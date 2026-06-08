@@ -1,0 +1,76 @@
+# Python
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+/*.egg-info/
+.eggs/
+/build/
+/dist/
+/build-win/
+/dist-win/
+
+# Virtual environments
+/.venv/
+/.venv-win/
+/venv/
+/env/
+
+# Test / lint / type caches
+/pytest_cache/
+/.pytest_cache/
+/.ruff_cache/
+/.mypy_cache/
+.coverage
+/htmlcov/
+
+# Packaging
+*.spec
+# Keep our hand-written PyInstaller build recipe. PyInstaller-generated specs stay ignored.
+!maxchat.spec
+*.manifest
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# App-local / runtime
+*.log
+/config.local.*
+
+# Legacy chat art — test only, never ship.
+# Loaded at runtime from the user's own install; copied here only for local testing.
+/assets/cc-art/
+*.avb
+*.bgb
+
+# NOTE: assets/fonts/ (Comic Relief *.ttf + OFL.txt) IS shipped — free, SIL OFL 1.1. Do not ignore.
+
+# Internal dev docs + working notes — local only, never pushed.
+/DEVDOCS/
+
+# Dev / personal build & run helpers — not part of the public release.
+/sync_to_windows.sh
+/windows-wsl-build.bat
+/build.sh
+/build.bat
+/run.sh
+/run.bat
+/Makefile
+
+# Local assistant/tooling files — not part of the release.
+/.agents/
+/.c?dex/
+/C?AUDE.md
+/AGENTS.MD
+/AUDIT-PLAN.MD
+/quick-scan.md
+/skills-lock.json
+
+# Design / roadmap / protocol / research notes — internal, not needed for the release.
+/docs/
+/tools/
