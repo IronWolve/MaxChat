@@ -1,0 +1,8 @@
+# Development dependencies (includes runtime).
+-r requirements.txt
+
+pytest>=8
+pytest-qt>=4
+ruff>=0.4
+black>=24
+pyinstaller>=6
