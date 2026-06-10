@@ -159,6 +159,7 @@ class MainWindow final : public QMainWindow {
     void addMutedChannel(const QString& channel);
     void removeMutedChannel(const QString& channel);
     [[nodiscard]] bool isMutedChannel(const QString& channel) const;
+    [[nodiscard]] bool textHighlightsMe(const QString& text, const QString& nick) const;
     [[nodiscard]] QString mutedChannelKey(const QString& channel) const;
     void addFriendNick(const QString& nick);
     void removeFriendNick(const QString& nick);
