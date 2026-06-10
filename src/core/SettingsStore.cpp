@@ -362,6 +362,10 @@ QVariantMap SettingsStore::defaultSettings() {
   settings.insert(QStringLiteral("show_button_bar"), false);
   settings.insert(QStringLiteral("buffer_tabs"), false);
   settings.insert(QStringLiteral("connect_on_start"), false);
+  // Used by the shortcut editor and the saved-looks menu; give them a home in
+  // the central defaults so they round-trip on export (Python parity).
+  settings.insert(QStringLiteral("shortcuts"), QVariantMap());
+  settings.insert(QStringLiteral("looks"), QVariantMap());
   settings.insert(QStringLiteral("networks"),
                   networkConfigListToVariantList(defaultNetworkConfigs()));
   return settings;

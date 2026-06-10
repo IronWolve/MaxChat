@@ -47,19 +47,22 @@ flagged "medium+ — push past the checklist for extra attack angles."
 the recommended model/effort or change it — before reading any files.** Do not begin the
 phase work until the user confirms.
 
-**Last session:** 2026-06-10 — Phase 2 done (Opus 4.8, bumped effort). 3 fixes
-($me/$chan aliases, slap/fish defaults, /sound send), scripting DEFERRED (user
-decision), S9 mostly debunked (inventory over-claimed — only /sound was missing),
-4 backport candidates logged. All 40 tests green. Next: Phase 3.
+**Last session:** 2026-06-10 — Phase 3 done (Opus 4.8 low-med). Settings layer is
+solid: Python has 127 default keys (not 175 — inventory over-claimed), C++ 100; the
+gaps are renames + comic keys (inline fallbacks, Phase 6) + migration flags (N/A for a
+fresh port) + deferred features. 1 cleanliness fix (shortcuts/looks defaults). S5a
+debunked (both default theme = synthwave), S11 resolved (shortcuts DO persist), S7
+quantified. Authoritative key map below. All 40 tests green. Next: Phase 4.
 
-Phase 1 (2026-06-10, Opus 4.8 medium): 5 fixes (caps, numeric fallthrough, 005
-display, CTCP rate-limit, VERSION string), 6 backlog, S6 resolved (no SCRAM).
+Phase 2 (2026-06-10, bumped): $me/$chan aliases, slap/fish defaults, /sound; scripting
+DEFERRED; S9 debunked; 4 backports. Phase 1 (Opus 4.8 medium): 5 protocol fixes, S6
+resolved (no SCRAM).
 
 ### Phase index
 
 - [x] Phase 1 — IRC protocol parity ✅ 2026-06-10
 - [x] Phase 2 — Slash commands & aliases ✅ 2026-06-10
-- [ ] Phase 3 — Settings keys & preferences
+- [x] Phase 3 — Settings keys & preferences ✅ 2026-06-10
 - [ ] Phase 4 — Chat rendering & input
 - [ ] Phase 5 — DCC (parity + security)
 - [ ] Phase 6 — Comic mode (parity + decoder robustness)
@@ -79,13 +82,13 @@ display, CTCP rate-limit, VERSION string), 6 backlog, S6 resolved (no SCRAM).
 | S2 | MISS | Update checker | Python has Help ▸ Check for Updates + quiet startup check (GitHub releases). C++ has none. When built: HTTPS-only. | 7 | OPEN |
 | S3 | MISS | Sounds | notify.wav playback, beep, CTCP SOUND (`/sound`, plays from `<config>/sounds/`) unwired. Qt6Multimedia is already linked for the media player. | 7 | OPEN |
 | S4 | MISS | Notifications | Taskbar flash (notify_flash), tray icon not visually present, highlight_words matching incomplete, DND coverage unverified. | 7 | OPEN |
-| S5 | MISS | Themes | "Looks" (saved theme+font combos) placeholder only. Default theme mismatch: C++ "synthwave" vs Python "dark". | 7 | OPEN |
+| S5 | MISS | Themes | "Looks" (saved theme+font combos) — verify completeness in Phase 7. **S5a default-theme mismatch is WRONG (debunked Phase 3): Python config.py defaults to "synthwave" too.** | 7 | PARTIAL (S5a closed) |
 | S6 | BUG? | SASL | ~~Python does PLAIN only; C++ claims PLAIN + SCRAM-SHA-256.~~ RESOLVED 2026-06-10: no SCRAM exists in src/ — the inventory over-claimed. C++ does PLAIN only, matching Python. No action. | 1 | VERIFIED |
-| S7 | MISS | Settings | Python DEFAULTS has ~175 keys; C++ SettingsStore ~70. ~105 keys unaccounted (some intentionally dropped, some missing). Phase 3 produces the authoritative map. | 3 | OPEN |
+| S7 | MISS | Settings | ~~175 vs ~70~~ QUANTIFIED Phase 3: Python has **127** default keys, C++ **100**. Gap = renames (2) + comic_* (16, inline fallbacks → Phase 6) + migration flags (3, N/A for fresh port) + deferred features (update_check/seeded_scripts/nick_width_autoset) + legacy notify_method. No data-loss bug. Map in Phase 3 section. | 3 | VERIFIED |
 | S8 | BUG? | Rendering | mIRC colors 16–98 + hex color code (\x04 / \x0C#RRGGBB) likely missing in C++ IrcFormat (0–15 only). Strike/reverse/mono coverage unverified. | 4 | OPEN |
 | S9 | MISS | Commands | ~~~25 Python commands likely missing~~~ MOSTLY DEBUNKED 2026-06-10: the inventory was wrong — /raw /quote /oper /kill /wallops /ns /cs /ms /identify /ghost /alias /unalias and unknown→raw passthrough all already exist in CommandParser. Only **/sound** was genuinely missing (now FIXED). C++ is in fact a superset (adds /help /close /disconnect /reconnect /connect /server /notify etc.). | 2 | VERIFIED |
 | S10 | MISS | Comic | Per-channel overrides (comic_channels: bg/chars/ignore), real emotion wheel (stub), assign-character dialog from member menu, stable per-channel random bg, panel right-click menus. | 6 | OPEN |
-| S11 | BUG | Shortcuts | Shortcut rebinding exists but reportedly not persisted across sessions (DEV_NOTES). | 3 | OPEN |
+| S11 | BUG | Shortcuts | ~~Rebinding not persisted~~ RESOLVED in code (Phase 3): `shortcuts` is saved via saveRaw (MainWindow.cpp:5278), re-applied on startup (applyNavShortcutOverrides @ 6653) and after edit (5282). Was stale. A round-trip regression test would lock it in (Backlog #7). | 3 | VERIFIED |
 | S12 | MISS | DCC UI | Transfers dialog lacks Rate/ETA columns (Python has live rate + ETA). | 5 | OPEN |
 | S13 | MISS | Input | Image-paste hook (Python emits imagePasted for script upload) — depends on S1 decision. | 4 | OPEN |
 | S14 | MISS | Localization | Translations deferred by user decision: tr() wrapping incomplete, no .qm files. Loader + Localization page exist. NOT an audit failure — track only. | 11 | WONTPORT (deferred) |
@@ -231,17 +234,49 @@ Checklist:
       notify_corner "br", replay_lines semantics 0=default).
 - [ ] Keys present in C++ but absent in Python: list as DIFF (fine, but document).
 
-### Python→C++ settings key map (fill in during phase)
+### Python→C++ settings key map (authoritative, 2026-06-10)
+
+Python DEFAULTS = **127** keys; C++ defaultSettings() = **100** (102 after this phase's
+shortcuts/looks add). **~95 keys are present in both with matching names AND default
+values** (theme, all fonts, timestamps, scrollback=2000, flood 10/4, paste_lines=4,
+notify_* corner=br/duration=6, dcc_*, replay_lines=0, nick_width=16, the 7 per-area
+colors, content_services all-true, the boolean toggles, etc.) — those are not listed
+individually. Only the non-trivial keys are reconciled below.
 
 | Python key | C++ key | Status | Note |
 |---|---|---|---|
-| | | | |
+| `aliases` | `command_aliases` | RENAMED | Same semantics (slap/fish now in both — Phase 2). |
+| `muted_buffers` | `muted_channels` | RENAMED | Same "net/#chan" key format. Verify format in Phase 8. |
+| `comic_*` (16: art_dir, bg, panels, per_panel, min_font, chars, ignore, ignore_cmds, bot_patterns, exclude_regex, captions, caption_mode, caption_color, caption_scale, random_bg, self_char) | (none in defaults) | INLINE FALLBACK | Read via `settings.value(key, fallback)` scattered in code, not centralized. Works, but defaults aren't in one place. Reconcile values in **Phase 6**. |
+| `comic_channels` | (absent) | MISSING | Per-channel overrides not implemented → S10, Phase 6. |
+| `comic_patterns_migrated` | (absent) | N/A | One-time Python migration flag; a fresh C++ port needs no migration. |
+| `font_defaults_version` | (absent) | N/A | Python migration flag (re-apply bundled font profile once). N/A. |
+| `logging_for_replay_migrated` | (absent) | N/A | Python migration flag. N/A. |
+| `nick_width_autoset` | (absent) | MISSING (low) | The "auto-fit nick column once" feature isn't ported. Minor — Backlog #8. |
+| `update_check` | (absent) | MISSING | Update checker not built → S2, Phase 7. |
+| `seeded_scripts` | (absent) | DEFERRED | Scripting deferred (S1). |
+| `notify_method` | (absent) | DROPPED | Legacy/superseded key Python keeps for back-compat; intentional to drop. |
+| `shortcuts` | `shortcuts` | OK (fixed) | Was read/written but absent from defaults; **added this phase**. |
+| `looks` | `looks` | OK (fixed) | Same — **added this phase**. |
+| — | `networks_merge_version` | C++-ONLY | Internal network-merge versioning. Fine. |
 
 ### Findings — Phase 3
 
-| Sev | Where | Issue | Status |
-|-----|-------|-------|--------|
-| | | | |
+| ID | Sev | Where | Issue | Status |
+|----|-----|-------|-------|--------|
+| P3-1 | DIFF (low) | SettingsStore.cpp | `shortcuts` and `looks` were read/written but had no central default entry (relied on empty-map fallback). | **FIXED** — added both as `{}` defaults. settings_store_test green. |
+| P3-2 | DIFF (low) | comic_* settings | 16 comic defaults live as scattered inline fallbacks, not in defaultSettings(). Works; reconcile in Phase 6. | NOTED → Phase 6 |
+| P3-3 | MISS (low) | nick_width_autoset | One-time nick-column auto-fit not ported. | Backlog #8 |
+| (S5a) | — | theme default | Debunked: Python default theme is "synthwave", same as C++. | CLOSED |
+| (S11) | — | shortcuts | Debunked: shortcuts persist + re-apply on startup. | CLOSED |
+
+Checklist status: full 127-key map produced ✓; default VALUES verified for the shared
+keys (all match) ✓; malformed settings.json → pure defaults (loadRaw returns {} on parse
+error) ✓; atomic write via QSaveFile ✓; import/export merge preserves user network fields
+(NetworkImport overlays imported onto catalog base, keeps catalog fields fresh) ✓;
+shortcuts round-trip ✓ (S11); no settings-layer data-loss bugs. Prefs-dialog
+page-behavior spot-check deferred to where each feature is audited (Fonts→Phase 7,
+DCC→Phase 5, etc.).
 
 ---
 
@@ -620,3 +655,5 @@ Big items deferred from phases. Each entry must be actionable cold: what, where,
 | 4 | 1 (P1-11) | DIFF low-med | Throttled line draining | `IrcConnection::queueIncomingLines` drains all complete lines synchronously per readyRead. Python caps at 100 lines/tick and defers the rest via singleShot(0) to keep the UI responsive during floods/netsplits. Port the deferred-drain queue. | OPEN |
 | 5 | 1 (P1-12) | DIFF low | away-notify chat spam | `IrcSession.cpp` AWAY handler emits both awayChanged AND a readable replyText for every away-notify; Python emits only the signal. Confirm whether MainWindow prints replyText to the active buffer (it does for WHO/WHOWAS) — if so, away-notify on a busy channel spams. Decide: drop the replyText, or gate it. Cross-check in a UI phase. | OPEN |
 | 6 | 2 (S1/P2-4) | MISS | C++-native plugin/scripting system | Python's plugin API (`scripting.py`: on_message/on_join/on_command/on_image_paste, /load /unload /reload, scripts dialog) can't be ported as-is (no embedded Python). DEFERRED by user 2026-06-10. Design a C++-native approach later — options: embed Lua, or a subprocess/IPC bridge speaking a small JSON protocol. Until then `/scripts /load /unload /reload` stay placeholders. | DEFERRED |
+| 7 | 3 (S11) | TEST | Shortcut persistence regression test | Shortcuts persist correctly but there's no test. Add a round-trip: set an override → saveRaw → reload → applyNavShortcutOverrides binds the new key. Needs a MainWindow harness (see main_window_link_preview_test). | OPEN |
+| 8 | 3 (P3-3) | MISS low | Port `nick_width_autoset` | Python auto-fits the nick column to the user's nick once, then lets them drag it (`nick_width_autoset` guards the one-shot). Port if/when touching the nick-column layout (Phase 4 area). | OPEN |
