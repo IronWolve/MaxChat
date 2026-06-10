@@ -676,18 +676,35 @@ void PreferencesDialog::buildFontsTab(QWidget* tab) {
                                            const QString& sizeKey, const QString& boldKey,
                                            QFontComboBox*& familyOut, QSpinBox*& sizeOut,
                                            QCheckBox*& boldOut) -> QGroupBox* {
+        // objectName mirrors the settings key (chat_font_family -> chatFontFamily)
+        // so tests and stylesheets can target each control.
+        const auto camel = [](const QString& key) {
+            QString out;
+            const QStringList parts = key.split(QLatin1Char('_'));
+            for (int i = 0; i < parts.size(); ++i) {
+                QString p = parts.at(i);
+                if (i > 0 && !p.isEmpty()) {
+                    p[0] = p[0].toUpper();
+                }
+                out += p;
+            }
+            return out;
+        };
         auto* box = new QGroupBox(title, tab);
         auto* form = new QFormLayout(box);
         familyOut = new QFontComboBox(box);
+        familyOut->setObjectName(camel(familyKey));
         const QString family =
             settings_.value(familyKey, QStringLiteral("JetBrains Mono")).toString();
         familyOut->setCurrentFont(QFont(family.isEmpty() ? QStringLiteral("JetBrains Mono")
                                                          : family));
         sizeOut = new QSpinBox(box);
+        sizeOut->setObjectName(camel(sizeKey));
         sizeOut->setRange(6, 48);
         const int size = settings_.value(sizeKey, 14).toInt();
         sizeOut->setValue(size > 0 ? size : 14);
         boldOut = new QCheckBox(QStringLiteral("Bold"), box);
+        boldOut->setObjectName(camel(boldKey));
         boldOut->setChecked(settings_.value(boldKey, true).toBool());
         auto* sizeRow = new QWidget(box);
         auto* sizeLayout = new QHBoxLayout(sizeRow);

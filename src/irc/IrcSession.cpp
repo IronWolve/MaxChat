@@ -413,6 +413,8 @@ void IrcSession::handleLine(const QString &line) {
     // Structured signal so the UI can apply ignore-invites / invite-protect;
     // the prefix carries the full nick!user@host for masking.
     emit invited(sender, params.at(1), msg.prefix);
+    emit replyText(QStringLiteral("[invite] %1 invited %2 to %3")
+                       .arg(sender, params.at(0), params.at(1)));
     return;
   }
 
