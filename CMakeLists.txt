@@ -724,6 +724,8 @@ qt_add_executable(preferences_dialog_test
     src/ui/PreferencesDialog.h
     src/ui/ThemeCatalog.cpp
     src/ui/ThemeCatalog.h
+    src/ui/AppIcon.cpp
+    src/ui/AppIcon.h
 )
 
 target_link_libraries(preferences_dialog_test
