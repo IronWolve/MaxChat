@@ -1977,6 +1977,13 @@ void maxchat::ui::MainWindow::setBufferTabsVisible(const bool visible, const boo
         syncBufferTabs();
         m_bufferTabBar->setVisible(visible);
     }
+    // Buttons-as-tabs is an alternative buffer navigator: when on it replaces the
+    // server-list tree, so the same "Server"/buffer rows aren't shown twice.
+    if (m_networkTree != nullptr) {
+        const bool serverListPref =
+            m_settings.loadWithDefaults().value(QStringLiteral("server_list_visible"), true).toBool();
+        m_networkTree->setVisible(visible ? false : serverListPref);
+    }
     if (m_buttonsAsTabsAction != nullptr && m_buttonsAsTabsAction->isChecked() != visible) {
         const QSignalBlocker blocker(m_buttonsAsTabsAction);
         m_buttonsAsTabsAction->setChecked(visible);
