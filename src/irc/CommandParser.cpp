@@ -112,6 +112,7 @@ QStringList supportedCommandNames() {
       QStringLiteral("flip"),       QStringLiteral("unflip"),
       QStringLiteral("lenny"),      QStringLiteral("disapprove"),
       QStringLiteral("onotice"),    QStringLiteral("ctcp"),
+      QStringLiteral("sound"),
       QStringLiteral("nickserv"),   QStringLiteral("ns"),
       QStringLiteral("chanserv"),   QStringLiteral("cs"),
       QStringLiteral("memoserv"),   QStringLiteral("ms"),
@@ -319,6 +320,16 @@ UserCommand parseUserCommand(const QString &input,
     parsed.rawLine = ctcp.first.toUpper();
     parsed.text = ctcp.rest;
     return parsed;
+  }
+
+  if (command == QStringLiteral("sound")) {
+    const SplitText sound = splitFirstToken(rest);
+    if (currentTarget.isEmpty() || sound.first.isEmpty()) {
+      return errorCommand(QStringLiteral("Usage: /sound <file.wav> [text]"));
+    }
+    // targets=current buffer, rawLine=sound file, text=optional message.
+    return {UserCommandType::Sound, command, QStringList{currentTarget},
+            sound.rest, sound.first};
   }
 
   const QString serviceTarget = serviceTargetForCommand(command);

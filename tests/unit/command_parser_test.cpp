@@ -488,6 +488,23 @@ private slots:
              QStringList({QStringLiteral("#one"), QStringLiteral("#two"),
                           QStringLiteral("&three")}));
   }
+
+  void soundCommandTargetsCurrentBufferAndNeedsFile() {
+    const auto parsed = parseUserCommand(
+        QStringLiteral("/sound horn.wav hey all"), QStringLiteral("#chat"));
+    QCOMPARE(parsed.type, UserCommandType::Sound);
+    QCOMPARE(parsed.targets, QStringList({QStringLiteral("#chat")}));
+    QCOMPARE(parsed.rawLine, QStringLiteral("horn.wav"));
+    QCOMPARE(parsed.text, QStringLiteral("hey all"));
+
+    // No file, or no current buffer → usage error (not a raw passthrough).
+    QCOMPARE(parseUserCommand(QStringLiteral("/sound"), QStringLiteral("#chat"))
+                 .type,
+             UserCommandType::Error);
+    QCOMPARE(
+        parseUserCommand(QStringLiteral("/sound horn.wav"), QString()).type,
+        UserCommandType::Error);
+  }
 };
 
 QTEST_APPLESS_MAIN(CommandParserTest)
