@@ -20,6 +20,12 @@ Created 2026-06-10. Source sizes at creation: C++ ~22.3k LOC src + ~5.2k tests
     full test suite, commit (`area: summary`, IronWolve identity, no AI trailer).
   - **Big items:** log in **FIX BACKLOG** at the bottom with enough detail to act cold.
   - **Findings:** record in the phase's Findings table as you go.
+  - **Port-is-better items:** when a finding is something the C++ port does
+    *better* than Python (or a latent bug in BOTH), add it to the **Backports to
+    Python** section below **AND** to the mirror copy at
+    `../maxchat/DEVDOCS/BACKPORTS.md`. Keep the two in sync — never leave the
+    info in only one repo. (Don't run git in the Python repo; the user drives
+    that. Just write the file.)
 - **Status flow:** `OPEN` → `FIXED` (code changed, tests green) → `VERIFIED`
   (user confirmed on Windows build). Decisions to NOT port something: `WONTPORT`
   with one-line rationale.
@@ -545,12 +551,31 @@ Checklist:
 - [ ] HANDOFF.md updated; this doc's phase index all ☑; final summary section appended
       (counts by severity/status).
 - [ ] Revisit S14 (translations) with user — schedule or keep deferred.
+- [ ] Reconcile the **Backports to Python** section here against the canonical
+      `../maxchat/DEVDOCS/BACKPORTS.md` — confirm both list the same entries.
 
 ### Findings — Phase 11
 
 | Sev | Where | Issue | Status |
 |-----|-------|-------|--------|
 | | | | |
+
+---
+
+## Backports to Python
+
+Items where the C++ port ended up **better than / usefully different from** the
+Python original — candidates to port *back* into Python MaxChat. **Mirror of**
+`../maxchat/DEVDOCS/BACKPORTS.md` (canonical copy lives there, where the work
+happens). Keep both in sync; see the sync rule in "How to use this doc".
+
+Priority: `P1` clear win · `P2` nice to have · `P3` minor/architectural.
+
+| ID | Phase | Pri | Item | Detail | Status |
+|----|-------|-----|------|--------|--------|
+| BP-1 | 1 | P1 | Readable numeric formatting | C++ emits friendly lines for numerics Python dumps raw: 301/305/306/307/313/328/331/333/671 (e.g. `[topic] #chan set by alice at <ts>`). Add explicit branches in `client.py` `_handle` before the digit catch-all. | OPEN |
+| BP-2 | 1 | P3 | Split connect vs registration watchdog | Port has independent connect + registration timeouts (clearer failure reason, correct failover when a server accepts TCP but never registers); Python has one ~20s watchdog. | OPEN |
+| BP-3 | 1 | P3 | Tolerant lag PONG token matching | Port matches the lag token in trailing OR positional param; Python only checks trailing. | OPEN |
 
 ---
 
