@@ -10,7 +10,11 @@ namespace maxchat::irc {
 
 namespace {
 
-constexpr qsizetype MaxPendingBytes = 4096;
+// An IRCv3 line is the 512-byte message plus up to ~8KB of message tags
+// (server-time, account-tag, …), so the incoming cap must be far larger than
+// the 512-byte *send* cap. Matches the Python client (8192 line / 65536 buffer).
+constexpr qsizetype MaxIncomingLineBytes = 8192;
+constexpr qsizetype MaxPendingBytes = 65536;
 
 } // namespace
 
@@ -313,7 +317,7 @@ void IrcConnection::queueIncomingLines(QSslSocket *socket) {
     if (chunk.isEmpty()) {
       continue;
     }
-    if (chunk.size() > IrcMaxWireBytes) {
+    if (chunk.size() > MaxIncomingLineBytes) {
       emit systemText(QStringLiteral("Dropped oversized IRC line from server"));
       continue;
     }

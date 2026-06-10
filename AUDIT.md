@@ -41,11 +41,14 @@ flagged "medium+ — push past the checklist for extra attack angles."
 the recommended model/effort or change it — before reading any files.** Do not begin the
 phase work until the user confirms.
 
-**Last session:** none yet — start with Phase 1.
+**Last session:** 2026-06-10 — Phase 1 done (Opus 4.8 medium). 5 fixes landed (caps,
+numeric fallthrough, 005 display, CTCP rate-limit, VERSION string), 6 items to backlog,
+S6 resolved (no SCRAM exists — inventory over-claimed; PLAIN only, matches Python).
+All 40 tests green. Next: Phase 2.
 
 ### Phase index
 
-- [ ] Phase 1 — IRC protocol parity
+- [x] Phase 1 — IRC protocol parity ✅ 2026-06-10
 - [ ] Phase 2 — Slash commands & aliases
 - [ ] Phase 3 — Settings keys & preferences
 - [ ] Phase 4 — Chat rendering & input
@@ -68,7 +71,7 @@ phase work until the user confirms.
 | S3 | MISS | Sounds | notify.wav playback, beep, CTCP SOUND (`/sound`, plays from `<config>/sounds/`) unwired. Qt6Multimedia is already linked for the media player. | 7 | OPEN |
 | S4 | MISS | Notifications | Taskbar flash (notify_flash), tray icon not visually present, highlight_words matching incomplete, DND coverage unverified. | 7 | OPEN |
 | S5 | MISS | Themes | "Looks" (saved theme+font combos) placeholder only. Default theme mismatch: C++ "synthwave" vs Python "dark". | 7 | OPEN |
-| S6 | BUG? | SASL | Python does PLAIN only; C++ claims PLAIN + SCRAM-SHA-256. Verify SCRAM actually works (or remove the claim) — parity-plus must still be correct. | 1 | OPEN |
+| S6 | BUG? | SASL | ~~Python does PLAIN only; C++ claims PLAIN + SCRAM-SHA-256.~~ RESOLVED 2026-06-10: no SCRAM exists in src/ — the inventory over-claimed. C++ does PLAIN only, matching Python. No action. | 1 | VERIFIED |
 | S7 | MISS | Settings | Python DEFAULTS has ~175 keys; C++ SettingsStore ~70. ~105 keys unaccounted (some intentionally dropped, some missing). Phase 3 produces the authoritative map. | 3 | OPEN |
 | S8 | BUG? | Rendering | mIRC colors 16–98 + hex color code (\x04 / \x0C#RRGGBB) likely missing in C++ IrcFormat (0–15 only). Strike/reverse/mono coverage unverified. | 4 | OPEN |
 | S9 | MISS | Commands | ~25 Python commands likely missing: /sound, /raw, /quote, /oper, /kill, /wallops, /ns /cs /ms /identify /ghost /recover /sidentify /login, /alias /unalias, /query?, unknown-command raw passthrough. | 2 | OPEN |
@@ -116,9 +119,27 @@ Checklist:
 
 ### Findings — Phase 1
 
-| Sev | Where | Issue | Status |
-|-----|-------|-------|--------|
-| | | | |
+| ID | Sev | Where | Issue | Status |
+|----|-----|-------|-------|--------|
+| P1-10 | BUG (med-high) | IrcConnection.cpp queueIncomingLines/onReadyRead | Incoming-line cap reused the 512-byte **send** cap (IrcMaxWireBytes) and pending buffer was 4096. IRCv3 tagged lines (server-time/account-tag) routinely exceed 512 → legit messages dropped, and a long in-progress line >4096 aborted the connection. Python uses 8192 line / 65536 buffer. | **FIXED** — added MaxIncomingLineBytes=8192, MaxPendingBytes=65536. Covered by irc_connection_test (green). |
+| P1-3 | BUG (med) | IrcSession.cpp handleLine | No generic numeric fallthrough — every numeric without an explicit handler was silently dropped (LUSERS 251-255, 250, 265/266, 396, server errors 462/465/491/484, etc.). Python surfaces all unknown numerics as status text. | **FIXED** — added catch-all emitting systemText. Test: unhandledNumericsAreSurfacedAsStatusText. |
+| P1-2 | DIFF (low) | IrcSession.cpp 005 handler | 005/ISUPPORT returned early; Python stores tokens AND falls through to display the line. | **FIXED** — 005 now falls through to the numeric catch-all. Test: isupportLineIsAlsoShownAsStatusText. |
+| P1-5 | SEC (med-low) | IrcSession.cpp CTCP block | No CTCP auto-reply rate-limit — answered every VERSION/PING/TIME 1:1, usable as a CTCP flood reflector. Python throttles to 1/sec. | **FIXED** — added ctcpReplyTimer_ 1s throttle (ACTION/DCC/NOTICE excluded). Test: ctcpAutoRepliesAreRateLimited. |
+| P1-4 | DIFF (low) | IrcSession.cpp VERSION reply | Hardcoded "MaxChat C++" with no version; Python uses app name + version. | **FIXED** — uses app::displayName()+version(). Existing test updated to build expected from AppInfo. |
+| P1-1 | DIFF (low) | IrcMessage.cpp parseMessage | QString::trimmed() on the whole line discards trailing whitespace in the trailing param; Python only strips \r\n (keeps trailing spaces verbatim). Rarely matters. | BACKLOG (#1) |
+| P1-6 | DIFF (low) | IrcSession.cpp CTCP NOTICE reply | Doesn't compute CTCP PING reply round-trip time; Python shows "%.3fs". | BACKLOG (#2) |
+| P1-8 | DIFF (low) | IrcConnection.cpp connectTo (proxy) | No proxy port-range validation (casts to quint16); Python errors on invalid port. | BACKLOG (#3) |
+| P1-9 | DIFF (low) | IrcConnection.cpp connectTo (proxy) | Unknown proxy type silently ignored (connects directly); Python raises "Unsupported proxy type". | BACKLOG (#3) |
+| P1-11 | DIFF (low-med) | IrcConnection.cpp queueIncomingLines | Drains all buffered lines synchronously per readyRead; Python throttles to 100 lines/tick with deferred draining to keep UI responsive under floods/netsplits. | BACKLOG (#4) |
+| P1-12 | DIFF (low) | IrcSession.cpp AWAY handler | Emits a readable "[away] X is away/back" replyText for **every** away-notify in addition to awayChanged; Python emits only the signal. With away-notify on a busy channel this could spam the active buffer. Verify UI side. | BACKLOG (#5) |
+| P1-7 | DIFF (none) | IrcConnection.cpp | Connect+registration timeouts 15s each vs Python 20s watchdog. Acceptable (arguably better split design). No action. | NOTED |
+
+Checklist status: message parsing ✓ (one whitespace diff P1-1); CAP/SASL ✓ (S6 resolved
+— PLAIN only); registration/nick-collision/alt-nick ✓ (exact match); watchdog/failover ✓
+(IrcConnection split timeouts + ReconnectPlanner ServerRetryLimit=3, P1-7 noted); CTCP
+replies ✓ (P1-4/P1-5 fixed; SOUND not handled → seed S3, Phase 7); numerics ✓✓ (P1-3 the
+big fix; C++ also richer on 301/305/306/307/313/328/331/333/671); ISUPPORT ✓ (P1-2);
+away-notify/ISON ✓ (P1-12 noted); proxy ✓ (P1-8/P1-9 minor); TLS cert exception ✓.
 
 ---
 
@@ -539,4 +560,8 @@ Big items deferred from phases. Each entry must be actionable cold: what, where,
 
 | # | From phase | Sev | Item | Notes | Status |
 |---|-----------|-----|------|-------|--------|
-| | | | | | |
+| 1 | 1 (P1-1) | DIFF low | parseMessage preserves trailing whitespace in the trailing param | In `IrcMessage.cpp parseMessage`, the early `s = s.trimmed()` (line ~75/88) strips trailing spaces from the whole line, losing them in the trailing param. Python only strips `\r\n`. Fix: rstrip only `\r\n` at entry; use lstrip (not trimmed) at the prefix/command boundaries. Add a parser test with a trailing-space message. Low value, parser-risk — verify all parse tests still pass. | OPEN |
+| 2 | 1 (P1-6) | DIFF low | CTCP PING reply round-trip time | In `IrcSession.cpp` CTCP-NOTICE-reply path (ctcpSummary for NOTICE), when ctcp.command=="PING" parse args as a float timestamp and show "%.3fs" elapsed, matching Python `_handle_ctcp_reply`. | OPEN |
+| 3 | 1 (P1-8/P1-9) | DIFF low | Proxy config validation | In `IrcConnection.cpp connectTo`: validate proxy port 1..65535 and surface an error for an unknown non-empty proxy type (currently silently connects direct). Mirror Python `_proxy_from_config` (emit errorOccurred + disconnected). Note proxy logic is inline → consider extracting for unit testing (Python has test_proxy.py). | OPEN |
+| 4 | 1 (P1-11) | DIFF low-med | Throttled line draining | `IrcConnection::queueIncomingLines` drains all complete lines synchronously per readyRead. Python caps at 100 lines/tick and defers the rest via singleShot(0) to keep the UI responsive during floods/netsplits. Port the deferred-drain queue. | OPEN |
+| 5 | 1 (P1-12) | DIFF low | away-notify chat spam | `IrcSession.cpp` AWAY handler emits both awayChanged AND a readable replyText for every away-notify; Python emits only the signal. Confirm whether MainWindow prints replyText to the active buffer (it does for WHO/WHOWAS) — if so, away-notify on a busy channel spams. Decide: drop the replyText, or gate it. Cross-check in a UI phase. | OPEN |
