@@ -30,6 +30,17 @@ Created 2026-06-10. Source sizes at creation: C++ ~22.3k LOC src + ~5.2k tests
   "THINGS I GOT WRONG").
 - After ALL phases: Phase 11 closes out (test-coverage map, backlog triage, doc sweep).
 
+### Model recommendation
+
+Default for the whole audit: **Opus 4.8, medium effort.** Reading the source dominates
+cost (identical at any effort), so medium is the best cost-per-correct-finding. Each
+phase below has a **Model:** line; the security/analysis-heavy phases (1, 5, 9, 10) are
+flagged "medium+ — push past the checklist for extra attack angles."
+
+**At the start of every phase, the session must STOP and ask the user whether to keep
+the recommended model/effort or change it — before reading any files.** Do not begin the
+phase work until the user confirms.
+
 **Last session:** none yet — start with Phase 1.
 
 ### Phase index
@@ -71,6 +82,8 @@ Created 2026-06-10. Source sizes at creation: C++ ~22.3k LOC src + ~5.2k tests
 
 ## Phase 1 — IRC protocol parity
 
+**Model:** Opus 4.8 medium+ (state-machine tracing rewards deeper reasoning).
+
 **C++ scope:** `src/irc/IrcMessage.{h,cpp}` (140), `src/irc/IrcSession.{h,cpp}` (~1000),
 `src/irc/IrcConnection.{h,cpp}` (~470), `src/irc/ReconnectPlanner.{h,cpp}` (70),
 `src/core/ConnectionPlan.{h,cpp}` (170). Tests: `tests/unit/irc_session_test.cpp`.
@@ -111,6 +124,8 @@ Checklist:
 
 ## Phase 2 — Slash commands & aliases
 
+**Model:** Opus 4.8 low–medium (mechanical diff against a clear checklist).
+
 **C++ scope:** `src/irc/CommandParser.{h,cpp}` (~790), command dispatch portion of
 `src/ui/MainWindow.cpp` (search `handleCommand`/dispatch — do NOT read the whole file),
 `src/core/CommandAlias.{h,cpp}` (153). Tests: `command_parser_test.cpp`.
@@ -145,6 +160,8 @@ Checklist:
 ---
 
 ## Phase 3 — Settings keys & preferences
+
+**Model:** Opus 4.8 low–medium (key-by-key mapping; lots of output, little reasoning).
 
 **C++ scope:** `src/core/SettingsStore.{h,cpp}` (413), `src/ui/PreferencesDialog.{h,cpp}`
 (~1420), `src/core/NetworkImport.{h,cpp}` (84), `src/ui/ShortcutEditorDialog.{h,cpp}` (114).
@@ -185,6 +202,8 @@ Checklist:
 ---
 
 ## Phase 4 — Chat rendering & input
+
+**Model:** Opus 4.8 medium.
 
 **C++ scope:** `src/irc/IrcFormat.{h,cpp}` (301), `src/ui/ChatLineFormatter` (find it —
 may live in MainWindow or its own file; tests: `chat_line_formatter_test.cpp`),
@@ -228,6 +247,8 @@ Checklist:
 
 ## Phase 5 — DCC (parity + security)
 
+**Model:** Opus 4.8 medium+ (security review — invent attacks beyond the checklist).
+
 **C++ scope:** `src/ui/DccManager.{h,cpp}` (896), `src/ui/DccTransfersDialog.{h,cpp}` (168),
 DCC wiring in MainWindow (configureDcc, /dcc routing, =peer buffers — targeted reads).
 Tests: any dcc test files.
@@ -270,6 +291,8 @@ Checklist (security — attacker = malicious peer):
 ---
 
 ## Phase 6 — Comic mode (parity + decoder robustness)
+
+**Model:** Opus 4.8 medium.
 
 **C++ scope:** `src/comic/ComicArt.{h,cpp}` (426), `src/comic/ComicCharacter.{h,cpp}` (264),
 `src/comic/ComicRenderer.{h,cpp}` (496), `src/ui/ComicView.{h,cpp}` (128),
@@ -319,6 +342,8 @@ Checklist (decoder robustness — input = hostile .avb/.bgb):
 
 ## Phase 7 — Themes, fonts, notifications, tray, sounds
 
+**Model:** Opus 4.8 medium (real implementation work: sounds, tray, update checker).
+
 **C++ scope:** `src/ui/ThemeCatalog.{h,cpp}` (1047), `src/ui/ThemeEditorDialog.{h,cpp}` (188),
 `src/ui/Notifier.{h,cpp}` (160), `src/ui/ToastWidget.{h,cpp}` (129),
 `src/ui/AppIcon.{h,cpp}` (95), theme/font/notify application in MainWindow
@@ -360,6 +385,8 @@ Checklist:
 
 ## Phase 8 — Logging, replay, buffers
 
+**Model:** Opus 4.8 low–medium.
+
 **C++ scope:** `src/core/ChatBufferStore.{h,cpp}` (474), `src/core/ChatLogStore.{h,cpp}` (153),
 replay + scrollback wiring in MainWindow (targeted reads), `src/core/FloodGuard.{h,cpp}` (63).
 **Python reference:** logging/replay code in `maxchat/ui/main_window.py` (search
@@ -392,6 +419,8 @@ Checklist:
 ---
 
 ## Phase 9 — Link previews & SSRF
+
+**Model:** Opus 4.8 medium+ (highest-risk phase — the redirect-revalidation item).
 
 **C++ scope:** `src/services/OpenGraphFetcher.{h,cpp}` (148), `OpenGraphParser.{h,cpp}` (199),
 `LinkPreviewClassifier.{h,cpp}` (307), `LinkPreviewPolicy.{h,cpp}` (69),
@@ -429,6 +458,8 @@ Checklist:
 ---
 
 ## Phase 10 — Cross-cutting security sweep
+
+**Model:** Opus 4.8 medium+ (cheap phase to read, but extra thinking finds the most here).
 
 **C++ scope:** `src/irc/IrcRedaction.{h,cpp}` (43), `src/ui/RawLogDialog.{h,cpp}` (100),
 grep-driven targeted reads across src/ (this phase is grep + spot-read, not full reads).
@@ -475,6 +506,8 @@ Checklist:
 ---
 
 ## Phase 11 — Tests & docs closeout
+
+**Model:** Opus 4.8 low (mostly bookkeeping).
 
 **Scope:** `tests/` both repos (lists only, then targeted), HANDOFF.md, DEV_NOTES.md,
 this file.
