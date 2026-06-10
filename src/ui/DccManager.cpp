@@ -9,6 +9,8 @@
 #include <QTcpSocket>
 #include <QtEndian>
 
+#include <algorithm>
+
 namespace maxchat::ui {
 
 namespace {
@@ -49,10 +51,29 @@ QStringList splitArgs(const QString& args) {
 }
 
 QString newToken() {
-    return QStringLiteral("%1").arg(QRandomGenerator::global()->generate(), 8, 16, QLatin1Char('0'));
+    // Use the system CSPRNG (like Python's secrets.token_hex) — the token is the
+    // only barrier stopping a third party from injecting a fake passive reply.
+    return QStringLiteral("%1").arg(QRandomGenerator::system()->generate(), 8, 16,
+                                    QLatin1Char('0'));
 }
 
 } // namespace
+
+qint64 dccWritableChunk(qint64 offeredSize, qint64 transferred, qint64 available) {
+    if (available <= 0) {
+        return 0;
+    }
+    // Unknown/zero/negative offered size → write nothing (don't trust the peer
+    // to bound the stream). Otherwise cap to what's left of the offered size.
+    if (offeredSize <= 0) {
+        return 0;
+    }
+    const qint64 remaining = offeredSize - transferred;
+    if (remaining <= 0) {
+        return 0;
+    }
+    return std::min(available, remaining);
+}
 
 DccManager::DccManager(QObject* parent) : QObject(parent) {}
 
@@ -293,7 +314,8 @@ void DccManager::inSend(const QString& sender, const QStringList& toks) {
     const QString name = QFileInfo(toks.at(1)).fileName();
     const quint32 host = toks.at(2).toUInt();
     const quint16 port = static_cast<quint16>(toks.at(3).toUInt());
-    const qint64 size = toks.at(4).toLongLong();
+    // Clamp a negative/garbage offered size to 0 (treated as "write nothing").
+    const qint64 size = std::max<qint64>(0, toks.at(4).toLongLong());
     const QString token = toks.size() >= 6 ? toks.at(5) : QString();
 
     // Passive reply to our own offer: peer listened, we connect out and send.
@@ -444,11 +466,18 @@ void DccManager::beginReceive(int id, QTcpSocket* socket) {
             return;
         }
         QByteArray data = socket->readAll();
-        if (tr->size > 0) {
-            const qint64 remaining = tr->size - tr->transferred;
-            if (data.size() > remaining) {
-                data.truncate(static_cast<int>(remaining));
+        const qint64 writable = dccWritableChunk(tr->size, tr->transferred, data.size());
+        if (writable <= 0) {
+            // Nothing we should persist: a zero-length offer (complete it
+            // cleanly) or already-complete/over-size data (drop it — a peer
+            // can't make us write past the offered size).
+            if (tr->size == 0) {
+                finishTransfer(id, true);
             }
+            return;
+        }
+        if (writable < data.size()) {
+            data.truncate(static_cast<int>(writable));
         }
         rr.file->write(data);
         tr->transferred += data.size();

@@ -489,6 +489,26 @@ target_link_libraries(irc_session_test
 
 add_test(NAME irc_session COMMAND irc_session_test)
 
+qt_add_executable(dcc_manager_test
+    tests/unit/dcc_manager_test.cpp
+    src/ui/DccManager.cpp
+    src/ui/DccManager.h
+)
+
+target_include_directories(dcc_manager_test
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(dcc_manager_test
+    PRIVATE
+        maxchat_core
+        Qt6::Network
+        Qt6::Test
+)
+
+add_test(NAME dcc_manager COMMAND dcc_manager_test)
+
 qt_add_executable(default_networks_test
     tests/unit/default_networks_test.cpp
 )

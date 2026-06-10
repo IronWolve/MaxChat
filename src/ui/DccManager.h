@@ -29,6 +29,14 @@ struct DccTransfer {
     qint64 transferred = 0;
 };
 
+// How many bytes of an incoming DCC chunk may be written to disk, given the
+// offered file size and bytes already received. Returns 0 for unknown/zero/
+// negative offered sizes and once the file is complete — so a malicious peer
+// can't write past the offered size (an unbounded-disk-write DoS). Mirrors the
+// Python receiver's `remaining = size - transferred; if remaining <= 0: drop`.
+[[nodiscard]] qint64 dccWritableChunk(qint64 offeredSize, qint64 transferred,
+                                      qint64 available);
+
 // One DCC CHAT session (a direct newline text link).
 struct DccChat {
     enum class State { Connecting, Active, Closed };
