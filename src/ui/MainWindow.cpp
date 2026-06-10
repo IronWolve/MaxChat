@@ -41,6 +41,7 @@
 #include <QAction>
 #include <QActionGroup>
 #include <QApplication>
+#include <QStyle>
 #include <QClipboard>
 #include <QColorDialog>
 #include <QDesktopServices>
@@ -5669,7 +5670,17 @@ void maxchat::ui::MainWindow::applyTheme(const QString& theme) {
     const QString normalized = normalizeThemeId(theme);
     const QString styleSheet =
         styleSheetForAppearance(normalized, m_currentChatTheme, m_currentWallpaper);
-    setStyleSheet(styleSheet);
+    // Apply palette + stylesheet app-wide so parentless dialogs are themed too,
+    // and the OS palette can't bleed into widgets the QSS doesn't cover.
+    if (normalized == systemThemeId()) {
+        if (QStyle* style = QApplication::style()) {
+            qApp->setPalette(style->standardPalette());
+        }
+        qApp->setStyleSheet(QString());
+    } else {
+        qApp->setPalette(paletteForAppearance(normalized));
+        qApp->setStyleSheet(styleSheet);
+    }
     updateTrayIcon();
     setWindowIcon(ui::AppIcon::makeIcon(
         m_settings.loadWithDefaults().value(QStringLiteral("tray_icon"), QStringLiteral("bubble")).toString(),

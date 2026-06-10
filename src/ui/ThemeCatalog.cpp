@@ -596,6 +596,39 @@ QString effectiveWallpaperPath(const QString& theme, const QString& wallpaper) {
     return {};
 }
 
+QPalette paletteForAppearance(const QString& theme) {
+    QPalette pal;
+    const QString themeId = normalizeThemeId(theme);
+    if (themeId == systemThemeId()) {
+        return pal; // caller restores the platform palette for "Themes Off"
+    }
+
+    const AppThemeDefinition p = appThemeById(themeId);
+    const QColor onText = p.onText.isEmpty()
+                             ? (luminance(p.on) < 140.0 ? QColor(Qt::white) : QColor(Qt::black))
+                             : QColor(p.onText);
+    pal.setColor(QPalette::Window, p.bg);
+    pal.setColor(QPalette::WindowText, p.text);
+    pal.setColor(QPalette::Base, p.panel);
+    pal.setColor(QPalette::AlternateBase, p.panel2);
+    pal.setColor(QPalette::Text, p.text);
+    pal.setColor(QPalette::Button, p.panel2);
+    pal.setColor(QPalette::ButtonText, p.text);
+    pal.setColor(QPalette::ToolTipBase, p.panel);
+    pal.setColor(QPalette::ToolTipText, p.text);
+    pal.setColor(QPalette::Highlight, p.on);
+    pal.setColor(QPalette::HighlightedText, onText);
+    pal.setColor(QPalette::PlaceholderText, QColor(p.text.red(), p.text.green(), p.text.blue(), 130));
+
+    QColor dim = p.text;
+    dim.setAlpha(110);
+    for (const QPalette::ColorRole role :
+         {QPalette::WindowText, QPalette::Text, QPalette::ButtonText}) {
+        pal.setColor(QPalette::Disabled, role, dim);
+    }
+    return pal;
+}
+
 QString styleSheetForAppearance(const QString& theme, const QString& chatTheme,
                                 const QString& wallpaper) {
     const QString themeId = normalizeThemeId(theme);
