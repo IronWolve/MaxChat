@@ -3,6 +3,7 @@
 #include <QColor>
 #include <QList>
 #include <QPair>
+#include <QPalette>
 #include <QString>
 
 namespace maxchat::ui {
@@ -59,6 +60,10 @@ struct WallpaperDefinition {
 [[nodiscard]] ChatThemeDefinition chatThemeById(const QString &chatTheme);
 [[nodiscard]] QString effectiveWallpaperPath(const QString &theme,
                                              const QString &wallpaper);
+// QPalette matching a theme, so the OS palette can't bleed into unstyled
+// widgets. For "Themes Off" returns a default QPalette() - the caller should
+// restore the platform standard palette instead.
+[[nodiscard]] QPalette paletteForAppearance(const QString &theme);
 [[nodiscard]] QString styleSheetForAppearance(const QString &theme,
                                               const QString &chatTheme,
                                               const QString &wallpaper);
