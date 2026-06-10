@@ -25,6 +25,7 @@ class PreferencesDialog final : public QDialog {
     void importSettingsRequested();
     void resetServerListRequested();
     void resetAllSettingsRequested();
+    void testNotificationRequested();
 
   private:
     void setAllFonts(const QString& family, int size, bool bold);
@@ -93,6 +94,19 @@ class PreferencesDialog final : public QDialog {
     QCheckBox* linkXCards_ = nullptr;
     QCheckBox* linkWebCards_ = nullptr;
     QComboBox* trayIcon_ = nullptr;
+    QCheckBox* dnd_ = nullptr;
+    QComboBox* notifyPopup_ = nullptr;
+    QCheckBox* notifyPm_ = nullptr;
+    QCheckBox* notifyHighlight_ = nullptr;
+    QLineEdit* highlightWords_ = nullptr;
+    QCheckBox* notifyFlash_ = nullptr;
+    QComboBox* notifyCorner_ = nullptr;
+    QSpinBox* notifyDuration_ = nullptr;
+    QComboBox* notifyTheme_ = nullptr;
+    QCheckBox* beepHighlight_ = nullptr;
+    QCheckBox* notifySound_ = nullptr;
+    QCheckBox* ctcpSound_ = nullptr;
+    QCheckBox* minimizeToTray_ = nullptr;
     QComboBox* interfaceLanguage_ = nullptr;
     QCheckBox* spellcheckEnabled_ = nullptr;
     QComboBox* spellLanguage_ = nullptr;

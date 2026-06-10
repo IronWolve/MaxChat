@@ -286,6 +286,20 @@ QVariantMap PreferencesDialog::settings() const {
     out.insert(QStringLiteral("interface_language"), interfaceLanguage_->currentData().toString());
     out.insert(QStringLiteral("spellcheck_enabled"), spellcheckEnabled_->isChecked());
     out.insert(QStringLiteral("spell_language"), spellLanguage_->currentData().toString());
+    // Notifications
+    if (dnd_) out.insert(QStringLiteral("dnd"), dnd_->isChecked());
+    if (notifyPopup_) out.insert(QStringLiteral("notify_popup"), notifyPopup_->currentData().toString());
+    if (notifyPm_) out.insert(QStringLiteral("notify_pm"), notifyPm_->isChecked());
+    if (notifyHighlight_) out.insert(QStringLiteral("notify_highlight"), notifyHighlight_->isChecked());
+    if (highlightWords_) out.insert(QStringLiteral("highlight_words"), highlightWords_->text().trimmed());
+    if (notifyFlash_) out.insert(QStringLiteral("notify_flash"), notifyFlash_->isChecked());
+    if (notifyCorner_) out.insert(QStringLiteral("notify_corner"), notifyCorner_->currentData().toString());
+    if (notifyDuration_) out.insert(QStringLiteral("notify_duration"), notifyDuration_->value());
+    if (notifyTheme_) out.insert(QStringLiteral("notify_theme"), notifyTheme_->currentData().toString());
+    if (beepHighlight_) out.insert(QStringLiteral("beep_highlight"), beepHighlight_->isChecked());
+    if (notifySound_) out.insert(QStringLiteral("notify_sound"), notifySound_->isChecked());
+    if (ctcpSound_) out.insert(QStringLiteral("ctcp_sound"), ctcpSound_->isChecked());
+    if (minimizeToTray_) out.insert(QStringLiteral("minimize_to_tray"), minimizeToTray_->isChecked());
 
     QVariantMap services = contentServicesFromSettings(out);
     services.insert(QStringLiteral("images"), linkImages_->isChecked());
@@ -430,19 +444,112 @@ void PreferencesDialog::buildAppearanceTab(QWidget* tab) {
 }
 
 void PreferencesDialog::buildNotificationsTab(QWidget* tab) {
-    auto* root = new QVBoxLayout(tab);
-    auto* note = new QLabel(
-        QStringLiteral("Notifications are planned for this port: toast popups, sounds, "
-                       "highlight words, per-channel mute, and Do Not Disturb will move "
-                       "here from the Python app."),
-        tab);
-    note->setWordWrap(true);
-    root->addWidget(note);
-    root->addWidget(plannedCheckBox(tab, QStringLiteral("Toast popups")));
-    root->addWidget(plannedCheckBox(tab, QStringLiteral("Notification sounds")));
-    root->addWidget(plannedCheckBox(tab, QStringLiteral("Highlight words")));
-    root->addWidget(plannedCheckBox(tab, QStringLiteral("Do Not Disturb schedule")));
-    root->addStretch(1);
+    auto* form = new QFormLayout(tab);
+    form->setContentsMargins(12, 12, 12, 12);
+
+    // Do Not Disturb
+    dnd_ = new QCheckBox(tab);
+    dnd_->setChecked(settings_.value(QStringLiteral("dnd"), false).toBool());
+    dnd_->setToolTip(QStringLiteral("Suppress ALL notifications. Also toggleable from the Tools menu and the tray."));
+
+    // Popup style
+    notifyPopup_ = new QComboBox(tab);
+    notifyPopup_->addItem(QStringLiteral("Off"), QStringLiteral("off"));
+    notifyPopup_->addItem(QStringLiteral("Custom toast (in-app)"), QStringLiteral("custom"));
+    notifyPopup_->addItem(QStringLiteral("System / OS native"), QStringLiteral("system"));
+    setComboByData(notifyPopup_, settings_.value(QStringLiteral("notify_popup"), QStringLiteral("custom")).toString());
+
+    // Notify on PMs
+    notifyPm_ = new QCheckBox(tab);
+    notifyPm_->setChecked(settings_.value(QStringLiteral("notify_pm"), true).toBool());
+
+    // Notify on highlights
+    notifyHighlight_ = new QCheckBox(tab);
+    notifyHighlight_->setChecked(settings_.value(QStringLiteral("notify_highlight"), true).toBool());
+
+    // Highlight words
+    highlightWords_ = new QLineEdit(tab);
+    highlightWords_->setText(settings_.value(QStringLiteral("highlight_words")).toString());
+    highlightWords_->setPlaceholderText(QStringLiteral("extra words that highlight you (space/comma-separated)"));
+
+    // Taskbar flash
+    notifyFlash_ = new QCheckBox(tab);
+    notifyFlash_->setChecked(settings_.value(QStringLiteral("notify_flash"), true).toBool());
+
+    // Toast corner
+    notifyCorner_ = new QComboBox(tab);
+    notifyCorner_->addItem(QStringLiteral("Top-left"), QStringLiteral("tl"));
+    notifyCorner_->addItem(QStringLiteral("Top-right"), QStringLiteral("tr"));
+    notifyCorner_->addItem(QStringLiteral("Bottom-left"), QStringLiteral("bl"));
+    notifyCorner_->addItem(QStringLiteral("Bottom-right"), QStringLiteral("br"));
+    setComboByData(notifyCorner_, settings_.value(QStringLiteral("notify_corner"), QStringLiteral("br")).toString());
+
+    // Toast duration
+    notifyDuration_ = new QSpinBox(tab);
+    notifyDuration_->setRange(2, 30);
+    notifyDuration_->setValue(settings_.value(QStringLiteral("notify_duration"), 6).toInt());
+    notifyDuration_->setSuffix(QStringLiteral(" s"));
+
+    // Toast theme
+    notifyTheme_ = new QComboBox(tab);
+    notifyTheme_->addItem(QStringLiteral("Follow app theme"), QStringLiteral("follow"));
+    notifyTheme_->addItem(QStringLiteral("Dark"), QStringLiteral("dark"));
+    notifyTheme_->addItem(QStringLiteral("Light"), QStringLiteral("light"));
+    notifyTheme_->addItem(QStringLiteral("Solarized dark"), QStringLiteral("solar-dark"));
+    notifyTheme_->addItem(QStringLiteral("Solarized light"), QStringLiteral("solar-light"));
+    setComboByData(notifyTheme_, settings_.value(QStringLiteral("notify_theme"), QStringLiteral("follow")).toString());
+
+    // Beep on highlight / PM
+    beepHighlight_ = new QCheckBox(tab);
+    beepHighlight_->setChecked(settings_.value(QStringLiteral("beep_highlight"), false).toBool());
+
+    // Sound on notification
+    notifySound_ = new QCheckBox(tab);
+    notifySound_->setChecked(settings_.value(QStringLiteral("notify_sound"), false).toBool());
+    notifySound_->setToolTip(QStringLiteral(
+        "Play a chime when a notification fires \u2014 a built-in default, or your own "
+        "if you drop a notify.wav in <config>/sounds/."));
+
+    // Play CTCP sounds
+    ctcpSound_ = new QCheckBox(tab);
+    ctcpSound_->setChecked(settings_.value(QStringLiteral("ctcp_sound"), false).toBool());
+    ctcpSound_->setToolTip(QStringLiteral(
+        "Play .wav sounds others send via CTCP SOUND (mIRC/Comic Chat). Drop your own "
+        ".wav files in the 'sounds' folder under your config directory; a sound only "
+        "plays if you have that file."));
+
+    // Minimize to tray
+    minimizeToTray_ = new QCheckBox(tab);
+    minimizeToTray_->setChecked(settings_.value(QStringLiteral("minimize_to_tray"), false).toBool());
+
+    form->addRow(QStringLiteral("Do Not Disturb"), dnd_);
+    form->addRow(QStringLiteral("Popup style"), notifyPopup_);
+    form->addRow(QStringLiteral("Notify on PMs"), notifyPm_);
+    form->addRow(QStringLiteral("Notify on highlights"), notifyHighlight_);
+    form->addRow(QStringLiteral("Highlight words"), highlightWords_);
+    form->addRow(QStringLiteral("Taskbar flash"), notifyFlash_);
+    form->addRow(QStringLiteral("Toast corner"), notifyCorner_);
+    form->addRow(QStringLiteral("Toast duration (s)"), notifyDuration_);
+    form->addRow(QStringLiteral("Toast theme"), notifyTheme_);
+    form->addRow(QStringLiteral("Beep on highlight / PM"), beepHighlight_);
+    form->addRow(QStringLiteral("Sound on notification"), notifySound_);
+    form->addRow(QStringLiteral("Play CTCP sounds"), ctcpSound_);
+    form->addRow(QStringLiteral("Minimize to tray"), minimizeToTray_);
+
+    // Test notification button
+    auto* testBtn = new QPushButton(QStringLiteral("Test notification"), tab);
+    testBtn->setToolTip(QStringLiteral("Preview a toast with the settings selected above (no need to save first)."));
+    connect(testBtn, &QPushButton::clicked, this, &PreferencesDialog::testNotificationRequested);
+    form->addRow(QString(), testBtn);
+
+    // Hint text
+    auto* hint = new QLabel(QStringLiteral(
+        "Alerts fire only when the window isn\u2019t focused (no sounds). "
+        "Tray features need a system tray \u2013 most Linux desktops and "
+        "Windows; not plain Wayland."), tab);
+    hint->setWordWrap(true);
+    hint->setStyleSheet(QStringLiteral("color:#888;"));
+    form->addRow(hint);
 }
 
 void PreferencesDialog::buildComicTab(QWidget* tab) {
