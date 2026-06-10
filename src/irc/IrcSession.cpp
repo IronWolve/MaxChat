@@ -97,6 +97,11 @@ void IrcSession::setIgnoreMasks(const QStringList &masks) {
   }
 }
 
+void IrcSession::setCtcpVersion(bool hide, const QString &custom) {
+  hideVersion_ = hide;
+  ctcpVersion_ = custom.trimmed();
+}
+
 QString IrcSession::nick() const { return nick_; }
 
 bool IrcSession::isRegistered() const { return registered_; }
@@ -345,7 +350,12 @@ void IrcSession::handleLine(const QString &line) {
       if (ctcp.command == QStringLiteral("PING")) {
         response = ctcpBody(QStringLiteral("PING"), ctcp.args);
       } else if (ctcp.command == QStringLiteral("VERSION")) {
-        response = QStringLiteral("VERSION MaxChat C++");
+        // hide_version suppresses the reply; ctcp_version overrides the text.
+        if (!hideVersion_) {
+          response = QStringLiteral("VERSION %1")
+                         .arg(ctcpVersion_.isEmpty() ? QStringLiteral("MaxChat C++")
+                                                     : ctcpVersion_);
+        }
       } else if (ctcp.command == QStringLiteral("TIME")) {
         response =
             ctcpBody(QStringLiteral("TIME"),
@@ -392,8 +402,9 @@ void IrcSession::handleLine(const QString &line) {
 
   if (command == QStringLiteral("INVITE") && params.size() >= 2) {
     const QString sender = msg.nick().isEmpty() ? msg.prefix : msg.nick();
-    emit replyText(QStringLiteral("[invite] %1 invited %2 to %3")
-                       .arg(sender, params.at(0), params.at(1)));
+    // Structured signal so the UI can apply ignore-invites / invite-protect;
+    // the prefix carries the full nick!user@host for masking.
+    emit invited(sender, params.at(1), msg.prefix);
     return;
   }
 

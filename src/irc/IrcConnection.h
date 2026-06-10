@@ -42,6 +42,7 @@ public:
   void connectTo(const ConnectConfig &config);
   void disconnectFromServer();
   void setIgnoreMasks(const QStringList &masks);
+  void setCtcpVersion(bool hide, const QString &custom);
 
   [[nodiscard]] bool isConnected() const;
   [[nodiscard]] QString nick() const;
@@ -64,6 +65,7 @@ signals:
   void systemText(const QString &line);
   void nickChanged(const QString &oldNick, const QString &newNick);
   void awayChanged(const QString &nick, bool away);
+  void invited(const QString &sender, const QString &channel, const QString &mask);
   void userJoined(const QString &channel, const QString &nick);
   void userParted(const QString &channel, const QString &nick,
                   const QString &reason);

@@ -295,6 +295,17 @@ QVariantMap SettingsStore::defaultSettings() {
   settings.insert(QStringLiteral("flood_protect"), false);
   settings.insert(QStringLiteral("flood_msgs"), 10);
   settings.insert(QStringLiteral("flood_secs"), 4);
+  settings.insert(QStringLiteral("scrollback"), 2000);
+  settings.insert(QStringLiteral("auto_rejoin"), false);
+  settings.insert(QStringLiteral("rejoin_delay"), 2);
+  settings.insert(QStringLiteral("auto_away_mins"), 0);
+  settings.insert(QStringLiteral("hide_version"), false);
+  settings.insert(QStringLiteral("ctcp_version"), QString());
+  settings.insert(QStringLiteral("paste_guard"), true);
+  settings.insert(QStringLiteral("paste_lines"), 4);
+  settings.insert(QStringLiteral("ignore_invites"), false);
+  settings.insert(QStringLiteral("invite_protect"), true);
+  settings.insert(QStringLiteral("confirm_quit"), true);
   settings.insert(QStringLiteral("logging"), true);
   settings.insert(QStringLiteral("replay_log"), true);
   settings.insert(QStringLiteral("replay_lines"), 0);
