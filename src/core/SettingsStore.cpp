@@ -305,6 +305,9 @@ QVariantMap SettingsStore::defaultSettings() {
   settings.insert(QStringLiteral("marker_line"), true);
   settings.insert(QStringLiteral("nick_colors"), QVariantMap());
   settings.insert(QStringLiteral("show_input_hint"), true);
+  settings.insert(QStringLiteral("strip_color_copy"), true);
+  settings.insert(QStringLiteral("sort_users_by_status"), true);
+  settings.insert(QStringLiteral("tray_icon"), QStringLiteral("bubble"));
   // Per-area colors; empty = follow the theme.
   settings.insert(QStringLiteral("chat_text_color"), QString());
   settings.insert(QStringLiteral("event_color"), QString());
