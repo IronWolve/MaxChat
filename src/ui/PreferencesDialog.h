@@ -5,6 +5,7 @@
 
 class QCheckBox;
 class QComboBox;
+class QFontComboBox;
 class QLineEdit;
 class QSpinBox;
 
@@ -26,6 +27,8 @@ class PreferencesDialog final : public QDialog {
     void resetServerListRequested();
     void resetAllSettingsRequested();
     void testNotificationRequested();
+    void openComicSettingsRequested();
+    void browseCharactersRequested();
 
   private:
     void setAllFonts(const QString& family, int size, bool bold);
@@ -47,14 +50,14 @@ class PreferencesDialog final : public QDialog {
     QComboBox* theme_ = nullptr;
     QComboBox* chatTheme_ = nullptr;
     QComboBox* wallpaper_ = nullptr;
-    QLineEdit* appFontFamily_ = nullptr;
+    QFontComboBox* appFontFamily_ = nullptr;
     QSpinBox* appFontSize_ = nullptr;
     QCheckBox* appFontBold_ = nullptr;
-    QLineEdit* chatFontFamily_ = nullptr;
+    QFontComboBox* chatFontFamily_ = nullptr;
     QSpinBox* chatFontSize_ = nullptr;
     QCheckBox* chatFontBold_ = nullptr;
     QCheckBox* showTimestamps_ = nullptr;
-    QLineEdit* timestampFormat_ = nullptr;
+    QComboBox* timestampFormat_ = nullptr;
     QCheckBox* wordWrap_ = nullptr;
     QCheckBox* alignNicks_ = nullptr;
     QCheckBox* separatorLine_ = nullptr;
@@ -72,9 +75,18 @@ class PreferencesDialog final : public QDialog {
     QLineEdit* logMask_ = nullptr;
     QSpinBox* replayLines_ = nullptr;
     QCheckBox* inputHint_ = nullptr;
-    QLineEdit* listFontFamily_ = nullptr;
+    QFontComboBox* listFontFamily_ = nullptr;
     QSpinBox* listFontSize_ = nullptr;
     QCheckBox* listFontBold_ = nullptr;
+    QFontComboBox* nickFontFamily_ = nullptr;
+    QSpinBox* nickFontSize_ = nullptr;
+    QCheckBox* nickFontBold_ = nullptr;
+    QFontComboBox* statusFontFamily_ = nullptr;
+    QSpinBox* statusFontSize_ = nullptr;
+    QCheckBox* statusFontBold_ = nullptr;
+    QFontComboBox* topicFontFamily_ = nullptr;
+    QSpinBox* topicFontSize_ = nullptr;
+    QCheckBox* topicFontBold_ = nullptr;
     ColorPick* chatTextColor_ = nullptr;
     ColorPick* eventColor_ = nullptr;
     ColorPick* treeColor_ = nullptr;
@@ -94,16 +106,21 @@ class PreferencesDialog final : public QDialog {
     QCheckBox* pasteGuard_ = nullptr;
     QSpinBox* pasteLines_ = nullptr;
     QCheckBox* autoRejoin_ = nullptr;
-    QSpinBox* rejoinDelay_ = nullptr;
     QCheckBox* ignoreInvites_ = nullptr;
     QCheckBox* inviteProtect_ = nullptr;
     QCheckBox* confirmQuit_ = nullptr;
     QSpinBox* scrollback_ = nullptr;
-    QSpinBox* autoAwayMins_ = nullptr;
     QCheckBox* hideVersion_ = nullptr;
     QLineEdit* ctcpVersion_ = nullptr;
     QCheckBox* loggingEnabled_ = nullptr;
     QCheckBox* replayLogEnabled_ = nullptr;
+    QComboBox* dccAccept_ = nullptr;
+    QLineEdit* dccTrusted_ = nullptr;
+    QCheckBox* dccPassive_ = nullptr;
+    QLineEdit* dccIp_ = nullptr;
+    QSpinBox* dccPortFirst_ = nullptr;
+    QSpinBox* dccPortLast_ = nullptr;
+    QLineEdit* dccDir_ = nullptr;
     QCheckBox* linkImages_ = nullptr;
     QCheckBox* linkMedia_ = nullptr;
     QCheckBox* linkXCards_ = nullptr;

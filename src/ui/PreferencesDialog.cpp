@@ -14,6 +14,8 @@
 #include <QDialogButtonBox>
 #include <QDir>
 #include <QDirIterator>
+#include <QFileDialog>
+#include <QFontComboBox>
 #include <QFontDatabase>
 #include <QFormLayout>
 #include <QLabel>
@@ -23,6 +25,7 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QPushButton>
+#include <QRegularExpression>
 #include <QSpinBox>
 #include <QStackedWidget>
 #include <QVBoxLayout>
@@ -156,7 +159,7 @@ QVariantMap contentServicesFromSettings(const QVariantMap& settings) {
 PreferencesDialog::PreferencesDialog(QVariantMap settings, QWidget* parent)
     : QDialog(parent), settings_(std::move(settings)) {
     setWindowTitle(QStringLiteral("Preferences"));
-    resize(860, 640);
+    resize(1000, 680);
 
     auto* root = new QVBoxLayout(this);
     auto* content = new QHBoxLayout();
@@ -232,13 +235,13 @@ QVariantMap PreferencesDialog::settings() const {
     out.insert(QStringLiteral("theme"), theme_->currentData().toString());
     out.insert(QStringLiteral("chat_theme"), chatTheme_->currentData().toString());
     out.insert(QStringLiteral("wallpaper"), wallpaper_->currentData().toString());
-    out.insert(QStringLiteral("app_font_family"), appFontFamily_->text().trimmed());
+    out.insert(QStringLiteral("app_font_family"), appFontFamily_->currentFont().family());
     out.insert(QStringLiteral("app_font_size"), appFontSize_->value());
     out.insert(QStringLiteral("app_font_bold"), appFontBold_->isChecked());
-    out.insert(QStringLiteral("chat_font_family"), chatFontFamily_->text().trimmed());
+    out.insert(QStringLiteral("chat_font_family"), chatFontFamily_->currentFont().family());
     out.insert(QStringLiteral("chat_font_size"), chatFontSize_->value());
     out.insert(QStringLiteral("chat_font_bold"), chatFontBold_->isChecked());
-    out.insert(QStringLiteral("list_font_family"), listFontFamily_->text().trimmed());
+    out.insert(QStringLiteral("list_font_family"), listFontFamily_->currentFont().family());
     out.insert(QStringLiteral("list_font_size"), listFontSize_->value());
     out.insert(QStringLiteral("list_font_bold"), listFontBold_->isChecked());
     out.insert(QStringLiteral("chat_text_color"), chatTextColor_->value());
@@ -248,17 +251,26 @@ QVariantMap PreferencesDialog::settings() const {
     out.insert(QStringLiteral("nick_label_color"), nickLabelColor_->value());
     out.insert(QStringLiteral("status_text_color"), statusColor_->value());
     out.insert(QStringLiteral("topic_color"), topicColor_->value());
-    out.insert(QStringLiteral("nick_font_family"), chatFontFamily_->text().trimmed());
-    out.insert(QStringLiteral("nick_font_size"), chatFontSize_->value());
-    out.insert(QStringLiteral("nick_font_bold"), chatFontBold_->isChecked());
-    out.insert(QStringLiteral("status_font_family"), appFontFamily_->text().trimmed());
-    out.insert(QStringLiteral("status_font_size"), appFontSize_->value());
-    out.insert(QStringLiteral("status_font_bold"), appFontBold_->isChecked());
-    out.insert(QStringLiteral("topic_font_family"), appFontFamily_->text().trimmed());
-    out.insert(QStringLiteral("topic_font_size"), appFontSize_->value());
-    out.insert(QStringLiteral("topic_font_bold"), appFontBold_->isChecked());
+    out.insert(QStringLiteral("nick_font_family"), nickFontFamily_->currentFont().family());
+    out.insert(QStringLiteral("nick_font_size"), nickFontSize_->value());
+    out.insert(QStringLiteral("nick_font_bold"), nickFontBold_->isChecked());
+    out.insert(QStringLiteral("status_font_family"), statusFontFamily_->currentFont().family());
+    out.insert(QStringLiteral("status_font_size"), statusFontSize_->value());
+    out.insert(QStringLiteral("status_font_bold"), statusFontBold_->isChecked());
+    out.insert(QStringLiteral("topic_font_family"), topicFontFamily_->currentFont().family());
+    out.insert(QStringLiteral("topic_font_size"), topicFontSize_->value());
+    out.insert(QStringLiteral("topic_font_bold"), topicFontBold_->isChecked());
     out.insert(QStringLiteral("show_timestamps"), showTimestamps_->isChecked());
-    out.insert(QStringLiteral("timestamp_format"), timestampFormat_->text().trimmed());
+    {
+        // Prefer the preset's strftime data; fall back to typed custom text.
+        const int idx = timestampFormat_->currentIndex();
+        const QString typed = timestampFormat_->currentText().trimmed();
+        QString fmt = typed.isEmpty() ? QStringLiteral("%I:%M %p") : typed;
+        if (idx >= 0 && timestampFormat_->itemText(idx) == typed) {
+            fmt = timestampFormat_->itemData(idx).toString();
+        }
+        out.insert(QStringLiteral("timestamp_format"), fmt);
+    }
     out.insert(QStringLiteral("word_wrap"), wordWrap_->isChecked());
     out.insert(QStringLiteral("align_nicks"), alignNicks_->isChecked());
     out.insert(QStringLiteral("separator_line"), separatorLine_->isChecked());
@@ -270,11 +282,13 @@ QVariantMap PreferencesDialog::settings() const {
     out.insert(QStringLiteral("marker_line"), markerLine_->isChecked());
     out.insert(QStringLiteral("show_mode"), showMode_->isChecked());
     out.insert(QStringLiteral("pm_echo"), pmEcho_->isChecked());
-    out.insert(QStringLiteral("log_mask"), logMask_->text().trimmed());
+    out.insert(QStringLiteral("log_mask"), logMask_->text().trimmed().isEmpty()
+                                               ? QStringLiteral("%network-%channel")
+                                               : logMask_->text().trimmed());
     out.insert(QStringLiteral("replay_lines"), replayLines_->value());
     out.insert(QStringLiteral("show_input_hint"), inputHint_->isChecked());
     out.insert(QStringLiteral("strip_color_copy"), stripColorCopy_->isChecked());
-    out.insert(QStringLiteral("sort_users_by_status"), sortByStatus_->isChecked());
+    out.insert(QStringLiteral("sort_status"), sortByStatus_->isChecked());
     out.insert(QStringLiteral("tray_icon"), trayIcon_->currentData().toString());
     out.insert(QStringLiteral("server_list_visible"), serverListVisible_->isChecked());
     out.insert(QStringLiteral("member_list_visible"), memberListVisible_->isChecked());
@@ -288,16 +302,23 @@ QVariantMap PreferencesDialog::settings() const {
     out.insert(QStringLiteral("paste_guard"), pasteGuard_->isChecked());
     out.insert(QStringLiteral("paste_lines"), pasteLines_->value());
     out.insert(QStringLiteral("auto_rejoin"), autoRejoin_->isChecked());
-    out.insert(QStringLiteral("rejoin_delay"), rejoinDelay_->value());
     out.insert(QStringLiteral("ignore_invites"), ignoreInvites_->isChecked());
     out.insert(QStringLiteral("invite_protect"), inviteProtect_->isChecked());
     out.insert(QStringLiteral("confirm_quit"), confirmQuit_->isChecked());
     out.insert(QStringLiteral("scrollback"), scrollback_->value());
-    out.insert(QStringLiteral("auto_away_mins"), autoAwayMins_->value());
     out.insert(QStringLiteral("hide_version"), hideVersion_->isChecked());
     out.insert(QStringLiteral("ctcp_version"), ctcpVersion_->text().trimmed());
     out.insert(QStringLiteral("logging"), loggingEnabled_->isChecked());
     out.insert(QStringLiteral("replay_log"), replayLogEnabled_->isChecked());
+    out.insert(QStringLiteral("dcc_accept"), dccAccept_->currentData().toString());
+    out.insert(QStringLiteral("dcc_trusted"),
+               dccTrusted_->text().toLower().split(QRegularExpression(QStringLiteral("[,\\s]+")),
+                                                   Qt::SkipEmptyParts));
+    out.insert(QStringLiteral("dcc_passive"), dccPassive_->isChecked());
+    out.insert(QStringLiteral("dcc_ip"), dccIp_->text().trimmed());
+    out.insert(QStringLiteral("dcc_port_first"), dccPortFirst_->value());
+    out.insert(QStringLiteral("dcc_port_last"), dccPortLast_->value());
+    out.insert(QStringLiteral("dcc_dir"), dccDir_->text().trimmed());
     out.insert(QStringLiteral("interface_language"), interfaceLanguage_->currentData().toString());
     out.insert(QStringLiteral("spellcheck_enabled"), spellcheckEnabled_->isChecked());
     out.insert(QStringLiteral("spell_language"), spellLanguage_->currentData().toString());
@@ -346,16 +367,24 @@ void PreferencesDialog::refillThemeCombo(QComboBox* combo, const bool chat,
 }
 
 void PreferencesDialog::setAllFonts(const QString& family, int size, bool bold) {
-    appFontFamily_->setText(family);
-    chatFontFamily_->setText(family);
-    appFontSize_->setValue(size);
-    chatFontSize_->setValue(size);
-    appFontBold_->setChecked(bold);
-    chatFontBold_->setChecked(bold);
-    if (listFontFamily_ != nullptr) {
-        listFontFamily_->setText(family);
-        listFontSize_->setValue(size);
-        listFontBold_->setChecked(bold);
+    const QFont font(family);
+    for (QFontComboBox* combo : {appFontFamily_, chatFontFamily_, listFontFamily_,
+                                 nickFontFamily_, statusFontFamily_, topicFontFamily_}) {
+        if (combo != nullptr) {
+            combo->setCurrentFont(font);
+        }
+    }
+    for (QSpinBox* spin : {appFontSize_, chatFontSize_, listFontSize_, nickFontSize_,
+                           statusFontSize_, topicFontSize_}) {
+        if (spin != nullptr) {
+            spin->setValue(size);
+        }
+    }
+    for (QCheckBox* boldBox : {appFontBold_, chatFontBold_, listFontBold_, nickFontBold_,
+                               statusFontBold_, topicFontBold_}) {
+        if (boldBox != nullptr) {
+            boldBox->setChecked(bold);
+        }
     }
 }
 
@@ -374,10 +403,30 @@ void PreferencesDialog::buildAppearanceTab(QWidget* tab) {
     showTimestamps_ = new QCheckBox(QString(), tab);
     showTimestamps_->setObjectName(QStringLiteral("showTimestamps"));
     showTimestamps_->setChecked(settings_.value(QStringLiteral("show_timestamps")).toBool());
-    timestampFormat_ = new QLineEdit(
-        settings_.value(QStringLiteral("timestamp_format"), QStringLiteral("%I:%M %p")).toString(),
-        tab);
+    timestampFormat_ = new QComboBox(tab);
     timestampFormat_->setObjectName(QStringLiteral("timestampFormat"));
+    timestampFormat_->setEditable(true);
+    const QList<QPair<QString, QString>> clockPresets = {
+        {QStringLiteral("3:45 PM"), QStringLiteral("%I:%M %p")},
+        {QStringLiteral("3:45:09 PM"), QStringLiteral("%I:%M:%S %p")},
+        {QStringLiteral("[3:45 PM]"), QStringLiteral("[%I:%M %p]")},
+        {QStringLiteral("15:45"), QStringLiteral("%H:%M")},
+        {QStringLiteral("15:45:09"), QStringLiteral("%H:%M:%S")},
+        {QStringLiteral("[15:45]"), QStringLiteral("[%H:%M]")},
+        {QStringLiteral("[2026-06-06 3:45 PM]"), QStringLiteral("[%Y-%m-%d %I:%M %p]")},
+        {QStringLiteral("[2026-06-06 15:45]"), QStringLiteral("[%Y-%m-%d %H:%M]")},
+    };
+    for (const auto& preset : clockPresets) {
+        timestampFormat_->addItem(preset.first, preset.second);
+    }
+    const QString currentFmt =
+        settings_.value(QStringLiteral("timestamp_format"), QStringLiteral("%I:%M %p")).toString();
+    int fmtIndex = timestampFormat_->findData(currentFmt);
+    if (fmtIndex >= 0) {
+        timestampFormat_->setCurrentIndex(fmtIndex);
+    } else {
+        timestampFormat_->setEditText(currentFmt);
+    }
     timestampForm->addRow(QStringLiteral("Show timestamps"), showTimestamps_);
     timestampForm->addRow(QStringLiteral("Clock / format"), timestampFormat_);
     leftColumn->addWidget(timestampBox);
@@ -392,8 +441,7 @@ void PreferencesDialog::buildAppearanceTab(QWidget* tab) {
     alignNicks_->setChecked(settings_.value(QStringLiteral("align_nicks")).toBool());
     nickWidth_ = new QSpinBox(tab);
     nickWidth_->setObjectName(QStringLiteral("nickWidth"));
-    nickWidth_->setRange(4, 40);
-    nickWidth_->setSuffix(QStringLiteral(" chars"));
+    nickWidth_->setRange(4, 24);
     nickWidth_->setValue(settings_.value(QStringLiteral("nick_width"), 16).toInt());
     separatorLine_ = new QCheckBox(QString(), tab);
     separatorLine_->setObjectName(QStringLiteral("separatorLine"));
@@ -406,39 +454,27 @@ void PreferencesDialog::buildAppearanceTab(QWidget* tab) {
     leftColumn->addStretch(1);
 
     auto* textBox = new QGroupBox(QStringLiteral("Text"), tab);
-    auto* textForm = new QVBoxLayout(textBox);
-    showFormatting_ = new QCheckBox(QStringLiteral("Show colors && formatting"), tab);
+    auto* textForm = new QFormLayout(textBox);
+    showFormatting_ = new QCheckBox(QString(), tab);
     showFormatting_->setObjectName(QStringLiteral("showFormatting"));
     showFormatting_->setChecked(settings_.value(QStringLiteral("show_formatting"), true).toBool());
-    wordWrap_ = new QCheckBox(QStringLiteral("Word wrap"), tab);
+    wordWrap_ = new QCheckBox(QString(), tab);
     wordWrap_->setObjectName(QStringLiteral("wordWrap"));
     wordWrap_->setChecked(settings_.value(QStringLiteral("word_wrap")).toBool());
-    indentWrap_ = new QCheckBox(QStringLiteral("Indent wrapped lines"), tab);
+    indentWrap_ = new QCheckBox(QString(), tab);
     indentWrap_->setObjectName(QStringLiteral("indentWrap"));
     indentWrap_->setChecked(settings_.value(QStringLiteral("indent_wrap"), true).toBool());
-    stripColorCopy_ = new QCheckBox(QStringLiteral("Strip colors on copy"), tab);
+    stripColorCopy_ = new QCheckBox(QString(), tab);
     stripColorCopy_->setObjectName(QStringLiteral("stripColorCopy"));
     stripColorCopy_->setChecked(settings_.value(QStringLiteral("strip_color_copy"), true).toBool());
-    textForm->addWidget(showFormatting_);
-    textForm->addWidget(wordWrap_);
-    textForm->addWidget(indentWrap_);
-    textForm->addWidget(stripColorCopy_);
+    textForm->addRow(QStringLiteral("Show colors && formatting"), showFormatting_);
+    textForm->addRow(QStringLiteral("Word wrap"), wordWrap_);
+    textForm->addRow(QStringLiteral("Indent wrapped lines"), indentWrap_);
+    textForm->addRow(QStringLiteral("Strip colors on copy"), stripColorCopy_);
     rightColumn->addWidget(textBox);
 
     auto* windowBox = new QGroupBox(QStringLiteral("Window"), tab);
     auto* windowForm = new QFormLayout(windowBox);
-    markerLine_ = new QCheckBox(QStringLiteral("Unread marker line"), tab);
-    markerLine_->setObjectName(QStringLiteral("markerLine"));
-    markerLine_->setChecked(settings_.value(QStringLiteral("marker_line"), true).toBool());
-    windowForm->addRow(QString(), markerLine_);
-    inputHint_ = new QCheckBox(QStringLiteral("Message-box hint text"), tab);
-    inputHint_->setObjectName(QStringLiteral("inputHint"));
-    inputHint_->setChecked(settings_.value(QStringLiteral("show_input_hint"), true).toBool());
-    windowForm->addRow(QString(), inputHint_);
-    sortByStatus_ = new QCheckBox(QStringLiteral("Sort users by status"), tab);
-    sortByStatus_->setObjectName(QStringLiteral("sortByStatus"));
-    sortByStatus_->setChecked(settings_.value(QStringLiteral("sort_users_by_status"), true).toBool());
-    windowForm->addRow(QString(), sortByStatus_);
     trayIcon_ = new QComboBox(tab);
     trayIcon_->setObjectName(QStringLiteral("trayIcon"));
     const QColor iconAccent = appThemeById(
@@ -447,6 +483,7 @@ void PreferencesDialog::buildAppearanceTab(QWidget* tab) {
         {QStringLiteral("bubble"), QStringLiteral("Speech bubble (theme color)")},
         {QString::fromUtf8("\xF0\x9F\x92\xAC"), QStringLiteral("Speech balloon")},
         {QString::fromUtf8("\xF0\x9F\x92\xAD"), QStringLiteral("Thought bubble")},
+        {QString::fromUtf8("\xF0\x9F\x97\xA8\xEF\xB8\x8F"), QStringLiteral("Left speech bubble")},
         {QString::fromUtf8("\xF0\x9F\x98\x80"), QStringLiteral("Smiley")},
         {QString::fromUtf8("\xF0\x9F\x98\x8E"), QStringLiteral("Cool shades")},
         {QString::fromUtf8("\xF0\x9F\xA4\x96"), QStringLiteral("Robot")},
@@ -462,7 +499,24 @@ void PreferencesDialog::buildAppearanceTab(QWidget* tab) {
     }
     setComboByData(trayIcon_,
                    settings_.value(QStringLiteral("tray_icon"), QStringLiteral("bubble")).toString());
+    buttonBarVisible_ = new QCheckBox(QString(), tab);
+    buttonBarVisible_->setObjectName(QStringLiteral("buttonBarVisible"));
+    buttonBarVisible_->setChecked(
+        settings_.value(QStringLiteral("show_button_bar"), false).toBool());
+    inputHint_ = new QCheckBox(QString(), tab);
+    inputHint_->setObjectName(QStringLiteral("inputHint"));
+    inputHint_->setChecked(settings_.value(QStringLiteral("show_input_hint"), true).toBool());
+    markerLine_ = new QCheckBox(QString(), tab);
+    markerLine_->setObjectName(QStringLiteral("markerLine"));
+    markerLine_->setChecked(settings_.value(QStringLiteral("marker_line"), true).toBool());
+    sortByStatus_ = new QCheckBox(QString(), tab);
+    sortByStatus_->setObjectName(QStringLiteral("sortByStatus"));
+    sortByStatus_->setChecked(settings_.value(QStringLiteral("sort_status"), true).toBool());
     windowForm->addRow(QStringLiteral("Window / tray icon"), trayIcon_);
+    windowForm->addRow(QStringLiteral("Show button bar"), buttonBarVisible_);
+    windowForm->addRow(QStringLiteral("Message-box hint text"), inputHint_);
+    windowForm->addRow(QStringLiteral("Unread marker line"), markerLine_);
+    windowForm->addRow(QStringLiteral("Sort users by status"), sortByStatus_);
     rightColumn->addWidget(windowBox);
     rightColumn->addStretch(1);
 }
@@ -579,92 +633,151 @@ void PreferencesDialog::buildNotificationsTab(QWidget* tab) {
 void PreferencesDialog::buildComicTab(QWidget* tab) {
     auto* root = new QVBoxLayout(tab);
     auto* note = new QLabel(
-        QStringLiteral("Comic Mode is planned for this port. Character, emotion, and "
-                       "panel options will move here from the Python app."),
+        QStringLiteral("Comic Mode draws the chat as comic panels. Point it at your own comic "
+                       "art folder and tune characters, backgrounds, and filtering in Comic "
+                       "Settings."),
         tab);
     note->setWordWrap(true);
     root->addWidget(note);
-    root->addWidget(plannedCheckBox(tab, QStringLiteral("Comic Mode")));
-    root->addWidget(plannedCheckBox(tab, QStringLiteral("Character picker")));
-    root->addWidget(plannedCheckBox(tab, QStringLiteral("Comic name labels")));
+
+    auto* buttons = new QHBoxLayout();
+    auto* openSettings = new QPushButton(QStringLiteral("Open Comic Settings..."), tab);
+    openSettings->setObjectName(QStringLiteral("openComicSettings"));
+    auto* browseChars = new QPushButton(QStringLiteral("Browse characters..."), tab);
+    browseChars->setObjectName(QStringLiteral("browseCharacters"));
+    buttons->addWidget(openSettings);
+    buttons->addWidget(browseChars);
+    buttons->addStretch(1);
+    root->addLayout(buttons);
     root->addStretch(1);
+
+    connect(openSettings, &QPushButton::clicked, this,
+            &PreferencesDialog::openComicSettingsRequested);
+    connect(browseChars, &QPushButton::clicked, this,
+            &PreferencesDialog::browseCharactersRequested);
 }
 
 void PreferencesDialog::buildFontsTab(QWidget* tab) {
     auto* root = new QVBoxLayout(tab);
-    auto* form = new QFormLayout();
 
-    appFontFamily_ =
-        new QLineEdit(settings_.value(QStringLiteral("app_font_family")).toString(), tab);
-    appFontFamily_->setObjectName(QStringLiteral("appFontFamily"));
-    appFontSize_ = fontSizeSpinBox(tab, settings_.value(QStringLiteral("app_font_size")).toInt());
-    appFontSize_->setObjectName(QStringLiteral("appFontSize"));
-    appFontBold_ = new QCheckBox(QStringLiteral("Bold"), tab);
-    appFontBold_->setObjectName(QStringLiteral("appFontBold"));
-    appFontBold_->setChecked(settings_.value(QStringLiteral("app_font_bold")).toBool());
+    auto* presetRow = new QHBoxLayout();
+    auto* jetbrains = new QPushButton(QStringLiteral("Set all to JetBrains Mono"), tab);
+    jetbrains->setObjectName(QStringLiteral("setAllJetBrains"));
+    auto* system = new QPushButton(QStringLiteral("Set all to System Default"), tab);
+    system->setObjectName(QStringLiteral("setAllSystem"));
+    system->setToolTip(QStringLiteral("Uses the system UI font for chrome and the system "
+                                      "fixed-width font for chat alignment."));
+    presetRow->addWidget(jetbrains);
+    presetRow->addWidget(system);
+    presetRow->addStretch(1);
+    root->addLayout(presetRow);
 
-    chatFontFamily_ =
-        new QLineEdit(settings_.value(QStringLiteral("chat_font_family")).toString(), tab);
-    chatFontFamily_->setObjectName(QStringLiteral("chatFontFamily"));
-    chatFontSize_ = fontSizeSpinBox(tab, settings_.value(QStringLiteral("chat_font_size")).toInt());
-    chatFontSize_->setObjectName(QStringLiteral("chatFontSize"));
-    chatFontBold_ = new QCheckBox(QStringLiteral("Bold"), tab);
-    chatFontBold_->setObjectName(QStringLiteral("chatFontBold"));
-    chatFontBold_->setChecked(settings_.value(QStringLiteral("chat_font_bold")).toBool());
+    const auto makeFontGroup = [this, tab](const QString& title, const QString& familyKey,
+                                           const QString& sizeKey, const QString& boldKey,
+                                           QFontComboBox*& familyOut, QSpinBox*& sizeOut,
+                                           QCheckBox*& boldOut) -> QGroupBox* {
+        auto* box = new QGroupBox(title, tab);
+        auto* form = new QFormLayout(box);
+        familyOut = new QFontComboBox(box);
+        const QString family =
+            settings_.value(familyKey, QStringLiteral("JetBrains Mono")).toString();
+        familyOut->setCurrentFont(QFont(family.isEmpty() ? QStringLiteral("JetBrains Mono")
+                                                         : family));
+        sizeOut = new QSpinBox(box);
+        sizeOut->setRange(6, 48);
+        const int size = settings_.value(sizeKey, 14).toInt();
+        sizeOut->setValue(size > 0 ? size : 14);
+        boldOut = new QCheckBox(QStringLiteral("Bold"), box);
+        boldOut->setChecked(settings_.value(boldKey, true).toBool());
+        auto* sizeRow = new QWidget(box);
+        auto* sizeLayout = new QHBoxLayout(sizeRow);
+        sizeLayout->setContentsMargins(0, 0, 0, 0);
+        sizeLayout->addWidget(sizeOut);
+        sizeLayout->addWidget(boldOut);
+        sizeLayout->addStretch(1);
+        form->addRow(QStringLiteral("Font"), familyOut);
+        form->addRow(QStringLiteral("Size"), sizeRow);
+        return box;
+    };
 
-    listFontFamily_ =
-        new QLineEdit(settings_.value(QStringLiteral("list_font_family")).toString(), tab);
-    listFontFamily_->setObjectName(QStringLiteral("listFontFamily"));
-    listFontSize_ = fontSizeSpinBox(tab, settings_.value(QStringLiteral("list_font_size")).toInt());
-    listFontSize_->setObjectName(QStringLiteral("listFontSize"));
-    listFontBold_ = new QCheckBox(QStringLiteral("Bold"), tab);
-    listFontBold_->setObjectName(QStringLiteral("listFontBold"));
-    listFontBold_->setChecked(settings_.value(QStringLiteral("list_font_bold")).toBool());
+    auto* columns = new QHBoxLayout();
+    auto* leftColumn = new QVBoxLayout();
+    auto* rightColumn = new QVBoxLayout();
+    columns->addLayout(leftColumn);
+    columns->addLayout(rightColumn);
+    root->addLayout(columns);
 
+    // Chat - the message view + input (font + text/event colors)
+    auto* chatBox = makeFontGroup(QString::fromUtf8("Chat  \xC2\xB7  the message view + input"),
+                                  QStringLiteral("chat_font_family"),
+                                  QStringLiteral("chat_font_size"),
+                                  QStringLiteral("chat_font_bold"), chatFontFamily_,
+                                  chatFontSize_, chatFontBold_);
+    auto* chatForm = qobject_cast<QFormLayout*>(chatBox->layout());
     chatTextColor_ =
         new ColorPick(settings_.value(QStringLiteral("chat_text_color")).toString(), tab);
     eventColor_ = new ColorPick(settings_.value(QStringLiteral("event_color")).toString(), tab);
+    chatForm->addRow(QStringLiteral("Text color"), chatTextColor_);
+    chatForm->addRow(QStringLiteral("Event lines"), eventColor_);
+    leftColumn->addWidget(chatBox);
+
+    auto* appBox = makeFontGroup(QString::fromUtf8("App  \xC2\xB7  window / menus / chrome"),
+                                 QStringLiteral("app_font_family"),
+                                 QStringLiteral("app_font_size"), QStringLiteral("app_font_bold"),
+                                 appFontFamily_, appFontSize_, appFontBold_);
+    leftColumn->addWidget(appBox);
+
+    auto* listBox = makeFontGroup(QStringLiteral("Channel + user list"),
+                                  QStringLiteral("list_font_family"),
+                                  QStringLiteral("list_font_size"),
+                                  QStringLiteral("list_font_bold"), listFontFamily_,
+                                  listFontSize_, listFontBold_);
+    auto* listForm = qobject_cast<QFormLayout*>(listBox->layout());
     treeColor_ = new ColorPick(settings_.value(QStringLiteral("tree_color")).toString(), tab);
     userlistColor_ =
         new ColorPick(settings_.value(QStringLiteral("userlist_color")).toString(), tab);
+    listForm->addRow(QStringLiteral("Tree color"), treeColor_);
+    listForm->addRow(QStringLiteral("Users color"), userlistColor_);
+    leftColumn->addWidget(listBox);
+    leftColumn->addStretch(1);
+
+    auto* nickBox = makeFontGroup(QString::fromUtf8("Your nick  \xC2\xB7  beside the input"),
+                                  QStringLiteral("nick_font_family"),
+                                  QStringLiteral("nick_font_size"),
+                                  QStringLiteral("nick_font_bold"), nickFontFamily_,
+                                  nickFontSize_, nickFontBold_);
+    auto* nickForm = qobject_cast<QFormLayout*>(nickBox->layout());
     nickLabelColor_ =
         new ColorPick(settings_.value(QStringLiteral("nick_label_color")).toString(), tab);
+    nickForm->addRow(QStringLiteral("Color"), nickLabelColor_);
+    rightColumn->addWidget(nickBox);
+
+    auto* statusBox = makeFontGroup(QStringLiteral("Status bar"),
+                                    QStringLiteral("status_font_family"),
+                                    QStringLiteral("status_font_size"),
+                                    QStringLiteral("status_font_bold"), statusFontFamily_,
+                                    statusFontSize_, statusFontBold_);
+    auto* statusForm = qobject_cast<QFormLayout*>(statusBox->layout());
     statusColor_ =
         new ColorPick(settings_.value(QStringLiteral("status_text_color")).toString(), tab);
+    statusForm->addRow(QStringLiteral("Color"), statusColor_);
+    rightColumn->addWidget(statusBox);
+
+    auto* topicBox = makeFontGroup(QStringLiteral("Channel topic"),
+                                   QStringLiteral("topic_font_family"),
+                                   QStringLiteral("topic_font_size"),
+                                   QStringLiteral("topic_font_bold"), topicFontFamily_,
+                                   topicFontSize_, topicFontBold_);
+    auto* topicForm = qobject_cast<QFormLayout*>(topicBox->layout());
     topicColor_ = new ColorPick(settings_.value(QStringLiteral("topic_color")).toString(), tab);
-
-    form->addRow(QStringLiteral("App Font"), appFontFamily_);
-    form->addRow(QStringLiteral("App Size"), appFontSize_);
-    form->addRow(QString(), appFontBold_);
-    form->addRow(QStringLiteral("Chat Font"), chatFontFamily_);
-    form->addRow(QStringLiteral("Chat Size"), chatFontSize_);
-    form->addRow(QString(), chatFontBold_);
-    form->addRow(QStringLiteral("Chat Text Color"), chatTextColor_);
-    form->addRow(QStringLiteral("Event Lines Color"), eventColor_);
-    form->addRow(QStringLiteral("List Font"), listFontFamily_);
-    form->addRow(QStringLiteral("List Size"), listFontSize_);
-    form->addRow(QString(), listFontBold_);
-    form->addRow(QStringLiteral("Tree Color"), treeColor_);
-    form->addRow(QStringLiteral("Users Color"), userlistColor_);
-    form->addRow(QStringLiteral("Nick Label Color"), nickLabelColor_);
-    form->addRow(QStringLiteral("Status Bar Color"), statusColor_);
-    form->addRow(QStringLiteral("Topic Color"), topicColor_);
-    root->addLayout(form);
-
-    auto* fontButtons = new QHBoxLayout();
-    auto* jetbrains = new QPushButton(QStringLiteral("Set All to JetBrains Mono"), tab);
-    jetbrains->setObjectName(QStringLiteral("setAllJetBrains"));
-    auto* system = new QPushButton(QStringLiteral("System Default"), tab);
-    system->setObjectName(QStringLiteral("setAllSystem"));
-    fontButtons->addWidget(jetbrains);
-    fontButtons->addWidget(system);
-    fontButtons->addStretch(1);
-    root->addLayout(fontButtons);
+    topicForm->addRow(QStringLiteral("Color"), topicColor_);
+    rightColumn->addWidget(topicBox);
+    rightColumn->addStretch(1);
 
     auto* note = new QLabel(
-        QStringLiteral("Per-area fonts and colors (channel tree, user list, nick label, "
-                       "status bar, topic) are planned and will move here from the "
-                       "Python app."),
+        QStringLiteral("Each area has its own font, size, bold and color. \"Pick\" sets a custom "
+                       "color; \"Default\" returns to the theme. App chrome color follows the "
+                       "theme (Themes > Customize)."),
         tab);
     note->setWordWrap(true);
     root->addWidget(note);
@@ -673,9 +786,27 @@ void PreferencesDialog::buildFontsTab(QWidget* tab) {
     connect(jetbrains, &QPushButton::clicked, this,
             [this]() { setAllFonts(QStringLiteral("JetBrains Mono"), 14, true); });
     connect(system, &QPushButton::clicked, this, [this]() {
-        const QFont systemFont = QFontDatabase::systemFont(QFontDatabase::GeneralFont);
-        setAllFonts(systemFont.family(), systemFont.pointSize() > 0 ? systemFont.pointSize() : 10,
-                    false);
+        const QFont uiFont = QFontDatabase::systemFont(QFontDatabase::GeneralFont);
+        const QFont fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+        const int uiSize = uiFont.pointSize() > 0 ? uiFont.pointSize() : 10;
+        const int fixedSize = fixedFont.pointSize() > 0 ? fixedFont.pointSize() : uiSize;
+        // Chat + list use the fixed-width font (alignment); chrome areas the UI font.
+        chatFontFamily_->setCurrentFont(fixedFont);
+        chatFontSize_->setValue(fixedSize);
+        chatFontBold_->setChecked(false);
+        listFontFamily_->setCurrentFont(fixedFont);
+        listFontSize_->setValue(fixedSize);
+        listFontBold_->setChecked(false);
+        for (QFontComboBox* combo : {appFontFamily_, nickFontFamily_, statusFontFamily_,
+                                     topicFontFamily_}) {
+            combo->setCurrentFont(uiFont);
+        }
+        for (QSpinBox* spin : {appFontSize_, nickFontSize_, statusFontSize_, topicFontSize_}) {
+            spin->setValue(uiSize);
+        }
+        for (QCheckBox* bold : {appFontBold_, nickFontBold_, statusFontBold_, topicFontBold_}) {
+            bold->setChecked(false);
+        }
     });
 }
 
@@ -760,18 +891,68 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
 
 void PreferencesDialog::buildMessagesTab(QWidget* tab) {
     auto* root = new QVBoxLayout(tab);
-    hideJoinPart_ = new QCheckBox(QStringLiteral("Hide joins, parts, and quits"), tab);
+    auto* form = new QFormLayout();
+
+    hideJoinPart_ = new QCheckBox(QString(), tab);
     hideJoinPart_->setObjectName(QStringLiteral("hideJoinPart"));
     hideJoinPart_->setChecked(settings_.value(QStringLiteral("hide_joinpart")).toBool());
-    root->addWidget(hideJoinPart_);
-    showMode_ = new QCheckBox(QStringLiteral("Show mode changes"), tab);
+    showMode_ = new QCheckBox(QString(), tab);
     showMode_->setObjectName(QStringLiteral("showMode"));
     showMode_->setChecked(settings_.value(QStringLiteral("show_mode"), true).toBool());
-    root->addWidget(showMode_);
-    pmEcho_ = new QCheckBox(QStringLiteral("Echo private messages you send"), tab);
+    pmEcho_ = new QCheckBox(QString(), tab);
     pmEcho_->setObjectName(QStringLiteral("pmEcho"));
     pmEcho_->setChecked(settings_.value(QStringLiteral("pm_echo"), true).toBool());
-    root->addWidget(pmEcho_);
+    loggingEnabled_ = new QCheckBox(QString(), tab);
+    loggingEnabled_->setObjectName(QStringLiteral("loggingEnabled"));
+    loggingEnabled_->setChecked(settings_.value(QStringLiteral("logging"), true).toBool());
+    logMask_ = new QLineEdit(settings_.value(QStringLiteral("log_mask")).toString(), tab);
+    logMask_->setObjectName(QStringLiteral("logMask"));
+    logMask_->setPlaceholderText(
+        QStringLiteral("%network-%channel  (+ strftime: %Y %m %d; / = subfolder)"));
+    replayLogEnabled_ = new QCheckBox(QString(), tab);
+    replayLogEnabled_->setObjectName(QStringLiteral("replayLogEnabled"));
+    replayLogEnabled_->setChecked(settings_.value(QStringLiteral("replay_log"), true).toBool());
+    replayLines_ = new QSpinBox(tab);
+    replayLines_->setObjectName(QStringLiteral("replayLines"));
+    replayLines_->setRange(0, 1000);
+    replayLines_->setSpecialValueText(QStringLiteral("all"));
+    replayLines_->setValue(settings_.value(QStringLiteral("replay_lines"), 0).toInt());
+    autoReconnect_ = new QCheckBox(QString(), tab);
+    autoReconnect_->setObjectName(QStringLiteral("autoReconnect"));
+    autoReconnect_->setChecked(settings_.value(QStringLiteral("auto_reconnect"), true).toBool());
+    autoRejoin_ = new QCheckBox(QString(), tab);
+    autoRejoin_->setObjectName(QStringLiteral("autoRejoin"));
+    autoRejoin_->setChecked(settings_.value(QStringLiteral("auto_rejoin"), false).toBool());
+    hideVersion_ = new QCheckBox(QString(), tab);
+    hideVersion_->setObjectName(QStringLiteral("hideVersion"));
+    hideVersion_->setChecked(settings_.value(QStringLiteral("hide_version"), false).toBool());
+    ctcpVersion_ = new QLineEdit(settings_.value(QStringLiteral("ctcp_version")).toString(), tab);
+    ctcpVersion_->setObjectName(QStringLiteral("ctcpVersion"));
+    ctcpVersion_->setPlaceholderText(
+        QStringLiteral("custom CTCP VERSION reply (blank = MaxChat <version>)"));
+    confirmQuit_ = new QCheckBox(QString(), tab);
+    confirmQuit_->setObjectName(QStringLiteral("confirmQuit"));
+    confirmQuit_->setChecked(settings_.value(QStringLiteral("confirm_quit"), true).toBool());
+    scrollback_ = new QSpinBox(tab);
+    scrollback_->setObjectName(QStringLiteral("scrollback"));
+    scrollback_->setRange(100, 100000);
+    scrollback_->setSingleStep(100);
+    scrollback_->setValue(settings_.value(QStringLiteral("scrollback"), 2000).toInt());
+
+    form->addRow(QStringLiteral("Hide join / part / quit"), hideJoinPart_);
+    form->addRow(QStringLiteral("Show mode changes"), showMode_);
+    form->addRow(QStringLiteral("Private msgs in server tab && chat"), pmEcho_);
+    form->addRow(QStringLiteral("Log conversations to disk"), loggingEnabled_);
+    form->addRow(QStringLiteral("Log filename mask"), logMask_);
+    form->addRow(QStringLiteral("Replay last log on open"), replayLogEnabled_);
+    form->addRow(QStringLiteral("Lines to replay"), replayLines_);
+    form->addRow(QStringLiteral("Auto-reconnect on disconnect"), autoReconnect_);
+    form->addRow(QStringLiteral("Auto-rejoin after kick"), autoRejoin_);
+    form->addRow(QStringLiteral("Hide CTCP VERSION replies"), hideVersion_);
+    form->addRow(QStringLiteral("Custom CTCP VERSION"), ctcpVersion_);
+    form->addRow(QStringLiteral("Confirm before quitting"), confirmQuit_);
+    form->addRow(QStringLiteral("Scrollback (lines)"), scrollback_);
+    root->addLayout(form);
     root->addStretch(1);
 }
 
@@ -788,11 +969,6 @@ void PreferencesDialog::buildLayoutTab(QWidget* tab) {
     memberListVisible_->setChecked(
         settings_.value(QStringLiteral("member_list_visible"), true).toBool());
 
-    buttonBarVisible_ = new QCheckBox(QStringLiteral("Show button bar on startup"), tab);
-    buttonBarVisible_->setObjectName(QStringLiteral("buttonBarVisible"));
-    buttonBarVisible_->setChecked(
-        settings_.value(QStringLiteral("show_button_bar"), true).toBool());
-
     buttonsAsTabs_ = new QCheckBox(QStringLiteral("Show buttons as tabs on startup"), tab);
     buttonsAsTabs_->setObjectName(QStringLiteral("buttonsAsTabs"));
     buttonsAsTabs_->setChecked(settings_.value(QStringLiteral("buffer_tabs"), false).toBool());
@@ -804,7 +980,6 @@ void PreferencesDialog::buildLayoutTab(QWidget* tab) {
 
     root->addWidget(serverListVisible_);
     root->addWidget(memberListVisible_);
-    root->addWidget(buttonBarVisible_);
     root->addWidget(buttonsAsTabs_);
     root->addWidget(connectOnStart_);
     root->addStretch(1);
@@ -814,113 +989,118 @@ void PreferencesDialog::buildProtectionTab(QWidget* tab) {
     auto* root = new QVBoxLayout(tab);
     auto* form = new QFormLayout();
 
-    autoReconnect_ = new QCheckBox(QStringLiteral("Auto-reconnect on disconnect"), tab);
-    autoReconnect_->setObjectName(QStringLiteral("autoReconnect"));
-    autoReconnect_->setChecked(settings_.value(QStringLiteral("auto_reconnect"), true).toBool());
-
-    floodProtect_ = new QCheckBox(QStringLiteral("Auto-ignore repeated messages"), tab);
+    floodProtect_ = new QCheckBox(QString(), tab);
     floodProtect_->setObjectName(QStringLiteral("floodProtect"));
     floodProtect_->setChecked(settings_.value(QStringLiteral("flood_protect"), false).toBool());
-
     floodMessages_ = new QSpinBox(tab);
     floodMessages_->setObjectName(QStringLiteral("floodMessages"));
     floodMessages_->setRange(2, 50);
-    floodMessages_->setSuffix(QStringLiteral(" messages"));
     floodMessages_->setValue(settings_.value(QStringLiteral("flood_msgs"), 10).toInt());
-
     floodSeconds_ = new QSpinBox(tab);
     floodSeconds_->setObjectName(QStringLiteral("floodSeconds"));
     floodSeconds_->setRange(1, 60);
     floodSeconds_->setSuffix(QStringLiteral(" s"));
     floodSeconds_->setValue(settings_.value(QStringLiteral("flood_secs"), 4).toInt());
-
-    pasteGuard_ = new QCheckBox(QStringLiteral("Confirm large multi-line pastes"), tab);
+    pasteGuard_ = new QCheckBox(QString(), tab);
     pasteGuard_->setObjectName(QStringLiteral("pasteGuard"));
     pasteGuard_->setChecked(settings_.value(QStringLiteral("paste_guard"), true).toBool());
     pasteLines_ = new QSpinBox(tab);
     pasteLines_->setObjectName(QStringLiteral("pasteLines"));
-    pasteLines_->setRange(2, 50);
-    pasteLines_->setSuffix(QStringLiteral(" lines"));
+    pasteLines_->setRange(2, 100);
     pasteLines_->setValue(settings_.value(QStringLiteral("paste_lines"), 4).toInt());
-    autoRejoin_ = new QCheckBox(QStringLiteral("Auto-rejoin after being kicked"), tab);
-    autoRejoin_->setObjectName(QStringLiteral("autoRejoin"));
-    autoRejoin_->setChecked(settings_.value(QStringLiteral("auto_rejoin"), false).toBool());
-    rejoinDelay_ = new QSpinBox(tab);
-    rejoinDelay_->setObjectName(QStringLiteral("rejoinDelay"));
-    rejoinDelay_->setRange(0, 60);
-    rejoinDelay_->setSuffix(QStringLiteral(" s"));
-    rejoinDelay_->setValue(settings_.value(QStringLiteral("rejoin_delay"), 2).toInt());
-    ignoreInvites_ = new QCheckBox(QStringLiteral("Ignore channel invites"), tab);
-    ignoreInvites_->setObjectName(QStringLiteral("ignoreInvites"));
-    ignoreInvites_->setChecked(settings_.value(QStringLiteral("ignore_invites"), false).toBool());
-    inviteProtect_ = new QCheckBox(QStringLiteral("Auto-ignore invite spammers"), tab);
+    inviteProtect_ = new QCheckBox(QString(), tab);
     inviteProtect_->setObjectName(QStringLiteral("inviteProtect"));
     inviteProtect_->setChecked(settings_.value(QStringLiteral("invite_protect"), true).toBool());
-    confirmQuit_ = new QCheckBox(QStringLiteral("Confirm quit while connected"), tab);
-    confirmQuit_->setObjectName(QStringLiteral("confirmQuit"));
-    confirmQuit_->setChecked(settings_.value(QStringLiteral("confirm_quit"), true).toBool());
-    scrollback_ = new QSpinBox(tab);
-    scrollback_->setObjectName(QStringLiteral("scrollback"));
-    scrollback_->setRange(100, 100000);
-    scrollback_->setSuffix(QStringLiteral(" lines"));
-    scrollback_->setValue(settings_.value(QStringLiteral("scrollback"), 2000).toInt());
-    autoAwayMins_ = new QSpinBox(tab);
-    autoAwayMins_->setObjectName(QStringLiteral("autoAwayMins"));
-    autoAwayMins_->setRange(0, 600);
-    autoAwayMins_->setSuffix(QStringLiteral(" min"));
-    autoAwayMins_->setSpecialValueText(QStringLiteral("Off"));
-    autoAwayMins_->setValue(settings_.value(QStringLiteral("auto_away_mins"), 0).toInt());
-    hideVersion_ = new QCheckBox(QStringLiteral("Hide CTCP VERSION replies"), tab);
-    hideVersion_->setObjectName(QStringLiteral("hideVersion"));
-    hideVersion_->setChecked(settings_.value(QStringLiteral("hide_version"), false).toBool());
-    ctcpVersion_ = new QLineEdit(settings_.value(QStringLiteral("ctcp_version")).toString(), tab);
-    ctcpVersion_->setObjectName(QStringLiteral("ctcpVersion"));
-    ctcpVersion_->setPlaceholderText(QStringLiteral("custom VERSION reply (blank = MaxChat C++)"));
+    ignoreInvites_ = new QCheckBox(QString(), tab);
+    ignoreInvites_->setObjectName(QStringLiteral("ignoreInvites"));
+    ignoreInvites_->setChecked(settings_.value(QStringLiteral("ignore_invites"), false).toBool());
 
-    form->addRow(QString(), autoReconnect_);
-    form->addRow(QString(), floodProtect_);
-    form->addRow(QStringLiteral("Flood threshold"), floodMessages_);
-    form->addRow(QStringLiteral("Flood window"), floodSeconds_);
-    form->addRow(QString(), pasteGuard_);
-    form->addRow(QStringLiteral("Paste guard at"), pasteLines_);
-    form->addRow(QString(), autoRejoin_);
-    form->addRow(QStringLiteral("Rejoin delay"), rejoinDelay_);
-    form->addRow(QString(), ignoreInvites_);
-    form->addRow(QString(), inviteProtect_);
-    form->addRow(QString(), confirmQuit_);
-    form->addRow(QStringLiteral("Scrollback"), scrollback_);
-    form->addRow(QStringLiteral("Auto-away after"), autoAwayMins_);
-    form->addRow(QString(), hideVersion_);
-    form->addRow(QStringLiteral("CTCP VERSION"), ctcpVersion_);
+    form->addRow(QStringLiteral("Flood protection (auto-ignore)"), floodProtect_);
+    form->addRow(QStringLiteral("Flood: max messages"), floodMessages_);
+    form->addRow(QStringLiteral("Flood: within"), floodSeconds_);
+    form->addRow(QStringLiteral("Large-paste guard"), pasteGuard_);
+    form->addRow(QStringLiteral("Paste guard: lines"), pasteLines_);
+    form->addRow(QStringLiteral("Auto-ignore invite spam"), inviteProtect_);
+    form->addRow(QStringLiteral("Ignore all channel invites"), ignoreInvites_);
     root->addLayout(form);
+
+    auto* hint = new QLabel(
+        QStringLiteral("Flood / invite-spam protection adds the offender to your ignore list "
+                       "automatically (friends are never auto-ignored). The paste guard confirms "
+                       "and throttles large pastes you send."),
+        tab);
+    hint->setWordWrap(true);
+    root->addWidget(hint);
     root->addStretch(1);
 }
 
 void PreferencesDialog::buildFilesTab(QWidget* tab) {
     auto* root = new QVBoxLayout(tab);
-    loggingEnabled_ = new QCheckBox(QStringLiteral("Log chats"), tab);
-    loggingEnabled_->setObjectName(QStringLiteral("loggingEnabled"));
-    loggingEnabled_->setChecked(settings_.value(QStringLiteral("logging"), true).toBool());
-    replayLogEnabled_ = new QCheckBox(QStringLiteral("Replay recent log on connect"), tab);
-    replayLogEnabled_->setObjectName(QStringLiteral("replayLogEnabled"));
-    replayLogEnabled_->setChecked(settings_.value(QStringLiteral("replay_log"), true).toBool());
-    root->addWidget(loggingEnabled_);
-    root->addWidget(replayLogEnabled_);
-
     auto* form = new QFormLayout();
-    logMask_ = new QLineEdit(settings_.value(QStringLiteral("log_mask")).toString(), tab);
-    logMask_->setObjectName(QStringLiteral("logMask"));
-    logMask_->setPlaceholderText(
-        QStringLiteral("%network/%channel/%Y-%m-%d  (/ = subfolder; date codes %Y %m %d)"));
-    form->addRow(QStringLiteral("Log filename"), logMask_);
-    replayLines_ = new QSpinBox(tab);
-    replayLines_->setObjectName(QStringLiteral("replayLines"));
-    replayLines_->setRange(0, 2000);
-    replayLines_->setSuffix(QStringLiteral(" lines"));
-    replayLines_->setSpecialValueText(QStringLiteral("Default (200)"));
-    replayLines_->setValue(settings_.value(QStringLiteral("replay_lines"), 0).toInt());
-    form->addRow(QStringLiteral("Replay amount"), replayLines_);
+
+    dccAccept_ = new QComboBox(tab);
+    dccAccept_->setObjectName(QStringLiteral("dccAccept"));
+    dccAccept_->addItem(QStringLiteral("Ask each time"), QStringLiteral("ask"));
+    dccAccept_->addItem(QStringLiteral("Auto-accept trusted nicks"), QStringLiteral("trusted"));
+    dccAccept_->addItem(QStringLiteral("Auto-accept everything (careful)"), QStringLiteral("all"));
+    setComboByData(dccAccept_,
+                   settings_.value(QStringLiteral("dcc_accept"), QStringLiteral("ask")).toString());
+    dccTrusted_ = new QLineEdit(
+        settings_.value(QStringLiteral("dcc_trusted")).toStringList().join(QStringLiteral(", ")),
+        tab);
+    dccTrusted_->setObjectName(QStringLiteral("dccTrusted"));
+    dccTrusted_->setPlaceholderText(
+        QString::fromUtf8("alice, bob \xE2\x80\x94 auto-accepted when \xE2\x80\x9Ctrusted\xE2\x80\x9D"));
+    dccPassive_ = new QCheckBox(QString(), tab);
+    dccPassive_->setObjectName(QStringLiteral("dccPassive"));
+    dccPassive_->setChecked(settings_.value(QStringLiteral("dcc_passive"), true).toBool());
+    dccIp_ = new QLineEdit(settings_.value(QStringLiteral("dcc_ip")).toString(), tab);
+    dccIp_->setObjectName(QStringLiteral("dccIp"));
+    dccIp_->setPlaceholderText(QString::fromUtf8("auto \xE2\x80\x94 your connection's IP"));
+    dccPortFirst_ = new QSpinBox(tab);
+    dccPortFirst_->setObjectName(QStringLiteral("dccPortFirst"));
+    dccPortFirst_->setRange(0, 65535);
+    dccPortFirst_->setSpecialValueText(QStringLiteral("any"));
+    dccPortFirst_->setValue(settings_.value(QStringLiteral("dcc_port_first"), 0).toInt());
+    dccPortLast_ = new QSpinBox(tab);
+    dccPortLast_->setObjectName(QStringLiteral("dccPortLast"));
+    dccPortLast_->setRange(0, 65535);
+    dccPortLast_->setSpecialValueText(QStringLiteral("any"));
+    dccPortLast_->setValue(settings_.value(QStringLiteral("dcc_port_last"), 0).toInt());
+
+    dccDir_ = new QLineEdit(settings_.value(QStringLiteral("dcc_dir")).toString(), tab);
+    dccDir_->setObjectName(QStringLiteral("dccDir"));
+    dccDir_->setPlaceholderText(QStringLiteral("<config>/downloads"));
+    auto* browse = new QPushButton(QStringLiteral("Browse..."), tab);
+    connect(browse, &QPushButton::clicked, this, [this]() {
+        const QString dir = QFileDialog::getExistingDirectory(
+            this, QStringLiteral("Choose download folder"), dccDir_->text());
+        if (!dir.isEmpty()) {
+            dccDir_->setText(dir);
+        }
+    });
+    auto* dirRow = new QWidget(tab);
+    auto* dirLayout = new QHBoxLayout(dirRow);
+    dirLayout->setContentsMargins(0, 0, 0, 0);
+    dirLayout->addWidget(dccDir_, 1);
+    dirLayout->addWidget(browse);
+
+    form->addRow(QStringLiteral("Incoming files"), dccAccept_);
+    form->addRow(QStringLiteral("Trusted nicks (auto-accept)"), dccTrusted_);
+    form->addRow(QStringLiteral("Passive / reverse DCC (NAT-friendly)"), dccPassive_);
+    form->addRow(QStringLiteral("Your DCC IP (for active DCC)"), dccIp_);
+    form->addRow(QStringLiteral("Listen port from"), dccPortFirst_);
+    form->addRow(QStringLiteral("Listen port to"), dccPortLast_);
+    form->addRow(QStringLiteral("Download folder"), dirRow);
     root->addLayout(form);
+
+    auto* hint = new QLabel(
+        QStringLiteral("Passive DCC asks the OTHER side to open the port - best when you're "
+                       "behind NAT and they aren't. For active DCC (you open the port) behind "
+                       "NAT, set your public IP + a forwarded port range here."),
+        tab);
+    hint->setWordWrap(true);
+    root->addWidget(hint);
     root->addStretch(1);
 }
 
@@ -952,15 +1132,24 @@ void PreferencesDialog::buildLocalizationTab(QWidget* tab) {
 
     interfaceLanguage_ = new QComboBox(tab);
     interfaceLanguage_->setObjectName(QStringLiteral("interfaceLanguage"));
-    interfaceLanguage_->addItem(QStringLiteral("System"), QStringLiteral("system"));
+    interfaceLanguage_->addItem(QStringLiteral("System default"), QStringLiteral("system"));
     interfaceLanguage_->addItem(QStringLiteral("English"), QStringLiteral("en"));
+    interfaceLanguage_->addItem(QStringLiteral("Arabic"), QStringLiteral("ar"));
+    interfaceLanguage_->addItem(QStringLiteral("German"), QStringLiteral("de"));
     interfaceLanguage_->addItem(QStringLiteral("Spanish"), QStringLiteral("es"));
     interfaceLanguage_->addItem(QStringLiteral("French"), QStringLiteral("fr"));
-    interfaceLanguage_->addItem(QStringLiteral("German"), QStringLiteral("de"));
-    interfaceLanguage_->addItem(QStringLiteral("Portuguese"), QStringLiteral("pt"));
+    interfaceLanguage_->addItem(QStringLiteral("Hindi"), QStringLiteral("hi"));
     interfaceLanguage_->addItem(QStringLiteral("Italian"), QStringLiteral("it"));
+    interfaceLanguage_->addItem(QStringLiteral("Japanese"), QStringLiteral("ja"));
+    interfaceLanguage_->addItem(QStringLiteral("Korean"), QStringLiteral("ko"));
     interfaceLanguage_->addItem(QStringLiteral("Dutch"), QStringLiteral("nl"));
     interfaceLanguage_->addItem(QStringLiteral("Polish"), QStringLiteral("pl"));
+    interfaceLanguage_->addItem(QStringLiteral("Portuguese (Brazil)"), QStringLiteral("pt_BR"));
+    interfaceLanguage_->addItem(QStringLiteral("Russian"), QStringLiteral("ru"));
+    interfaceLanguage_->addItem(QStringLiteral("Turkish"), QStringLiteral("tr"));
+    interfaceLanguage_->addItem(QStringLiteral("Ukrainian"), QStringLiteral("uk"));
+    interfaceLanguage_->addItem(QStringLiteral("Chinese (Simplified)"), QStringLiteral("zh_CN"));
+    interfaceLanguage_->addItem(QStringLiteral("Chinese (Traditional)"), QStringLiteral("zh_TW"));
     setComboByData(interfaceLanguage_,
                    settings_.value(QStringLiteral("interface_language"), QStringLiteral("system")));
 
@@ -989,7 +1178,10 @@ void PreferencesDialog::buildDataTab(QWidget* tab) {
     auto* root = new QVBoxLayout(tab);
     const maxchat::core::SettingsPaths paths = maxchat::core::standardSettingsPaths();
     const QString logsDir = QDir(paths.configDir).filePath(QStringLiteral("logs"));
-    const QString downloadsDir = QDir(paths.configDir).filePath(QStringLiteral("downloads"));
+    const QString dccDirPref = settings_.value(QStringLiteral("dcc_dir")).toString().trimmed();
+    const QString downloadsDir = dccDirPref.isEmpty()
+                                     ? QDir(paths.configDir).filePath(QStringLiteral("downloads"))
+                                     : dccDirPref;
     const QString scriptsDir = QDir(paths.configDir).filePath(QStringLiteral("scripts"));
 
     const auto dirRow = [tab](const QString& path) -> QWidget* {
@@ -1000,6 +1192,7 @@ void PreferencesDialog::buildDataTab(QWidget* tab) {
         edit->setReadOnly(true);
         auto* open = new QPushButton(QStringLiteral("Open"), row);
         connect(open, &QPushButton::clicked, row, [path]() {
+            QDir().mkpath(path);
             QDesktopServices::openUrl(QUrl::fromLocalFile(path));
         });
         layout->addWidget(edit, 1);

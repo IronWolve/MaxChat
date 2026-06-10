@@ -307,10 +307,29 @@ QVariantMap SettingsStore::defaultSettings() {
   settings.insert(QStringLiteral("invite_protect"), true);
   settings.insert(QStringLiteral("confirm_quit"), true);
   settings.insert(QStringLiteral("dcc_dir"), QString());
+  settings.insert(QStringLiteral("dcc_accept"), QStringLiteral("ask"));
+  settings.insert(QStringLiteral("dcc_trusted"), QStringList());
+  settings.insert(QStringLiteral("dcc_passive"), true);
+  settings.insert(QStringLiteral("dcc_ip"), QString());
+  settings.insert(QStringLiteral("dcc_port_first"), 0);
+  settings.insert(QStringLiteral("dcc_port_last"), 0);
+  settings.insert(QStringLiteral("dnd"), false);
+  settings.insert(QStringLiteral("notify_popup"), QStringLiteral("custom"));
+  settings.insert(QStringLiteral("notify_pm"), true);
+  settings.insert(QStringLiteral("notify_highlight"), true);
+  settings.insert(QStringLiteral("highlight_words"), QString());
+  settings.insert(QStringLiteral("notify_flash"), true);
+  settings.insert(QStringLiteral("notify_corner"), QStringLiteral("br"));
+  settings.insert(QStringLiteral("notify_duration"), 6);
+  settings.insert(QStringLiteral("notify_theme"), QStringLiteral("follow"));
+  settings.insert(QStringLiteral("beep_highlight"), true);
+  settings.insert(QStringLiteral("notify_sound"), false);
+  settings.insert(QStringLiteral("ctcp_sound"), false);
+  settings.insert(QStringLiteral("minimize_to_tray"), false);
   settings.insert(QStringLiteral("logging"), true);
   settings.insert(QStringLiteral("replay_log"), true);
   settings.insert(QStringLiteral("replay_lines"), 0);
-  settings.insert(QStringLiteral("log_mask"), QStringLiteral("%network/%channel/%Y-%m-%d"));
+  settings.insert(QStringLiteral("log_mask"), QStringLiteral("%network-%channel"));
   settings.insert(QStringLiteral("pm_echo"), true);
   settings.insert(QStringLiteral("show_mode"), true);
   settings.insert(QStringLiteral("indent_wrap"), true);
@@ -318,7 +337,7 @@ QVariantMap SettingsStore::defaultSettings() {
   settings.insert(QStringLiteral("nick_colors"), QVariantMap());
   settings.insert(QStringLiteral("show_input_hint"), true);
   settings.insert(QStringLiteral("strip_color_copy"), true);
-  settings.insert(QStringLiteral("sort_users_by_status"), true);
+  settings.insert(QStringLiteral("sort_status"), true);
   settings.insert(QStringLiteral("tray_icon"), QStringLiteral("bubble"));
   // Per-area colors; empty = follow the theme.
   settings.insert(QStringLiteral("chat_text_color"), QString());
@@ -340,7 +359,7 @@ QVariantMap SettingsStore::defaultSettings() {
   settings.insert(QStringLiteral("content_services"), contentServices);
   settings.insert(QStringLiteral("server_list_visible"), true);
   settings.insert(QStringLiteral("member_list_visible"), true);
-  settings.insert(QStringLiteral("show_button_bar"), true);
+  settings.insert(QStringLiteral("show_button_bar"), false);
   settings.insert(QStringLiteral("buffer_tabs"), false);
   settings.insert(QStringLiteral("connect_on_start"), false);
   settings.insert(QStringLiteral("networks"),

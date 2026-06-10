@@ -46,7 +46,7 @@ QString ChatLogStore::logFilePath(const QString& network, const QString& target,
     // the historical Network/target/yyyy-MM-dd.log layout.
     QString mask = logMask_;
     if (mask.isEmpty()) {
-        mask = QStringLiteral("%network/%channel/%Y-%m-%d");
+        mask = QStringLiteral("%network-%channel");
     }
     mask.replace(QStringLiteral("%network"), networkPart);
     mask.replace(QStringLiteral("%channel"), targetPart);
