@@ -344,6 +344,15 @@ class MainWindow final : public QMainWindow {
     QTimer m_friendPollTimer;
     Notifier* m_notifier = nullptr;
     QStringList m_highlightWords;
+    bool m_notifyPm = true;
+    bool m_notifyHighlight = true;
+    bool m_beepHighlight = false;
+    bool m_notifyFlash = true;
+    bool m_notifySound = false;
+    QString m_notifyStyle = QStringLiteral("custom");
+    QString m_notifyCorner = QStringLiteral("br");
+    int m_notifyDuration = 6;
+    QString m_notifyTheme = QStringLiteral("follow");
     QAction* m_buttonBarAction = nullptr;
     QAction* m_serverListVisibleAction = nullptr;
     QAction* m_membersVisibleAction = nullptr;
