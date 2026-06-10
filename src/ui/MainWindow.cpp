@@ -1316,6 +1316,10 @@ void maxchat::ui::MainWindow::openPreferences() {
         dialog.reject();
         resetAllSettings();
     });
+    connect(&dialog, &PreferencesDialog::testNotificationRequested, this, [this]() {
+        notify(QStringLiteral("Test \u00b7 MaxChat"),
+               QStringLiteral("This is what a notification looks like \u2014 click to open the chat."));
+    });
     if (dialog.exec() != QDialog::Accepted) {
         return;
     }
@@ -2474,6 +2478,21 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
                                                  QStringLiteral("<%1> %2").arg(sender, text), true,
                                                  false, highlight);
                     }
+
+                    // Notify on PMs and highlights
+                    if (!isActiveWindow()) {
+                        if (privateToMe && m_notifyPm) {
+                            const QString stripped = sender;  // stripFormatting TBD
+                            QString title = QStringLiteral("Private message \u00b7 %1").arg(stripped);
+                            notify(title, text, activeNetworkName(), conversation);
+                        } else if (highlight && m_notifyHighlight) {
+                            QString title = QStringLiteral("%1 mentioned you").arg(sender);
+                            notify(title, text, activeNetworkName(), conversation);
+                        }
+                        if ((privateToMe || highlight) && m_beepHighlight) {
+                            QApplication::beep();
+                        }
+                    }
                 });
             });
     connect(irc, &maxchat::irc::IrcConnection::nickChanged, this,
@@ -2829,9 +2848,9 @@ void maxchat::ui::MainWindow::connectNextServer(const QString& network, const bo
             return;
         }
 
-        const QString networkName = activeNetworkName();
-        const int attempts = m_initialConnectAttemptsByNetwork.value(networkName, 0);
-        if (!m_registered && attempts >= maxInitialConnectAttempts(networkName)) {
+        const QString signalNetwork = activeNetworkName();
+        const int attempts = m_initialConnectAttemptsByNetwork.value(signalNetwork, 0);
+        if (!m_registered && attempts >= maxInitialConnectAttempts(signalNetwork)) {
             appendSystemLine(QStringLiteral("! Connection attempts exhausted for %1.")
                                  .arg(m_connectionPlan.networkName));
             setConnectionTopic(QStringLiteral("Not connected"));
@@ -2846,22 +2865,22 @@ void maxchat::ui::MainWindow::connectNextServer(const QString& network, const bo
             return;
         }
         m_connectionPlan = plan;
-        m_connectionPlansByNetwork.insert(networkName, m_connectionPlan);
+        m_connectionPlansByNetwork.insert(signalNetwork, m_connectionPlan);
 
         const int nextAttempts = attempts + 1;
         m_initialConnectAttempts = nextAttempts;
-        m_initialConnectAttemptsByNetwork.insert(networkName, nextAttempts);
+        m_initialConnectAttemptsByNetwork.insert(signalNetwork, nextAttempts);
         const QString tlsText = server.tls ? QStringLiteral(" SSL/TLS") : QString();
         appendSystemLine(QStringLiteral("! Connecting to %1 (%2:%3%4), attempt %5 of %6.")
                              .arg(m_connectionPlan.networkName, server.host)
                              .arg(server.port)
                              .arg(tlsText)
                              .arg(nextAttempts)
-                             .arg(maxInitialConnectAttempts(networkName)));
+                             .arg(maxInitialConnectAttempts(signalNetwork)));
         setConnectionTopic(
             QStringLiteral("Connecting to %1:%2...").arg(server.host).arg(server.port));
 
-        maxchat::irc::IrcConnection* irc = ensureConnectionForNetwork(networkName);
+        maxchat::irc::IrcConnection* irc = ensureConnectionForNetwork(signalNetwork);
         if (irc == nullptr) {
             appendSystemLine(QStringLiteral("! Could not create network connection."));
             return;
@@ -2881,26 +2900,26 @@ void maxchat::ui::MainWindow::reconnectNetwork(const QString& network) {
             return;
         }
 
-        const QString networkName = activeNetworkName();
+        const QString signalNetwork = activeNetworkName();
         m_initialConnectAttempts = 0;
-        m_initialConnectAttemptsByNetwork.insert(networkName, 0);
+        m_initialConnectAttemptsByNetwork.insert(signalNetwork, 0);
         m_reconnectRequested = true;
-        m_reconnectRequestedByNetwork.insert(networkName, true);
-        maxchat::irc::IrcConnection* irc = ensureConnectionForNetwork(networkName);
+        m_reconnectRequestedByNetwork.insert(signalNetwork, true);
+        maxchat::irc::IrcConnection* irc = ensureConnectionForNetwork(signalNetwork);
         if (irc != nullptr && irc->isConnected()) {
             appendSystemLine(
                 QStringLiteral("! Reconnecting to %1.").arg(m_connectionPlan.networkName));
             m_manualDisconnect = true;
-            m_manualDisconnectByNetwork.insert(networkName, true);
+            m_manualDisconnectByNetwork.insert(signalNetwork, true);
             irc->disconnectFromServer();
             return;
         }
 
         m_reconnectRequested = false;
-        m_reconnectRequestedByNetwork.insert(networkName, false);
+        m_reconnectRequestedByNetwork.insert(signalNetwork, false);
         m_manualDisconnect = false;
-        m_manualDisconnectByNetwork.insert(networkName, false);
-        connectNextServer(networkName, true);
+        m_manualDisconnectByNetwork.insert(signalNetwork, false);
+        connectNextServer(signalNetwork, true);
     });
 }
 
@@ -2910,15 +2929,15 @@ void maxchat::ui::MainWindow::reconnectCurrentServer() {
 
 void maxchat::ui::MainWindow::disconnectNetwork(const QString& network) {
     withNetworkContext(network, [this]() {
-        const QString networkName = activeNetworkName();
+        const QString signalNetwork = activeNetworkName();
         m_manualDisconnect = true;
         m_reconnectRequested = false;
-        m_manualDisconnectByNetwork.insert(networkName, true);
-        m_reconnectRequestedByNetwork.insert(networkName, false);
+        m_manualDisconnectByNetwork.insert(signalNetwork, true);
+        m_reconnectRequestedByNetwork.insert(signalNetwork, false);
         if (m_hasConnectionPlan) {
             appendSystemLine(
                 QStringLiteral("! Disconnecting from %1.").arg(m_connectionPlan.networkName));
-            if (auto* irc = connectionForNetwork(networkName); irc != nullptr) {
+            if (auto* irc = connectionForNetwork(signalNetwork); irc != nullptr) {
                 irc->disconnectFromServer();
             } else {
                 connection().disconnectFromServer();
@@ -5847,56 +5866,62 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
     updateMinimizeToTrayFromSettings();
     m_highlightWords = settings.value(QStringLiteral("highlight_words")).toString().split(
         QRegularExpression(QStringLiteral("[,\\s]+")), Qt::SkipEmptyParts);
+    m_notifyPm = settings.value(QStringLiteral("notify_pm"), true).toBool();
+    m_notifyHighlight = settings.value(QStringLiteral("notify_highlight"), true).toBool();
+    m_beepHighlight = settings.value(QStringLiteral("beep_highlight"), false).toBool();
+    m_notifyFlash = settings.value(QStringLiteral("notify_flash"), true).toBool();
+    m_notifySound = settings.value(QStringLiteral("notify_sound"), false).toBool();
+    m_notifyStyle = settings.value(QStringLiteral("notify_popup"), QStringLiteral("custom")).toString();
+    m_notifyCorner = settings.value(QStringLiteral("notify_corner"), QStringLiteral("br")).toString();
+    m_notifyDuration = settings.value(QStringLiteral("notify_duration"), 6).toInt();
+    m_notifyTheme = settings.value(QStringLiteral("notify_theme"), QStringLiteral("follow")).toString();
     renderActiveBuffer();
     updateChatSeparatorGuide();
     renderActiveBufferMetadata();
     updateNetworkTreeLabels();
     updateChannelModeButton();
     }
-
 void maxchat::ui::MainWindow::notify(const QString& title, const QString& text,
                         const QString& network, const QString& target) {
     // Don't notify if window is active or DND is on (matches Python)
     if (isActiveWindow() || !m_notifier) return;
-    auto s = m_settings.loadWithDefaults();
-    if (s.value(QStringLiteral("dnd"), false).toBool()) return;
+    if (m_settings.loadWithDefaults().value(QStringLiteral("dnd"), false).toBool()) return;
 
     // Taskbar flash
-    if (s.value(QStringLiteral("notify_flash"), true).toBool()) {
+    if (m_notifyFlash) {
         QApplication::alert(this, 0);
     }
 
     // Sound
-    if (s.value(QStringLiteral("notify_sound"), false).toBool()) {
+    if (m_notifySound) {
         QApplication::beep();
     }
 
     // Popup style
-    const QString style = s.value(QStringLiteral("notify_popup"), QStringLiteral("custom")).toString();
-    if (style == QLatin1String("off")) return;
+    if (m_notifyStyle == QLatin1String("off")) return;
 
     // System tray notification
-    if (style == QLatin1String("system") && m_tray && ::QSystemTrayIcon::supportsMessages()) {
+    if (m_notifyStyle == QLatin1String("system") && m_tray && ::QSystemTrayIcon::supportsMessages()) {
         m_tray->showMessage(title, text, m_tray->icon(), 5000);
         return;
     }
 
-        const AppThemeDefinition& themeDef = appThemeById(m_currentTheme);
+    // Custom toast (also fallback when system tray unavailable)
+    const AppThemeDefinition& themeDef = appThemeById(m_currentTheme);
     QColor followBg = themeDef.panel.isValid() ? themeDef.panel : QColor(QStringLiteral("#2b2b2b"));
     QColor followFg = themeDef.text.isValid() ? themeDef.text : QColor(QStringLiteral("#e8e8e8"));
     QColor followAccent = themeDef.accent.isValid() ? themeDef.accent : QColor(QStringLiteral("#4a9eff"));
 
-    const QString notifyTheme = s.value(QStringLiteral("notify_theme"), QStringLiteral("follow")).toString();
-    QColor bg = Notifier::paletteBg(notifyTheme, followBg);
-    QColor fg = Notifier::paletteFg(notifyTheme, followFg);
-    QColor accent = Notifier::paletteAccent(notifyTheme, followAccent);
+    QColor bg = Notifier::paletteBg(m_notifyTheme, followBg);
+    QColor fg = Notifier::paletteFg(m_notifyTheme, followFg);
+    QColor accent = Notifier::paletteAccent(m_notifyTheme, followAccent);
 
-    const QString corner = s.value(QStringLiteral("notify_corner"), QStringLiteral("br")).toString();
-    const int durationMs = s.value(QStringLiteral("notify_duration"), 6).toInt() * 1000;
+    const int durationMs = m_notifyDuration * 1000;
 
     QIcon icon;
-    QString trayChoice = s.value(QStringLiteral("tray_icon"), QStringLiteral("bubble")).toString();
-    icon = ui::AppIcon::makeIcon(trayChoice, accent);
+    icon = ui::AppIcon::makeIcon(
+        m_settings.loadWithDefaults().value(QStringLiteral("tray_icon"), QStringLiteral("bubble")).toString(),
+        accent);
 
     std::function<void()> onClick;
     if (!network.isEmpty() && !target.isEmpty()) {
@@ -5917,8 +5942,8 @@ void maxchat::ui::MainWindow::notify(const QString& title, const QString& text,
         };
     }
 
-    m_notifier->show(title, text, bg, fg, accent, corner, durationMs, icon, std::move(onClick));
-    }
+    m_notifier->show(title, text, bg, fg, accent, m_notifyCorner, durationMs, icon, std::move(onClick));
+}
 
 void maxchat::ui::MainWindow::setupTrayIcon() {
     if (!QSystemTrayIcon::isSystemTrayAvailable()) {
