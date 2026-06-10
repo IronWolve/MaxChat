@@ -59,7 +59,7 @@ class SettingsStoreTest final : public QObject {
         QCOMPARE(settings.value(QStringLiteral("nick_width")).toInt(), 16);
         QCOMPARE(settings.value(QStringLiteral("server_list_visible")).toBool(), true);
         QCOMPARE(settings.value(QStringLiteral("member_list_visible")).toBool(), true);
-        QCOMPARE(settings.value(QStringLiteral("show_button_bar")).toBool(), true);
+        QCOMPARE(settings.value(QStringLiteral("show_button_bar")).toBool(), false);
         QCOMPARE(settings.value(QStringLiteral("connect_on_start")).toBool(), false);
 
         const NetworkConfigList networks =

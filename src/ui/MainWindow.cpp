@@ -1978,11 +1978,19 @@ void maxchat::ui::MainWindow::setBufferTabsVisible(const bool visible, const boo
         m_bufferTabBar->setVisible(visible);
     }
     // Buttons-as-tabs is an alternative buffer navigator: when on it replaces the
-    // server-list tree, so the same "Server"/buffer rows aren't shown twice.
+    // server-list tree so the same "Server"/buffer rows aren't shown twice. Only act
+    // on a real transition (don't disturb the splitter at startup when tabs are off
+    // and the tree already shows): hide the tree when tabs go on, restore it via the
+    // splitter mechanism (preserving sizing) when tabs go off.
     if (m_networkTree != nullptr) {
-        const bool serverListPref =
-            m_settings.loadWithDefaults().value(QStringLiteral("server_list_visible"), true).toBool();
-        m_networkTree->setVisible(visible ? false : serverListPref);
+        if (visible && m_networkTree->isVisible()) {
+            m_networkTree->setVisible(false);
+        } else if (!visible && !m_networkTree->isVisible()) {
+            const bool serverListPref = m_settings.loadWithDefaults()
+                                            .value(QStringLiteral("server_list_visible"), true)
+                                            .toBool();
+            setServerListVisible(serverListPref, false);
+        }
     }
     if (m_buttonsAsTabsAction != nullptr && m_buttonsAsTabsAction->isChecked() != visible) {
         const QSignalBlocker blocker(m_buttonsAsTabsAction);
@@ -5521,7 +5529,13 @@ void maxchat::ui::MainWindow::setComicMode(bool enabled) {
         m_comicView->setVisible(enabled);
     }
     if (enabled) {
+        ensureComicArt();
         refreshComic();
+        if (m_comicCharacterPaths.isEmpty()) {
+            appendSystemLine(QStringLiteral(
+                "! Comic Mode: no art loaded. Set your Comic Chat art folder in "
+                "Comic > Comic Settings (the folder with the .avb/.bgb files)."));
+        }
     }
     statusBar()->showMessage(enabled ? QStringLiteral("Comic Mode on.")
                                      : QStringLiteral("Comic Mode off."));
@@ -5865,6 +5879,14 @@ void maxchat::ui::MainWindow::refreshComic() {
         }
         rendered.append(maxchat::comic::renderComicPanel(kSize, background, actors, rlines, captions,
                                                          captionScale, captionColors));
+    }
+
+    // Empty state: if we have art but nothing to draw yet, show blank background
+    // panels so the comic area is visibly alive (matches the Python app). With no
+    // art at all, leave it empty so ComicView shows its "set an art folder" hint.
+    const bool haveArt = !m_comicCharacterPaths.isEmpty() || !background.isNull();
+    if (rendered.isEmpty() && haveArt) {
+        rendered.append(maxchat::comic::renderComicPanel(kSize, background, {}, {}, false, 1.0, {}));
     }
     m_comicView->setPanels(rendered);
 }

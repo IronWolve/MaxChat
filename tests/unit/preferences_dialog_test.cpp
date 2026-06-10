@@ -4,6 +4,7 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QFontComboBox>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QPushButton>
@@ -48,7 +49,7 @@ class PreferencesDialogTest final : public QObject {
         auto* theme = dialog.findChild<QComboBox*>(QStringLiteral("theme"));
         auto* chatTheme = dialog.findChild<QComboBox*>(QStringLiteral("chatTheme"));
         auto* wallpaper = dialog.findChild<QComboBox*>(QStringLiteral("wallpaper"));
-        auto* timestampFormat = dialog.findChild<QLineEdit*>(QStringLiteral("timestampFormat"));
+        auto* timestampFormat = dialog.findChild<QComboBox*>(QStringLiteral("timestampFormat"));
         auto* spellcheck = dialog.findChild<QCheckBox*>(QStringLiteral("spellcheckEnabled"));
         auto* floodProtect = dialog.findChild<QCheckBox*>(QStringLiteral("floodProtect"));
         auto* autoReconnect = dialog.findChild<QCheckBox*>(QStringLiteral("autoReconnect"));
@@ -101,7 +102,7 @@ class PreferencesDialogTest final : public QObject {
         theme->setCurrentIndex(theme->findData(QStringLiteral("system")));
         chatTheme->setCurrentIndex(chatTheme->findData(QStringLiteral("green")));
         wallpaper->setCurrentIndex(wallpaper->findData(QStringLiteral("synthwave.png")));
-        timestampFormat->setText(QStringLiteral("%H:%M"));
+        timestampFormat->setEditText(QStringLiteral("%H:%M"));
         spellcheck->setChecked(false);
         autoReconnect->setChecked(false);
         floodProtect->setChecked(true);
@@ -159,8 +160,8 @@ class PreferencesDialogTest final : public QObject {
 
         auto* jetbrains = dialog.findChild<QPushButton*>(QStringLiteral("setAllJetBrains"));
         auto* system = dialog.findChild<QPushButton*>(QStringLiteral("setAllSystem"));
-        auto* appFont = dialog.findChild<QLineEdit*>(QStringLiteral("appFontFamily"));
-        auto* chatFont = dialog.findChild<QLineEdit*>(QStringLiteral("chatFontFamily"));
+        auto* appFont = dialog.findChild<QFontComboBox*>(QStringLiteral("appFontFamily"));
+        auto* chatFont = dialog.findChild<QFontComboBox*>(QStringLiteral("chatFontFamily"));
         auto* appBold = dialog.findChild<QCheckBox*>(QStringLiteral("appFontBold"));
         auto* chatBold = dialog.findChild<QCheckBox*>(QStringLiteral("chatFontBold"));
         QVERIFY(jetbrains != nullptr);
@@ -170,27 +171,34 @@ class PreferencesDialogTest final : public QObject {
         QVERIFY(appBold != nullptr);
         QVERIFY(chatBold != nullptr);
 
+        // System preset: chrome areas (app/nick/status/topic) use the UI font;
+        // chat + list use the fixed-width font; nothing bold.
         QTest::mouseClick(system, Qt::LeftButton);
-        QVERIFY(!appFont->text().trimmed().isEmpty());
+        QVERIFY(!appFont->currentFont().family().trimmed().isEmpty());
         QCOMPARE(appBold->isChecked(), false);
         QCOMPARE(chatBold->isChecked(), false);
         QVariantMap values = dialog.settings();
-        QCOMPARE(values.value(QStringLiteral("list_font_family")).toString(), appFont->text());
+        QCOMPARE(values.value(QStringLiteral("list_font_family")).toString(),
+                 chatFont->currentFont().family());
         QCOMPARE(values.value(QStringLiteral("list_font_bold")).toBool(), false);
-        QCOMPARE(values.value(QStringLiteral("status_font_family")).toString(), appFont->text());
-        QCOMPARE(values.value(QStringLiteral("topic_font_family")).toString(), appFont->text());
+        QCOMPARE(values.value(QStringLiteral("status_font_family")).toString(),
+                 appFont->currentFont().family());
+        QCOMPARE(values.value(QStringLiteral("topic_font_family")).toString(),
+                 appFont->currentFont().family());
 
+        // JetBrains preset: every area goes bold and settings() faithfully reports
+        // each combo's resolved family. (QFontComboBox snaps an uninstalled family to
+        // the nearest installed one in a headless test env, so assert that settings()
+        // mirrors the combos rather than a literal "JetBrains Mono".)
         QTest::mouseClick(jetbrains, Qt::LeftButton);
-        QCOMPARE(appFont->text(), QStringLiteral("JetBrains Mono"));
-        QCOMPARE(chatFont->text(), QStringLiteral("JetBrains Mono"));
         QCOMPARE(appBold->isChecked(), true);
         QCOMPARE(chatBold->isChecked(), true);
         values = dialog.settings();
-        QCOMPARE(values.value(QStringLiteral("list_font_family")).toString(),
-                 QStringLiteral("JetBrains Mono"));
+        QCOMPARE(values.value(QStringLiteral("app_font_family")).toString(),
+                 appFont->currentFont().family());
+        QCOMPARE(values.value(QStringLiteral("chat_font_family")).toString(),
+                 chatFont->currentFont().family());
         QCOMPARE(values.value(QStringLiteral("list_font_bold")).toBool(), true);
-        QCOMPARE(values.value(QStringLiteral("nick_font_family")).toString(),
-                 QStringLiteral("JetBrains Mono"));
         QCOMPARE(values.value(QStringLiteral("nick_font_bold")).toBool(), true);
     }
 

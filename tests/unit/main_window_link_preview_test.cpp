@@ -1,3 +1,4 @@
+#include <QApplication>
 #include <QAction>
 #include <QElapsedTimer>
 #include <QFontMetricsF>
@@ -282,7 +283,7 @@ class MainWindowLinkPreviewTest final : public QObject {
         QVERIFY(about != nullptr);
         QVERIFY(clearCurrentChat != nullptr);
         QVERIFY(comicMode->isEnabled());
-        QVERIFY(!comicMode->isCheckable());
+        QVERIFY(comicMode->isCheckable());
         QVERIFY(comicSettings->isEnabled());
         QVERIFY(characterNames->isCheckable());
         QVERIFY(dnd->isCheckable());
@@ -441,33 +442,39 @@ class MainWindowLinkPreviewTest final : public QObject {
         QVERIFY(themesOffAction->isCheckable());
         window.setTheme(QStringLiteral("synthwave"), true);
         QVERIFY(synthwaveAction->isChecked());
-        QVERIFY(!window.styleSheet().isEmpty());
+        // Theming is applied application-wide (qApp) via QPalette + stylesheet.
+        QVERIFY(!qApp->styleSheet().isEmpty());
 
         themesOffAction->trigger();
         QVERIFY(themesOffAction->isChecked());
-        QVERIFY(window.styleSheet().isEmpty());
+        QVERIFY(qApp->styleSheet().isEmpty());
         QVariantMap saved = window.m_settings.loadRaw();
         QCOMPARE(saved.value(QStringLiteral("theme")).toString(), QStringLiteral("system"));
 
         vaporwaveAction->trigger();
         QVERIFY(vaporwaveAction->isChecked());
-        QVERIFY(!window.styleSheet().isEmpty());
-        QVERIFY(window.styleSheet().contains(QStringLiteral("QToolBar#mainToolbar")));
+        QVERIFY(!qApp->styleSheet().isEmpty());
+        QVERIFY(qApp->styleSheet().contains(QStringLiteral("QToolBar#mainToolbar")));
         saved = window.m_settings.loadRaw();
         QCOMPARE(saved.value(QStringLiteral("theme")).toString(), QStringLiteral("vaporwave"));
 
         greenChatAction->trigger();
         QVERIFY(greenChatAction->isChecked());
-        QVERIFY(window.styleSheet().contains(QStringLiteral("rgb(8,12,8)")));
+        QVERIFY(qApp->styleSheet().contains(QStringLiteral("rgb(8,12,8)")));
         saved = window.m_settings.loadRaw();
         QCOMPARE(saved.value(QStringLiteral("chat_theme")).toString(), QStringLiteral("green"));
 
         vaporwaveWallpaperAction->trigger();
         QVERIFY(vaporwaveWallpaperAction->isChecked());
-        QVERIFY(window.styleSheet().contains(QStringLiteral("vaporwave-2.jpg")));
+        QVERIFY(qApp->styleSheet().contains(QStringLiteral("vaporwave-2.jpg")));
         saved = window.m_settings.loadRaw();
         QCOMPARE(saved.value(QStringLiteral("wallpaper")).toString(),
                  QStringLiteral("vaporwave-2.jpg"));
+
+        // Reset global app theming + saved state so later tests construct against a
+        // clean qApp (each test shares one QApplication and the settings file).
+        window.setTheme(QStringLiteral("system"), true);
+        window.setWallpaper(QString(), true);
     }
 
     void draggingChatSeparatorChangesNickColumnWidth() {
