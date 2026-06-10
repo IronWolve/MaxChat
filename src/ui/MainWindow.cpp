@@ -6710,6 +6710,14 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
     m_currentWallpaper =
         normalizeWallpaperValue(settings.value(QStringLiteral("wallpaper")).toString());
     applyTheme(m_currentTheme);
+    // Re-apply the app font AFTER the theme: setting a global stylesheet re-polishes
+    // widgets and drops qApp->setFont for chrome (menu bar, menus, dialogs), so the
+    // window/menu font would otherwise ignore the configured app font. Set it on the
+    // menu bar explicitly too (popup menus inherit from it).
+    qApp->setFont(appFont);
+    if (menuBar() != nullptr) {
+        menuBar()->setFont(appFont);
+    }
     syncThemeActions(m_currentTheme);
     syncChatThemeActions(m_currentChatTheme);
     syncWallpaperActions(m_currentWallpaper);
