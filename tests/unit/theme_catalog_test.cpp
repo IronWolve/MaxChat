@@ -1,0 +1,98 @@
+#include "ui/ThemeCatalog.h"
+
+#include <QtTest/QtTest>
+
+#include <QFileInfo>
+
+using maxchat::ui::appThemeById;
+using maxchat::ui::appThemes;
+using maxchat::ui::effectiveWallpaperPath;
+using maxchat::ui::normalizeWallpaperValue;
+using maxchat::ui::styleSheetForAppearance;
+using maxchat::ui::systemThemeId;
+
+class ThemeCatalogTest final : public QObject {
+    Q_OBJECT
+
+  private slots:
+    void bundledCatalogLoadsSynthwave() {
+        const auto definition = appThemeById(QStringLiteral("synthwave"));
+        QCOMPARE(definition.id, QStringLiteral("synthwave"));
+        QCOMPARE(definition.wallpaper, QStringLiteral("synthwave.png"));
+        QVERIFY(!definition.bgGradient.isEmpty());
+    }
+
+    void wallpaperResolvesToPlainExistingPath() {
+        const QString path = effectiveWallpaperPath(QStringLiteral("synthwave"), QString());
+        QVERIFY(!path.isEmpty());
+        QVERIFY(!path.startsWith(QStringLiteral("file:")));
+        QVERIFY(!path.contains(QLatin1Char('\\')));
+        QVERIFY(QFileInfo(path).isFile());
+    }
+
+    void wallpaperOffSuppressesThemeDefault() {
+        QCOMPARE(effectiveWallpaperPath(QStringLiteral("synthwave"), QStringLiteral("none")),
+                 QString());
+        QCOMPARE(effectiveWallpaperPath(systemThemeId(), QString()), QString());
+    }
+
+    void styleSheetEmbedsQuotedWallpaperPath() {
+        const QString sheet = styleSheetForAppearance(
+            QStringLiteral("synthwave"), QStringLiteral("follow"), QString());
+        QVERIFY(sheet.contains(QStringLiteral("border-image: url(\"")));
+        QVERIFY(!sheet.contains(QStringLiteral("file:")));
+    }
+
+    void styleSheetFallsBackToGradientWithoutWallpaper() {
+        const QString sheet = styleSheetForAppearance(
+            QStringLiteral("synthwave"), QStringLiteral("follow"), QStringLiteral("none"));
+        QVERIFY(!sheet.contains(QStringLiteral("border-image")));
+        QVERIFY(sheet.contains(QStringLiteral("qlineargradient")));
+    }
+
+    void darkThemeUsesSolidBackground() {
+        const QString sheet = styleSheetForAppearance(
+            QStringLiteral("dark"), QStringLiteral("follow"), QString());
+        QVERIFY(!sheet.contains(QStringLiteral("border-image")));
+        QVERIFY(sheet.contains(QStringLiteral("background:rgb(28,30,33);")));
+    }
+
+    void systemThemeProducesEmptyStyleSheet() {
+        QCOMPARE(styleSheetForAppearance(systemThemeId(), QStringLiteral("follow"), QString()),
+                 QString());
+    }
+
+    void irssiChatThemeCarriesTerminalExtras() {
+        const auto irssi = maxchat::ui::chatThemeById(QStringLiteral("irssi"));
+        QCOMPARE(irssi.id, QStringLiteral("irssi"));
+        QCOMPARE(irssi.timestamp, QColor(95, 95, 110));
+        QCOMPARE(irssi.bracket, QColor(120, 120, 120));
+        QCOMPARE(irssi.system, QColor(108, 132, 168));
+        QVERIFY(irssi.monoNicks);
+        QVERIFY(irssi.nickPalette.isEmpty());
+    }
+
+    void bitchxChatThemeCarriesNickPalette() {
+        const auto bitchx = maxchat::ui::chatThemeById(QStringLiteral("bitchx"));
+        QCOMPARE(bitchx.id, QStringLiteral("bitchx"));
+        QCOMPARE(bitchx.timestamp, QColor(0, 200, 200));
+        QCOMPARE(bitchx.bracket, QColor(0, 205, 0));
+        QCOMPARE(bitchx.system, QColor(0, 200, 200));
+        QVERIFY(!bitchx.monoNicks);
+        QCOMPARE(bitchx.nickPalette.size(), 10);
+        QCOMPARE(bitchx.nickPalette.first(), QColor(0, 255, 255));
+    }
+
+    void plainChatThemesHaveNoExtras() {
+        const auto terminal = maxchat::ui::chatThemeById(QStringLiteral("terminal"));
+        QVERIFY(!terminal.timestamp.isValid());
+        QVERIFY(!terminal.bracket.isValid());
+        QVERIFY(!terminal.system.isValid());
+        QVERIFY(!terminal.monoNicks);
+        QVERIFY(terminal.nickPalette.isEmpty());
+    }
+};
+
+QTEST_MAIN(ThemeCatalogTest)
+
+#include "theme_catalog_test.moc"

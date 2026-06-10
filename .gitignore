@@ -1,0 +1,14 @@
+build/
+build-*/
+.cache/
+.qt/
+*.user
+*.autosave
+*.o
+*.obj
+*.so
+*.dll
+*.dylib
+*.exe
+*.app/
+compile_commands.json

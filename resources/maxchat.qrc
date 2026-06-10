@@ -1,0 +1,11 @@
+<RCC>
+  <qresource prefix="/">
+    <file alias="fonts/JetBrainsMono-Regular.ttf">../assets/fonts/JetBrainsMono-Regular.ttf</file>
+    <file alias="fonts/JetBrainsMono-Bold.ttf">../assets/fonts/JetBrainsMono-Bold.ttf</file>
+    <file alias="fonts/ComicRelief-Regular.ttf">../assets/fonts/ComicRelief-Regular.ttf</file>
+    <file alias="fonts/ComicRelief-Bold.ttf">../assets/fonts/ComicRelief-Bold.ttf</file>
+    <file alias="fonts/SymbolsNerdFontMono-Regular.ttf">../assets/fonts/SymbolsNerdFontMono-Regular.ttf</file>
+    <file alias="sounds/notify.wav">../assets/sounds/notify.wav</file>
+    <file alias="icons/maxchat.ico">../assets/icons/maxchat.ico</file>
+  </qresource>
+</RCC>
