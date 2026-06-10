@@ -70,6 +70,7 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QMimeData>
 #include <QMetaType>
 #include <QMouseEvent>
 #include <QPainter>
@@ -665,6 +666,10 @@ class ChatTextView final : public QTextBrowser {
         separatorMovedHandler_ = std::move(handler);
     }
 
+    // When true, copying yields plain text only (no rich-text colour runs),
+    // matching the Python "strip colors on copy" option.
+    void setStripColorsOnCopy(bool strip) { stripColorsOnCopy_ = strip; }
+
     void setSeparatorGuide(double timestampColumns, int nickWidth, bool visible, QColor color) {
         timestampColumns_ = std::max(0.0, timestampColumns);
         nickWidth_ = std::clamp(nickWidth, 4, 40);
@@ -737,6 +742,17 @@ class ChatTextView final : public QTextBrowser {
         painter.drawLine(x, 0, x, viewport()->height());
     }
 
+    QMimeData* createMimeDataFromSelection() const override {
+        QMimeData* mime = QTextBrowser::createMimeDataFromSelection();
+        if (stripColorsOnCopy_ && mime != nullptr) {
+            // Drop the HTML/colour payload; keep the plain text only.
+            const QString plain = mime->text();
+            mime->clear();
+            mime->setText(plain);
+        }
+        return mime;
+    }
+
   private:
     [[nodiscard]] double separatorX() const {
         return document()->documentMargin() +
@@ -747,6 +763,7 @@ class ChatTextView final : public QTextBrowser {
         return separatorColumns_ > 0.0 && std::abs(x - separatorX()) <= 5.0;
     }
 
+    bool stripColorsOnCopy_ = true;
     SeparatorMovedHandler separatorMovedHandler_;
     double timestampColumns_ = 0.0;
     double separatorColumns_ = 0.0;
@@ -4789,10 +4806,23 @@ void maxchat::ui::MainWindow::renderActiveBufferMetadata() {
                     QStringLiteral("%1 users").arg(snapshot.members.size()));
             }
             if (m_coloredNicks) {
-                for (const QString& member : snapshot.members) {
+                const auto roleRank = [](const QString& member) {
+                    const int idx =
+                        QStringLiteral("~&@%+").indexOf(member.isEmpty() ? QChar() : member.front());
+                    return idx < 0 ? 5 : idx;
+                };
+                QStringList members = snapshot.members;
+                std::sort(members.begin(), members.end(),
+                          [&](const QString& a, const QString& b) {
+                              if (m_sortByStatus && roleRank(a) != roleRank(b)) {
+                                  return roleRank(a) < roleRank(b);
+                              }
+                              return nickWithoutPrefix(a).compare(nickWithoutPrefix(b),
+                                                                  Qt::CaseInsensitive) < 0;
+                          });
+                for (const QString& member : members) {
                     m_memberList->addItem(member);
                 }
-                m_memberList->sortItems(Qt::AscendingOrder);
             } else {
                 // Colours off: IRCCloud-style sections grouped by channel role.
                 const QList<QPair<QString, QString>> memberGroups = {
@@ -5790,6 +5820,11 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
     m_markerLine = settings.value(QStringLiteral("marker_line"), true).toBool();
     m_replayLines = settings.value(QStringLiteral("replay_lines"), 0).toInt();
     m_nickColorOverrides = settings.value(QStringLiteral("nick_colors")).toMap();
+    m_sortByStatus = settings.value(QStringLiteral("sort_users_by_status"), true).toBool();
+    if (auto* chatView = dynamic_cast<ChatTextView*>(m_chatView)) {
+        chatView->setStripColorsOnCopy(
+            settings.value(QStringLiteral("strip_color_copy"), true).toBool());
+    }
     if (m_input != nullptr) {
         m_input->setPlaceholderText(
             settings.value(QStringLiteral("show_input_hint"), true).toBool()

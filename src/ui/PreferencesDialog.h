@@ -64,6 +64,9 @@ class PreferencesDialog final : public QDialog {
     QCheckBox* showFormatting_ = nullptr;
     QCheckBox* indentWrap_ = nullptr;
     QCheckBox* markerLine_ = nullptr;
+    QCheckBox* stripColorCopy_ = nullptr;
+    QCheckBox* sortByStatus_ = nullptr;
+    QComboBox* trayIcon_ = nullptr;
     QCheckBox* showMode_ = nullptr;
     QCheckBox* pmEcho_ = nullptr;
     QLineEdit* logMask_ = nullptr;
@@ -94,7 +97,6 @@ class PreferencesDialog final : public QDialog {
     QCheckBox* linkMedia_ = nullptr;
     QCheckBox* linkXCards_ = nullptr;
     QCheckBox* linkWebCards_ = nullptr;
-    QComboBox* trayIcon_ = nullptr;
     QCheckBox* dnd_ = nullptr;
     QComboBox* notifyPopup_ = nullptr;
     QCheckBox* notifyPm_ = nullptr;

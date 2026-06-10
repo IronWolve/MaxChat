@@ -364,6 +364,7 @@ class MainWindow final : public QMainWindow {
     QHash<QString, QSet<QString>> m_awayNicksByNetwork; // lowercase nicks
     QVariantMap m_nickColorOverrides;                   // lowercase nick -> hex
     QString m_eventColor;                               // "" = chat theme / default
+    bool m_sortByStatus = true;
     QLabel* m_membersHeader = nullptr;
     QAction* m_doNotDisturbAction = nullptr;
     QAction* m_comicCaptionsAction = nullptr;

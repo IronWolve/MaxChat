@@ -273,6 +273,9 @@ QVariantMap PreferencesDialog::settings() const {
     out.insert(QStringLiteral("log_mask"), logMask_->text().trimmed());
     out.insert(QStringLiteral("replay_lines"), replayLines_->value());
     out.insert(QStringLiteral("show_input_hint"), inputHint_->isChecked());
+    out.insert(QStringLiteral("strip_color_copy"), stripColorCopy_->isChecked());
+    out.insert(QStringLiteral("sort_users_by_status"), sortByStatus_->isChecked());
+    out.insert(QStringLiteral("tray_icon"), trayIcon_->currentData().toString());
     out.insert(QStringLiteral("server_list_visible"), serverListVisible_->isChecked());
     out.insert(QStringLiteral("member_list_visible"), memberListVisible_->isChecked());
     out.insert(QStringLiteral("show_button_bar"), buttonBarVisible_->isChecked());
@@ -308,9 +311,6 @@ QVariantMap PreferencesDialog::settings() const {
     services.insert(QStringLiteral("xcards"), linkXCards_->isChecked());
     services.insert(QStringLiteral("webcards"), linkWebCards_->isChecked());
     out.insert(QStringLiteral("content_services"), services);
-    if (trayIcon_) {
-        out.insert(QStringLiteral("tray_icon"), trayIcon_->currentData().toString());
-    }
     return out;
 }
 
@@ -405,61 +405,53 @@ void PreferencesDialog::buildAppearanceTab(QWidget* tab) {
     indentWrap_ = new QCheckBox(QStringLiteral("Indent wrapped lines"), tab);
     indentWrap_->setObjectName(QStringLiteral("indentWrap"));
     indentWrap_->setChecked(settings_.value(QStringLiteral("indent_wrap"), true).toBool());
+    stripColorCopy_ = new QCheckBox(QStringLiteral("Strip colors on copy"), tab);
+    stripColorCopy_->setObjectName(QStringLiteral("stripColorCopy"));
+    stripColorCopy_->setChecked(settings_.value(QStringLiteral("strip_color_copy"), true).toBool());
     textForm->addWidget(showFormatting_);
     textForm->addWidget(wordWrap_);
     textForm->addWidget(indentWrap_);
-    textForm->addWidget(plannedCheckBox(tab, QStringLiteral("Strip colors on copy")));
+    textForm->addWidget(stripColorCopy_);
     rightColumn->addWidget(textBox);
 
     auto* windowBox = new QGroupBox(QStringLiteral("Window"), tab);
-    auto* windowForm = new QVBoxLayout(windowBox);
+    auto* windowForm = new QFormLayout(windowBox);
     markerLine_ = new QCheckBox(QStringLiteral("Unread marker line"), tab);
     markerLine_->setObjectName(QStringLiteral("markerLine"));
     markerLine_->setChecked(settings_.value(QStringLiteral("marker_line"), true).toBool());
-    windowForm->addWidget(markerLine_);
+    windowForm->addRow(QString(), markerLine_);
     inputHint_ = new QCheckBox(QStringLiteral("Message-box hint text"), tab);
     inputHint_->setObjectName(QStringLiteral("inputHint"));
     inputHint_->setChecked(settings_.value(QStringLiteral("show_input_hint"), true).toBool());
-    windowForm->addWidget(inputHint_);
-
-    // Window / tray icon picker
-    auto* iconRow = new QHBoxLayout();
-    auto* iconLabel = new QLabel(QStringLiteral("Window / tray icon:"), tab);
+    windowForm->addRow(QString(), inputHint_);
+    sortByStatus_ = new QCheckBox(QStringLiteral("Sort users by status"), tab);
+    sortByStatus_->setObjectName(QStringLiteral("sortByStatus"));
+    sortByStatus_->setChecked(settings_.value(QStringLiteral("sort_users_by_status"), true).toBool());
+    windowForm->addRow(QString(), sortByStatus_);
     trayIcon_ = new QComboBox(tab);
     trayIcon_->setObjectName(QStringLiteral("trayIcon"));
-    {
-        // Populate matching Python app_icon.CHOICES
-        struct IconChoice { const char* value; const char* label; };
-        static const IconChoice choices[] = {
-            {"bubble", "Speech bubble (theme color)"},
-            {"\xF0\x9F\x92\xAC", "Speech balloon"},
-            {"\xF0\x9F\x92\xAD", "Thought bubble"},
-            {"\xF0\x9F\x97\xA8\xEF\xB8\x8F", "Left speech bubble"},
-            {"\xF0\x9F\x98\x80", "Smiley"},
-            {"\xF0\x9F\x98\x8E", "Cool shades"},
-            {"\xF0\x9F\xA4\x96", "Robot"},
-            {"\xF0\x9F\x91\xBE", "Alien"},
-            {"\xF0\x9F\x90\xA7", "Penguin"},
-            {"\xE2\xAD\x90", "Star"},
-            {"\xF0\x9F\x94\x94", "Bell"},
-            {"\xF0\x9F\x92\xBB", "Computer"},
-        };
-        for (const auto& c : choices) {
-            trayIcon_->addItem(
-                ui::AppIcon::makeIcon(QString::fromUtf8(c.value), QColor(QStringLiteral("#4a9eff"))),
-                QString::fromUtf8(c.label),
-                QString::fromUtf8(c.value));
-        }
+    const QColor iconAccent = appThemeById(
+        settings_.value(QStringLiteral("theme"), QStringLiteral("dark")).toString()).on;
+    const QList<QPair<QString, QString>> iconChoices = {
+        {QStringLiteral("bubble"), QStringLiteral("Speech bubble (theme color)")},
+        {QString::fromUtf8("\xF0\x9F\x92\xAC"), QStringLiteral("Speech balloon")},
+        {QString::fromUtf8("\xF0\x9F\x92\xAD"), QStringLiteral("Thought bubble")},
+        {QString::fromUtf8("\xF0\x9F\x98\x80"), QStringLiteral("Smiley")},
+        {QString::fromUtf8("\xF0\x9F\x98\x8E"), QStringLiteral("Cool shades")},
+        {QString::fromUtf8("\xF0\x9F\xA4\x96"), QStringLiteral("Robot")},
+        {QString::fromUtf8("\xF0\x9F\x91\xBE"), QStringLiteral("Alien")},
+        {QString::fromUtf8("\xF0\x9F\x90\xA7"), QStringLiteral("Penguin")},
+        {QString::fromUtf8("\xE2\xAD\x90"), QStringLiteral("Star")},
+        {QString::fromUtf8("\xF0\x9F\x94\x94"), QStringLiteral("Bell")},
+        {QString::fromUtf8("\xF0\x9F\x92\xBB"), QStringLiteral("Computer")},
+    };
+    for (const auto& choice : iconChoices) {
+        trayIcon_->addItem(ui::AppIcon::makeIcon(choice.first, iconAccent), choice.second,
+                           choice.first);
     }
-    // Select current value
-    const QString currentTray = settings_.value(QStringLiteral("tray_icon"), QStringLiteral("bubble")).toString();
-    const int idx = trayIcon_->findData(currentTray);
-    if (idx >= 0) trayIcon_->setCurrentIndex(idx);
-    iconRow->addWidget(iconLabel);
-    iconRow->addWidget(trayIcon_, 1);
-    windowForm->addLayout(iconRow);
-
-    windowForm->addWidget(plannedCheckBox(tab, QStringLiteral("Sort users by status")));
+    setComboByData(trayIcon_,
+                   settings_.value(QStringLiteral("tray_icon"), QStringLiteral("bubble")).toString());
+    windowForm->addRow(QStringLiteral("Window / tray icon"), trayIcon_);
     rightColumn->addWidget(windowBox);
     rightColumn->addStretch(1);
 }
