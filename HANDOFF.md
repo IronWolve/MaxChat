@@ -8,7 +8,27 @@ menus, button-tabs option, side panels, theme/chat-theme/wallpaper controls, and
 planned feature stubs visible. A theme-parity pass against the Python app is in
 progress (wallpaper rendering fixed; remaining gaps listed in `DEV_NOTES.md`).
 
-## Latest Completed Slice (member list / input / user themes / fonts)
+## Latest Completed Slice (themes/palette/protection batch, git-tracked)
+
+Now under git (local repo, no remote; author IronWolve, no AI trailer). Recent
+commits, newest first: protection settings; notify highlight_words fix; last
+planned stubs (strip-copy, sort-by-status); theme editor; app-wide QPalette;
+OS-notify visible-tray fix. Done in this batch:
+- App-wide QPalette + stylesheet (qApp), so dialogs are themed; "Themes Off"
+  restores the platform palette.
+- All 17 app + 8 chat Python themes verified present with full colour data.
+- Theme editor: Customize buttons -> ThemeEditorDialog, saves user JSON, live
+  registry reload (themeRegistry is now rebuildable).
+- strip_color_copy, sort_users_by_status (tray-icon picker already existed).
+- notify: highlight_words now honoured + no self-highlight.
+- Protection: paste guard, auto-rejoin, ignore/invite-protect (new invited()
+  signal), confirm-quit, scrollback cap, auto-away idle timer, hide/custom
+  CTCP VERSION.
+Remaining parity: Comic Mode + DCC (both deferred, now in progress as
+foundational passes). Tests deliberately not run this batch (user deferred);
+everything compiles debug + release.
+
+## Earlier Slice (member list / input / user themes / fonts)
 
 - Member list: away dimming (away-notify), per-nick colour overrides
   (context menu + chat), role-grouped view when colours off, "N users"

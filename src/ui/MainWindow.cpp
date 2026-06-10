@@ -21,6 +21,7 @@
 #include "ui/AudioPlayerBar.h"
 #include "ui/ChatFindDialog.h"
 #include "ui/ColorPickerDialog.h"
+#include "ui/ComicView.h"
 #include "ui/ImageViewerDialog.h"
 #include "ui/MediaPlayerDialog.h"
 #include "ui/ShortcutEditorDialog.h"
@@ -1021,11 +1022,10 @@ void maxchat::ui::MainWindow::buildMenus() {
                             &MainWindow::resetServerList);
 
     auto* comicMenu = menuBar()->addMenu(QStringLiteral("&Comic"));
-    QAction* comicModeAction = comicMenu->addAction(QStringLiteral("Comic Mode"), this, [this]() {
-        showFeaturePlanned(QStringLiteral("Comic Mode"),
-                           QStringLiteral("The Python comic renderer still needs to "
-                                          "be ported."));
-    });
+    m_comicModeAction = comicMenu->addAction(QStringLiteral("Comic Mode"));
+    m_comicModeAction->setCheckable(true);
+    connect(m_comicModeAction, &QAction::toggled, this, &MainWindow::setComicMode);
+    QAction* comicModeAction = m_comicModeAction;
     comicModeAction->setShortcut(QKeySequence(QStringLiteral("Ctrl+M")));
     QAction* emotionAction = comicMenu->addAction(QStringLiteral("Emotion..."), this, [this]() {
         showFeaturePlanned(QStringLiteral("Emotion Picker"),
@@ -1269,6 +1269,9 @@ void maxchat::ui::MainWindow::buildLayout() {
     });
 
     chatLayout->addWidget(m_chatView, 1);
+    m_comicView = new ComicView(chatColumn);
+    m_comicView->setVisible(false);
+    chatLayout->addWidget(m_comicView, 1);
     m_audioBar = new AudioPlayerBar(chatColumn);
     chatLayout->addWidget(m_audioBar);
     chatLayout->addWidget(m_input);
@@ -4675,6 +4678,9 @@ void maxchat::ui::MainWindow::appendSystemLineToNetworkTarget(const QString& net
     const bool active = isActiveBufferTarget(network, target);
     if (active) {
         appendFormattedChatLine(display);
+        if (m_comicMode) {
+            refreshComic();
+        }
     }
     if (active && shouldQueuePreviews) {
         queueLinkPreviewsFromLine(display.plainText);
@@ -4920,6 +4926,7 @@ void maxchat::ui::MainWindow::renderActiveBuffer(const int unreadMarkerFromEnd) 
             appendPlainChatLine(line.plainText);
         }
     }
+    refreshComic();
 }
 
 void maxchat::ui::MainWindow::renderActiveBufferMetadata() {
@@ -5259,6 +5266,65 @@ void maxchat::ui::MainWindow::appendUnreadMarkerLine() {
     }
     cursor.insertHtml(QStringLiteral("<hr/>"));
     m_chatView->setTextCursor(cursor);
+}
+
+void maxchat::ui::MainWindow::setComicMode(bool enabled) {
+    m_comicMode = enabled;
+    if (m_comicModeAction != nullptr && m_comicModeAction->isChecked() != enabled) {
+        const QSignalBlocker blocker(m_comicModeAction);
+        m_comicModeAction->setChecked(enabled);
+    }
+    if (m_chatView != nullptr) {
+        m_chatView->setVisible(!enabled);
+    }
+    if (m_comicView != nullptr) {
+        m_comicView->setVisible(enabled);
+    }
+    if (enabled) {
+        refreshComic();
+    }
+    statusBar()->showMessage(enabled ? QStringLiteral("Comic Mode on.")
+                                     : QStringLiteral("Comic Mode off."));
+}
+
+void maxchat::ui::MainWindow::refreshComic() {
+    if (m_comicView == nullptr || !m_comicMode) {
+        return;
+    }
+    const QVariantMap settings = m_settings.loadWithDefaults();
+    m_comicView->setShowNames(settings.value(QStringLiteral("comic_captions"), true).toBool());
+    m_comicView->setPanelCount(settings.value(QStringLiteral("comic_panels"), 4).toInt());
+
+    const maxchat::core::ChatBufferSnapshot snapshot =
+        m_chatBuffers.snapshot(bufferIdForTarget(m_currentTarget));
+    QVector<ComicLine> comicLines;
+    for (const maxchat::core::ChatBufferLine& line : snapshot.lines) {
+        const QString src = line.sourceText;
+        if (line.systemLine || src.isEmpty()) {
+            continue; // skip join/part/status; only real speech becomes panels
+        }
+        ComicLine comic;
+        if (src.startsWith(QLatin1Char('<'))) {
+            const int end = src.indexOf(QStringLiteral("> "));
+            if (end <= 0) {
+                continue;
+            }
+            comic.nick = src.mid(1, end - 1);
+            comic.text = src.mid(end + 2);
+        } else if (src.startsWith(QStringLiteral("* "))) {
+            const int sp = src.indexOf(QLatin1Char(' '), 2);
+            if (sp <= 2) {
+                continue;
+            }
+            comic.nick = src.mid(2, sp - 2);
+            comic.text = src.mid(sp + 1);
+            comic.action = true;
+        } else {
+            continue;
+        }
+        comicLines.append(comic);
+    }
+    m_comicView->setLines(comicLines);
 }
 
 void maxchat::ui::MainWindow::recolorMemberList() {
