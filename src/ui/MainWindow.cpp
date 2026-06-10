@@ -760,7 +760,6 @@ MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent),
       m_chatLogStore(QDir(m_settings.paths().configDir).filePath(QStringLiteral("logs"))),
       m_openGraphFetcher(&m_previewNetworkManager),
-      m_notificationTray(nullptr),
       m_osNotifyAvailable(false) {
     m_appUptime.start();
     loadFonts();
@@ -769,9 +768,12 @@ MainWindow::MainWindow(QWidget* parent)
     setupConnectionSignals();
     setupTrayIcon();
     m_notifier = new Notifier(this);
-    // Probe whether OS native notifications actually work (Wayland/WSLg reports
-    // supportsMessages=true but has no notification daemon)
-    m_osNotifyAvailable = ::QSystemTrayIcon::supportsMessages();
+    // OS native notifications post through the VISIBLE tray icon (showMessage on
+    // a never-shown tray is a silent no-op), so they require m_tray to exist.
+    m_osNotifyAvailable = (m_tray != nullptr) && ::QSystemTrayIcon::supportsMessages();
+#ifdef Q_OS_LINUX
+    // Wayland/WSLg reports supportsMessages()=true but often has no notification
+    // daemon; confirm one actually owns the D-Bus name, else fall back to toast.
     if (m_osNotifyAvailable) {
         QProcess probe;
         probe.start(QStringLiteral("dbus-send"),
@@ -782,9 +784,11 @@ MainWindow::MainWindow(QWidget* parent)
                      QStringLiteral("/org/freedesktop/DBus"),
                      QStringLiteral("org.freedesktop.DBus.GetNameOwner"),
                      QStringLiteral("string:org.freedesktop.Notifications")});
-        probe.waitForFinished(3000);
-        m_osNotifyAvailable = (probe.exitCode() == 0);
+        const bool finished = probe.waitForFinished(3000);
+        m_osNotifyAvailable = finished && probe.exitStatus() == QProcess::NormalExit &&
+                              probe.exitCode() == 0;
     }
+#endif
     connect(&m_openGraphFetcher, &maxchat::services::OpenGraphFetcher::cardFetched, this,
             &MainWindow::handlePreviewCardFetched);
     connect(&m_openGraphFetcher, &maxchat::services::OpenGraphFetcher::fetchFailed, this,
@@ -1354,18 +1358,12 @@ void maxchat::ui::MainWindow::openPreferences() {
 
         if (style == QLatin1String("off")) return;
 
-        // OS native
-        if (style == QLatin1String("system") && m_osNotifyAvailable) {
-            if (m_notificationTray == nullptr) {
-                m_notificationTray = new ::QSystemTrayIcon(this);
-                m_notificationTray->setIcon(ui::AppIcon::makeIcon(
-                    testSettings.value(QStringLiteral("tray_icon"), QStringLiteral("bubble")).toString(),
-                    QColor(QStringLiteral("#4a9eff"))));
-            }
-            m_notificationTray->showMessage(
+        // OS native - post through the visible tray icon.
+        if (style == QLatin1String("system") && m_osNotifyAvailable && m_tray != nullptr) {
+            m_tray->showMessage(
                 QStringLiteral("Test \u00b7 MaxChat"),
                 QStringLiteral("This is what a notification looks like \u2014 click to open the chat."),
-                m_notificationTray->icon(), 5000);
+                m_tray->icon(), 5000);
             return;
         }
 
@@ -5967,15 +5965,10 @@ void maxchat::ui::MainWindow::notify(const QString& title, const QString& text,
     // Popup style
     if (m_notifyStyle == QLatin1String("off")) return;
 
-    // OS native notification (only if notification daemon is available)
-    if (m_notifyStyle == QLatin1String("system") && m_osNotifyAvailable) {
-        if (m_notificationTray == nullptr) {
-            m_notificationTray = new ::QSystemTrayIcon(this);
-            m_notificationTray->setIcon(ui::AppIcon::makeIcon(
-                m_settings.loadWithDefaults().value(QStringLiteral("tray_icon"), QStringLiteral("bubble")).toString(),
-                QColor(QStringLiteral("#4a9eff"))));
-        }
-        m_notificationTray->showMessage(title, text, m_notificationTray->icon(), 5000);
+    // OS native notification - post through the visible tray icon (showMessage
+    // on a hidden tray is a no-op), available only when a daemon/tray accepts it.
+    if (m_notifyStyle == QLatin1String("system") && m_osNotifyAvailable && m_tray != nullptr) {
+        m_tray->showMessage(title, text, m_tray->icon(), 5000);
         return;
     }
 
