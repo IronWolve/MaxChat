@@ -34,6 +34,7 @@
 #include "ui/ThemeCatalog.h"
 #include "ui/UrlListDialog.h"
 #include "ui/AppIcon.h"
+#include "ui/Notifier.h"
 #include <QSystemTrayIcon>
 #include <QMenu>
 
@@ -764,6 +765,7 @@ MainWindow::MainWindow(QWidget* parent)
     buildLayout();
     setupConnectionSignals();
     setupTrayIcon();
+    m_notifier = new Notifier(this);
     connect(&m_openGraphFetcher, &maxchat::services::OpenGraphFetcher::cardFetched, this,
             &MainWindow::handlePreviewCardFetched);
     connect(&m_openGraphFetcher, &maxchat::services::OpenGraphFetcher::fetchFailed, this,
@@ -5843,13 +5845,80 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
 
     updateTrayIcon();
     updateMinimizeToTrayFromSettings();
+    m_highlightWords = settings.value(QStringLiteral("highlight_words")).toString().split(
+        QRegularExpression(QStringLiteral("[,\\s]+")), Qt::SkipEmptyParts);
     renderActiveBuffer();
     updateChatSeparatorGuide();
     renderActiveBufferMetadata();
     updateNetworkTreeLabels();
     updateChannelModeButton();
-}
+    }
 
+void maxchat::ui::MainWindow::notify(const QString& title, const QString& text,
+                        const QString& network, const QString& target) {
+    // Don't notify if window is active or DND is on (matches Python)
+    if (isActiveWindow() || !m_notifier) return;
+    auto s = m_settings.loadWithDefaults();
+    if (s.value(QStringLiteral("dnd"), false).toBool()) return;
+
+    // Taskbar flash
+    if (s.value(QStringLiteral("notify_flash"), true).toBool()) {
+        QApplication::alert(this, 0);
+    }
+
+    // Sound
+    if (s.value(QStringLiteral("notify_sound"), false).toBool()) {
+        QApplication::beep();
+    }
+
+    // Popup style
+    const QString style = s.value(QStringLiteral("notify_popup"), QStringLiteral("custom")).toString();
+    if (style == QLatin1String("off")) return;
+
+    // System tray notification
+    if (style == QLatin1String("system") && m_tray && ::QSystemTrayIcon::supportsMessages()) {
+        m_tray->showMessage(title, text, m_tray->icon(), 5000);
+        return;
+    }
+
+        const AppThemeDefinition& themeDef = appThemeById(m_currentTheme);
+    QColor followBg = themeDef.panel.isValid() ? themeDef.panel : QColor(QStringLiteral("#2b2b2b"));
+    QColor followFg = themeDef.text.isValid() ? themeDef.text : QColor(QStringLiteral("#e8e8e8"));
+    QColor followAccent = themeDef.accent.isValid() ? themeDef.accent : QColor(QStringLiteral("#4a9eff"));
+
+    const QString notifyTheme = s.value(QStringLiteral("notify_theme"), QStringLiteral("follow")).toString();
+    QColor bg = Notifier::paletteBg(notifyTheme, followBg);
+    QColor fg = Notifier::paletteFg(notifyTheme, followFg);
+    QColor accent = Notifier::paletteAccent(notifyTheme, followAccent);
+
+    const QString corner = s.value(QStringLiteral("notify_corner"), QStringLiteral("br")).toString();
+    const int durationMs = s.value(QStringLiteral("notify_duration"), 6).toInt() * 1000;
+
+    QIcon icon;
+    QString trayChoice = s.value(QStringLiteral("tray_icon"), QStringLiteral("bubble")).toString();
+    icon = ui::AppIcon::makeIcon(trayChoice, accent);
+
+    std::function<void()> onClick;
+    if (!network.isEmpty() && !target.isEmpty()) {
+        QString net = network;
+        QString tgt = target;
+        onClick = [this, net, tgt]() {
+            show();
+            raise();
+            activateWindow();
+            setActiveNetwork(net);
+            activateBufferTarget(tgt);
+        };
+    } else {
+        onClick = [this]() {
+            show();
+            raise();
+            activateWindow();
+        };
+    }
+
+    m_notifier->show(title, text, bg, fg, accent, corner, durationMs, icon, std::move(onClick));
+    }
 
 void maxchat::ui::MainWindow::setupTrayIcon() {
     if (!QSystemTrayIcon::isSystemTrayAvailable()) {
