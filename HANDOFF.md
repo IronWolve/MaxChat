@@ -8,7 +8,27 @@ menus, button-tabs option, side panels, theme/chat-theme/wallpaper controls, and
 planned feature stubs visible. A theme-parity pass against the Python app is in
 progress (wallpaper rendering fixed; remaining gaps listed in `DEV_NOTES.md`).
 
-## Latest Completed Slice (themes/palette/protection batch, git-tracked)
+## Latest Completed Slice (prefs parity + full DCC + full Comic Mode)
+
+- Preferences now match the Python dialog page-for-page, control-for-control:
+  Appearance/Messages/Notifications/Protection/Files(DCC)/Themes/Fonts/
+  Localization/Comic/Services/Data; QFontComboBox per area incl. nick/status/
+  topic; sort_status key fixed; all notify_*/dcc_* defaults added; nick label
+  beside the input now exists and per-area fonts/colours apply.
+- DCC is complete: passive/reverse mode, RESUME/ACCEPT, accept policy
+  (ask/trusted/all), port range, advertised IP (incl. IrcConnection::
+  localAddress), 32-bit acks, DCC CHAT (=peer buffers), member-menu Send File /
+  DCC Chat, transfers dialog with progress/Open-folder.
+- Comic Mode fully ported: src/comic/ (ComicArt .avb/.bgb decoder, ComicCharacter
+  compose/mirror/trim, ComicRenderer balloon/tail/caption layout) + a MainWindow
+  comic engine (assignment, emotion guess, filtering, panel spill) + ComicView
+  panel grid + ComicSettingsDialog + character gallery + Save Comic. No art ships;
+  users set comic_art_dir to their own Comic Chat install.
+- Verified: clean-from-scratch debug build 0 errors, release builds, selftest OK.
+  Tests still deferred per user. Translations (tr() of UI strings) intentionally
+  left for later.
+
+## Previous Slice (themes/palette/protection batch, git-tracked)
 
 Now under git (local repo, no remote; author IronWolve, no AI trailer). Recent
 commits, newest first: protection settings; notify highlight_words fix; last
