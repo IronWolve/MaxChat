@@ -47,7 +47,12 @@ flagged "medium+ — push past the checklist for extra attack angles."
 the recommended model/effort or change it — before reading any files.** Do not begin the
 phase work until the user confirms.
 
-**Last session:** 2026-06-10 — Phase 3 done (Opus 4.8 low-med). Settings layer is
+**Last session:** 2026-06-10 — Phase 4 done (Opus 4.8 medium). S8 DEBUNKED — IrcFormat.cpp
+is a faithful full port (0–98 palette + 0x04 hex + all control codes, reverse-video and
+parse edge cases match Python). ChatLineFormatter solid. 1 fix (Ctrl+O/R format keys),
+1 backlog (Tab-completion cycling). All 40 green. Next: Phase 5 (DCC).
+
+Phase 3 (2026-06-10, Opus 4.8 low-med). Settings layer is
 solid: Python has 127 default keys (not 175 — inventory over-claimed), C++ 100; the
 gaps are renames + comic keys (inline fallbacks, Phase 6) + migration flags (N/A for a
 fresh port) + deferred features. 1 cleanliness fix (shortcuts/looks defaults). S5a
@@ -63,7 +68,7 @@ resolved (no SCRAM).
 - [x] Phase 1 — IRC protocol parity ✅ 2026-06-10
 - [x] Phase 2 — Slash commands & aliases ✅ 2026-06-10
 - [x] Phase 3 — Settings keys & preferences ✅ 2026-06-10
-- [ ] Phase 4 — Chat rendering & input
+- [x] Phase 4 — Chat rendering & input ✅ 2026-06-10
 - [ ] Phase 5 — DCC (parity + security)
 - [ ] Phase 6 — Comic mode (parity + decoder robustness)
 - [ ] Phase 7 — Themes, fonts, notifications, tray, sounds
@@ -85,12 +90,12 @@ resolved (no SCRAM).
 | S5 | MISS | Themes | "Looks" (saved theme+font combos) — verify completeness in Phase 7. **S5a default-theme mismatch is WRONG (debunked Phase 3): Python config.py defaults to "synthwave" too.** | 7 | PARTIAL (S5a closed) |
 | S6 | BUG? | SASL | ~~Python does PLAIN only; C++ claims PLAIN + SCRAM-SHA-256.~~ RESOLVED 2026-06-10: no SCRAM exists in src/ — the inventory over-claimed. C++ does PLAIN only, matching Python. No action. | 1 | VERIFIED |
 | S7 | MISS | Settings | ~~175 vs ~70~~ QUANTIFIED Phase 3: Python has **127** default keys, C++ **100**. Gap = renames (2) + comic_* (16, inline fallbacks → Phase 6) + migration flags (3, N/A for fresh port) + deferred features (update_check/seeded_scripts/nick_width_autoset) + legacy notify_method. No data-loss bug. Map in Phase 3 section. | 3 | VERIFIED |
-| S8 | BUG? | Rendering | mIRC colors 16–98 + hex color code (\x04 / \x0C#RRGGBB) likely missing in C++ IrcFormat (0–15 only). Strike/reverse/mono coverage unverified. | 4 | OPEN |
+| S8 | BUG? | Rendering | ~~colors 16–98 + hex likely missing~~ DEBUNKED 2026-06-10: IrcFormat.cpp has the full 0–98 palette (identical RRGGBB), the 0x04 hex code, and all control codes (bold/italic/underline/strike/reverse/mono/reset). Reverse-video swap + color-parse edge cases match Python. No bug. | 4 | VERIFIED |
 | S9 | MISS | Commands | ~~~25 Python commands likely missing~~~ MOSTLY DEBUNKED 2026-06-10: the inventory was wrong — /raw /quote /oper /kill /wallops /ns /cs /ms /identify /ghost /alias /unalias and unknown→raw passthrough all already exist in CommandParser. Only **/sound** was genuinely missing (now FIXED). C++ is in fact a superset (adds /help /close /disconnect /reconnect /connect /server /notify etc.). | 2 | VERIFIED |
 | S10 | MISS | Comic | Per-channel overrides (comic_channels: bg/chars/ignore), real emotion wheel (stub), assign-character dialog from member menu, stable per-channel random bg, panel right-click menus. | 6 | OPEN |
 | S11 | BUG | Shortcuts | ~~Rebinding not persisted~~ RESOLVED in code (Phase 3): `shortcuts` is saved via saveRaw (MainWindow.cpp:5278), re-applied on startup (applyNavShortcutOverrides @ 6653) and after edit (5282). Was stale. A round-trip regression test would lock it in (Backlog #7). | 3 | VERIFIED |
 | S12 | MISS | DCC UI | Transfers dialog lacks Rate/ETA columns (Python has live rate + ETA). | 5 | OPEN |
-| S13 | MISS | Input | Image-paste hook (Python emits imagePasted for script upload) — depends on S1 decision. | 4 | OPEN |
+| S13 | MISS | Input | Image-paste hook (Python emits imagePasted for a script to upload+link). C++ input is a QTextEdit with acceptRichText(false) → pasted images are ignored (no crash). Nothing to wire until scripting exists. | 4 | DEFERRED (with S1) |
 | S14 | MISS | Localization | Translations deferred by user decision: tr() wrapping incomplete, no .qm files. Loader + Localization page exist. NOT an audit failure — track only. | 11 | WONTPORT (deferred) |
 
 ---
@@ -318,9 +323,22 @@ Checklist:
 
 ### Findings — Phase 4
 
-| Sev | Where | Issue | Status |
-|-----|-------|-------|--------|
-| | | | |
+| ID | Sev | Where | Issue | Status |
+|----|-----|-------|-------|--------|
+| P4-1 | MISS (low) | MainWindow.cpp input shortcuts | C++ wired Ctrl+B/I/U/K but not **Ctrl+O (reset 0x0F)** and **Ctrl+R (reverse 0x16)** that Python's FORMAT_KEYS has. | **FIXED** — added both. |
+| P4-2 | DIFF (med) | MainWindow.cpp completeInput | Tab completion always picks the **first** matching candidate; Python's `_complete` **cycles** through all matches on repeated Tab/Backtab. | Backlog #9 |
+| P4-3 | DIFF (low) | MainWindow input widget | C++ input is a multi-line QTextEdit; Python is a single-line QLineEdit. Paste guard therefore triggers on **send** (m_pasteGuard @ submit) rather than on **paste** (Python intercepts in insertFromMimeData). Functionally equivalent, different trigger point. | NOTED |
+| P4-4 | DIFF (none) | MainWindow.cpp addInputHistory | History capped at 200 entries; Python's grows unbounded. Acceptable/better. | NOTED |
+| (S8) | — | IrcFormat.cpp | Debunked — faithful full color/code port. | CLOSED |
+| (S13) | — | input image paste | Deferred with scripting (S1); QTextEdit ignores image paste, no crash. | DEFERRED |
+
+Checklist status: color codes ✓✓ (S8 — full 0–98 + hex + all control codes, values match);
+bg colors / reverse-video / reset / mono ✓ (exact parity); strip-on-copy ✓ (ChatLineFormatter
+plainText path + strip_color_copy); nick column right-align + width clamp + hang-indent ✓;
+timestamps ✓ (token format handled at render); nick coloring + override precedence + bracket
+tint ✓; tab completion present (P4-2 cycling gap); history ✓; Ctrl+B/I/U/K ✓ + O/R fixed;
+paste guard ✓ (P4-3 trigger-point diff); spellcheck highlighter present. Emoji-fallback font
+is a Phase 7 (fonts) concern. HTML-escaping of nick/text verified inline — full sweep Phase 10.
 
 ---
 
@@ -657,3 +675,4 @@ Big items deferred from phases. Each entry must be actionable cold: what, where,
 | 6 | 2 (S1/P2-4) | MISS | C++-native plugin/scripting system | Python's plugin API (`scripting.py`: on_message/on_join/on_command/on_image_paste, /load /unload /reload, scripts dialog) can't be ported as-is (no embedded Python). DEFERRED by user 2026-06-10. Design a C++-native approach later — options: embed Lua, or a subprocess/IPC bridge speaking a small JSON protocol. Until then `/scripts /load /unload /reload` stay placeholders. | DEFERRED |
 | 7 | 3 (S11) | TEST | Shortcut persistence regression test | Shortcuts persist correctly but there's no test. Add a round-trip: set an override → saveRaw → reload → applyNavShortcutOverrides binds the new key. Needs a MainWindow harness (see main_window_link_preview_test). | OPEN |
 | 8 | 3 (P3-3) | MISS low | Port `nick_width_autoset` | Python auto-fits the nick column to the user's nick once, then lets them drag it (`nick_width_autoset` guards the one-shot). Port if/when touching the nick-column layout (Phase 4 area). | OPEN |
+| 9 | 4 (P4-2) | DIFF med | Tab-completion cycling | `MainWindow::completeInput` picks the first match only. Make repeated Tab/Backtab cycle through all candidates: remember (tokenStart, prefix, candidate list, index, last-inserted range); on each Tab advance the index and replace the last completion; reset the state on any other keypress/edit. Mirror Python `input_bar._complete(back=...)`. Needs the main_window test harness for a round-trip test. | OPEN |
