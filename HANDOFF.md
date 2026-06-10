@@ -24,9 +24,17 @@ OS-notify visible-tray fix. Done in this batch:
 - Protection: paste guard, auto-rejoin, ignore/invite-protect (new invited()
   signal), confirm-quit, scrollback cap, auto-away idle timer, hide/custom
   CTCP VERSION.
-Remaining parity: Comic Mode + DCC (both deferred, now in progress as
-foundational passes). Tests deliberately not run this batch (user deferred);
-everything compiles debug + release.
+Comic Mode and DCC now have foundational passes too:
+- Comic Mode (Ctrl+M): ComicView renders recent messages as panels with
+  generated per-nick characters, name captions, speech bubbles. Emotion /
+  Comic Settings / Browse / Save still stubs (need the bundled-art pipeline).
+- DCC: DccManager does active-mode SEND + incoming-SEND receive with progress;
+  DccTransfersDialog (Settings -> File Transfers); /dcc send|list|close; new
+  dccRequest() signal. Passive mode + RESUME still TODO.
+Tests deliberately not run this batch (user deferred); everything compiles
+debug + release and the release selftest passes. With these, the major Python
+feature set is ported; remaining work is depth (comic art, DCC passive/resume,
+tr() localization strings) rather than missing features.
 
 ## Earlier Slice (member list / input / user themes / fonts)
 
