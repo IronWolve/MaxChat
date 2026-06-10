@@ -50,6 +50,7 @@ class QMenu;
 namespace maxchat::ui {
 
 class AudioPlayerBar;
+class Notifier;
 
 class BanListDialog;
 class ChannelListDialog;
@@ -234,6 +235,8 @@ class MainWindow final : public QMainWindow {
     void updateTrayIcon();
     void toggleWindowVisibility();
     void updateMinimizeToTrayFromSettings();
+    void notify(const QString& title, const QString& text,
+                const QString& network = {}, const QString& target = {});
     [[nodiscard]] QStringList channelTargetsContainingMember(const QString& network,
                                                              const QString& nick) const;
     [[nodiscard]] QStringList channelTargetsContainingMember(const QString& nick) const;
@@ -339,6 +342,8 @@ class MainWindow final : public QMainWindow {
     int m_inputHistoryIndex = 0;
     bool m_haveFriendSnapshot = false;
     QTimer m_friendPollTimer;
+    Notifier* m_notifier = nullptr;
+    QStringList m_highlightWords;
     QAction* m_buttonBarAction = nullptr;
     QAction* m_serverListVisibleAction = nullptr;
     QAction* m_membersVisibleAction = nullptr;

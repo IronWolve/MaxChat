@@ -200,6 +200,10 @@ qt_add_executable(maxchat-c
     src/ui/UrlListDialog.h
     src/ui/AppIcon.cpp
     src/ui/AppIcon.h
+    src/ui/ToastWidget.cpp
+    src/ui/ToastWidget.h
+    src/ui/Notifier.cpp
+    src/ui/Notifier.h
     resources/maxchat.qrc
 )
 
@@ -783,6 +787,10 @@ qt_add_executable(main_window_link_preview_test
     src/ui/UrlListDialog.h
     src/ui/AppIcon.cpp
     src/ui/AppIcon.h
+    src/ui/ToastWidget.cpp
+    src/ui/ToastWidget.h
+    src/ui/Notifier.cpp
+    src/ui/Notifier.h
     resources/maxchat.qrc
 )
 
