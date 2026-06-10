@@ -3,6 +3,7 @@
 #include "core/SettingsStore.h"
 #include "spell/SpellcheckDictionaryCatalog.h"
 #include "ui/ThemeCatalog.h"
+#include "ui/ThemeEditorDialog.h"
 #include "ui/AppIcon.h"
 
 #include <QAbstractItemView>
@@ -311,6 +312,26 @@ QVariantMap PreferencesDialog::settings() const {
         out.insert(QStringLiteral("tray_icon"), trayIcon_->currentData().toString());
     }
     return out;
+}
+
+void PreferencesDialog::refillThemeCombo(QComboBox* combo, const bool chat,
+                                         const QString& selectId) {
+    if (combo == nullptr) {
+        return;
+    }
+    const QSignalBlocker blocker(combo);
+    combo->clear();
+    if (chat) {
+        for (const ChatThemeDefinition& theme : chatThemes()) {
+            combo->addItem(theme.label, theme.id);
+        }
+        setComboByData(combo, normalizeChatThemeId(selectId));
+    } else {
+        for (const AppThemeDefinition& theme : appThemes()) {
+            combo->addItem(theme.label, theme.id);
+        }
+        setComboByData(combo, normalizeThemeId(selectId));
+    }
 }
 
 void PreferencesDialog::setAllFonts(const QString& family, int size, bool bold) {
@@ -681,7 +702,13 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
     appForm->addRow(QString(), appButtons);
     auto* appCustomize = new QPushButton(QStringLiteral("Customize..."), appBox);
     appCustomize->setObjectName(QStringLiteral("customizeAppTheme"));
-    appCustomize->setEnabled(false);
+    connect(appCustomize, &QPushButton::clicked, this, [this]() {
+        ThemeEditorDialog editor(ThemeEditorDialog::Scope::App, theme_->currentData().toString(),
+                                 this);
+        if (editor.exec() == QDialog::Accepted && !editor.resultId().isEmpty()) {
+            refillThemeCombo(theme_, false, editor.resultId());
+        }
+    });
     appForm->addRow(QString(), appCustomize);
     root->addWidget(appBox);
 
@@ -699,7 +726,13 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
     chatForm->addRow(QStringLiteral("Theme"), chatTheme_);
     auto* chatCustomize = new QPushButton(QStringLiteral("Customize..."), chatBox);
     chatCustomize->setObjectName(QStringLiteral("customizeChatTheme"));
-    chatCustomize->setEnabled(false);
+    connect(chatCustomize, &QPushButton::clicked, this, [this]() {
+        ThemeEditorDialog editor(ThemeEditorDialog::Scope::Chat,
+                                 chatTheme_->currentData().toString(), this);
+        if (editor.exec() == QDialog::Accepted && !editor.resultId().isEmpty()) {
+            refillThemeCombo(chatTheme_, true, editor.resultId());
+        }
+    });
     chatForm->addRow(QString(), chatCustomize);
     root->addWidget(chatBox);
 

@@ -184,6 +184,8 @@ qt_add_executable(maxchat-c
     src/ui/MainWindow.h
     src/ui/PreferencesDialog.cpp
     src/ui/PreferencesDialog.h
+    src/ui/ThemeEditorDialog.cpp
+    src/ui/ThemeEditorDialog.h
     src/ui/QuickConnectDialog.cpp
     src/ui/QuickConnectDialog.h
     src/ui/RawLogDialog.cpp
@@ -726,6 +728,8 @@ qt_add_executable(preferences_dialog_test
     tests/unit/preferences_dialog_test.cpp
     src/ui/PreferencesDialog.cpp
     src/ui/PreferencesDialog.h
+    src/ui/ThemeEditorDialog.cpp
+    src/ui/ThemeEditorDialog.h
     src/ui/ThemeCatalog.cpp
     src/ui/ThemeCatalog.h
     src/ui/AppIcon.cpp
@@ -771,6 +775,8 @@ qt_add_executable(main_window_link_preview_test
     src/ui/MainWindow.h
     src/ui/PreferencesDialog.cpp
     src/ui/PreferencesDialog.h
+    src/ui/ThemeEditorDialog.cpp
+    src/ui/ThemeEditorDialog.h
     src/ui/QuickConnectDialog.cpp
     src/ui/QuickConnectDialog.h
     src/ui/RawLogDialog.cpp

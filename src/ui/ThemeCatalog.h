@@ -58,6 +58,14 @@ struct WallpaperDefinition {
 [[nodiscard]] QList<WallpaperDefinition> wallpaperChoices();
 [[nodiscard]] AppThemeDefinition appThemeById(const QString &theme);
 [[nodiscard]] ChatThemeDefinition chatThemeById(const QString &chatTheme);
+
+// Rebuild the in-memory theme lists from bundled assets + the user config dir
+// (call after saving a user theme so menus/combos pick it up without a restart).
+void reloadThemes();
+// Save an edited theme as a user JSON file and reload; returns the new id
+// ("u-<slug>"), or empty on failure.
+[[nodiscard]] QString saveUserAppTheme(const QString &name, const AppThemeDefinition &theme);
+[[nodiscard]] QString saveUserChatTheme(const QString &name, const ChatThemeDefinition &theme);
 [[nodiscard]] QString effectiveWallpaperPath(const QString &theme,
                                              const QString &wallpaper);
 // QPalette matching a theme, so the OS palette can't bleed into unstyled
