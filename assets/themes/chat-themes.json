@@ -1,0 +1,71 @@
+{
+  "kind": "chat",
+  "version": 1,
+  "themes": [
+    {
+      "id": "follow",
+      "label": "Follow app theme"
+    },
+    {
+      "id": "terminal",
+      "label": "Terminal - grey on black",
+      "bg": [10, 10, 10],
+      "fg": [208, 208, 208],
+      "fixed": true
+    },
+    {
+      "id": "green",
+      "label": "Terminal - green on black",
+      "bg": [8, 12, 8],
+      "fg": [0, 210, 0],
+      "fixed": true
+    },
+    {
+      "id": "amber",
+      "label": "Terminal - amber on black",
+      "bg": [12, 10, 6],
+      "fg": [255, 176, 0],
+      "fixed": true
+    },
+    {
+      "id": "irssi",
+      "label": "irssi - clean (mono nicks)",
+      "bg": [0, 0, 0],
+      "fg": [192, 192, 192],
+      "fixed": true,
+      "ts": [95, 95, 110],
+      "bracket": [120, 120, 120],
+      "system": [108, 132, 168],
+      "nicks": "mono"
+    },
+    {
+      "id": "bitchx",
+      "label": "BitchX - bright & loud",
+      "bg": [0, 0, 0],
+      "fg": [205, 205, 205],
+      "fixed": true,
+      "ts": [0, 200, 200],
+      "bracket": [0, 205, 0],
+      "system": [0, 200, 200],
+      "nicks": [
+        [0, 255, 255], [0, 255, 0], [255, 255, 0], [255, 0, 255],
+        [90, 130, 255], [255, 90, 90], [255, 255, 255], [255, 156, 0],
+        [90, 255, 200], [180, 120, 255]
+      ]
+    },
+    {
+      "id": "white",
+      "label": "White - proportional",
+      "bg": [255, 255, 255],
+      "fg": [24, 24, 24],
+      "fixed": false
+    },
+    {
+      "id": "paper",
+      "label": "Paper - sepia",
+      "bg": [250, 247, 238],
+      "fg": [43, 40, 33],
+      "fixed": false
+    }
+  ]
+}
