@@ -306,6 +306,7 @@ QVariantMap SettingsStore::defaultSettings() {
   settings.insert(QStringLiteral("ignore_invites"), false);
   settings.insert(QStringLiteral("invite_protect"), true);
   settings.insert(QStringLiteral("confirm_quit"), true);
+  settings.insert(QStringLiteral("dcc_dir"), QString());
   settings.insert(QStringLiteral("logging"), true);
   settings.insert(QStringLiteral("replay_log"), true);
   settings.insert(QStringLiteral("replay_lines"), 0);

@@ -66,6 +66,7 @@ signals:
   void nickChanged(const QString &oldNick, const QString &newNick);
   void awayChanged(const QString &nick, bool away);
   void invited(const QString &sender, const QString &channel, const QString &mask);
+  void dccRequest(const QString &sender, const QString &args);
   void userJoined(const QString &channel, const QString &nick);
   void userParted(const QString &channel, const QString &nick,
                   const QString &reason);

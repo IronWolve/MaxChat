@@ -51,6 +51,7 @@ namespace maxchat::ui {
 
 class AudioPlayerBar;
 class ComicView;
+class DccManager;
 class Notifier;
 
 class BanListDialog;
@@ -217,6 +218,8 @@ class MainWindow final : public QMainWindow {
     void renderActiveBufferMetadata();
     void setComicMode(bool enabled);
     void refreshComic();
+    void openDccTransfers();
+    void handleDccCommand(const QStringList& args);
     void recolorMemberList();
     void appendUnreadMarkerLine();
     void rebuildLooksMenu();
@@ -390,6 +393,7 @@ class MainWindow final : public QMainWindow {
     QAction* m_comicModeAction = nullptr;
     ComicView* m_comicView = nullptr;
     bool m_comicMode = false;
+    DccManager* m_dccManager = nullptr;
     QList<QAction*> m_themeActions;
     QList<QAction*> m_chatThemeActions;
     QList<QAction*> m_wallpaperActions;
