@@ -92,6 +92,7 @@ class PreferencesDialog final : public QDialog {
     QCheckBox* linkMedia_ = nullptr;
     QCheckBox* linkXCards_ = nullptr;
     QCheckBox* linkWebCards_ = nullptr;
+    QComboBox* trayIcon_ = nullptr;
     QComboBox* interfaceLanguage_ = nullptr;
     QCheckBox* spellcheckEnabled_ = nullptr;
     QComboBox* spellLanguage_ = nullptr;

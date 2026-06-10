@@ -3,6 +3,7 @@
 #include "core/SettingsStore.h"
 #include "spell/SpellcheckDictionaryCatalog.h"
 #include "ui/ThemeCatalog.h"
+#include "ui/AppIcon.h"
 
 #include <QAbstractItemView>
 #include <QCheckBox>
@@ -292,6 +293,9 @@ QVariantMap PreferencesDialog::settings() const {
     services.insert(QStringLiteral("xcards"), linkXCards_->isChecked());
     services.insert(QStringLiteral("webcards"), linkWebCards_->isChecked());
     out.insert(QStringLiteral("content_services"), services);
+    if (trayIcon_) {
+        out.insert(QStringLiteral("tray_icon"), trayIcon_->currentData().toString());
+    }
     return out;
 }
 
@@ -382,7 +386,44 @@ void PreferencesDialog::buildAppearanceTab(QWidget* tab) {
     inputHint_->setObjectName(QStringLiteral("inputHint"));
     inputHint_->setChecked(settings_.value(QStringLiteral("show_input_hint"), true).toBool());
     windowForm->addWidget(inputHint_);
-    windowForm->addWidget(plannedCheckBox(tab, QStringLiteral("Window / tray icon picker")));
+
+    // Window / tray icon picker
+    auto* iconRow = new QHBoxLayout();
+    auto* iconLabel = new QLabel(QStringLiteral("Window / tray icon:"), tab);
+    trayIcon_ = new QComboBox(tab);
+    trayIcon_->setObjectName(QStringLiteral("trayIcon"));
+    {
+        // Populate matching Python app_icon.CHOICES
+        struct IconChoice { const char* value; const char* label; };
+        static const IconChoice choices[] = {
+            {"bubble", "Speech bubble (theme color)"},
+            {"\xF0\x9F\x92\xAC", "Speech balloon"},
+            {"\xF0\x9F\x92\xAD", "Thought bubble"},
+            {"\xF0\x9F\x97\xA8\xEF\xB8\x8F", "Left speech bubble"},
+            {"\xF0\x9F\x98\x80", "Smiley"},
+            {"\xF0\x9F\x98\x8E", "Cool shades"},
+            {"\xF0\x9F\xA4\x96", "Robot"},
+            {"\xF0\x9F\x91\xBE", "Alien"},
+            {"\xF0\x9F\x90\xA7", "Penguin"},
+            {"\xE2\xAD\x90", "Star"},
+            {"\xF0\x9F\x94\x94", "Bell"},
+            {"\xF0\x9F\x92\xBB", "Computer"},
+        };
+        for (const auto& c : choices) {
+            trayIcon_->addItem(
+                ui::AppIcon::makeIcon(QString::fromUtf8(c.value), QColor(QStringLiteral("#4a9eff"))),
+                QString::fromUtf8(c.label),
+                QString::fromUtf8(c.value));
+        }
+    }
+    // Select current value
+    const QString currentTray = settings_.value(QStringLiteral("tray_icon"), QStringLiteral("bubble")).toString();
+    const int idx = trayIcon_->findData(currentTray);
+    if (idx >= 0) trayIcon_->setCurrentIndex(idx);
+    iconRow->addWidget(iconLabel);
+    iconRow->addWidget(trayIcon_, 1);
+    windowForm->addLayout(iconRow);
+
     windowForm->addWidget(plannedCheckBox(tab, QStringLiteral("Sort users by status")));
     rightColumn->addWidget(windowBox);
     rightColumn->addStretch(1);

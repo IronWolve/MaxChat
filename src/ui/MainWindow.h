@@ -66,6 +66,7 @@ class MainWindow final : public QMainWindow {
 
   private:
     bool eventFilter(QObject* watched, QEvent* event) override;
+    void changeEvent(QEvent* event) override;
 
     void buildMenus();
     void buildLayout();

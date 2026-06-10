@@ -787,6 +787,15 @@ bool MainWindow::selfTest() const {
            m_input != nullptr && !windowTitle().isEmpty();
 }
 
+void MainWindow::changeEvent(QEvent* event) {
+    if (event->type() == QEvent::WindowStateChange && isMinimized() && m_minimizeToTray && m_tray) {
+        hide();
+        event->ignore();
+        return;
+    }
+    QMainWindow::changeEvent(event);
+}
+
 bool MainWindow::eventFilter(QObject* watched, QEvent* event) {
     if (watched == m_input && event->type() == QEvent::KeyPress) {
         auto* keyEvent = static_cast<QKeyEvent*>(event);
@@ -5575,6 +5584,10 @@ void maxchat::ui::MainWindow::applyTheme(const QString& theme) {
     const QString styleSheet =
         styleSheetForAppearance(normalized, m_currentChatTheme, m_currentWallpaper);
     setStyleSheet(styleSheet);
+    updateTrayIcon();
+    setWindowIcon(ui::AppIcon::makeIcon(
+        m_settings.loadWithDefaults().value(QStringLiteral("tray_icon"), QStringLiteral("bubble")).toString(),
+        appThemeById(normalized).accent));
 }
 
 void maxchat::ui::MainWindow::setTheme(const QString& theme, const bool save) {
@@ -5828,6 +5841,8 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
     }
     m_eventColor = colorOverride("event_color");
 
+    updateTrayIcon();
+    updateMinimizeToTrayFromSettings();
     renderActiveBuffer();
     updateChatSeparatorGuide();
     renderActiveBufferMetadata();
@@ -5848,20 +5863,12 @@ void maxchat::ui::MainWindow::setupTrayIcon() {
     m_trayMenu->addAction(QStringLiteral("Show / Hide"), this, &MainWindow::toggleWindowVisibility);
     m_trayMenu->addSeparator();
 
-    QAction* dnd = m_trayMenu->addAction(QStringLiteral("Do Not Disturb"));
-    dnd->setCheckable(true);
-    connect(dnd, &QAction::toggled, this, [this](bool checked) {
-        auto s = m_settings.loadWithDefaults();
-        s[QStringLiteral("dnd")] = checked;
-        m_settings.saveRaw(s);
-    });
-    connect(m_trayMenu, &QMenu::aboutToShow, this, [this, dnd]() {
-        auto s = m_settings.loadWithDefaults();
-        dnd->setChecked(s.value(QStringLiteral("dnd"), false).toBool());
-    });
-
+    // Reuse the menu-bar DND action so both stay in sync (matches Python)
+    if (m_doNotDisturbAction) {
+        m_trayMenu->addAction(m_doNotDisturbAction);
+    }
     m_trayMenu->addSeparator();
-    m_trayMenu->addAction(QStringLiteral("Quit"), qApp, &QApplication::quit);
+    m_trayMenu->addAction(QStringLiteral("Quit"), this, &QWidget::close);
 
     m_tray->setContextMenu(m_trayMenu);
     connect(m_tray, &::QSystemTrayIcon::activated, this, [this](::QSystemTrayIcon::ActivationReason r) {
@@ -5877,7 +5884,12 @@ void maxchat::ui::MainWindow::setupTrayIcon() {
 void maxchat::ui::MainWindow::updateTrayIcon() {
     if (!m_tray) return;
 
-    QColor accent(QStringLiteral("#4a9eff"));
+    // Pull accent from current theme, fallback to default blue
+    QColor accent = appThemeById(m_currentTheme).accent;
+    if (!accent.isValid()) {
+        accent = QColor(QStringLiteral("#4a9eff"));
+    }
+
     QString choice = m_settings.loadWithDefaults()
         .value(QStringLiteral("tray_icon"), QStringLiteral("bubble")).toString();
 
