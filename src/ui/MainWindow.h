@@ -218,6 +218,8 @@ class MainWindow final : public QMainWindow {
     void renderActiveBufferMetadata();
     void setComicMode(bool enabled);
     void refreshComic();
+    void openComicSettings();
+    void openCharacterGallery();
     void openDccTransfers();
     void handleDccCommand(const QStringList& args);
     void recolorMemberList();
@@ -388,6 +390,7 @@ class MainWindow final : public QMainWindow {
     bool m_autoAwayActive = false;
     QTimer m_autoAwayTimer;
     QLabel* m_membersHeader = nullptr;
+    QLabel* m_nickLabel = nullptr;
     QAction* m_doNotDisturbAction = nullptr;
     QAction* m_comicCaptionsAction = nullptr;
     QAction* m_comicModeAction = nullptr;

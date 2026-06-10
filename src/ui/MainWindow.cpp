@@ -1284,7 +1284,16 @@ void maxchat::ui::MainWindow::buildLayout() {
     chatLayout->addWidget(m_comicView, 1);
     m_audioBar = new AudioPlayerBar(chatColumn);
     chatLayout->addWidget(m_audioBar);
-    chatLayout->addWidget(m_input);
+    auto* inputRow = new QWidget(chatColumn);
+    auto* inputRowLayout = new QHBoxLayout(inputRow);
+    inputRowLayout->setContentsMargins(0, 0, 0, 0);
+    inputRowLayout->setSpacing(4);
+    m_nickLabel = new QLabel(inputRow);
+    m_nickLabel->setObjectName(QStringLiteral("nickLabel"));
+    m_nickLabel->setVisible(false);
+    inputRowLayout->addWidget(m_nickLabel);
+    inputRowLayout->addWidget(m_input, 1);
+    chatLayout->addWidget(inputRow);
 
     m_mainSplitter = new QSplitter(Qt::Horizontal, root);
     m_mainSplitter->setObjectName(QStringLiteral("mainSplitter"));
@@ -1373,6 +1382,10 @@ void maxchat::ui::MainWindow::openPreferences() {
         dialog.reject();
         resetAllSettings();
     });
+    connect(&dialog, &PreferencesDialog::openComicSettingsRequested, this,
+            &MainWindow::openComicSettings);
+    connect(&dialog, &PreferencesDialog::browseCharactersRequested, this,
+            &MainWindow::openCharacterGallery);
     connect(&dialog, &PreferencesDialog::testNotificationRequested, this, [this, &dialog]() {
         // Use the dialog's current (unsaved) settings, not the cached m_notify*
         QVariantMap testSettings = dialog.settings();
@@ -1690,7 +1703,7 @@ void maxchat::ui::MainWindow::replayCurrentLog() {
     const QString network = currentLogNetwork();
     const QString target = currentLogTarget();
     const QStringList lines =
-        m_chatLogStore.recentLines(network, target, m_replayLines > 0 ? m_replayLines : 200);
+        m_chatLogStore.recentLines(network, target, m_replayLines > 0 ? m_replayLines : 100000);
     if (lines.isEmpty()) {
         statusBar()->showMessage(
             QStringLiteral("No saved log lines for %1/%2.").arg(network, target));
@@ -5329,6 +5342,16 @@ void maxchat::ui::MainWindow::handleDccCommand(const QStringList& args) {
     }
 }
 
+void maxchat::ui::MainWindow::openComicSettings() {
+    showFeaturePlanned(QStringLiteral("Comic Settings"),
+                       QStringLiteral("Comic settings are being wired up."));
+}
+
+void maxchat::ui::MainWindow::openCharacterGallery() {
+    showFeaturePlanned(QStringLiteral("Browse Characters"),
+                       QStringLiteral("The character gallery is being wired up."));
+}
+
 void maxchat::ui::MainWindow::setComicMode(bool enabled) {
     m_comicMode = enabled;
     if (m_comicModeAction != nullptr && m_comicModeAction->isChecked() != enabled) {
@@ -6075,7 +6098,10 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
     m_markerLine = settings.value(QStringLiteral("marker_line"), true).toBool();
     m_replayLines = settings.value(QStringLiteral("replay_lines"), 0).toInt();
     m_nickColorOverrides = settings.value(QStringLiteral("nick_colors")).toMap();
-    m_sortByStatus = settings.value(QStringLiteral("sort_users_by_status"), true).toBool();
+    m_sortByStatus =
+        settings.value(QStringLiteral("sort_status"),
+                       settings.value(QStringLiteral("sort_users_by_status"), true))
+            .toBool();
     if (auto* chatView = dynamic_cast<ChatTextView*>(m_chatView)) {
         chatView->setStripColorsOnCopy(
             settings.value(QStringLiteral("strip_color_copy"), true).toBool());
@@ -6244,13 +6270,57 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
     }
     m_eventColor = colorOverride("event_color");
 
+    // Per-area fonts (list/nick/status/topic). Empty family / size 0 = inherit.
+    const auto areaFont = [&settings](const char* familyKey, const char* sizeKey,
+                                      const char* boldKey, const QFont& base) {
+        QFont font = base;
+        const QString family = settings.value(QLatin1String(familyKey)).toString().trimmed();
+        if (!family.isEmpty()) {
+            font.setFamily(family);
+        }
+        const int size = settings.value(QLatin1String(sizeKey)).toInt();
+        if (size > 0) {
+            font.setPointSize(size);
+        }
+        font.setBold(settings.value(QLatin1String(boldKey)).toBool());
+        return font;
+    };
+    const QFont baseFont = qApp->font();
+    if (m_networkTree != nullptr) {
+        m_networkTree->setFont(
+            areaFont("list_font_family", "list_font_size", "list_font_bold", baseFont));
+    }
+    if (m_memberList != nullptr) {
+        m_memberList->setFont(
+            areaFont("list_font_family", "list_font_size", "list_font_bold", baseFont));
+    }
+    if (m_topicLabel != nullptr) {
+        m_topicLabel->setFont(
+            areaFont("topic_font_family", "topic_font_size", "topic_font_bold", baseFont));
+    }
+    statusBar()->setFont(
+        areaFont("status_font_family", "status_font_size", "status_font_bold", baseFont));
+
+    // Your-nick label beside the input (text, font, colour).
+    if (m_nickLabel != nullptr) {
+        const QString nick = m_hasConnectionPlan ? currentNickForNetwork(activeNetworkName())
+                                                 : QString();
+        m_nickLabel->setText(nick.isEmpty() ? QString() : QStringLiteral("%1:").arg(nick));
+        m_nickLabel->setVisible(!nick.isEmpty());
+        m_nickLabel->setFont(
+            areaFont("nick_font_family", "nick_font_size", "nick_font_bold", baseFont));
+        const QString nickColor = colorOverride("nick_label_color");
+        m_nickLabel->setStyleSheet(
+            nickColor.isEmpty() ? QString() : QStringLiteral("QLabel{color:%1;}").arg(nickColor));
+    }
+
     updateTrayIcon();
     updateMinimizeToTrayFromSettings();
     m_highlightWords = settings.value(QStringLiteral("highlight_words")).toString().split(
         QRegularExpression(QStringLiteral("[,\\s]+")), Qt::SkipEmptyParts);
     m_notifyPm = settings.value(QStringLiteral("notify_pm"), true).toBool();
     m_notifyHighlight = settings.value(QStringLiteral("notify_highlight"), true).toBool();
-    m_beepHighlight = settings.value(QStringLiteral("beep_highlight"), false).toBool();
+    m_beepHighlight = settings.value(QStringLiteral("beep_highlight"), true).toBool();
     m_notifyFlash = settings.value(QStringLiteral("notify_flash"), true).toBool();
     m_notifySound = settings.value(QStringLiteral("notify_sound"), false).toBool();
     m_notifyStyle = settings.value(QStringLiteral("notify_popup"), QStringLiteral("custom")).toString();
