@@ -571,6 +571,14 @@ happens). Keep both in sync; see the sync rule in "How to use this doc".
 
 Priority: `P1` clear win · `P2` nice to have · `P3` minor/architectural.
 
+> **Lesson learned (the backports idea).** Auditing a port is bidirectional. The
+> port is not just "behind" the original — it also accrues genuine improvements
+> the original lacks, and a port-vs-original audit is the one moment you have
+> both in view to spot them. Capture those as backport candidates *while you're
+> looking*, in **both** repos, or the knowledge dies with the audit session. Keep
+> the parity direction (port catching up) and the backport direction (original
+> catching up) as two separate ledgers so neither swamps the other.
+
 | ID | Phase | Pri | Item | Detail | Status |
 |----|-------|-----|------|--------|--------|
 | BP-1 | 1 | P1 | Readable numeric formatting | C++ emits friendly lines for numerics Python dumps raw: 301/305/306/307/313/328/331/333/671 (e.g. `[topic] #chan set by alice at <ts>`). Add explicit branches in `client.py` `_handle` before the digit catch-all. | OPEN |
