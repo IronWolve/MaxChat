@@ -509,6 +509,25 @@ target_link_libraries(dcc_manager_test
 
 add_test(NAME dcc_manager COMMAND dcc_manager_test)
 
+qt_add_executable(comic_art_test
+    tests/unit/comic_art_test.cpp
+    src/comic/ComicArt.cpp
+    src/comic/ComicArt.h
+)
+
+target_include_directories(comic_art_test
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(comic_art_test
+    PRIVATE
+        Qt6::Gui
+        Qt6::Test
+)
+
+add_test(NAME comic_art COMMAND comic_art_test)
+
 qt_add_executable(default_networks_test
     tests/unit/default_networks_test.cpp
 )

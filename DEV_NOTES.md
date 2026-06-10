@@ -4,6 +4,20 @@ Internal notes for this port. Not shipped.
 
 ## THINGS I GOT WRONG
 
+- **2026-06-10 — Comic art decoder trusted a file-supplied length → OOM
+  (audit phase 6, SECURITY).** `ComicArt.cpp inflateDib` prepends the DIB's
+  `origLen` field to the zlib stream for `qUncompress`, which allocates that
+  length up front. `origLen` is attacker-controlled (a `.avb`/`.bgb` is
+  user-supplied art), so a tiny file claiming `origLen = 0xFFFFFFFF` forced a
+  ~4GB allocation → OOM. The Python original is immune: it uses
+  `zlib.decompress(stream)` and never reads the length header for sizing. Also
+  `w`/`h` were unbounded (→ `w*2` stride overflow + huge `QImage`) and
+  `std::abs` on a possibly-`INT_MIN` height was UB. Fixed: cap `origLen` at
+  32 MB and dimensions at 4096, and compute the height magnitude in qint64.
+  Tested with crafted headers in comic_art_test. Lesson: the `qUncompress`
+  big-endian-length-prefix trick is convenient but it makes a file-supplied
+  number an allocation size — always clamp it.
+
 - **2026-06-10 — DCC receive cap skipped for size-0 offers → unbounded disk write
   (audit phase 5, SECURITY).** `DccManager::beginReceive` guarded the byte cap
   with `if (tr->size > 0) { truncate to remaining }`. The Python original does

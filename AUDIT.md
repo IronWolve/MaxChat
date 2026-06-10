@@ -47,7 +47,14 @@ flagged "medium+ — push past the checklist for extra attack angles."
 the recommended model/effort or change it — before reading any files.** Do not begin the
 phase work until the user confirms.
 
-**Last session:** 2026-06-10 — Phase 5 done (Opus 4.8 medium+, hard security pass).
+**Last session:** 2026-06-10 — Phase 6 done (Opus 4.8 medium+, decoder-safety push).
+**Found + fixed another real vuln**: the .avb/.bgb decoder trusted a file-supplied inflate
+length → ~4GB OOM from a tiny hostile file (C++-only; Python immune). Also capped
+dimensions + fixed abs(INT_MIN) UB. New comic_art_test (hostile inputs). The S10 comic
+parity gaps (per-channel overrides, emotion wheel, assign dialog, random-bg logic, panel
+menu) are all confirmed missing → backlogged as feature builds. 42 tests green. Next: Phase 7.
+
+Phase 5 done (Opus 4.8 medium+, hard security pass).
 **Found + fixed a real vuln**: DCC size-0/negative offers bypassed the receive byte cap →
 unbounded disk write (C++ inverted Python's guard). Also hardened DCC tokens to a CSPRNG.
 New dcc_manager_test (pure helper). 41 tests green. 4 lower items to backlog/backports.
@@ -76,7 +83,7 @@ resolved (no SCRAM).
 - [x] Phase 3 — Settings keys & preferences ✅ 2026-06-10
 - [x] Phase 4 — Chat rendering & input ✅ 2026-06-10
 - [x] Phase 5 — DCC (parity + security) ✅ 2026-06-10
-- [ ] Phase 6 — Comic mode (parity + decoder robustness)
+- [x] Phase 6 — Comic mode (parity + decoder robustness) ✅ 2026-06-10
 - [ ] Phase 7 — Themes, fonts, notifications, tray, sounds
 - [ ] Phase 8 — Logging, replay, buffers
 - [ ] Phase 9 — Link previews & SSRF
@@ -98,7 +105,7 @@ resolved (no SCRAM).
 | S7 | MISS | Settings | ~~175 vs ~70~~ QUANTIFIED Phase 3: Python has **127** default keys, C++ **100**. Gap = renames (2) + comic_* (16, inline fallbacks → Phase 6) + migration flags (3, N/A for fresh port) + deferred features (update_check/seeded_scripts/nick_width_autoset) + legacy notify_method. No data-loss bug. Map in Phase 3 section. | 3 | VERIFIED |
 | S8 | BUG? | Rendering | ~~colors 16–98 + hex likely missing~~ DEBUNKED 2026-06-10: IrcFormat.cpp has the full 0–98 palette (identical RRGGBB), the 0x04 hex code, and all control codes (bold/italic/underline/strike/reverse/mono/reset). Reverse-video swap + color-parse edge cases match Python. No bug. | 4 | VERIFIED |
 | S9 | MISS | Commands | ~~~25 Python commands likely missing~~~ MOSTLY DEBUNKED 2026-06-10: the inventory was wrong — /raw /quote /oper /kill /wallops /ns /cs /ms /identify /ghost /alias /unalias and unknown→raw passthrough all already exist in CommandParser. Only **/sound** was genuinely missing (now FIXED). C++ is in fact a superset (adds /help /close /disconnect /reconnect /connect /server /notify etc.). | 2 | VERIFIED |
-| S10 | MISS | Comic | Per-channel overrides (comic_channels: bg/chars/ignore), real emotion wheel (stub), assign-character dialog from member menu, stable per-channel random bg, panel right-click menus. | 6 | OPEN |
+| S10 | MISS | Comic | Confirmed Phase 6, all still missing → backlog #14-18: per-channel overrides (comic_channels absent), emotion wheel (openEmotionPicker is a stub), assign-character dialog from member menu (only global text list), comic_random_bg (dead checkbox — stored, not consumed), panel right-click menu (ComicView has none). | 6 | Backlog #14-18 |
 | S11 | BUG | Shortcuts | ~~Rebinding not persisted~~ RESOLVED in code (Phase 3): `shortcuts` is saved via saveRaw (MainWindow.cpp:5278), re-applied on startup (applyNavShortcutOverrides @ 6653) and after edit (5282). Was stale. A round-trip regression test would lock it in (Backlog #7). | 3 | VERIFIED |
 | S12 | MISS | DCC UI | Transfers dialog lacks Rate/ETA columns (Python has live rate + ETA). Confirmed Phase 5; cosmetic. | 5 | Backlog #12 |
 | S13 | MISS | Input | Image-paste hook (Python emits imagePasted for a script to upload+link). C++ input is a QTextEdit with acceptRichText(false) → pasted images are ignored (no crash). Nothing to wire until scripting exists. | 4 | DEFERRED (with S1) |
@@ -452,9 +459,25 @@ Checklist (decoder robustness — input = hostile .avb/.bgb):
 
 ### Findings — Phase 6
 
-| Sev | Where | Issue | Status |
-|-----|-------|-------|--------|
-| | | | |
+| ID | Sev | Where | Issue | Status |
+|----|-----|-------|-------|--------|
+| P6-1 | **SEC (med)** | ComicArt.cpp inflateDib | **OOM from a hostile art file.** `origLen` (attacker-controlled DIB field) is prefixed for `qUncompress`, which allocates it up front → a tiny file claiming `origLen=4GB` OOMs. Python uses `zlib.decompress` (ignores the length field) and is immune. | **FIXED** — cap origLen ≤ 32MB. Test: comic_art_test::hugeOrigLenDoesNotAllocate. |
+| P6-2 | SEC (low-med) | ComicArt.cpp inflateDib | `w`/`h` unbounded → `stride = w*2` int overflow + huge `QImage` alloc. | **FIXED** — cap both dims ≤ 4096. Test: absurdDimensionsRejected. |
+| P6-3 | BUG (low) | ComicArt.cpp inflateDib | `std::abs(static_cast<int>(h))` is UB when h = INT_MIN. | **FIXED** — height magnitude computed in qint64. |
+| P6-4 | MISS | MainWindow / ComicSettingsDialog | `comic_random_bg` is a **dead checkbox** — saved to settings but `comicBackground()` never consults it (no stable per-channel random selection). | Backlog #17 |
+| S10a | MISS | comic engine | Per-channel overrides (`comic_channels`: bg/chars/ignore) entirely absent. | Backlog #14 |
+| S10b | MISS | openEmotionPicker | Emotion wheel is a "planned" stub; auto-emotion-from-text only. | Backlog #15 |
+| S10c | MISS | member context menu | No assign-character dialog from a nick; only the global nick=stem text box in Comic Settings. | Backlog #16 |
+| S10e | MISS | ComicView | No panel right-click menu (Copy/Save panel). | Backlog #18 |
+| — | TEST | tests/ | Before this phase there were **no comic tests**; added comic_art_test (decoder robustness). Renderer/emotion-guess/bot-filter logic still untested (ported under tasks #25/#29). | Backlog #19 |
+
+Checklist status: decoder robustness ✓✓ (the phase focus — every offset bounds-checked;
+the chunk-table loop always progresses or breaks, no infinite loop; per-cell offset/dim
+guards present; the OOM + overflow + UB holes fixed and tested). Parity: the renderer,
+emotion-guessing table, and bot-pattern/ignore/exclude filtering were ported (tasks
+#25/#29) and read as faithful; the five S10 feature gaps are confirmed missing and
+backlogged (they're UI/plumbing builds, not in-scope for an audit pass). Save-comic PNG
+works.
 
 ---
 
@@ -703,3 +726,9 @@ Big items deferred from phases. Each entry must be actionable cold: what, where,
 | 11 | 5 (P5-3) | DIFF low | Expire passive CHAT tokens | `chat->pendingToken` never expires. Add a ~120s timeout that drops the pending token (and the ChatRuntime if still unconnected), mirroring Python's `_chat_awaiting` singleShot + drop-on-close. | OPEN |
 | 12 | 5 (S12) | MISS low | DCC Rate/ETA columns | Add live transfer rate + ETA to DccTransfersDialog (EMA over recent throughput on a timer tick), like Python's dcc_dialog. | OPEN |
 | 13 | 5 | TEST | DCC loopback tests | Port test_dcc.py: drive a real QTcpServer/QTcpSocket loopback through SEND/GET/RESUME/CHAT and assert the received file matches (sha/byte-compare), plus the size-0 guard end-to-end. Heavier harness than the pure-helper test already added. | OPEN |
+| 14 | 6 (S10a) | MISS | Comic per-channel overrides | Implement `comic_channels` `{"<net>/<#chan>": {bg, chars{nick:stem}, ignore[]}}`: a Channels page in ComicSettingsDialog + lookups in refreshComic/comicBackground/comicCharacterForNick that prefer per-channel over global. Mirror Python comic_settings.py. | OPEN |
+| 15 | 6 (S10b) | MISS | Comic emotion wheel | Replace the openEmotionPicker stub with a real picker (Python emotion_picker.py — 9 emotions) that sets the emotion for your next message; refreshComic already supports explicit emotions. | OPEN |
+| 16 | 6 (S10c) | MISS | Assign-character dialog | Add a member context-menu "Assign comic character…" → dialog listing available .avb stems, writing comic_chars[nick] (Python assign_character.py). | OPEN |
+| 17 | 6 (P6-4) | MISS | Wire comic_random_bg | The checkbox is saved but unused. In comicBackground(), when a channel has no set bg and comic_random_bg is on, pick a stable per-channel background (seed a hash by network/#channel → index into m_comicBackgroundPaths), mirroring Python's stable random. | OPEN |
+| 18 | 6 (S10e) | MISS | Comic panel context menu | Add a right-click menu to ComicView panels: Copy panel, Save panel as PNG. | OPEN |
+| 19 | 6 | TEST | Comic renderer/filter tests | Port test_comic_speech.py / test_comic_filter.py / test_character_cells.py: emotion guessing, bot-pattern/ignore filtering, cell layout. | OPEN |
