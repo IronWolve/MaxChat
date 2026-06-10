@@ -362,77 +362,89 @@ QList<ChatThemeDefinition> fallbackChatThemes() {
              rgb(10, 10, 10), rgb(208, 208, 208), true}};
 }
 
-const QList<AppThemeDefinition>& themeRegistry() {
-    static const QList<AppThemeDefinition> themes = [] {
-        QList<AppThemeDefinition> loaded;
-        QSet<QString> ids;
-        for (const QJsonObject& object : jsonThemeObjects(QStringLiteral("app"))) {
-            const AppThemeDefinition theme = parseAppTheme(object);
-            if (theme.id.isEmpty() || ids.contains(theme.id)) {
-                continue;
-            }
-            ids.insert(theme.id);
-            loaded.append(theme);
+QList<AppThemeDefinition> buildAppThemes() {
+    QList<AppThemeDefinition> loaded;
+    QSet<QString> ids;
+    for (const QJsonObject& object : jsonThemeObjects(QStringLiteral("app"))) {
+        const AppThemeDefinition theme = parseAppTheme(object);
+        if (theme.id.isEmpty() || ids.contains(theme.id)) {
+            continue;
         }
+        ids.insert(theme.id);
+        loaded.append(theme);
+    }
 
-        // User themes load after the bundled set; built-in ids win.
-        for (const QJsonObject& object : userThemeObjects()) {
-            const AppThemeDefinition theme = parseAppTheme(object);
-            if (theme.id.isEmpty() || ids.contains(theme.id)) {
-                continue;
-            }
-            ids.insert(theme.id);
-            loaded.append(theme);
+    // User themes load after the bundled set; built-in ids win.
+    for (const QJsonObject& object : userThemeObjects()) {
+        const AppThemeDefinition theme = parseAppTheme(object);
+        if (theme.id.isEmpty() || ids.contains(theme.id)) {
+            continue;
         }
+        ids.insert(theme.id);
+        loaded.append(theme);
+    }
 
-        if (loaded.isEmpty()) {
-            return fallbackAppThemes();
+    if (loaded.isEmpty()) {
+        return fallbackAppThemes();
+    }
+    if (!ids.contains(defaultThemeId())) {
+        loaded.prepend(fallbackAppThemes().first());
+    }
+    if (!ids.contains(systemThemeId())) {
+        loaded.insert(loaded.isEmpty() ? 0 : 1,
+                      {systemThemeId(), QStringLiteral("Themes Off"), false});
+    }
+    return loaded;
+}
+
+QList<ChatThemeDefinition> buildChatThemes() {
+    QList<ChatThemeDefinition> loaded;
+    QSet<QString> ids;
+    for (const QJsonObject& object : jsonThemeObjects(QStringLiteral("chat"))) {
+        const ChatThemeDefinition theme = parseChatTheme(object);
+        if (theme.id.isEmpty() || ids.contains(theme.id)) {
+            continue;
         }
-        if (!ids.contains(defaultThemeId())) {
-            loaded.prepend(fallbackAppThemes().first());
+        ids.insert(theme.id);
+        loaded.append(theme);
+    }
+
+    // User chat themes from <config>/maxchat/chat_themes.json; built-in ids win.
+    for (const QJsonObject& object : userChatThemeObjects()) {
+        const ChatThemeDefinition theme = parseChatTheme(object);
+        if (theme.id.isEmpty() || ids.contains(theme.id)) {
+            continue;
         }
-        if (!ids.contains(systemThemeId())) {
-            loaded.insert(loaded.isEmpty() ? 0 : 1,
-                          {systemThemeId(), QStringLiteral("Themes Off"), false});
-        }
-        return loaded;
-    }();
+        ids.insert(theme.id);
+        loaded.append(theme);
+    }
+
+    if (loaded.isEmpty()) {
+        return fallbackChatThemes();
+    }
+    if (!ids.contains(QStringLiteral("follow"))) {
+        loaded.prepend(fallbackChatThemes().first());
+    }
+    return loaded;
+}
+
+// Mutable singletons so saving a user theme can refresh them without a restart.
+QList<AppThemeDefinition>& mutableAppThemes() {
+    static QList<AppThemeDefinition> themes = buildAppThemes();
     return themes;
 }
 
-const QList<ChatThemeDefinition>& chatThemeRegistry() {
-    static const QList<ChatThemeDefinition> themes = [] {
-        QList<ChatThemeDefinition> loaded;
-        QSet<QString> ids;
-        for (const QJsonObject& object : jsonThemeObjects(QStringLiteral("chat"))) {
-            const ChatThemeDefinition theme = parseChatTheme(object);
-            if (theme.id.isEmpty() || ids.contains(theme.id)) {
-                continue;
-            }
-            ids.insert(theme.id);
-            loaded.append(theme);
-        }
-
-        // User chat themes from <config>/maxchat/chat_themes.json; built-in
-        // ids win.
-        for (const QJsonObject& object : userChatThemeObjects()) {
-            const ChatThemeDefinition theme = parseChatTheme(object);
-            if (theme.id.isEmpty() || ids.contains(theme.id)) {
-                continue;
-            }
-            ids.insert(theme.id);
-            loaded.append(theme);
-        }
-
-        if (loaded.isEmpty()) {
-            return fallbackChatThemes();
-        }
-        if (!ids.contains(QStringLiteral("follow"))) {
-            loaded.prepend(fallbackChatThemes().first());
-        }
-        return loaded;
-    }();
+QList<ChatThemeDefinition>& mutableChatThemes() {
+    static QList<ChatThemeDefinition> themes = buildChatThemes();
     return themes;
+}
+
+const QList<AppThemeDefinition>& themeRegistry() {
+    return mutableAppThemes();
+}
+
+const QList<ChatThemeDefinition>& chatThemeRegistry() {
+    return mutableChatThemes();
 }
 
 QString gradientCss(const AppThemeDefinition& theme) {
@@ -832,6 +844,125 @@ QString styleSheetForAppearance(const QString& theme, const QString& chatTheme,
   )")
         .arg(windowDecl, text, panel2, border, on, onText, panel, chatBg, chatFg, bg, scroll,
              scrollHi);
+}
+
+namespace {
+
+QJsonArray colorArray(const QColor& color) {
+    return QJsonArray{color.red(), color.green(), color.blue()};
+}
+
+QString slugify(const QString& name) {
+    QString slug;
+    for (const QChar ch : name.toLower()) {
+        slug.append(ch.isLetterOrNumber() ? ch : QLatin1Char('-'));
+    }
+    const QStringList parts = slug.split(QLatin1Char('-'), Qt::SkipEmptyParts);
+    const QString joined = parts.join(QLatin1Char('-'));
+    return joined.isEmpty() ? QStringLiteral("custom") : joined;
+}
+
+bool writeJsonFile(const QString& path, const QJsonObject& object) {
+    QDir().mkpath(QFileInfo(path).absolutePath());
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        return false;
+    }
+    file.write(QJsonDocument(object).toJson(QJsonDocument::Indented));
+    return true;
+}
+
+} // namespace
+
+void reloadThemes() {
+    mutableAppThemes() = buildAppThemes();
+    mutableChatThemes() = buildChatThemes();
+}
+
+QString saveUserAppTheme(const QString& name, const AppThemeDefinition& theme) {
+    const QString dir = userThemeDirectory();
+    if (dir.isEmpty()) {
+        return {};
+    }
+    const QString id = QStringLiteral("u-%1").arg(slugify(name));
+
+    QJsonObject object;
+    object.insert(QStringLiteral("name"), name);
+    object.insert(QStringLiteral("dark"), theme.dark);
+    object.insert(QStringLiteral("on_text"),
+                  theme.onText.isEmpty() ? QStringLiteral("white") : theme.onText);
+    object.insert(QStringLiteral("bg"), colorArray(theme.bg));
+    object.insert(QStringLiteral("panel"), colorArray(theme.panel));
+    object.insert(QStringLiteral("panel2"), colorArray(theme.panel2));
+    object.insert(QStringLiteral("text"), colorArray(theme.text));
+    object.insert(QStringLiteral("on"), colorArray(theme.on));
+    object.insert(QStringLiteral("accent"), colorArray(theme.accent));
+    object.insert(QStringLiteral("groove"), colorArray(theme.groove));
+    object.insert(QStringLiteral("scroll"), colorArray(theme.scroll));
+    object.insert(QStringLiteral("scroll_hi"), colorArray(theme.scrollHi));
+    if (theme.chatBg.isValid()) {
+        object.insert(QStringLiteral("chat_bg"), colorArray(theme.chatBg));
+    }
+    if (theme.chatFg.isValid()) {
+        object.insert(QStringLiteral("chat_fg"), colorArray(theme.chatFg));
+    }
+
+    if (!writeJsonFile(QDir(dir).filePath(id + QStringLiteral(".json")), object)) {
+        return {};
+    }
+    reloadThemes();
+    return id;
+}
+
+QString saveUserChatTheme(const QString& name, const ChatThemeDefinition& theme) {
+    const QString config = userConfigDirectory();
+    if (config.isEmpty()) {
+        return {};
+    }
+    const QString id = QStringLiteral("u-%1").arg(slugify(name));
+    const QString path = QDir(config).filePath(QStringLiteral("chat_themes.json"));
+
+    // Merge into the existing id -> theme map.
+    QJsonObject root;
+    QFile readFile(path);
+    if (readFile.open(QIODevice::ReadOnly)) {
+        const QJsonDocument doc = QJsonDocument::fromJson(readFile.readAll());
+        if (doc.isObject()) {
+            root = doc.object();
+        }
+        readFile.close();
+    }
+
+    QJsonObject entry;
+    entry.insert(QStringLiteral("label"), name);
+    entry.insert(QStringLiteral("bg"), colorArray(theme.bg));
+    entry.insert(QStringLiteral("fg"), colorArray(theme.fg));
+    entry.insert(QStringLiteral("fixed"), theme.fixedFont);
+    if (theme.timestamp.isValid()) {
+        entry.insert(QStringLiteral("ts"), colorArray(theme.timestamp));
+    }
+    if (theme.bracket.isValid()) {
+        entry.insert(QStringLiteral("bracket"), colorArray(theme.bracket));
+    }
+    if (theme.system.isValid()) {
+        entry.insert(QStringLiteral("system"), colorArray(theme.system));
+    }
+    if (theme.monoNicks) {
+        entry.insert(QStringLiteral("nicks"), QStringLiteral("mono"));
+    } else if (!theme.nickPalette.isEmpty()) {
+        QJsonArray palette;
+        for (const QColor& color : theme.nickPalette) {
+            palette.append(colorArray(color));
+        }
+        entry.insert(QStringLiteral("nicks"), palette);
+    }
+    root.insert(id, entry);
+
+    if (!writeJsonFile(path, root)) {
+        return {};
+    }
+    reloadThemes();
+    return id;
 }
 
 } // namespace maxchat::ui

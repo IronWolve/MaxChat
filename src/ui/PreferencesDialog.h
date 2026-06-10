@@ -29,6 +29,7 @@ class PreferencesDialog final : public QDialog {
 
   private:
     void setAllFonts(const QString& family, int size, bool bold);
+    void refillThemeCombo(QComboBox* combo, bool chat, const QString& selectId);
     void buildAppearanceTab(QWidget* tab);
     void buildThemesTab(QWidget* tab);
     void buildMessagesTab(QWidget* tab);
