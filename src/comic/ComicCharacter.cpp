@@ -171,7 +171,7 @@ QImage Character::image(const QString& emotion, const QString& facing, int pose)
     }
     QImage img = baseImage(emo, poseIdx);
     if (!img.isNull() && facing == QStringLiteral("left")) {
-        img = img.mirrored(true, false);
+        img = img.flipped(Qt::Horizontal);
     }
     composed_.insert(key, img);
     return img;
