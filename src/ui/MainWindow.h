@@ -222,6 +222,7 @@ class MainWindow final : public QMainWindow {
     void openCharacterGallery();
     void openDccTransfers();
     void handleDccCommand(const QStringList& args);
+    void configureDcc();
     void recolorMemberList();
     void appendUnreadMarkerLine();
     void rebuildLooksMenu();

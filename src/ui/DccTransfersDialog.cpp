@@ -2,10 +2,13 @@
 
 #include "ui/DccManager.h"
 
+#include <QDesktopServices>
+#include <QFileInfo>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QPushButton>
 #include <QTableWidget>
+#include <QUrl>
 #include <QVBoxLayout>
 
 namespace maxchat::ui {
@@ -16,8 +19,14 @@ QString stateLabel(DccTransfer::State state) {
     switch (state) {
     case DccTransfer::State::Pending:
         return QStringLiteral("Pending");
+    case DccTransfer::State::Offered:
+        return QStringLiteral("Offered");
+    case DccTransfer::State::Connecting:
+        return QStringLiteral("Connecting");
     case DccTransfer::State::Active:
         return QStringLiteral("Active");
+    case DccTransfer::State::Resuming:
+        return QStringLiteral("Resuming");
     case DccTransfer::State::Done:
         return QStringLiteral("Done");
     case DccTransfer::State::Failed:
@@ -26,6 +35,20 @@ QString stateLabel(DccTransfer::State state) {
         return QStringLiteral("Cancelled");
     }
     return {};
+}
+
+QString humanBytes(qint64 bytes) {
+    constexpr double kb = 1024.0;
+    if (bytes >= kb * kb * kb) {
+        return QStringLiteral("%1 GB").arg(bytes / (kb * kb * kb), 0, 'f', 1);
+    }
+    if (bytes >= kb * kb) {
+        return QStringLiteral("%1 MB").arg(bytes / (kb * kb), 0, 'f', 1);
+    }
+    if (bytes >= kb) {
+        return QStringLiteral("%1 KB").arg(bytes / kb, 0, 'f', 1);
+    }
+    return QStringLiteral("%1 B").arg(bytes);
 }
 
 } // namespace
@@ -49,12 +72,25 @@ DccTransfersDialog::DccTransfersDialog(DccManager* manager, QWidget* parent)
     auto* buttons = new QHBoxLayout();
     auto* accept = new QPushButton(QStringLiteral("Accept"), this);
     auto* cancel = new QPushButton(QStringLiteral("Cancel Transfer"), this);
+    auto* openFolder = new QPushButton(QStringLiteral("Open folder"), this);
     auto* close = new QPushButton(QStringLiteral("Close"), this);
     buttons->addWidget(accept);
     buttons->addWidget(cancel);
+    buttons->addWidget(openFolder);
     buttons->addStretch(1);
     buttons->addWidget(close);
     root->addLayout(buttons);
+    connect(openFolder, &QPushButton::clicked, this, [this]() {
+        const int row = table_->currentRow();
+        if (row < 0) {
+            return;
+        }
+        const QString path =
+            table_->item(row, 2)->data(Qt::UserRole + 1).toString();
+        if (!path.isEmpty()) {
+            QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(path).absolutePath()));
+        }
+    });
 
     const auto selectedId = [this]() -> int {
         const int row = table_->currentRow();
@@ -86,15 +122,19 @@ void DccTransfersDialog::refresh() {
     for (int row = 0; row < transfers.size(); ++row) {
         const DccTransfer& t = transfers.at(row);
         const QString progress =
-            t.size > 0 ? QStringLiteral("%1%").arg(t.transferred * 100 / t.size)
-                       : QStringLiteral("%1 B").arg(t.transferred);
+            t.size > 0 ? QStringLiteral("%1%  (%2 / %3)")
+                             .arg(t.transferred * 100 / t.size)
+                             .arg(humanBytes(t.transferred), humanBytes(t.size))
+                       : humanBytes(t.transferred);
         auto* dirItem = new QTableWidgetItem(
-            t.direction == DccTransfer::Direction::Send ? QStringLiteral("Send")
-                                                        : QStringLiteral("Recv"));
+            t.direction == DccTransfer::Direction::Send ? QString::fromUtf8("Send \xE2\x86\x91")
+                                                        : QString::fromUtf8("Recv \xE2\x86\x93"));
         dirItem->setData(Qt::UserRole, t.id);
         table_->setItem(row, 0, dirItem);
         table_->setItem(row, 1, new QTableWidgetItem(t.peer));
-        table_->setItem(row, 2, new QTableWidgetItem(t.fileName));
+        auto* fileItem = new QTableWidgetItem(t.fileName);
+        fileItem->setData(Qt::UserRole + 1, t.localPath);
+        table_->setItem(row, 2, fileItem);
         table_->setItem(row, 3, new QTableWidgetItem(progress));
         table_->setItem(row, 4, new QTableWidgetItem(stateLabel(t.state)));
     }

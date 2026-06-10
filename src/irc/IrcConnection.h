@@ -46,6 +46,7 @@ public:
 
   [[nodiscard]] bool isConnected() const;
   [[nodiscard]] QString nick() const;
+  [[nodiscard]] QString localAddress() const;
   [[nodiscard]] QHash<QString, QString> isupport() const;
   [[nodiscard]] const IrcSession &session() const;
 
