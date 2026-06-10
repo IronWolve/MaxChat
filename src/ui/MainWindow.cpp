@@ -21,6 +21,10 @@
 #include "ui/AudioPlayerBar.h"
 #include "ui/ChatFindDialog.h"
 #include "ui/ColorPickerDialog.h"
+#include "comic/ComicArt.h"
+#include "comic/ComicCharacter.h"
+#include "comic/ComicRenderer.h"
+#include "ui/ComicSettingsDialog.h"
 #include "ui/ComicView.h"
 #include "ui/DccManager.h"
 #include "ui/DccTransfersDialog.h"
@@ -1055,24 +1059,13 @@ void maxchat::ui::MainWindow::buildMenus() {
     connect(m_comicModeAction, &QAction::toggled, this, &MainWindow::setComicMode);
     QAction* comicModeAction = m_comicModeAction;
     comicModeAction->setShortcut(QKeySequence(QStringLiteral("Ctrl+M")));
-    QAction* emotionAction = comicMenu->addAction(QStringLiteral("Emotion..."), this, [this]() {
-        showFeaturePlanned(QStringLiteral("Emotion Picker"),
-                           QStringLiteral("Comic expressions will attach here."));
-    });
+    QAction* emotionAction =
+        comicMenu->addAction(QStringLiteral("Emotion..."), this, &MainWindow::openEmotionPicker);
     comicMenu->addSeparator();
-    comicMenu->addAction(QStringLiteral("Comic Settings..."), this, [this]() {
-        showFeaturePlanned(QStringLiteral("Comic Settings"),
-                           QStringLiteral("Comic character and panel options are "
-                                          "planned."));
-    });
-    comicMenu->addAction(QStringLiteral("Browse Characters..."), this, [this]() {
-        showFeaturePlanned(QStringLiteral("Browse Characters"),
-                           QStringLiteral("The character gallery will live here."));
-    });
-    comicMenu->addAction(QStringLiteral("Save Comic..."), this, [this]() {
-        showFeaturePlanned(QStringLiteral("Save Comic"),
-                           QStringLiteral("Comic image export depends on the renderer."));
-    });
+    comicMenu->addAction(QStringLiteral("Comic Settings..."), this, &MainWindow::openComicSettings);
+    comicMenu->addAction(QStringLiteral("Browse Characters..."), this,
+                         &MainWindow::openCharacterGallery);
+    comicMenu->addAction(QStringLiteral("Save Comic..."), this, &MainWindow::saveComic);
     comicMenu->addSeparator();
     m_comicCaptionsAction = comicMenu->addAction(QStringLiteral("Character Names"));
     m_comicCaptionsAction->setCheckable(true);
@@ -5410,13 +5403,102 @@ void maxchat::ui::MainWindow::handleDccCommand(const QStringList& args) {
 }
 
 void maxchat::ui::MainWindow::openComicSettings() {
-    showFeaturePlanned(QStringLiteral("Comic Settings"),
-                       QStringLiteral("Comic settings are being wired up."));
+    ensureComicArt();
+    QStringList stems = m_comicCharacterPaths.keys();
+    std::sort(stems.begin(), stems.end());
+    QStringList bgs;
+    for (auto it = m_comicBackgroundPaths.constBegin(); it != m_comicBackgroundPaths.constEnd();
+         ++it) {
+        bgs.append(it.key());
+    }
+    std::sort(bgs.begin(), bgs.end());
+    ComicSettingsDialog dialog(m_settings.loadWithDefaults(), stems, bgs, this);
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+    if (!m_settings.saveRaw(dialog.settings())) {
+        appendSystemLine(QStringLiteral("! Could not save comic settings."));
+        return;
+    }
+    m_comicArtDirLoaded.clear(); // force art rescan
+    m_comicBgCache.clear();
+    refreshComic();
+    appendSystemLine(QStringLiteral("! Comic settings saved."));
 }
 
 void maxchat::ui::MainWindow::openCharacterGallery() {
-    showFeaturePlanned(QStringLiteral("Browse Characters"),
-                       QStringLiteral("The character gallery is being wired up."));
+    ensureComicArt();
+    if (m_comicCharacterPaths.isEmpty()) {
+        showFeaturePlanned(QStringLiteral("Browse Characters"),
+                           QStringLiteral("No comic art found - set a comic art folder in "
+                                          "Comic Settings."));
+        return;
+    }
+    QStringList stems = m_comicCharacterPaths.keys();
+    std::sort(stems.begin(), stems.end());
+    auto* dialog = new QDialog(this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->setWindowTitle(QStringLiteral("Comic Characters"));
+    dialog->resize(560, 480);
+    auto* layout = new QVBoxLayout(dialog);
+    layout->addWidget(new QLabel(
+        QStringLiteral("%1 characters - assign them to nicks in Comic Settings.").arg(stems.size()),
+        dialog));
+    auto* list = new QListWidget(dialog);
+    list->setViewMode(QListView::IconMode);
+    list->setIconSize(QSize(96, 110));
+    list->setResizeMode(QListView::Adjust);
+    list->setSpacing(8);
+    for (const QString& stem : stems) {
+        maxchat::comic::Character* ch = maxchat::comic::loadCharacter(m_comicCharacterPaths.value(stem));
+        auto* item = new QListWidgetItem(stem, list);
+        if (ch != nullptr) {
+            const QImage im = ch->imageTrimmed(QStringLiteral("neutral"), QStringLiteral("right"), 0);
+            if (!im.isNull()) {
+                item->setIcon(QIcon(QPixmap::fromImage(
+                    im.scaledToHeight(110, Qt::SmoothTransformation))));
+            }
+        }
+    }
+    layout->addWidget(list, 1);
+    auto* close = new QPushButton(QStringLiteral("Close"), dialog);
+    connect(close, &QPushButton::clicked, dialog, &QDialog::accept);
+    layout->addWidget(close, 0, Qt::AlignRight);
+    dialog->show();
+}
+
+void maxchat::ui::MainWindow::openEmotionPicker() {
+    showFeaturePlanned(QStringLiteral("Emotion"),
+                       QStringLiteral("Pick an emotion in chat with the comic showing; auto "
+                                      "emotion follows your text for now."));
+}
+
+void maxchat::ui::MainWindow::saveComic() {
+    if (m_comicView == nullptr || !m_comicView->hasPanels()) {
+        appendSystemLine(QStringLiteral("! No comic to save yet."));
+        return;
+    }
+    const QPixmap sheet = m_comicView->sheet();
+    if (sheet.isNull()) {
+        return;
+    }
+    QString defaultName =
+        QStringLiteral("comic-%1.png")
+            .arg(QString(m_currentTarget).remove(QLatin1Char('#')).remove(QLatin1Char('&')).replace(
+                QLatin1Char('/'), QLatin1Char('_')));
+    QString path = QFileDialog::getSaveFileName(this, QStringLiteral("Save comic image"),
+                                                defaultName, QStringLiteral("PNG image (*.png)"));
+    if (path.isEmpty()) {
+        return;
+    }
+    if (!path.endsWith(QStringLiteral(".png"), Qt::CaseInsensitive)) {
+        path += QStringLiteral(".png");
+    }
+    if (sheet.save(path, "PNG")) {
+        appendSystemLine(QStringLiteral("! Comic saved to %1").arg(path));
+    } else {
+        appendSystemLine(QStringLiteral("! Could not save the comic image."));
+    }
 }
 
 void maxchat::ui::MainWindow::setComicMode(bool enabled) {
@@ -5438,44 +5520,346 @@ void maxchat::ui::MainWindow::setComicMode(bool enabled) {
                                      : QStringLiteral("Comic Mode off."));
 }
 
+namespace {
+
+// Java-style deterministic hash used by the Python comic for character/pose.
+quint32 comicHash(const QString& s) {
+    quint32 h = 0;
+    for (const QChar c : s) {
+        h = h * 31u + c.unicode();
+    }
+    return h;
+}
+
+// Text-based emotion guess (port of _emotion_for).
+QString comicEmotionFor(const QString& body) {
+    const QString low = body.toLower();
+    if (low.contains(QStringLiteral(":d")) || low.contains(QStringLiteral(":-d")) ||
+        low.contains(QStringLiteral("lol")) || low.contains(QStringLiteral("rotfl")) ||
+        low.contains(QStringLiteral("haha"))) {
+        return QStringLiteral("laughing");
+    }
+    if (body.contains(QStringLiteral(":)")) || body.contains(QStringLiteral(":-)")) ||
+        body.contains(QStringLiteral("(:")) || body.contains(QStringLiteral("=)"))) {
+        return QStringLiteral("happy");
+    }
+    if (body.contains(QStringLiteral(":(")) || body.contains(QStringLiteral(":-(")) ||
+        body.contains(QStringLiteral("):")) || body.contains(QStringLiteral("=("))) {
+        return QStringLiteral("sad");
+    }
+    if (body.contains(QStringLiteral(";)")) || body.contains(QStringLiteral(";-)"))) {
+        return QStringLiteral("coy");
+    }
+    if (body.contains(QStringLiteral("?!")) || body.contains(QStringLiteral("!?"))) {
+        return QStringLiteral("scared");
+    }
+    int letters = 0;
+    bool allUpper = true;
+    for (const QChar c : body) {
+        if (c.isLetter()) {
+            ++letters;
+            if (!c.isUpper()) {
+                allUpper = false;
+            }
+        }
+    }
+    if (letters >= 3 && allUpper) {
+        return QStringLiteral("shouting");
+    }
+    return QStringLiteral("neutral");
+}
+
+struct ComicMsg {
+    QString nick;
+    QString text;
+    bool think = false;
+    bool action = false;
+};
+
+} // namespace
+
+void maxchat::ui::MainWindow::ensureComicArt() {
+    const QVariantMap settings = m_settings.loadWithDefaults();
+    const QString dir = settings.value(QStringLiteral("comic_art_dir")).toString().trimmed();
+    const QString resolved = dir.isEmpty() ? maxchat::comic::bundledArtDir() : dir;
+    if (resolved == m_comicArtDirLoaded) {
+        return;
+    }
+    m_comicArtDirLoaded = resolved;
+    m_comicCharacterPaths.clear();
+    m_comicBackgroundPaths.clear();
+    m_comicAutoChars.clear();
+    if (resolved.isEmpty()) {
+        return;
+    }
+    QStringList backgrounds;
+    QStringList characters;
+    maxchat::comic::scanArtDir(resolved, backgrounds, characters);
+    for (const QString& path : characters) {
+        m_comicCharacterPaths.insert(QFileInfo(path).completeBaseName().toLower(), path);
+    }
+    for (const QString& path : backgrounds) {
+        m_comicBackgroundPaths.insert(QFileInfo(path).fileName().toLower(), path);
+    }
+}
+
+maxchat::comic::Character* maxchat::ui::MainWindow::comicCharacterForNick(const QString& nick) {
+    if (m_comicCharacterPaths.isEmpty()) {
+        return nullptr;
+    }
+    const QString low = nick.trimmed().toLower();
+    const QVariantMap settings = m_settings.loadWithDefaults();
+    const QVariantMap manual = settings.value(QStringLiteral("comic_chars")).toMap();
+    QString stem = manual.value(low).toString();
+    if (stem.isEmpty()) {
+        const QString self = settings.value(QStringLiteral("comic_self_char")).toString();
+        if (!self.isEmpty() && low == currentNickForNetwork(activeNetworkName()).toLower()) {
+            stem = self;
+        }
+    }
+    if (stem.isEmpty()) {
+        if (m_comicAutoChars.contains(low)) {
+            stem = m_comicAutoChars.value(low);
+        } else {
+            QStringList pool = m_comicCharacterPaths.keys();
+            QStringList used = m_comicAutoChars.values();
+            for (auto it = manual.constBegin(); it != manual.constEnd(); ++it) {
+                used.append(it.value().toString().toLower());
+            }
+            QStringList freePool;
+            for (const QString& s : pool) {
+                if (!used.contains(s)) {
+                    freePool.append(s);
+                }
+            }
+            if (freePool.isEmpty()) {
+                freePool = pool;
+            }
+            std::sort(freePool.begin(), freePool.end());
+            stem = freePool.at(static_cast<int>(comicHash(low) % freePool.size()));
+            m_comicAutoChars.insert(low, stem);
+        }
+    }
+    const QString path = m_comicCharacterPaths.value(stem.toLower());
+    return path.isEmpty() ? nullptr : maxchat::comic::loadCharacter(path);
+}
+
+QImage maxchat::ui::MainWindow::comicBackground() {
+    const QVariantMap settings = m_settings.loadWithDefaults();
+    QString file = settings.value(QStringLiteral("comic_bg")).toString().toLower();
+    QString path = m_comicBackgroundPaths.value(file);
+    if (path.isEmpty() && !m_comicBackgroundPaths.isEmpty()) {
+        path = *m_comicBackgroundPaths.constBegin();
+    }
+    if (path.isEmpty()) {
+        return {};
+    }
+    if (!m_comicBgCache.contains(path)) {
+        m_comicBgCache.insert(path, maxchat::comic::loadBackground(path));
+    }
+    return m_comicBgCache.value(path);
+}
+
 void maxchat::ui::MainWindow::refreshComic() {
     if (m_comicView == nullptr || !m_comicMode) {
         return;
     }
+    ensureComicArt();
     const QVariantMap settings = m_settings.loadWithDefaults();
-    m_comicView->setShowNames(settings.value(QStringLiteral("comic_captions"), true).toBool());
-    m_comicView->setPanelCount(settings.value(QStringLiteral("comic_panels"), 4).toInt());
+    const bool captions = settings.value(QStringLiteral("comic_captions"), true).toBool();
+    const double captionScale = settings.value(QStringLiteral("comic_caption_scale"), 1.0).toDouble();
+    const int panelCount = std::clamp(settings.value(QStringLiteral("comic_panels"), 4).toInt(), 1, 6);
+    const int perPanel = std::clamp(settings.value(QStringLiteral("comic_per_panel"), 4).toInt(), 1, 6);
+    const int minFont = std::clamp(settings.value(QStringLiteral("comic_min_font"), 9).toInt(), 6, 13);
+    const QStringList comicIgnore = settings.value(QStringLiteral("comic_ignore")).toStringList();
+    const bool ignoreCmds = settings.value(QStringLiteral("comic_ignore_cmds"), true).toBool();
+    const QStringList botPatterns = settings.value(QStringLiteral("comic_bot_patterns")).toStringList();
+    QRegularExpression excludeRe;
+    const QString excludeStr = settings.value(QStringLiteral("comic_exclude_regex")).toString();
+    if (!excludeStr.isEmpty()) {
+        excludeRe = QRegularExpression(excludeStr, QRegularExpression::CaseInsensitiveOption);
+    }
 
+    const auto filtered = [&](const QString& nick, const QString& text) {
+        if (comicIgnore.contains(nick.toLower())) {
+            return true;
+        }
+        const QString stripped = maxchat::irc::stripFormatting(text).trimmed();
+        if (stripped.isEmpty()) {
+            return true;
+        }
+        if (ignoreCmds) {
+            const QString low = stripped.toLower();
+            for (const QString& pat : botPatterns) {
+                if (pat.isEmpty() || !low.startsWith(pat)) {
+                    continue;
+                }
+                if (pat.size() == 1) {
+                    if (low.size() > 1 && low.at(1).isLetterOrNumber()) {
+                        return true;
+                    }
+                } else {
+                    return true;
+                }
+            }
+        }
+        if (!excludeStr.isEmpty() && excludeRe.isValid() && excludeRe.match(stripped).hasMatch()) {
+            return true;
+        }
+        return false;
+    };
+
+    // Collect eligible speech messages from the active buffer.
     const maxchat::core::ChatBufferSnapshot snapshot =
         m_chatBuffers.snapshot(bufferIdForTarget(m_currentTarget));
-    QVector<ComicLine> comicLines;
+    QVector<ComicMsg> msgs;
     for (const maxchat::core::ChatBufferLine& line : snapshot.lines) {
         const QString src = line.sourceText;
-        if (line.systemLine || src.isEmpty()) {
-            continue; // skip join/part/status; only real speech becomes panels
+        if (src.isEmpty()) {
+            continue;
         }
-        ComicLine comic;
+        ComicMsg msg;
         if (src.startsWith(QLatin1Char('<'))) {
             const int end = src.indexOf(QStringLiteral("> "));
             if (end <= 0) {
                 continue;
             }
-            comic.nick = src.mid(1, end - 1);
-            comic.text = src.mid(end + 2);
-        } else if (src.startsWith(QStringLiteral("* "))) {
+            msg.nick = src.mid(1, end - 1);
+            msg.text = maxchat::irc::stripFormatting(src.mid(end + 2)).trimmed();
+        } else if (!line.systemLine && src.startsWith(QStringLiteral("* "))) {
             const int sp = src.indexOf(QLatin1Char(' '), 2);
             if (sp <= 2) {
                 continue;
             }
-            comic.nick = src.mid(2, sp - 2);
-            comic.text = src.mid(sp + 1);
-            comic.action = true;
+            msg.nick = src.mid(2, sp - 2);
+            msg.text = maxchat::irc::stripFormatting(src.mid(sp + 1)).trimmed();
+            msg.action = true;
         } else {
             continue;
         }
-        comicLines.append(comic);
+        if (msg.text.contains(QStringLiteral("http://")) ||
+            msg.text.contains(QStringLiteral("https://")) ||
+            msg.text.contains(QStringLiteral("www."))) {
+            continue; // links are chat embeds, never panels
+        }
+        if (filtered(msg.nick, msg.text)) {
+            continue;
+        }
+        if (!msg.action && msg.text.size() > 2 && msg.text.startsWith(QLatin1Char('(')) &&
+            msg.text.endsWith(QLatin1Char(')'))) {
+            msg.think = true;
+            msg.text = msg.text.mid(1, msg.text.size() - 2);
+        }
+        msgs.append(msg);
     }
-    m_comicView->setLines(comicLines);
+
+    // Group into panels (bubble cap + min-font spill).
+    constexpr int kSize = 315;
+    QVector<QVector<ComicMsg>> panels;
+    for (const ComicMsg& msg : msgs) {
+        bool extended = false;
+        if (!panels.isEmpty() && panels.last().size() < perPanel) {
+            QVector<ComicMsg> trial = panels.last();
+            trial.append(msg);
+            // Build actors/lines for the trial to check the resulting font size.
+            QVector<maxchat::comic::ComicActor> actors;
+            QHash<QString, int> actorIndex;
+            QVector<maxchat::comic::ComicLineItem> rlines;
+            for (const ComicMsg& m : trial) {
+                if (!actorIndex.contains(m.nick.toLower())) {
+                    maxchat::comic::ComicActor a;
+                    a.nick = m.nick;
+                    a.character = comicCharacterForNick(m.nick);
+                    a.emotion = comicEmotionFor(m.text);
+                    a.pose = a.character && a.character->bodyCount() > 0
+                                 ? static_cast<int>(comicHash(m.nick.toLower() + QStringLiteral("|") +
+                                                              m.text) %
+                                                    a.character->bodyCount())
+                                 : 0;
+                    actorIndex.insert(m.nick.toLower(), actors.size());
+                    actors.append(a);
+                }
+                maxchat::comic::ComicLineItem li;
+                li.actorIndex = actorIndex.value(m.nick.toLower());
+                li.text = m.text;
+                li.think = m.think;
+                li.action = m.action;
+                rlines.append(li);
+            }
+            if (maxchat::comic::panelMinFont(kSize, actors, rlines) >= minFont) {
+                panels.last() = trial;
+                extended = true;
+            }
+        }
+        if (!extended) {
+            panels.append({msg});
+        }
+    }
+    while (panels.size() > 6) {
+        panels.removeFirst();
+    }
+
+    // Caption colours: per-user nick_colors override else hashed nick colour.
+    const QString captionMode = settings.value(QStringLiteral("comic_caption_mode"),
+                                               QStringLiteral("nick")).toString();
+    const QString fixedColor = settings.value(QStringLiteral("comic_caption_color"),
+                                              QStringLiteral("#363636")).toString();
+    const QImage background = comicBackground();
+
+    QVector<QPixmap> rendered;
+    const QVector<QVector<ComicMsg>> shown =
+        panels.size() > panelCount ? panels.mid(panels.size() - panelCount) : panels;
+    for (const QVector<ComicMsg>& panel : shown) {
+        QVector<maxchat::comic::ComicActor> actors;
+        QHash<QString, int> actorIndex;
+        QVector<maxchat::comic::ComicLineItem> rlines;
+        QHash<QString, QString> captionColors;
+        for (const ComicMsg& m : panel) {
+            const QString low = m.nick.toLower();
+            if (!actorIndex.contains(low)) {
+                maxchat::comic::ComicActor a;
+                a.nick = m.nick;
+                a.character = comicCharacterForNick(m.nick);
+                if (a.character == nullptr) {
+                    continue; // no art for this nick → skip (its lines too)
+                }
+                a.emotion = comicEmotionFor(m.text);
+                a.pose = a.character->bodyCount() > 0
+                             ? static_cast<int>(comicHash(low + QStringLiteral("|") + m.text) %
+                                                a.character->bodyCount())
+                             : 0;
+                actorIndex.insert(low, actors.size());
+                actors.append(a);
+                captionColors.insert(low, captionMode == QStringLiteral("fixed")
+                                              ? fixedColor
+                                              : (m_nickColorOverrides.value(low).toString().isEmpty()
+                                                     ? QColor(maxchat::irc::nickColor(m.nick)).name()
+                                                     : m_nickColorOverrides.value(low).toString()));
+            }
+            if (!actorIndex.contains(low)) {
+                continue;
+            }
+            // Latest emotion/pose for the actor.
+            maxchat::comic::ComicActor& a = actors[actorIndex.value(low)];
+            a.emotion = comicEmotionFor(m.text);
+            if (a.character && a.character->bodyCount() > 0) {
+                a.pose = static_cast<int>(comicHash(low + QStringLiteral("|") + m.text) %
+                                          a.character->bodyCount());
+            }
+            maxchat::comic::ComicLineItem li;
+            li.actorIndex = actorIndex.value(low);
+            li.text = m.text;
+            li.think = m.think;
+            li.action = m.action;
+            rlines.append(li);
+        }
+        if (actors.isEmpty()) {
+            continue;
+        }
+        rendered.append(maxchat::comic::renderComicPanel(kSize, background, actors, rlines, captions,
+                                                         captionScale, captionColors));
+    }
+    m_comicView->setPanels(rendered);
 }
 
 void maxchat::ui::MainWindow::recolorMemberList() {

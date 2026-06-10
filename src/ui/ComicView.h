@@ -1,42 +1,29 @@
 #pragma once
 
-#include <QColor>
-#include <QString>
+#include <QPixmap>
 #include <QVector>
 #include <QWidget>
 
 namespace maxchat::ui {
 
-// One speech entry in the comic strip.
-struct ComicLine {
-    QString nick;
-    QString text;
-    bool action = false;
-};
-
-// Foundational comic-strip renderer: lays recent messages out as panels, each
-// with a deterministically-generated character (no external art needed), a name
-// caption, and a speech bubble. A first pass the bundled-art pipeline can later
-// enrich.
+// Displays rendered comic panels (square pixmaps) in a centred grid, scaling
+// each to fit. The panels themselves are produced by the comic renderer and
+// pushed in by MainWindow's comic engine.
 class ComicView final : public QWidget {
     Q_OBJECT
 
   public:
     explicit ComicView(QWidget* parent = nullptr);
 
-    void setLines(const QVector<ComicLine>& lines);
-    void setShowNames(bool show);
-    void setPanelCount(int count); // max panels shown
+    void setPanels(const QVector<QPixmap>& panels);
+    [[nodiscard]] QPixmap sheet() const; // all panels composited (for Save/Copy)
+    [[nodiscard]] bool hasPanels() const { return !panels_.isEmpty(); }
 
   protected:
     void paintEvent(QPaintEvent* event) override;
 
   private:
-    [[nodiscard]] int columnsForWidth() const;
-
-    QVector<ComicLine> lines_;
-    bool showNames_ = true;
-    int panelCount_ = 4;
+    QVector<QPixmap> panels_;
 };
 
 } // namespace maxchat::ui
