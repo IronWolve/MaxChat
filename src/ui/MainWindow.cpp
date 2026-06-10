@@ -1279,6 +1279,8 @@ void maxchat::ui::MainWindow::buildLayout() {
     addFormattingShortcut(QStringLiteral("Ctrl+B"), 0x02);
     addFormattingShortcut(QStringLiteral("Ctrl+I"), 0x1D);
     addFormattingShortcut(QStringLiteral("Ctrl+U"), 0x1F);
+    addFormattingShortcut(QStringLiteral("Ctrl+R"), 0x16); // reverse
+    addFormattingShortcut(QStringLiteral("Ctrl+O"), 0x0F); // reset/plain
     auto* colorShortcut = new QShortcut(QKeySequence(QStringLiteral("Ctrl+K")), m_input);
     colorShortcut->setContext(Qt::WidgetShortcut);
     connect(colorShortcut, &QShortcut::activated, this, [this]() {
