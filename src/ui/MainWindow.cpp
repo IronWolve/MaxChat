@@ -1317,9 +1317,57 @@ void maxchat::ui::MainWindow::openPreferences() {
         dialog.reject();
         resetAllSettings();
     });
-    connect(&dialog, &PreferencesDialog::testNotificationRequested, this, [this]() {
-        notify(QStringLiteral("Test \u00b7 MaxChat"),
-               QStringLiteral("This is what a notification looks like \u2014 click to open the chat."));
+    connect(&dialog, &PreferencesDialog::testNotificationRequested, this, [this, &dialog]() {
+        // Use the dialog's current (unsaved) settings, not the cached m_notify*
+        QVariantMap testSettings = dialog.settings();
+        const QString style = testSettings.value(QStringLiteral("notify_popup"), QStringLiteral("custom")).toString();
+        const bool flash = testSettings.value(QStringLiteral("notify_flash"), true).toBool();
+        const bool sound = testSettings.value(QStringLiteral("notify_sound"), false).toBool();
+        const int durationMs = testSettings.value(QStringLiteral("notify_duration"), 6).toInt() * 1000;
+        const QString corner = testSettings.value(QStringLiteral("notify_corner"), QStringLiteral("br")).toString();
+        const QString theme = testSettings.value(QStringLiteral("notify_theme"), QStringLiteral("follow")).toString();
+
+        // Don't notify if window is active or DND
+        if (isActiveWindow()) return;
+        if (testSettings.value(QStringLiteral("dnd"), false).toBool()) return;
+
+        if (flash) QApplication::alert(this, 0);
+        if (sound) QApplication::beep();
+
+        if (style == QLatin1String("off")) return;
+
+        // OS native
+        if (style == QLatin1String("system") && ::QSystemTrayIcon::supportsMessages()) {
+            if (m_notificationTray == nullptr) {
+                m_notificationTray = new ::QSystemTrayIcon(this);
+                m_notificationTray->setIcon(ui::AppIcon::makeIcon(
+                    testSettings.value(QStringLiteral("tray_icon"), QStringLiteral("bubble")).toString(),
+                    QColor(QStringLiteral("#4a9eff"))));
+            }
+            m_notificationTray->showMessage(
+                QStringLiteral("Test \u00b7 MaxChat"),
+                QStringLiteral("This is what a notification looks like \u2014 click to open the chat."),
+                m_notificationTray->icon(), 5000);
+            return;
+        }
+
+        // Custom toast
+        const AppThemeDefinition& themeDef = appThemeById(m_currentTheme);
+        QColor followBg = themeDef.panel.isValid() ? themeDef.panel : QColor(QStringLiteral("#2b2b2b"));
+        QColor followFg = themeDef.text.isValid() ? themeDef.text : QColor(QStringLiteral("#e8e8e8"));
+        QColor followAccent = themeDef.accent.isValid() ? themeDef.accent : QColor(QStringLiteral("#4a9eff"));
+
+        QColor bg = Notifier::paletteBg(theme, followBg);
+        QColor fg = Notifier::paletteFg(theme, followFg);
+        QColor accent = Notifier::paletteAccent(theme, followAccent);
+
+        QIcon icon = ui::AppIcon::makeIcon(
+            testSettings.value(QStringLiteral("tray_icon"), QStringLiteral("bubble")).toString(), accent);
+
+        m_notifier->show(
+            QStringLiteral("Test \u00b7 MaxChat"),
+            QStringLiteral("This is what a notification looks like \u2014 click to open the chat."),
+            bg, fg, accent, corner, durationMs, icon);
     });
     if (dialog.exec() != QDialog::Accepted) {
         return;
