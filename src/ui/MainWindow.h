@@ -414,6 +414,7 @@ class MainWindow final : public QMainWindow {
     QList<QAction*> m_wallpaperActions;
     QToolBar* m_buttonBar = nullptr;
     QSplitter* m_mainSplitter = nullptr;
+    QSplitter* m_chatSplitter = nullptr;
     QTreeWidget* m_networkTree = nullptr;
     QTabBar* m_bufferTabBar = nullptr;
     QTextBrowser* m_chatView = nullptr;
