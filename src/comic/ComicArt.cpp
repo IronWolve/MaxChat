@@ -46,18 +46,37 @@ struct Dib {
     bool ok = false;
 };
 
+// Hostile-file guards: real Comic Chat art is tiny (315x315 backgrounds, cells
+// well under 512px), so these caps never reject legitimate art but stop a
+// crafted .avb/.bgb from forcing a giant allocation.
+constexpr qint64 MaxDibDim = 4096;                        // bounds stride + QImage size
+constexpr quint32 MaxInflateBytes = 32u * 1024 * 1024;   // bounds qUncompress output alloc
+
 // Inflate the zlib DIB whose BITMAPINFOHEADER is at offset j.
 Dib inflateDib(const QByteArray& data, int j) {
     Dib out;
     if (j < 0 || j + 48 > data.size()) {
         return out;
     }
-    out.w = static_cast<int>(static_cast<qint32>(u32(data, j + 4)));
-    out.h = std::abs(static_cast<int>(static_cast<qint32>(u32(data, j + 8))));
+    // Use qint64 for the height magnitude — std::abs(INT_MIN) would be UB.
+    const qint32 wRaw = static_cast<qint32>(u32(data, j + 4));
+    const qint32 hRaw = static_cast<qint32>(u32(data, j + 8));
+    const qint64 w = wRaw;
+    const qint64 h = hRaw < 0 ? -static_cast<qint64>(hRaw) : static_cast<qint64>(hRaw);
+    if (w <= 0 || w > MaxDibDim || h <= 0 || h > MaxDibDim) {
+        return out; // reject absurd/hostile dimensions
+    }
+    out.w = static_cast<int>(w);
+    out.h = static_cast<int>(h);
     out.bitCount = u16(data, j + 14);
     const quint32 origLen = u32(data, j + 40);
     const quint32 cmprLen = u32(data, j + 44);
     if (cmprLen == 0 || j + 48 + static_cast<int>(cmprLen) > data.size()) {
+        return out;
+    }
+    // qUncompress allocates the prefixed length up front, so an attacker-set
+    // origLen (~4GB) would OOM us. Reject anything beyond a sane ceiling.
+    if (origLen == 0 || origLen > MaxInflateBytes) {
         return out;
     }
     QByteArray packed;
