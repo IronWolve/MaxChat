@@ -75,6 +75,7 @@
 #include <QPair>
 #include <QPalette>
 #include <QPushButton>
+#include <QProcess>
 #include <QRegularExpression>
 #include <QSaveFile>
 #include <QSet>
@@ -759,7 +760,8 @@ MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent),
       m_chatLogStore(QDir(m_settings.paths().configDir).filePath(QStringLiteral("logs"))),
       m_openGraphFetcher(&m_previewNetworkManager),
-      m_notificationTray(nullptr) {
+      m_notificationTray(nullptr),
+      m_osNotifyAvailable(false) {
     m_appUptime.start();
     loadFonts();
     buildMenus();
@@ -767,6 +769,22 @@ MainWindow::MainWindow(QWidget* parent)
     setupConnectionSignals();
     setupTrayIcon();
     m_notifier = new Notifier(this);
+    // Probe whether OS native notifications actually work (Wayland/WSLg reports
+    // supportsMessages=true but has no notification daemon)
+    m_osNotifyAvailable = ::QSystemTrayIcon::supportsMessages();
+    if (m_osNotifyAvailable) {
+        QProcess probe;
+        probe.start(QStringLiteral("dbus-send"),
+                    {QStringLiteral("--session"),
+                     QStringLiteral("--dest=org.freedesktop.DBus"),
+                     QStringLiteral("--type=method_call"),
+                     QStringLiteral("--print-reply"),
+                     QStringLiteral("/org/freedesktop/DBus"),
+                     QStringLiteral("org.freedesktop.DBus.GetNameOwner"),
+                     QStringLiteral("string:org.freedesktop.Notifications")});
+        probe.waitForFinished(3000);
+        m_osNotifyAvailable = (probe.exitCode() == 0);
+    }
     connect(&m_openGraphFetcher, &maxchat::services::OpenGraphFetcher::cardFetched, this,
             &MainWindow::handlePreviewCardFetched);
     connect(&m_openGraphFetcher, &maxchat::services::OpenGraphFetcher::fetchFailed, this,
@@ -1337,7 +1355,7 @@ void maxchat::ui::MainWindow::openPreferences() {
         if (style == QLatin1String("off")) return;
 
         // OS native
-        if (style == QLatin1String("system") && ::QSystemTrayIcon::supportsMessages()) {
+        if (style == QLatin1String("system") && m_osNotifyAvailable) {
             if (m_notificationTray == nullptr) {
                 m_notificationTray = new ::QSystemTrayIcon(this);
                 m_notificationTray->setIcon(ui::AppIcon::makeIcon(
@@ -5949,8 +5967,8 @@ void maxchat::ui::MainWindow::notify(const QString& title, const QString& text,
     // Popup style
     if (m_notifyStyle == QLatin1String("off")) return;
 
-    // System tray notification (lazy-create notification-only tray icon)
-    if (m_notifyStyle == QLatin1String("system") && ::QSystemTrayIcon::supportsMessages()) {
+    // OS native notification (only if notification daemon is available)
+    if (m_notifyStyle == QLatin1String("system") && m_osNotifyAvailable) {
         if (m_notificationTray == nullptr) {
             m_notificationTray = new ::QSystemTrayIcon(this);
             m_notificationTray->setIcon(ui::AppIcon::makeIcon(

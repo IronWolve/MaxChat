@@ -293,6 +293,7 @@ class MainWindow final : public QMainWindow {
     QMenu* m_trayMenu = nullptr;
     bool m_minimizeToTray = false;
     ::QSystemTrayIcon* m_notificationTray = nullptr;
+    bool m_osNotifyAvailable = false;
     QHash<QString, qint64> m_connectionUptimeStartMsByNetwork;
     bool m_connectionUptimeRunning = false;
     bool m_manualDisconnect = false;
