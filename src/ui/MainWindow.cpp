@@ -758,7 +758,8 @@ class ChatTextView final : public QTextBrowser {
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent),
       m_chatLogStore(QDir(m_settings.paths().configDir).filePath(QStringLiteral("logs"))),
-      m_openGraphFetcher(&m_previewNetworkManager) {
+      m_openGraphFetcher(&m_previewNetworkManager),
+      m_notificationTray(nullptr) {
     m_appUptime.start();
     loadFonts();
     buildMenus();
@@ -5900,9 +5901,15 @@ void maxchat::ui::MainWindow::notify(const QString& title, const QString& text,
     // Popup style
     if (m_notifyStyle == QLatin1String("off")) return;
 
-    // System tray notification
-    if (m_notifyStyle == QLatin1String("system") && m_tray && ::QSystemTrayIcon::supportsMessages()) {
-        m_tray->showMessage(title, text, m_tray->icon(), 5000);
+    // System tray notification (lazy-create notification-only tray icon)
+    if (m_notifyStyle == QLatin1String("system") && ::QSystemTrayIcon::supportsMessages()) {
+        if (m_notificationTray == nullptr) {
+            m_notificationTray = new ::QSystemTrayIcon(this);
+            m_notificationTray->setIcon(ui::AppIcon::makeIcon(
+                m_settings.loadWithDefaults().value(QStringLiteral("tray_icon"), QStringLiteral("bubble")).toString(),
+                QColor(QStringLiteral("#4a9eff"))));
+        }
+        m_notificationTray->showMessage(title, text, m_notificationTray->icon(), 5000);
         return;
     }
 
