@@ -829,6 +829,24 @@ MainWindow::MainWindow(QWidget* parent)
             });
     connect(m_dccManager, &DccManager::status, this,
             [this](const QString& message) { appendSystemLine(QStringLiteral("! %1").arg(message)); });
+    connect(m_dccManager, &DccManager::chatLineReceived, this,
+            [this](const QString& peer, const QString& line) {
+                appendSystemLineToTarget(QStringLiteral("=%1").arg(peer),
+                                         QStringLiteral("<%1> %2").arg(peer, line), true, false,
+                                         false, false);
+            });
+    connect(m_dccManager, &DccManager::chatStateChanged, this,
+            [this](const QString& peer, int state) {
+                const QString target = QStringLiteral("=%1").arg(peer);
+                const QString note = state == 0   ? QStringLiteral("connecting...")
+                                     : state == 1 ? QStringLiteral("connected.")
+                                                  : QStringLiteral("closed.");
+                rememberTarget(target);
+                appendSystemLineToTarget(
+                    target, QStringLiteral("* DCC chat with %1 %2").arg(peer, note), true, false,
+                    false);
+                rebuildNetworkTree();
+            });
 
     setupNavShortcuts();
     applyCurrentSettings();
@@ -3262,6 +3280,17 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
         return;
     }
 
+    // Plain text in a "=peer" buffer is a DCC CHAT line, not an IRC message.
+    if (m_currentTarget.startsWith(QLatin1Char('=')) &&
+        !aliasExpansion.commandLine.startsWith(QLatin1Char('/'))) {
+        const QString peer = m_currentTarget.mid(1);
+        m_dccManager->sendChatLine(peer, text);
+        appendSystemLineToTarget(m_currentTarget,
+                                 QStringLiteral("<%1> %2").arg(currentNickForNetwork(activeNetworkName()), text),
+                                 false, true, false, false);
+        return;
+    }
+
     const auto parsed = maxchat::irc::parseUserCommand(aliasExpansion.commandLine, m_currentTarget);
 
     if (parsed.type == maxchat::irc::UserCommandType::Clear) {
@@ -3909,6 +3938,18 @@ void maxchat::ui::MainWindow::showMemberContextMenu(const QPoint& pos) {
                    [this, nick]() { openQueryForNick(nick); });
     menu.addAction(QStringLiteral("Copy Nick"), this,
                    [nick]() { QApplication::clipboard()->setText(nick); });
+    menu.addAction(QStringLiteral("Send File to %1...").arg(nick), this, [this, nick]() {
+        configureDcc();
+        const QString path =
+            QFileDialog::getOpenFileName(this, QStringLiteral("Send file to %1").arg(nick));
+        if (!path.isEmpty()) {
+            m_dccManager->offerSend(nick, path);
+        }
+    });
+    menu.addAction(QStringLiteral("DCC Chat with %1").arg(nick), this, [this, nick]() {
+        configureDcc();
+        m_dccManager->offerChat(nick);
+    });
     menu.addAction(QStringLiteral("Set Color..."), this,
                    [this, nick]() { setNickColorOverride(nick); });
     if (m_nickColorOverrides.contains(nick.toLower())) {
@@ -5304,41 +5345,67 @@ void maxchat::ui::MainWindow::appendUnreadMarkerLine() {
     m_chatView->setTextCursor(cursor);
 }
 
-void maxchat::ui::MainWindow::openDccTransfers() {
+void maxchat::ui::MainWindow::configureDcc() {
     const QVariantMap settings = m_settings.loadWithDefaults();
-    QString dir = settings.value(QStringLiteral("dcc_dir")).toString();
+    QString dir = settings.value(QStringLiteral("dcc_dir")).toString().trimmed();
     if (dir.isEmpty()) {
         dir = QDir(m_settings.paths().configDir).filePath(QStringLiteral("downloads"));
     }
     m_dccManager->setDownloadDir(dir);
+    m_dccManager->setPassive(settings.value(QStringLiteral("dcc_passive"), true).toBool());
+    m_dccManager->setPortRange(settings.value(QStringLiteral("dcc_port_first"), 0).toInt(),
+                               settings.value(QStringLiteral("dcc_port_last"), 0).toInt());
+    m_dccManager->setAcceptPolicy(
+        settings.value(QStringLiteral("dcc_accept"), QStringLiteral("ask")).toString(),
+        settings.value(QStringLiteral("dcc_trusted")).toStringList());
+    // Advertised IP: pref override, else the active connection's local IPv4.
+    QString ip = settings.value(QStringLiteral("dcc_ip")).toString().trimmed();
+    if (ip.isEmpty()) {
+        ip = connection().localAddress();
+    }
+    m_dccManager->setAdvertisedIp(ip);
+}
+
+void maxchat::ui::MainWindow::openDccTransfers() {
+    configureDcc();
     DccTransfersDialog dialog(m_dccManager, this);
     dialog.exec();
 }
 
 void maxchat::ui::MainWindow::handleDccCommand(const QStringList& args) {
-    const QVariantMap settings = m_settings.loadWithDefaults();
-    QString dir = settings.value(QStringLiteral("dcc_dir")).toString();
-    if (dir.isEmpty()) {
-        dir = QDir(m_settings.paths().configDir).filePath(QStringLiteral("downloads"));
-    }
-    m_dccManager->setDownloadDir(dir);
+    configureDcc();
 
     const QString sub = args.isEmpty() ? QString() : args.first().toLower();
     if (sub == QStringLiteral("send") && args.size() >= 3) {
         const QString peer = args.at(1);
         const QString path = args.mid(2).join(QLatin1Char(' '));
         m_dccManager->offerSend(peer, path);
+    } else if (sub == QStringLiteral("send") && args.size() == 2) {
+        const QString peer = args.at(1);
+        const QString path =
+            QFileDialog::getOpenFileName(this, QStringLiteral("Send file to %1").arg(peer));
+        if (!path.isEmpty()) {
+            m_dccManager->offerSend(peer, path);
+        }
+    } else if (sub == QStringLiteral("chat") && args.size() >= 2) {
+        m_dccManager->offerChat(args.at(1));
     } else if (sub == QStringLiteral("list")) {
         const auto transfers = m_dccManager->transfers();
         appendSystemLine(QStringLiteral("! %1 DCC transfer(s).").arg(transfers.size()));
         openDccTransfers();
     } else if (sub == QStringLiteral("close") || sub == QStringLiteral("cancel")) {
-        for (const auto& t : m_dccManager->transfers()) {
-            m_dccManager->cancelTransfer(t.id);
+        const QString target = m_currentTarget.trimmed();
+        if (target.startsWith(QLatin1Char('='))) {
+            m_dccManager->closeChat(target.mid(1));
+        } else {
+            for (const auto& t : m_dccManager->transfers()) {
+                m_dccManager->cancelTransfer(t.id);
+            }
+            appendSystemLine(QStringLiteral("! Cancelled active DCC transfers."));
         }
-        appendSystemLine(QStringLiteral("! Cancelled active DCC transfers."));
     } else {
-        appendSystemLine(QStringLiteral("! Usage: /dcc send <nick> <file> | /dcc list | /dcc close"));
+        appendSystemLine(QStringLiteral(
+            "! Usage: /dcc send <nick> [file] | /dcc chat <nick> | /dcc list | /dcc close"));
     }
 }
 

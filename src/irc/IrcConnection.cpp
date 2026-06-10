@@ -158,6 +158,16 @@ bool IrcConnection::isConnected() const {
 
 QString IrcConnection::nick() const { return session_.nick(); }
 
+QString IrcConnection::localAddress() const {
+  if (socket_ != nullptr) {
+    const QHostAddress addr = socket_->localAddress();
+    if (addr.protocol() == QAbstractSocket::IPv4Protocol) {
+      return addr.toString();
+    }
+  }
+  return {};
+}
+
 QHash<QString, QString> IrcConnection::isupport() const {
   return session_.isupport();
 }
