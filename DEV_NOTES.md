@@ -4,6 +4,22 @@ Internal notes for this port. Not shipped.
 
 ## THINGS I GOT WRONG
 
+- **2026-06-10 — DCC receive cap skipped for size-0 offers → unbounded disk write
+  (audit phase 5, SECURITY).** `DccManager::beginReceive` guarded the byte cap
+  with `if (tr->size > 0) { truncate to remaining }`. The Python original does
+  the opposite — `remaining = size - transferred; if remaining <= 0: drop` —
+  which means a peer offering size 0 gets *nothing* written. The C++ inversion
+  meant a malicious `DCC SEND "x" ip port 0` (or a negative size) bypassed the
+  cap entirely: every byte the peer sent was written to disk with no limit, and
+  the disconnect handler reported success. Remote-triggerable with accept policy
+  `all` or a trusted nick (no user click). Fixed with a pure, unit-tested helper
+  `dccWritableChunk(size, transferred, available)` that returns 0 for
+  zero/negative/complete and otherwise caps to remaining; offered size is also
+  clamped to >=0 at parse. Lesson: when porting a bounds check, port the
+  *predicate exactly* — `if size > 0 then cap` is NOT equivalent to `if
+  remaining <= 0 then drop` at the size==0 boundary, and that boundary is
+  attacker-reachable.
+
 - **2026-06-10 — Incoming IRC lines capped at the 512-byte *send* limit (audit
   phase 1).** `IrcConnection::queueIncomingLines` dropped any incoming line
   larger than `IrcMaxWireBytes` (512) and aborted on a pending buffer >4096.

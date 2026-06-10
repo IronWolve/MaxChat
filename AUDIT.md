@@ -47,7 +47,13 @@ flagged "medium+ — push past the checklist for extra attack angles."
 the recommended model/effort or change it — before reading any files.** Do not begin the
 phase work until the user confirms.
 
-**Last session:** 2026-06-10 — Phase 4 done (Opus 4.8 medium). S8 DEBUNKED — IrcFormat.cpp
+**Last session:** 2026-06-10 — Phase 5 done (Opus 4.8 medium+, hard security pass).
+**Found + fixed a real vuln**: DCC size-0/negative offers bypassed the receive byte cap →
+unbounded disk write (C++ inverted Python's guard). Also hardened DCC tokens to a CSPRNG.
+New dcc_manager_test (pure helper). 41 tests green. 4 lower items to backlog/backports.
+Next: Phase 6 (comic).
+
+Phase 4 (2026-06-10, Opus 4.8 medium). S8 DEBUNKED — IrcFormat.cpp
 is a faithful full port (0–98 palette + 0x04 hex + all control codes, reverse-video and
 parse edge cases match Python). ChatLineFormatter solid. 1 fix (Ctrl+O/R format keys),
 1 backlog (Tab-completion cycling). All 40 green. Next: Phase 5 (DCC).
@@ -69,7 +75,7 @@ resolved (no SCRAM).
 - [x] Phase 2 — Slash commands & aliases ✅ 2026-06-10
 - [x] Phase 3 — Settings keys & preferences ✅ 2026-06-10
 - [x] Phase 4 — Chat rendering & input ✅ 2026-06-10
-- [ ] Phase 5 — DCC (parity + security)
+- [x] Phase 5 — DCC (parity + security) ✅ 2026-06-10
 - [ ] Phase 6 — Comic mode (parity + decoder robustness)
 - [ ] Phase 7 — Themes, fonts, notifications, tray, sounds
 - [ ] Phase 8 — Logging, replay, buffers
@@ -94,7 +100,7 @@ resolved (no SCRAM).
 | S9 | MISS | Commands | ~~~25 Python commands likely missing~~~ MOSTLY DEBUNKED 2026-06-10: the inventory was wrong — /raw /quote /oper /kill /wallops /ns /cs /ms /identify /ghost /alias /unalias and unknown→raw passthrough all already exist in CommandParser. Only **/sound** was genuinely missing (now FIXED). C++ is in fact a superset (adds /help /close /disconnect /reconnect /connect /server /notify etc.). | 2 | VERIFIED |
 | S10 | MISS | Comic | Per-channel overrides (comic_channels: bg/chars/ignore), real emotion wheel (stub), assign-character dialog from member menu, stable per-channel random bg, panel right-click menus. | 6 | OPEN |
 | S11 | BUG | Shortcuts | ~~Rebinding not persisted~~ RESOLVED in code (Phase 3): `shortcuts` is saved via saveRaw (MainWindow.cpp:5278), re-applied on startup (applyNavShortcutOverrides @ 6653) and after edit (5282). Was stale. A round-trip regression test would lock it in (Backlog #7). | 3 | VERIFIED |
-| S12 | MISS | DCC UI | Transfers dialog lacks Rate/ETA columns (Python has live rate + ETA). | 5 | OPEN |
+| S12 | MISS | DCC UI | Transfers dialog lacks Rate/ETA columns (Python has live rate + ETA). Confirmed Phase 5; cosmetic. | 5 | Backlog #12 |
 | S13 | MISS | Input | Image-paste hook (Python emits imagePasted for a script to upload+link). C++ input is a QTextEdit with acceptRichText(false) → pasted images are ignored (no crash). Nothing to wire until scripting exists. | 4 | DEFERRED (with S1) |
 | S14 | MISS | Localization | Translations deferred by user decision: tr() wrapping incomplete, no .qm files. Loader + Localization page exist. NOT an audit failure — track only. | 11 | WONTPORT (deferred) |
 
@@ -381,9 +387,24 @@ Checklist (security — attacker = malicious peer):
 
 ### Findings — Phase 5
 
-| Sev | Where | Issue | Status |
-|-----|-------|-------|--------|
-| | | | |
+| ID | Sev | Where | Issue | Status |
+|----|-----|-------|-------|--------|
+| P5-1 | **SEC (med)** | DccManager.cpp beginReceive | **Unbounded disk write.** Byte cap was guarded `if (tr->size > 0)`, so a peer offering size 0 (or negative) bypassed it entirely — every byte streamed was written to disk, completion never fired, disconnect reported success. Python drops data when `remaining <= 0`. Remote-triggerable with accept policy `all`/trusted (no click). | **FIXED** — `dccWritableChunk()` helper caps to remaining and returns 0 for zero/negative/complete; offered size clamped >=0. Test: dcc_manager_test (3 cases). DEV_NOTES logged. |
+| P5-2 | SEC (low) | DccManager.cpp newToken | DCC passive/chat tokens used `QRandomGenerator::global()` (non-crypto PRNG); the token is the only barrier against a third party injecting a fake passive reply (→ file misdelivery). Python uses `secrets`. | **FIXED** — switched to `QRandomGenerator::system()` (CSPRNG). |
+| P5-7 | OK | DccManager.cpp inSend/destPath | Path-traversal: filenames are reduced via `QFileInfo::fileName()` on receive (strips `/` on Linux, `/`+`\` on Windows) and dest is `QDir::filePath(base)`. Adequate + parity with Python's `os.path.basename`. Residual: a literal `\`-containing name on Linux or control chars yield an ugly-but-contained filename in the download dir (no traversal). | VERIFIED (no fix) |
+| P5-4 | DIFF (low) | inResume/inAccept | RESUME/ACCEPT `pos` is trusted without validating against file size (sender seeks past EOF → sends nothing; receiver could get a sparse/corrupt file if the sender lies). Python has the same non-validation. Corruption, not a security hole. | NOTED — backport BP-8 (BOTH) |
+| P5-5 | SEC (low) | inSend / inChat | No cap on the number of pending incoming offers — a peer can spam DCC SEND/CHAT to grow transfer records/sockets (UI/memory DoS). Python is also uncapped. | Backlog #10; backport BP-9 (BOTH) |
+| P5-3 | DIFF (low) | offerChat / inChat | Passive CHAT tokens never expire; Python expires `_chat_awaiting` after 120s + drops on close. | Backlog #11 |
+| P5-6 | DIFF (none) | setAcceptPolicy | "trusted" matches by lowercased nick only (spoofable on IRC). Same as Python's design. | NOTED |
+| S12 | MISS (low) | DccTransfersDialog | No Rate/ETA columns (Python shows live rate + ETA via an EMA tick). | Backlog #12 |
+| — | TEST | tests/ | Only the `dccWritableChunk` helper is unit-tested; there's no loopback test of the SEND/GET/RESUME/CHAT handshakes (Python has test_dcc.py). | Backlog #13 |
+
+Checklist status: all handshakes traced (active/passive SEND+GET, RESUME offset, token echo,
+ack wraparound `& 0xFFFFFFFF`, destPath collision/resume rules, accept policy, CHAT 8192/65536
+caps) — all match Python. Security pass found one real vuln (P5-1, fixed) + token hardening
+(P5-2, fixed); traversal adequate (P5-7); pos-validation, flood-cap, chat-token-expiry are
+parity gaps shared with Python (backlog/backport). Resume-overwrite: auto-resume keys on
+name+size, can resume into a coincidentally-named partial — parity with Python, low.
 
 ---
 
@@ -658,6 +679,8 @@ Priority: `P1` clear win · `P2` nice to have · `P3` minor/architectural.
 | BP-5 | 2 | P3 | In-client `/help` `/?` | Port prints a command reference in chat; Python only has the Help menu/dialog. | OPEN |
 | BP-6 | 2 | P3 | Misc command extras | Port adds `/close`, `/notify` `/unnotify`, `/list` (opens dialog), `/q` `/m` short aliases, and os/hs service shortcuts. | OPEN |
 | BP-7 | 2 | P3 | Alias appends unused args | When an alias template has no placeholder, the port appends the args (mIRC-style); Python drops them. | OPEN |
+| BP-8 | 5 | P3 | Validate RESUME/ACCEPT pos (BOTH) | Both clients trust the peer's resume offset without checking it against the file size → a lying peer causes a sparse/corrupt download. Add `0 <= pos <= size` validation on both the RESUME (sender) and ACCEPT (receiver) sides. | OPEN |
+| BP-9 | 5 | P2 | Cap pending DCC offers (BOTH) | Neither client limits incoming DCC offers → offer-spam DoS. Add a per-peer + global cap. | OPEN |
 
 ---
 
@@ -676,3 +699,7 @@ Big items deferred from phases. Each entry must be actionable cold: what, where,
 | 7 | 3 (S11) | TEST | Shortcut persistence regression test | Shortcuts persist correctly but there's no test. Add a round-trip: set an override → saveRaw → reload → applyNavShortcutOverrides binds the new key. Needs a MainWindow harness (see main_window_link_preview_test). | OPEN |
 | 8 | 3 (P3-3) | MISS low | Port `nick_width_autoset` | Python auto-fits the nick column to the user's nick once, then lets them drag it (`nick_width_autoset` guards the one-shot). Port if/when touching the nick-column layout (Phase 4 area). | OPEN |
 | 9 | 4 (P4-2) | DIFF med | Tab-completion cycling | `MainWindow::completeInput` picks the first match only. Make repeated Tab/Backtab cycle through all candidates: remember (tokenStart, prefix, candidate list, index, last-inserted range); on each Tab advance the index and replace the last completion; reset the state on any other keypress/edit. Mirror Python `input_bar._complete(back=...)`. Needs the main_window test harness for a round-trip test. | OPEN |
+| 10 | 5 (P5-5) | SEC low | Cap pending DCC offers | No limit on incoming DCC SEND/CHAT offers → a peer can spam them (UI/memory DoS). Add a per-peer and global cap on Pending transfers; drop/ignore beyond it with a status line. Also affects Python (BP-9). | OPEN |
+| 11 | 5 (P5-3) | DIFF low | Expire passive CHAT tokens | `chat->pendingToken` never expires. Add a ~120s timeout that drops the pending token (and the ChatRuntime if still unconnected), mirroring Python's `_chat_awaiting` singleShot + drop-on-close. | OPEN |
+| 12 | 5 (S12) | MISS low | DCC Rate/ETA columns | Add live transfer rate + ETA to DccTransfersDialog (EMA over recent throughput on a timer tick), like Python's dcc_dialog. | OPEN |
+| 13 | 5 | TEST | DCC loopback tests | Port test_dcc.py: drive a real QTcpServer/QTcpSocket loopback through SEND/GET/RESUME/CHAT and assert the received file matches (sha/byte-compare), plus the size-0 guard end-to-end. Heavier harness than the pure-helper test already added. | OPEN |
