@@ -117,6 +117,7 @@ private:
   QHash<QString, QString> isupport_;
   QString lagToken_;
   QElapsedTimer lagTimer_;
+  QElapsedTimer ctcpReplyTimer_;
   QList<QRegularExpression> ignorePatterns_;
 };
 

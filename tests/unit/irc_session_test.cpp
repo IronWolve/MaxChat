@@ -1,5 +1,7 @@
 #include "irc/IrcSession.h"
 
+#include "app/AppInfo.h"
+
 #include <QtTest/QtTest>
 
 #include <algorithm>
@@ -398,9 +400,12 @@ private slots:
     QCOMPARE(replies.count(), 1);
     QCOMPARE(replies.at(0).at(0).toString(),
              QStringLiteral("[ctcp] VERSION request from alice"));
+    const QString expectedVersion =
+        QStringLiteral("VERSION %1 %2")
+            .arg(maxchat::app::displayName(), maxchat::app::version());
     QCOMPARE(linesFromWrites(writes),
              QStringList({QStringLiteral("NOTICE alice :") +
-                          ctcpPayload(QStringLiteral("VERSION MaxChat C++"))}));
+                          ctcpPayload(expectedVersion)}));
   }
 
   void ctcpPingRequestEchoesPayload() {
@@ -798,6 +803,61 @@ private slots:
     QCOMPARE(modeChanges.at(0).at(0).toString(), QStringLiteral("#chan"));
     QCOMPARE(modeChanges.at(0).at(1).toString(), QStringLiteral("alice"));
     QCOMPARE(modeChanges.at(0).at(2).toString(), QStringLiteral("+o bob"));
+  }
+
+  void unhandledNumericsAreSurfacedAsStatusText() {
+    // Numerics without an explicit handler (LUSERS, server errors, …) must not
+    // vanish — the Python client shows them as status text.
+    IrcSession session;
+    QSignalSpy status(&session, &IrcSession::systemText);
+
+    session.handleLine(
+        QStringLiteral(":srv 251 bob :There are 42 users on 3 servers"));
+    session.handleLine(
+        QStringLiteral(":srv 465 bob :You are banned from this server"));
+
+    QCOMPARE(status.count(), 2);
+    QCOMPARE(status.at(0).at(0).toString(),
+             QStringLiteral("There are 42 users on 3 servers"));
+    QCOMPARE(status.at(1).at(0).toString(),
+             QStringLiteral("You are banned from this server"));
+  }
+
+  void isupportLineIsAlsoShownAsStatusText() {
+    // 005 tokens are stored AND the line is surfaced (Python falls through).
+    IrcSession session;
+    QSignalSpy status(&session, &IrcSession::systemText);
+
+    session.handleLine(
+        QStringLiteral(":srv 005 bob NETWORK=Libera :are supported"));
+
+    QCOMPARE(session.isupport().value(QStringLiteral("NETWORK")),
+             QStringLiteral("Libera"));
+    QCOMPARE(status.count(), 1);
+    QCOMPARE(status.at(0).at(0).toString(), QStringLiteral("are supported"));
+  }
+
+  void ctcpAutoRepliesAreRateLimited() {
+    // A burst of CTCP requests must not produce a 1:1 flood of replies.
+    IrcSession session;
+    QList<QByteArray> writes;
+    session.setConnected(true);
+    session.setWriter([&writes](const QByteArray &payload) {
+      writes.append(payload);
+      return payload.size();
+    });
+
+    session.handleLine(QStringLiteral(":alice!u@h PRIVMSG bob :") +
+                       ctcpPayload(QStringLiteral("VERSION")));
+    session.handleLine(QStringLiteral(":mallory!u@h PRIVMSG bob :") +
+                       ctcpPayload(QStringLiteral("VERSION")));
+    session.handleLine(QStringLiteral(":mallory!u@h PRIVMSG bob :") +
+                       ctcpPayload(QStringLiteral("TIME")));
+
+    // Only the first request inside the 1s window draws an auto-reply.
+    QCOMPARE(writes.size(), 1);
+    QVERIFY(QString::fromUtf8(writes.first()).startsWith(
+        QStringLiteral("NOTICE alice :")));
   }
 };
 

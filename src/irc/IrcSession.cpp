@@ -1,5 +1,6 @@
 #include "irc/IrcSession.h"
 
+#include "app/AppInfo.h"
 #include "irc/IrcMessage.h"
 #include "irc/IrcRedaction.h"
 
@@ -255,7 +256,8 @@ void IrcSession::handleLine(const QString &line) {
 
   if (command == QStringLiteral("005")) {
     handleIsupport(params);
-    return;
+    // Fall through to the numeric catch-all so the line is also shown as status
+    // text (Python surfaces 005 too).
   }
 
   if (command == QStringLiteral("433") || command == QStringLiteral("436")) {
@@ -354,14 +356,25 @@ void IrcSession::handleLine(const QString &line) {
         return;
       }
 
+      // Rate-limit CTCP auto-replies to ~1/sec so we can't be used as a CTCP
+      // flood reflector (Python throttles identically). NOTICE replies, ACTION
+      // and DCC are handled above and are not subject to this throttle.
+      if (ctcpReplyTimer_.isValid() && ctcpReplyTimer_.elapsed() < 1000) {
+        return;
+      }
+      ctcpReplyTimer_.restart();
+
       QString response;
       if (ctcp.command == QStringLiteral("PING")) {
         response = ctcpBody(QStringLiteral("PING"), ctcp.args);
       } else if (ctcp.command == QStringLiteral("VERSION")) {
         // hide_version suppresses the reply; ctcp_version overrides the text.
         if (!hideVersion_) {
+          const QString defaultVersion =
+              QStringLiteral("%1 %2").arg(maxchat::app::displayName(),
+                                          maxchat::app::version());
           response = QStringLiteral("VERSION %1")
-                         .arg(ctcpVersion_.isEmpty() ? QStringLiteral("MaxChat C++")
+                         .arg(ctcpVersion_.isEmpty() ? defaultVersion
                                                      : ctcpVersion_);
         }
       } else if (ctcp.command == QStringLiteral("TIME")) {
@@ -769,6 +782,16 @@ void IrcSession::handleLine(const QString &line) {
   if (command == QStringLiteral("368") && params.size() >= 2) {
     emit banListEnd(params.at(1));
     return;
+  }
+
+  // Generic fallthrough for numerics we don't handle explicitly (LUSERS
+  // 251-255, 250, 265/266, 396, server errors like 462/465/491, …). Without
+  // this they vanish silently; Python surfaces them as status text.
+  if (command.size() == 3 &&
+      std::all_of(command.cbegin(), command.cend(),
+                  [](QChar c) { return c.isDigit(); })) {
+    const QString detail = msg.trailing().trimmed();
+    emit systemText(detail.isEmpty() ? msg.raw : detail);
   }
 }
 
