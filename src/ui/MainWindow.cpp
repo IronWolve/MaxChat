@@ -22,6 +22,8 @@
 #include "ui/ChatFindDialog.h"
 #include "ui/ColorPickerDialog.h"
 #include "ui/ComicView.h"
+#include "ui/DccManager.h"
+#include "ui/DccTransfersDialog.h"
 #include "ui/ImageViewerDialog.h"
 #include "ui/MediaPlayerDialog.h"
 #include "ui/ShortcutEditorDialog.h"
@@ -817,6 +819,17 @@ MainWindow::MainWindow(QWidget* parent)
     connect(&m_friendPollTimer, &QTimer::timeout, this, &MainWindow::pollFriends);
     m_autoAwayTimer.setSingleShot(true);
     connect(&m_autoAwayTimer, &QTimer::timeout, this, &MainWindow::triggerAutoAway);
+
+    m_dccManager = new DccManager(this);
+    connect(m_dccManager, &DccManager::ctcpToSend, this,
+            [this](const QString& peer, const QString& ctcpArgs) {
+                connection().ctcp(peer, QStringLiteral("DCC"), ctcpArgs);
+                appendSystemLineToTarget(peer, QStringLiteral("-> [dcc] %1").arg(ctcpArgs), true,
+                                         true, false, false);
+            });
+    connect(m_dccManager, &DccManager::status, this,
+            [this](const QString& message) { appendSystemLine(QStringLiteral("! %1").arg(message)); });
+
     setupNavShortcuts();
     applyCurrentSettings();
     if (m_settings.loadWithDefaults().value(QStringLiteral("connect_on_start"), false).toBool()) {
@@ -1008,11 +1021,8 @@ void maxchat::ui::MainWindow::buildMenus() {
     settingsMenu->addAction(QStringLiteral("Scripts..."), this,
                             [this]() { showScriptsPlaceholder(QStringLiteral("scripts")); });
     QAction* transfersAction =
-        settingsMenu->addAction(QStringLiteral("File Transfers..."), this, [this]() {
-            showFeaturePlanned(QStringLiteral("File Transfers"),
-                               QStringLiteral("DCC transfers are on the post-basic "
-                                              "IRC list."));
-        });
+        settingsMenu->addAction(QStringLiteral("File Transfers..."), this,
+                                &MainWindow::openDccTransfers);
     settingsMenu->addSeparator();
     settingsMenu->addAction(QStringLiteral("Import Settings..."), this,
                             &MainWindow::importSettings);
@@ -2745,6 +2755,10 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
                     }
                 });
             });
+    connect(irc, &maxchat::irc::IrcConnection::dccRequest, this,
+            [this, runInContext](const QString& sender, const QString& args) {
+                runInContext([&]() { m_dccManager->handleIncoming(sender, args); });
+            });
     connect(irc, &maxchat::irc::IrcConnection::invited, this,
             [this, runInContext](const QString& sender, const QString& channel,
                                  const QString& mask) {
@@ -3226,6 +3240,15 @@ void maxchat::ui::MainWindow::handleInputSubmitted() {
 
 void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
     const auto aliasExpansion = maxchat::core::expandCommandAliases(text, m_commandAliases);
+
+    // /dcc is handled by the DCC manager, not the IRC command parser.
+    if (aliasExpansion.commandLine.startsWith(QStringLiteral("/dcc"), Qt::CaseInsensitive)) {
+        const QStringList parts =
+            aliasExpansion.commandLine.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+        handleDccCommand(parts.mid(1));
+        return;
+    }
+
     const auto parsed = maxchat::irc::parseUserCommand(aliasExpansion.commandLine, m_currentTarget);
 
     if (parsed.type == maxchat::irc::UserCommandType::Clear) {
@@ -5266,6 +5289,44 @@ void maxchat::ui::MainWindow::appendUnreadMarkerLine() {
     }
     cursor.insertHtml(QStringLiteral("<hr/>"));
     m_chatView->setTextCursor(cursor);
+}
+
+void maxchat::ui::MainWindow::openDccTransfers() {
+    const QVariantMap settings = m_settings.loadWithDefaults();
+    QString dir = settings.value(QStringLiteral("dcc_dir")).toString();
+    if (dir.isEmpty()) {
+        dir = QDir(m_settings.paths().configDir).filePath(QStringLiteral("downloads"));
+    }
+    m_dccManager->setDownloadDir(dir);
+    DccTransfersDialog dialog(m_dccManager, this);
+    dialog.exec();
+}
+
+void maxchat::ui::MainWindow::handleDccCommand(const QStringList& args) {
+    const QVariantMap settings = m_settings.loadWithDefaults();
+    QString dir = settings.value(QStringLiteral("dcc_dir")).toString();
+    if (dir.isEmpty()) {
+        dir = QDir(m_settings.paths().configDir).filePath(QStringLiteral("downloads"));
+    }
+    m_dccManager->setDownloadDir(dir);
+
+    const QString sub = args.isEmpty() ? QString() : args.first().toLower();
+    if (sub == QStringLiteral("send") && args.size() >= 3) {
+        const QString peer = args.at(1);
+        const QString path = args.mid(2).join(QLatin1Char(' '));
+        m_dccManager->offerSend(peer, path);
+    } else if (sub == QStringLiteral("list")) {
+        const auto transfers = m_dccManager->transfers();
+        appendSystemLine(QStringLiteral("! %1 DCC transfer(s).").arg(transfers.size()));
+        openDccTransfers();
+    } else if (sub == QStringLiteral("close") || sub == QStringLiteral("cancel")) {
+        for (const auto& t : m_dccManager->transfers()) {
+            m_dccManager->cancelTransfer(t.id);
+        }
+        appendSystemLine(QStringLiteral("! Cancelled active DCC transfers."));
+    } else {
+        appendSystemLine(QStringLiteral("! Usage: /dcc send <nick> <file> | /dcc list | /dcc close"));
+    }
 }
 
 void maxchat::ui::MainWindow::setComicMode(bool enabled) {

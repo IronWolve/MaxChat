@@ -346,6 +346,14 @@ void IrcSession::handleLine(const QString &line) {
         return;
       }
 
+      if (ctcp.command == QStringLiteral("DCC")) {
+        // DCC <type> <argument> <address> <port> [size]; pass the raw args up
+        // so the UI's DCC manager can negotiate the transfer.
+        emit dccRequest(msg.nick(), ctcp.args);
+        emit replyText(ctcpSummary(QStringLiteral("request"), msg.nick(), ctcp));
+        return;
+      }
+
       QString response;
       if (ctcp.command == QStringLiteral("PING")) {
         response = ctcpBody(QStringLiteral("PING"), ctcp.args);
