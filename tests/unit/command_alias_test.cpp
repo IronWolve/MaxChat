@@ -56,6 +56,31 @@ class CommandAliasTest final : public QObject {
         QCOMPARE(expanded.commandLine, QStringLiteral("/raw AWAY getting coffee"));
     }
 
+    void substitutesMeAndChanPlaceholders() {
+        QVariantMap aliases;
+        aliases.insert(QStringLiteral("wave"),
+                       QStringLiteral("/me waves at $1- in $chan as $me"));
+
+        const auto expanded = expandCommandAliases(QStringLiteral("/wave bob carol"), aliases,
+                                                   QStringLiteral("alice"), QStringLiteral("#chat"));
+        QCOMPARE(expanded.commandLine,
+                 QStringLiteral("/me waves at bob carol in #chat as alice"));
+
+        // No nick/channel context → $me/$chan expand to nothing (Python parity).
+        const auto bare = expandCommandAliases(QStringLiteral("/wave bob"), aliases);
+        QCOMPARE(bare.commandLine, QStringLiteral("/me waves at bob in  as"));
+    }
+
+    void shipsClassicFunAliases() {
+        const QVariantMap aliases = defaultCommandAliases();
+        QVERIFY(aliases.contains(QStringLiteral("slap")));
+        QVERIFY(aliases.contains(QStringLiteral("fish")));
+
+        const auto slap = expandCommandAliases(QStringLiteral("/slap bob"), aliases);
+        QCOMPARE(slap.commandLine,
+                 QStringLiteral("/me slaps bob around a bit with a large trout"));
+    }
+
     void supportsChainedExpansionWithLoopCap() {
         QVariantMap aliases;
         aliases.insert(QStringLiteral("one"), QStringLiteral("/two $*"));

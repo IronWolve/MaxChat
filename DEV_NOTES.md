@@ -35,6 +35,16 @@ Internal notes for this port. Not shipped.
   `assets\` looked like a successful build (app silently falls back to the
   built-in Dark theme only). Now each copy is checked and fails the build.
 
+## DECISIONS
+
+- **2026-06-10 — Scripting/plugins: DEFER (audit phase 2).** Python ships a Python
+  plugin API (`scripting.py`: on_message/on_join/on_command/on_image_paste hooks,
+  `/load /unload /reload`, scripts dialog). The C++ port can't run Python plugins,
+  and embedding CPython is heavy/off-scope. Decision (user): **defer** — keep
+  `/scripts /load /unload /reload` as a clear placeholder, and design a
+  C++-native extension system later (candidates: embed Lua, or a subprocess/IPC
+  bridge speaking a small JSON protocol). Tracked as AUDIT FIX BACKLOG #6.
+
 ## Conversion debt spotted while comparing themes (2026-06-09)
 
 - ~~Bundled chat-themes.json lost the irssi/BitchX extras~~ DONE later that

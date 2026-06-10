@@ -3287,7 +3287,12 @@ void maxchat::ui::MainWindow::handleInputSubmitted() {
 }
 
 void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
-    const auto aliasExpansion = maxchat::core::expandCommandAliases(text, m_commandAliases);
+    const QString aliasChannel = m_currentTarget.startsWith(QLatin1Char('#')) ||
+                                         m_currentTarget.startsWith(QLatin1Char('&'))
+                                     ? m_currentTarget
+                                     : QString();
+    const auto aliasExpansion = maxchat::core::expandCommandAliases(
+        text, m_commandAliases, currentNickForNetwork(activeNetworkName()), aliasChannel);
 
     // /dcc is handled by the DCC manager, not the IRC command parser.
     if (aliasExpansion.commandLine.startsWith(QStringLiteral("/dcc"), Qt::CaseInsensitive)) {
@@ -3623,6 +3628,27 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
             appendSystemLine(QStringLiteral("! Could not send CTCP."));
         }
         return;
+    case maxchat::irc::UserCommandType::Sound: {
+        const QString soundTarget = parsed.targets.first();
+        if (isTreeStatusTarget(soundTarget)) {
+            appendSystemLine(QStringLiteral("! /sound needs a channel or query."));
+            return;
+        }
+        // Send the CTCP SOUND to the room (wire parity with Python). Local
+        // playback (self + received sounds) arrives with the sound subsystem
+        // (audit Phase 7 / S3).
+        const QString soundArgs =
+            QStringLiteral("%1 %2").arg(parsed.rawLine, parsed.text).trimmed();
+        if (connection().ctcp(soundTarget, QStringLiteral("SOUND"), soundArgs)) {
+            appendSystemLineToTarget(
+                soundTarget,
+                QStringLiteral("* [sound] %1").arg(soundArgs), true, true, false,
+                false);
+        } else {
+            appendSystemLine(QStringLiteral("! Could not send sound."));
+        }
+        return;
+    }
     case maxchat::irc::UserCommandType::ServiceMessage:
         if (connection().privmsg(parsed.targets.first(), parsed.text)) {
             const QString redactedLine = maxchat::irc::redactLine(

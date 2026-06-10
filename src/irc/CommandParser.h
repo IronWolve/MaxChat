@@ -20,6 +20,7 @@ enum class UserCommandType {
   BroadcastAction,
   OpNotice,
   Ctcp,
+  Sound,
   ServiceMessage,
   Nick,
   Whois,

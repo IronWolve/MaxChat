@@ -43,7 +43,8 @@ QString normalizeTemplate(QString aliasTemplate) {
     return aliasTemplate;
 }
 
-QString applyTemplate(QString aliasTemplate, const QString& arguments) {
+QString applyTemplate(QString aliasTemplate, const QString& arguments,
+                      const QString& selfNick, const QString& currentChannel) {
     aliasTemplate = normalizeTemplate(aliasTemplate);
     if (aliasTemplate.isEmpty()) {
         return {};
@@ -52,7 +53,8 @@ QString applyTemplate(QString aliasTemplate, const QString& arguments) {
     const QStringList tokens = argumentTokens(arguments);
     bool usedPlaceholder = false;
 
-    QRegularExpression placeholder(QStringLiteral(R"(\$(\*|\d+-?))"));
+    // $me / $chan / $* / $N / $N- — matches the Python _expand_alias token set.
+    QRegularExpression placeholder(QStringLiteral(R"(\$(me|chan|\*|\d+-?))"));
     QRegularExpressionMatchIterator matches = placeholder.globalMatch(aliasTemplate);
     QString expanded;
     qsizetype last = 0;
@@ -63,6 +65,14 @@ QString applyTemplate(QString aliasTemplate, const QString& arguments) {
         usedPlaceholder = true;
 
         const QString token = match.captured(1);
+        if (token == QStringLiteral("me")) {
+            expanded += selfNick;
+            continue;
+        }
+        if (token == QStringLiteral("chan")) {
+            expanded += currentChannel;
+            continue;
+        }
         if (token == QStringLiteral("*")) {
             expanded += arguments;
             continue;
@@ -93,14 +103,21 @@ QString applyTemplate(QString aliasTemplate, const QString& arguments) {
 
 QVariantMap defaultCommandAliases() {
     QVariantMap aliases;
+    // Command shortcuts (C++ extra — not in Python defaults; see BACKPORTS).
     aliases.insert(QStringLiteral("j"), QStringLiteral("/join $*"));
     aliases.insert(QStringLiteral("p"), QStringLiteral("/part $*"));
     aliases.insert(QStringLiteral("w"), QStringLiteral("/whois $*"));
+    // Classic fun aliases shipped by the Python app (parity).
+    aliases.insert(QStringLiteral("slap"),
+                   QStringLiteral("/me slaps $1- around a bit with a large trout"));
+    aliases.insert(QStringLiteral("fish"),
+                   QStringLiteral("/me slaps $1- around the face with a wet fish"));
     return aliases;
 }
 
 CommandAliasExpansion expandCommandAliases(const QString& input, const QVariantMap& aliases,
-                                           int maxDepth) {
+                                           const QString& selfNick,
+                                           const QString& currentChannel, int maxDepth) {
     CommandAliasExpansion result;
     result.commandLine = input.trimmed();
     if (result.commandLine.isEmpty() || aliases.isEmpty() || maxDepth <= 0) {
@@ -120,7 +137,8 @@ CommandAliasExpansion expandCommandAliases(const QString& input, const QVariantM
             break;
         }
 
-        const QString next = applyTemplate(value.toString(), parts.arguments);
+        const QString next =
+            applyTemplate(value.toString(), parts.arguments, selfNick, currentChannel);
         if (next.isEmpty() || next == result.commandLine) {
             break;
         }

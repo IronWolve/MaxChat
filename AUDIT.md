@@ -47,15 +47,18 @@ flagged "medium+ — push past the checklist for extra attack angles."
 the recommended model/effort or change it — before reading any files.** Do not begin the
 phase work until the user confirms.
 
-**Last session:** 2026-06-10 — Phase 1 done (Opus 4.8 medium). 5 fixes landed (caps,
-numeric fallthrough, 005 display, CTCP rate-limit, VERSION string), 6 items to backlog,
-S6 resolved (no SCRAM exists — inventory over-claimed; PLAIN only, matches Python).
-All 40 tests green. Next: Phase 2.
+**Last session:** 2026-06-10 — Phase 2 done (Opus 4.8, bumped effort). 3 fixes
+($me/$chan aliases, slap/fish defaults, /sound send), scripting DEFERRED (user
+decision), S9 mostly debunked (inventory over-claimed — only /sound was missing),
+4 backport candidates logged. All 40 tests green. Next: Phase 3.
+
+Phase 1 (2026-06-10, Opus 4.8 medium): 5 fixes (caps, numeric fallthrough, 005
+display, CTCP rate-limit, VERSION string), 6 backlog, S6 resolved (no SCRAM).
 
 ### Phase index
 
 - [x] Phase 1 — IRC protocol parity ✅ 2026-06-10
-- [ ] Phase 2 — Slash commands & aliases
+- [x] Phase 2 — Slash commands & aliases ✅ 2026-06-10
 - [ ] Phase 3 — Settings keys & preferences
 - [ ] Phase 4 — Chat rendering & input
 - [ ] Phase 5 — DCC (parity + security)
@@ -72,7 +75,7 @@ All 40 tests green. Next: Phase 2.
 
 | # | Sev | Area | Issue | Phase | Status |
 |---|-----|------|-------|-------|--------|
-| S1 | MISS | Scripting | Entire Python plugin API (`scripting.py`: on_message/on_join/on_command/on_image_paste hooks, /load /unload /reload, scripts dialog) not ported. `/scripts` etc. are stubs. Decide: port, defer, or WONTPORT. | 2 | OPEN |
+| S1 | MISS | Scripting | Entire Python plugin API (`scripting.py`: hooks, /load /unload /reload, scripts dialog) not ported. **DECISION 2026-06-10: DEFER** — keep the placeholder, design a C++-native plugin system later (Lua or IPC bridge, not embedded Python). Recorded in DEV_NOTES. Backlog #6. | 2 | DEFERRED |
 | S2 | MISS | Update checker | Python has Help ▸ Check for Updates + quiet startup check (GitHub releases). C++ has none. When built: HTTPS-only. | 7 | OPEN |
 | S3 | MISS | Sounds | notify.wav playback, beep, CTCP SOUND (`/sound`, plays from `<config>/sounds/`) unwired. Qt6Multimedia is already linked for the media player. | 7 | OPEN |
 | S4 | MISS | Notifications | Taskbar flash (notify_flash), tray icon not visually present, highlight_words matching incomplete, DND coverage unverified. | 7 | OPEN |
@@ -80,7 +83,7 @@ All 40 tests green. Next: Phase 2.
 | S6 | BUG? | SASL | ~~Python does PLAIN only; C++ claims PLAIN + SCRAM-SHA-256.~~ RESOLVED 2026-06-10: no SCRAM exists in src/ — the inventory over-claimed. C++ does PLAIN only, matching Python. No action. | 1 | VERIFIED |
 | S7 | MISS | Settings | Python DEFAULTS has ~175 keys; C++ SettingsStore ~70. ~105 keys unaccounted (some intentionally dropped, some missing). Phase 3 produces the authoritative map. | 3 | OPEN |
 | S8 | BUG? | Rendering | mIRC colors 16–98 + hex color code (\x04 / \x0C#RRGGBB) likely missing in C++ IrcFormat (0–15 only). Strike/reverse/mono coverage unverified. | 4 | OPEN |
-| S9 | MISS | Commands | ~25 Python commands likely missing: /sound, /raw, /quote, /oper, /kill, /wallops, /ns /cs /ms /identify /ghost /recover /sidentify /login, /alias /unalias, /query?, unknown-command raw passthrough. | 2 | OPEN |
+| S9 | MISS | Commands | ~~~25 Python commands likely missing~~~ MOSTLY DEBUNKED 2026-06-10: the inventory was wrong — /raw /quote /oper /kill /wallops /ns /cs /ms /identify /ghost /alias /unalias and unknown→raw passthrough all already exist in CommandParser. Only **/sound** was genuinely missing (now FIXED). C++ is in fact a superset (adds /help /close /disconnect /reconnect /connect /server /notify etc.). | 2 | VERIFIED |
 | S10 | MISS | Comic | Per-channel overrides (comic_channels: bg/chars/ignore), real emotion wheel (stub), assign-character dialog from member menu, stable per-channel random bg, panel right-click menus. | 6 | OPEN |
 | S11 | BUG | Shortcuts | Shortcut rebinding exists but reportedly not persisted across sessions (DEV_NOTES). | 3 | OPEN |
 | S12 | MISS | DCC UI | Transfers dialog lacks Rate/ETA columns (Python has live rate + ETA). | 5 | OPEN |
@@ -180,9 +183,23 @@ Checklist:
 
 ### Findings — Phase 2
 
-| Sev | Where | Issue | Status |
-|-----|-------|-------|--------|
-| | | | |
+| ID | Sev | Where | Issue | Status |
+|----|-----|-------|-------|--------|
+| P2-2 | MISS (med) | CommandAlias.cpp applyTemplate / MainWindow call site | Alias templates supported only `$*` `$N` `$N-`; **`$me` and `$chan` were missing** (and `expandCommandAliases` had no nick/channel context). Python supports both. | **FIXED** — added `$me`/`$chan`, threaded selfNick+currentChannel through. Test: substitutesMeAndChanPlaceholders. |
+| P2-6 | MISS (med) | CommandAlias.cpp defaultCommandAliases | C++ shipped j/p/w; Python ships **slap** + **fish** (classic fun aliases using `$1-`). Fresh C++ installs lacked them. | **FIXED** — added slap+fish (kept j/p/w as extras). Test: shipsClassicFunAliases. |
+| P2-1 | BUG/MISS (med) | CommandParser.cpp + MainWindow dispatch | `/sound` was unrecognized → fell through to raw passthrough, sending `SOUND …` to the server (now visible as a 421 after the Phase-1 numeric fix). Python sends a CTCP SOUND to the room + plays locally. | **FIXED** — parse `/sound <file> [text]`, send CTCP SOUND to the current buffer. Local playback (self + received) deferred to Phase 7 (S3). Test: soundCommandTargetsCurrentBufferAndNeedsFile. |
+| P2-3 | DIFF (low) | CommandAlias.cpp applyTemplate | When a template has no placeholder, C++ appends the args (mIRC-style); Python drops them. Intentional + tested (appendsArgumentsWhenTemplateHasNoPlaceholder). | NOTED — backport candidate BP-7. |
+| P2-4 | MISS | CommandParser/MainWindow | Scripting commands (/scripts /load /unload /reload) are placeholders — the Python plugin API isn't ported. | DEFERRED (S1, user decision). Backlog #6. |
+| P2-5 | DIFF | CommandParser.cpp | C++ is a **superset** of Python's commands: adds /help /? /close /disconnect /reconnect /connect /server /notify /unnotify /list (dialog) /q /m and os/hs service shortcuts. | NOTED — backport candidates BP-4/5/6. |
+| P2-8 | DIFF (none) | CommandParser.cpp | `umite` ships as a typo-tolerant alias for `unmute`. Harmless; intentional. | NOTED. |
+
+Checklist status: full command diff done — Python ~50 dispatch arms vs C++ ~60+ parser
+arms; C++ is a superset, only `/sound` was missing (fixed). Unknown→raw passthrough ✓
+(both send the slash-stripped line). Alias substitution ✓✓ ($me/$chan was the gap, fixed;
+$*/$N/$N- already worked; recursion guard via `seen` set + maxDepth=8 ✓). Default aliases ✓
+(slap/fish added). Per-command arg/usage behavior spot-checked (msg/nick/whois/kick/ban/
+mode/topic) — matches Python's "needs rest" guards. Services passwords redacted in the
+ServiceMessage path ✓ (full check is Phase 10).
 
 ---
 
@@ -584,6 +601,10 @@ Priority: `P1` clear win · `P2` nice to have · `P3` minor/architectural.
 | BP-1 | 1 | P1 | Readable numeric formatting | C++ emits friendly lines for numerics Python dumps raw: 301/305/306/307/313/328/331/333/671 (e.g. `[topic] #chan set by alice at <ts>`). Add explicit branches in `client.py` `_handle` before the digit catch-all. | OPEN |
 | BP-2 | 1 | P3 | Split connect vs registration watchdog | Port has independent connect + registration timeouts (clearer failure reason, correct failover when a server accepts TCP but never registers); Python has one ~20s watchdog. | OPEN |
 | BP-3 | 1 | P3 | Tolerant lag PONG token matching | Port matches the lag token in trailing OR positional param; Python only checks trailing. | OPEN |
+| BP-4 | 2 | P2 | Connection-management commands | Port has `/server` `/connect` `/disconnect` `/reconnect`; Python has none (menu only). Useful power-user parity. | OPEN |
+| BP-5 | 2 | P3 | In-client `/help` `/?` | Port prints a command reference in chat; Python only has the Help menu/dialog. | OPEN |
+| BP-6 | 2 | P3 | Misc command extras | Port adds `/close`, `/notify` `/unnotify`, `/list` (opens dialog), `/q` `/m` short aliases, and os/hs service shortcuts. | OPEN |
+| BP-7 | 2 | P3 | Alias appends unused args | When an alias template has no placeholder, the port appends the args (mIRC-style); Python drops them. | OPEN |
 
 ---
 
@@ -598,3 +619,4 @@ Big items deferred from phases. Each entry must be actionable cold: what, where,
 | 3 | 1 (P1-8/P1-9) | DIFF low | Proxy config validation | In `IrcConnection.cpp connectTo`: validate proxy port 1..65535 and surface an error for an unknown non-empty proxy type (currently silently connects direct). Mirror Python `_proxy_from_config` (emit errorOccurred + disconnected). Note proxy logic is inline → consider extracting for unit testing (Python has test_proxy.py). | OPEN |
 | 4 | 1 (P1-11) | DIFF low-med | Throttled line draining | `IrcConnection::queueIncomingLines` drains all complete lines synchronously per readyRead. Python caps at 100 lines/tick and defers the rest via singleShot(0) to keep the UI responsive during floods/netsplits. Port the deferred-drain queue. | OPEN |
 | 5 | 1 (P1-12) | DIFF low | away-notify chat spam | `IrcSession.cpp` AWAY handler emits both awayChanged AND a readable replyText for every away-notify; Python emits only the signal. Confirm whether MainWindow prints replyText to the active buffer (it does for WHO/WHOWAS) — if so, away-notify on a busy channel spams. Decide: drop the replyText, or gate it. Cross-check in a UI phase. | OPEN |
+| 6 | 2 (S1/P2-4) | MISS | C++-native plugin/scripting system | Python's plugin API (`scripting.py`: on_message/on_join/on_command/on_image_paste, /load /unload /reload, scripts dialog) can't be ported as-is (no embedded Python). DEFERRED by user 2026-06-10. Design a C++-native approach later — options: embed Lua, or a subprocess/IPC bridge speaking a small JSON protocol. Until then `/scripts /load /unload /reload` stay placeholders. | DEFERRED |
