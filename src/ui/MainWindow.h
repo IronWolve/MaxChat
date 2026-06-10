@@ -3,6 +3,7 @@
 #include "core/ChatBufferStore.h"
 #include "core/ChatLineFormatter.h"
 #include "core/ChatLogStore.h"
+#include "comic/ComicCharacter.h"
 #include "core/ConnectionPlan.h"
 #include "core/FloodGuard.h"
 #include "core/SettingsStore.h"
@@ -218,8 +219,13 @@ class MainWindow final : public QMainWindow {
     void renderActiveBufferMetadata();
     void setComicMode(bool enabled);
     void refreshComic();
+    void ensureComicArt();
+    [[nodiscard]] maxchat::comic::Character* comicCharacterForNick(const QString& nick);
+    [[nodiscard]] QImage comicBackground();
     void openComicSettings();
     void openCharacterGallery();
+    void openEmotionPicker();
+    void saveComic();
     void openDccTransfers();
     void handleDccCommand(const QStringList& args);
     void configureDcc();
@@ -397,6 +403,11 @@ class MainWindow final : public QMainWindow {
     QAction* m_comicModeAction = nullptr;
     ComicView* m_comicView = nullptr;
     bool m_comicMode = false;
+    QString m_comicArtDirLoaded;
+    QHash<QString, QString> m_comicCharacterPaths;  // stem -> .avb path
+    QHash<QString, QString> m_comicBackgroundPaths; // filename -> .bgb path
+    QHash<QString, QString> m_comicAutoChars;       // nick -> assigned stem
+    QHash<QString, QImage> m_comicBgCache;
     DccManager* m_dccManager = nullptr;
     QList<QAction*> m_themeActions;
     QList<QAction*> m_chatThemeActions;

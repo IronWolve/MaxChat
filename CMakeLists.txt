@@ -172,6 +172,14 @@ qt_add_executable(maxchat-c
     src/ui/ChatFindDialog.h
     src/ui/ColorPickerDialog.cpp
     src/ui/ColorPickerDialog.h
+    src/comic/ComicArt.cpp
+    src/comic/ComicArt.h
+    src/comic/ComicCharacter.cpp
+    src/comic/ComicCharacter.h
+    src/comic/ComicRenderer.cpp
+    src/comic/ComicRenderer.h
+    src/ui/ComicSettingsDialog.cpp
+    src/ui/ComicSettingsDialog.h
     src/ui/ComicView.cpp
     src/ui/ComicView.h
     src/ui/DccManager.cpp
@@ -769,6 +777,14 @@ qt_add_executable(main_window_link_preview_test
     src/ui/ChatFindDialog.h
     src/ui/ColorPickerDialog.cpp
     src/ui/ColorPickerDialog.h
+    src/comic/ComicArt.cpp
+    src/comic/ComicArt.h
+    src/comic/ComicCharacter.cpp
+    src/comic/ComicCharacter.h
+    src/comic/ComicRenderer.cpp
+    src/comic/ComicRenderer.h
+    src/ui/ComicSettingsDialog.cpp
+    src/ui/ComicSettingsDialog.h
     src/ui/ComicView.cpp
     src/ui/ComicView.h
     src/ui/DccManager.cpp
