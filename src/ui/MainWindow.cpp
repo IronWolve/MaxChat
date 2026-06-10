@@ -2545,8 +2545,8 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
                         renderActiveBufferMetadata();
                     }
 
-                    const bool highlight = !nick.isEmpty() &&
-                                           text.contains(nick, Qt::CaseInsensitive) &&
+                    const bool highlight = sender.compare(nick, Qt::CaseInsensitive) != 0 &&
+                                           textHighlightsMe(text, nick) &&
                                            !isMutedChannel(conversation);
                     if (action) {
                         appendSystemLineToTarget(conversation,
@@ -4033,6 +4033,19 @@ void maxchat::ui::MainWindow::removeMutedChannel(const QString& channel) {
     m_mutedChannelKeys = next;
     appendSystemLine(QStringLiteral("! Unmuted highlights for %1 on %2.")
                          .arg(channel.trimmed(), activeNetworkName()));
+}
+
+bool MainWindow::textHighlightsMe(const QString& text, const QString& nick) const {
+    if (!nick.isEmpty() && text.contains(nick, Qt::CaseInsensitive)) {
+        return true;
+    }
+    for (const QString& word : m_highlightWords) {
+        const QString trimmed = word.trimmed();
+        if (!trimmed.isEmpty() && text.contains(trimmed, Qt::CaseInsensitive)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool MainWindow::isMutedChannel(const QString& channel) const {
