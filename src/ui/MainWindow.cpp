@@ -1289,10 +1289,19 @@ void maxchat::ui::MainWindow::buildLayout() {
         }
     });
 
-    chatLayout->addWidget(m_chatView, 1);
+    // Comic panels sit ABOVE the chat in a vertical splitter so the chat stays
+    // visible beneath them when Comic Mode is on (MS Comic Chat style).
     m_comicView = new ComicView(chatColumn);
     m_comicView->setVisible(false);
-    chatLayout->addWidget(m_comicView, 1);
+    m_chatSplitter = new QSplitter(Qt::Vertical, chatColumn);
+    m_chatSplitter->setObjectName(QStringLiteral("chatSplitter"));
+    m_chatSplitter->addWidget(m_comicView);
+    m_chatSplitter->addWidget(m_chatView);
+    m_chatSplitter->setCollapsible(0, false);
+    m_chatSplitter->setCollapsible(1, false);
+    m_chatSplitter->setStretchFactor(0, 1);
+    m_chatSplitter->setStretchFactor(1, 1);
+    chatLayout->addWidget(m_chatSplitter, 1);
     m_audioBar = new AudioPlayerBar(chatColumn);
     chatLayout->addWidget(m_audioBar);
     auto* inputRow = new QWidget(chatColumn);
@@ -5522,11 +5531,16 @@ void maxchat::ui::MainWindow::setComicMode(bool enabled) {
         const QSignalBlocker blocker(m_comicModeAction);
         m_comicModeAction->setChecked(enabled);
     }
-    if (m_chatView != nullptr) {
-        m_chatView->setVisible(!enabled);
-    }
+    // Show the comic pane above the chat; the chat stays visible beneath it.
     if (m_comicView != nullptr) {
         m_comicView->setVisible(enabled);
+    }
+    if (enabled && m_chatSplitter != nullptr) {
+        const QList<int> sizes = m_chatSplitter->sizes();
+        const int total = sizes.value(0) + sizes.value(1);
+        if (total > 0 && sizes.value(0) <= 0) {
+            m_chatSplitter->setSizes({total / 2, total - total / 2});
+        }
     }
     if (enabled) {
         ensureComicArt();
