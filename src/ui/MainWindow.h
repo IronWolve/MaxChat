@@ -50,6 +50,7 @@ class QMenu;
 namespace maxchat::ui {
 
 class AudioPlayerBar;
+class ComicView;
 class Notifier;
 
 class BanListDialog;
@@ -214,6 +215,8 @@ class MainWindow final : public QMainWindow {
     void activateBufferTarget(const QString& target);
     void renderActiveBuffer(int unreadMarkerFromEnd = 0);
     void renderActiveBufferMetadata();
+    void setComicMode(bool enabled);
+    void refreshComic();
     void recolorMemberList();
     void appendUnreadMarkerLine();
     void rebuildLooksMenu();
@@ -384,6 +387,9 @@ class MainWindow final : public QMainWindow {
     QLabel* m_membersHeader = nullptr;
     QAction* m_doNotDisturbAction = nullptr;
     QAction* m_comicCaptionsAction = nullptr;
+    QAction* m_comicModeAction = nullptr;
+    ComicView* m_comicView = nullptr;
+    bool m_comicMode = false;
     QList<QAction*> m_themeActions;
     QList<QAction*> m_chatThemeActions;
     QList<QAction*> m_wallpaperActions;

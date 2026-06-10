@@ -172,6 +172,8 @@ qt_add_executable(maxchat-c
     src/ui/ChatFindDialog.h
     src/ui/ColorPickerDialog.cpp
     src/ui/ColorPickerDialog.h
+    src/ui/ComicView.cpp
+    src/ui/ComicView.h
     src/ui/ImageViewerDialog.cpp
     src/ui/ImageViewerDialog.h
     src/ui/MediaPlayerDialog.cpp
@@ -763,6 +765,8 @@ qt_add_executable(main_window_link_preview_test
     src/ui/ChatFindDialog.h
     src/ui/ColorPickerDialog.cpp
     src/ui/ColorPickerDialog.h
+    src/ui/ComicView.cpp
+    src/ui/ComicView.h
     src/ui/ImageViewerDialog.cpp
     src/ui/ImageViewerDialog.h
     src/ui/MediaPlayerDialog.cpp
