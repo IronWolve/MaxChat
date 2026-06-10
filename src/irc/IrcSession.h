@@ -38,6 +38,7 @@ public:
   void setConnected(bool connected);
   void setWriter(Writer writer);
   void setIgnoreMasks(const QStringList &masks);
+  void setCtcpVersion(bool hide, const QString &custom);
 
   [[nodiscard]] QString nick() const;
   [[nodiscard]] bool isRegistered() const;
@@ -62,6 +63,7 @@ signals:
   void systemText(const QString &line);
   void nickChanged(const QString &oldNick, const QString &newNick);
   void awayChanged(const QString &nick, bool away);
+  void invited(const QString &sender, const QString &channel, const QString &mask);
   void userJoined(const QString &channel, const QString &nick);
   void userParted(const QString &channel, const QString &nick,
                   const QString &reason);
@@ -107,6 +109,8 @@ private:
   bool allowInsecureAuth_ = false;
   bool insecureAuthWarned_ = false;
   bool authed_ = false;
+  bool hideVersion_ = false;
+  QString ctcpVersion_;
   QStringList autojoin_;
   QSet<QString> serverCaps_;
   QHash<QString, QString> isupport_;

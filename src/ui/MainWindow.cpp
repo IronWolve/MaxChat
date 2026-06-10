@@ -43,6 +43,7 @@
 #include <QApplication>
 #include <QStyle>
 #include <QClipboard>
+#include <QCloseEvent>
 #include <QColorDialog>
 #include <QDesktopServices>
 #include <QColor>
@@ -813,6 +814,8 @@ MainWindow::MainWindow(QWidget* parent)
             &MainWindow::handlePreviewFetchFailed);
     m_friendPollTimer.setInterval(FriendPollIntervalMs);
     connect(&m_friendPollTimer, &QTimer::timeout, this, &MainWindow::pollFriends);
+    m_autoAwayTimer.setSingleShot(true);
+    connect(&m_autoAwayTimer, &QTimer::timeout, this, &MainWindow::triggerAutoAway);
     setupNavShortcuts();
     applyCurrentSettings();
     if (m_settings.loadWithDefaults().value(QStringLiteral("connect_on_start"), false).toBool()) {
@@ -2256,6 +2259,9 @@ maxchat::irc::IrcConnection* MainWindow::ensureConnectionForNetwork(const QStrin
 
     auto* created = new maxchat::irc::IrcConnection(this);
     created->setIgnoreMasks(m_ignoreMasks);
+    const QVariantMap settings = m_settings.loadWithDefaults();
+    created->setCtcpVersion(settings.value(QStringLiteral("hide_version"), false).toBool(),
+                            settings.value(QStringLiteral("ctcp_version")).toString());
     m_connectionsByNetwork.insert(normalized, created);
     setupConnectionSignals(normalized, created);
     return created;
@@ -2736,6 +2742,22 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
                     }
                 });
             });
+    connect(irc, &maxchat::irc::IrcConnection::invited, this,
+            [this, runInContext](const QString& sender, const QString& channel,
+                                 const QString& mask) {
+                runInContext([&]() {
+                    if (m_inviteProtect && !containsCaseInsensitive(m_friendNicks, sender)) {
+                        // Treat invite spam from non-friends as an auto-ignore.
+                        addIgnoreMask(normalizeIgnoreMask(mask.isEmpty() ? sender : mask));
+                    }
+                    if (m_ignoreInvites) {
+                        return; // silently drop
+                    }
+                    appendSystemLineToTarget(
+                        QStringLiteral("server"),
+                        QStringLiteral("[invite] %1 invited you to %2").arg(sender, channel));
+                });
+            });
     connect(
         irc, &maxchat::irc::IrcConnection::kicked, this,
         [this, runInContext](const QString& channel, const QString& nick, const QString& reason) {
@@ -2745,6 +2767,18 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
                                  ? QStringLiteral("* %1 was kicked from %2").arg(nick, channel)
                                  : QStringLiteral("* %1 was kicked from %2 (%3)")
                                        .arg(nick, channel, reason));
+                const QString ownNick =
+                    connection().nick().isEmpty() ? m_connectionPlan.nick : connection().nick();
+                if (m_autoRejoin && nick.compare(ownNick, Qt::CaseInsensitive) == 0) {
+                    const QString net = activeNetworkName();
+                    QTimer::singleShot(std::max(0, m_rejoinDelay) * 1000, this, [this, net, channel]() {
+                        withNetworkContext(net, [&]() {
+                            if (connection().isConnected()) {
+                                connection().sendRaw(QStringLiteral("JOIN %1").arg(channel));
+                            }
+                        });
+                    });
+                }
                 if (channel.compare(m_currentTarget, Qt::CaseInsensitive) == 0) {
                     const QString currentNick =
                         connection().nick().isEmpty() ? m_connectionPlan.nick : connection().nick();
@@ -3148,13 +3182,43 @@ void maxchat::ui::MainWindow::connectFromCommand(const QString& command, const Q
 }
 
 void maxchat::ui::MainWindow::handleInputSubmitted() {
-    const QString text = inputText(m_input).trimmed();
-    if (text.isEmpty()) {
+    noteUserActivity();
+    const QString raw = inputText(m_input);
+    const QStringList lines = raw.split(QLatin1Char('\n'));
+    int lineCount = 0;
+    for (const QString& line : lines) {
+        if (!line.trimmed().isEmpty()) {
+            ++lineCount;
+        }
+    }
+    if (lineCount == 0) {
         return;
     }
-    addInputHistory(text);
+
+    // Paste guard: confirm before firing a big multi-line block at the network.
+    if (m_pasteGuard && lineCount >= m_pasteLines) {
+        const QString where =
+            m_currentTarget.trimmed().isEmpty() ? QStringLiteral("the server") : m_currentTarget;
+        const auto answer = QMessageBox::question(
+            this, QStringLiteral("Paste guard"),
+            QStringLiteral("Send %1 lines to %2?").arg(lineCount).arg(where));
+        if (answer != QMessageBox::Yes) {
+            return;
+        }
+    }
+
+    addInputHistory(raw.trimmed());
     m_input->clear();
-    sendCommandOrMessage(text);
+    if (lines.size() <= 1) {
+        sendCommandOrMessage(raw.trimmed());
+    } else {
+        for (const QString& line : lines) {
+            const QString trimmed = line.trimmed();
+            if (!trimmed.isEmpty()) {
+                sendCommandOrMessage(trimmed);
+            }
+        }
+    }
 }
 
 void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
@@ -4033,6 +4097,57 @@ void maxchat::ui::MainWindow::removeMutedChannel(const QString& channel) {
     m_mutedChannelKeys = next;
     appendSystemLine(QStringLiteral("! Unmuted highlights for %1 on %2.")
                          .arg(channel.trimmed(), activeNetworkName()));
+}
+
+void MainWindow::closeEvent(QCloseEvent* event) {
+    if (m_confirmQuit && anyNetworkConnectionIsConnected()) {
+        const auto answer = QMessageBox::question(
+            this, QStringLiteral("Quit MaxChat"),
+            QStringLiteral("You are still connected. Quit anyway?"));
+        if (answer != QMessageBox::Yes) {
+            event->ignore();
+            return;
+        }
+    }
+    QMainWindow::closeEvent(event);
+}
+
+void MainWindow::noteUserActivity() {
+    // Any typed input resets the idle clock and clears an auto-set away.
+    if (m_autoAwayMins > 0) {
+        m_autoAwayTimer.start(m_autoAwayMins * 60 * 1000);
+    }
+    if (m_autoAwayActive) {
+        m_autoAwayActive = false;
+        for (auto* irc : std::as_const(m_connectionsByNetwork)) {
+            if (irc != nullptr && irc->isConnected()) {
+                irc->sendRaw(QStringLiteral("AWAY"));
+            }
+        }
+    }
+}
+
+void MainWindow::triggerAutoAway() {
+    if (m_autoAwayMins <= 0 || m_autoAwayActive || !anyNetworkConnectionIsConnected()) {
+        return;
+    }
+    m_autoAwayActive = true;
+    for (auto* irc : std::as_const(m_connectionsByNetwork)) {
+        if (irc != nullptr && irc->isConnected()) {
+            irc->sendRaw(QStringLiteral("AWAY :Auto-away (idle)"));
+        }
+    }
+}
+
+void MainWindow::applyCtcpVersion(const QVariantMap& settings) {
+    const bool hide = settings.value(QStringLiteral("hide_version"), false).toBool();
+    const QString custom = settings.value(QStringLiteral("ctcp_version")).toString();
+    for (auto* irc : std::as_const(m_connectionsByNetwork)) {
+        if (irc != nullptr) {
+            irc->setCtcpVersion(hide, custom);
+        }
+    }
+    m_connection.setCtcpVersion(hide, custom);
 }
 
 bool MainWindow::textHighlightsMe(const QString& text, const QString& nick) const {
@@ -5838,6 +5953,22 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
         chatView->setStripColorsOnCopy(
             settings.value(QStringLiteral("strip_color_copy"), true).toBool());
     }
+    m_pasteGuard = settings.value(QStringLiteral("paste_guard"), true).toBool();
+    m_pasteLines = settings.value(QStringLiteral("paste_lines"), 4).toInt();
+    m_autoRejoin = settings.value(QStringLiteral("auto_rejoin"), false).toBool();
+    m_rejoinDelay = settings.value(QStringLiteral("rejoin_delay"), 2).toInt();
+    m_ignoreInvites = settings.value(QStringLiteral("ignore_invites"), false).toBool();
+    m_inviteProtect = settings.value(QStringLiteral("invite_protect"), true).toBool();
+    m_confirmQuit = settings.value(QStringLiteral("confirm_quit"), true).toBool();
+    m_scrollback = std::max(100, settings.value(QStringLiteral("scrollback"), 2000).toInt());
+    m_chatBuffers.setMaxLinesPerBuffer(m_scrollback);
+    m_autoAwayMins = settings.value(QStringLiteral("auto_away_mins"), 0).toInt();
+    if (m_autoAwayMins > 0) {
+        m_autoAwayTimer.start(m_autoAwayMins * 60 * 1000);
+    } else {
+        m_autoAwayTimer.stop();
+    }
+    applyCtcpVersion(settings);
     if (m_input != nullptr) {
         m_input->setPlaceholderText(
             settings.value(QStringLiteral("show_input_hint"), true).toBool()

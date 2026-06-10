@@ -68,6 +68,7 @@ class MainWindow final : public QMainWindow {
   private:
     bool eventFilter(QObject* watched, QEvent* event) override;
     void changeEvent(QEvent* event) override;
+    void closeEvent(QCloseEvent* event) override;
 
     void buildMenus();
     void buildLayout();
@@ -160,6 +161,9 @@ class MainWindow final : public QMainWindow {
     void removeMutedChannel(const QString& channel);
     [[nodiscard]] bool isMutedChannel(const QString& channel) const;
     [[nodiscard]] bool textHighlightsMe(const QString& text, const QString& nick) const;
+    void noteUserActivity();
+    void triggerAutoAway();
+    void applyCtcpVersion(const QVariantMap& settings);
     [[nodiscard]] QString mutedChannelKey(const QString& channel) const;
     void addFriendNick(const QString& nick);
     void removeFriendNick(const QString& nick);
@@ -366,6 +370,17 @@ class MainWindow final : public QMainWindow {
     QVariantMap m_nickColorOverrides;                   // lowercase nick -> hex
     QString m_eventColor;                               // "" = chat theme / default
     bool m_sortByStatus = true;
+    bool m_pasteGuard = true;
+    int m_pasteLines = 4;
+    bool m_autoRejoin = false;
+    int m_rejoinDelay = 2;
+    bool m_ignoreInvites = false;
+    bool m_inviteProtect = true;
+    bool m_confirmQuit = true;
+    int m_scrollback = 2000;
+    int m_autoAwayMins = 0;
+    bool m_autoAwayActive = false;
+    QTimer m_autoAwayTimer;
     QLabel* m_membersHeader = nullptr;
     QAction* m_doNotDisturbAction = nullptr;
     QAction* m_comicCaptionsAction = nullptr;

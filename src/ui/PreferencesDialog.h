@@ -91,6 +91,17 @@ class PreferencesDialog final : public QDialog {
     QCheckBox* floodProtect_ = nullptr;
     QSpinBox* floodMessages_ = nullptr;
     QSpinBox* floodSeconds_ = nullptr;
+    QCheckBox* pasteGuard_ = nullptr;
+    QSpinBox* pasteLines_ = nullptr;
+    QCheckBox* autoRejoin_ = nullptr;
+    QSpinBox* rejoinDelay_ = nullptr;
+    QCheckBox* ignoreInvites_ = nullptr;
+    QCheckBox* inviteProtect_ = nullptr;
+    QCheckBox* confirmQuit_ = nullptr;
+    QSpinBox* scrollback_ = nullptr;
+    QSpinBox* autoAwayMins_ = nullptr;
+    QCheckBox* hideVersion_ = nullptr;
+    QLineEdit* ctcpVersion_ = nullptr;
     QCheckBox* loggingEnabled_ = nullptr;
     QCheckBox* replayLogEnabled_ = nullptr;
     QCheckBox* linkImages_ = nullptr;

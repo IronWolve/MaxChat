@@ -28,6 +28,7 @@ IrcConnection::IrcConnection(QObject *parent) : QObject(parent) {
           &IrcConnection::nickChanged);
   connect(&session_, &IrcSession::awayChanged, this,
           &IrcConnection::awayChanged);
+  connect(&session_, &IrcSession::invited, this, &IrcConnection::invited);
   connect(&session_, &IrcSession::userJoined, this, &IrcConnection::userJoined);
   connect(&session_, &IrcSession::userParted, this, &IrcConnection::userParted);
   connect(&session_, &IrcSession::userQuit, this, &IrcConnection::userQuit);
@@ -143,6 +144,10 @@ void IrcConnection::disconnectFromServer() {
 
 void IrcConnection::setIgnoreMasks(const QStringList &masks) {
   session_.setIgnoreMasks(masks);
+}
+
+void IrcConnection::setCtcpVersion(bool hide, const QString &custom) {
+  session_.setCtcpVersion(hide, custom);
 }
 
 bool IrcConnection::isConnected() const {
