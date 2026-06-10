@@ -4,6 +4,18 @@ Internal notes for this port. Not shipped.
 
 ## THINGS I GOT WRONG
 
+- **2026-06-10 — Incoming IRC lines capped at the 512-byte *send* limit (audit
+  phase 1).** `IrcConnection::queueIncomingLines` dropped any incoming line
+  larger than `IrcMaxWireBytes` (512) and aborted on a pending buffer >4096.
+  512 is the RFC limit for the *message* you SEND — but an incoming IRCv3 line is
+  that 512 plus up to ~8KB of message tags (server-time, account-tag), which the
+  client requests during CAP. So once tags were negotiated, ordinary messages
+  near the limit were silently dropped and long in-progress lines killed the
+  connection. The Python client always used separate constants (8192 line /
+  65536 buffer); the port collapsed them into one. Fixed with
+  `MaxIncomingLineBytes`/`MaxPendingBytes`. Lesson: send caps and receive caps
+  are different numbers in IRC — never reuse the wire-send limit for parsing.
+
 - **2026-06-09 — Wallpapers never rendered (every theme, every platform).**
   `effectiveWallpaperUrl()` returned `QUrl::fromLocalFile(...)` (`file:///...`)
   and pasted it into the stylesheet as `border-image: url(file:///...)`. Qt
