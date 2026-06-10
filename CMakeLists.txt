@@ -198,6 +198,8 @@ qt_add_executable(maxchat-c
     src/ui/ThemeCatalog.h
     src/ui/UrlListDialog.cpp
     src/ui/UrlListDialog.h
+    src/ui/AppIcon.cpp
+    src/ui/AppIcon.h
     resources/maxchat.qrc
 )
 
@@ -777,6 +779,8 @@ qt_add_executable(main_window_link_preview_test
     src/ui/ThemeCatalog.h
     src/ui/UrlListDialog.cpp
     src/ui/UrlListDialog.h
+    src/ui/AppIcon.cpp
+    src/ui/AppIcon.h
     resources/maxchat.qrc
 )
 
