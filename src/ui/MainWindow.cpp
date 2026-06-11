@@ -12,6 +12,7 @@
 #include "services/LinkPreviewClassifier.h"
 #include "services/LinkPreviewPolicy.h"
 #include "services/LinkPreviewRenderer.h"
+#include "spell/HunspellSpellchecker.h"
 #include "spell/SpellcheckDictionaryCatalog.h"
 #include "ui/AliasEditorDialog.h"
 #include "ui/BanListDialog.h"
@@ -7309,24 +7310,50 @@ void maxchat::ui::MainWindow::configureSpellcheck(const QVariantMap& settings) {
         return;
     }
 
-#ifdef MAXCHAT_WITH_HUNSPELL
-    if (!settings.value(QStringLiteral("spellcheck_enabled"), true).toBool()) {
+    const auto disableSpell = [this]() {
         m_spellcheckHighlighter->setWordChecker({});
         m_spellcheckHighlighter->setSpellcheckEnabled(false);
-        if (m_spellchecker) {
-            m_spellchecker->unload();
-        }
+        m_spellchecker.reset();
+    };
+
+    if (!settings.value(QStringLiteral("spellcheck_enabled"), true).toBool()) {
+        disableSpell();
         return;
     }
 
-    const QString requestedLanguage =
+    const auto wireActiveSpeller = [this]() {
+        m_spellcheckHighlighter->setWordChecker([this](const QString& word) {
+            return m_spellchecker != nullptr && m_spellchecker->isLoaded() &&
+                   m_spellchecker->isCorrect(word);
+        });
+        m_spellcheckHighlighter->setSpellcheckEnabled(true);
+    };
+
+    const QString languageCode =
         settings.value(QStringLiteral("spell_language"), QStringLiteral("en")).toString();
+    const QString backend =
+        settings.value(QStringLiteral("spellcheck_backend"), QStringLiteral("internal")).toString();
+
+    // OS engine — independent of the (Linux-only) Hunspell build option.
+    if (backend == QStringLiteral("os")) {
+        m_spellchecker = maxchat::spell::createOsSpeller(languageCode);
+        if (m_spellchecker != nullptr && m_spellchecker->isLoaded()) {
+            wireActiveSpeller();
+            return;
+        }
+        statusBar()->showMessage(
+            QStringLiteral("OS spell engine unavailable; using the internal dictionary."));
+        // fall through to the internal engine
+    }
+
+    // Internal engine: bundled Hunspell dictionaries.
+#ifdef MAXCHAT_WITH_HUNSPELL
     const QList<maxchat::spell::SpellcheckLanguage> languages =
         maxchat::spell::spellcheckLanguages();
     auto languageIt =
         std::find_if(languages.cbegin(), languages.cend(),
-                     [&requestedLanguage](const maxchat::spell::SpellcheckLanguage& language) {
-                         return language.code.compare(requestedLanguage, Qt::CaseInsensitive) == 0;
+                     [&languageCode](const maxchat::spell::SpellcheckLanguage& language) {
+                         return language.code.compare(languageCode, Qt::CaseInsensitive) == 0;
                      });
     if (languageIt == languages.cend() || !languageIt->dictionaryAvailable()) {
         languageIt = std::find_if(languages.cbegin(), languages.cend(),
@@ -7335,34 +7362,25 @@ void maxchat::ui::MainWindow::configureSpellcheck(const QVariantMap& settings) {
                                              language.dictionaryAvailable();
                                   });
     }
-
     if (languageIt == languages.cend() || !languageIt->dictionaryAvailable()) {
-        m_spellcheckHighlighter->setWordChecker({});
-        m_spellcheckHighlighter->setSpellcheckEnabled(false);
-        if (m_spellchecker) {
-            m_spellchecker->unload();
-        }
+        disableSpell();
         return;
     }
-
-    if (!m_spellchecker) {
-        m_spellchecker = std::make_unique<maxchat::spell::HunspellSpellchecker>();
-    }
-    if (!m_spellchecker->loadDictionary(languageIt->affPath, languageIt->dicPath)) {
-        m_spellcheckHighlighter->setWordChecker({});
-        m_spellcheckHighlighter->setSpellcheckEnabled(false);
+    auto hunspell = std::make_unique<maxchat::spell::HunspellSpellchecker>();
+    if (!hunspell->loadDictionary(languageIt->affPath, languageIt->dicPath)) {
+        disableSpell();
         return;
     }
-
-    m_spellcheckHighlighter->setWordChecker([this](const QString& word) {
-        return m_spellchecker != nullptr && m_spellchecker->isLoaded() &&
-               m_spellchecker->isCorrect(word);
-    });
-    m_spellcheckHighlighter->setSpellcheckEnabled(true);
+    m_spellchecker = std::move(hunspell);
+    wireActiveSpeller();
 #else
-    Q_UNUSED(settings);
-    m_spellcheckHighlighter->setWordChecker({});
-    m_spellcheckHighlighter->setSpellcheckEnabled(false);
+    // No internal engine in this build (e.g. the Windows build without Hunspell).
+    disableSpell();
+    if (backend != QStringLiteral("os")) {
+        statusBar()->showMessage(QStringLiteral(
+            "Spellcheck has no internal dictionary in this build — choose the OS "
+            "engine in Preferences ▸ Localization."));
+    }
 #endif
 }
 
