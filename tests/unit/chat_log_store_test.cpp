@@ -42,6 +42,16 @@ class ChatLogStoreTest final : public QObject {
         QVERIFY(recent.at(1).contains(QStringLiteral("third")));
     }
 
+    void expandsDateTokensInMask() {
+        QTemporaryDir temp;
+        QVERIFY(temp.isValid());
+        ChatLogStore store(temp.path());
+        store.setLogMask(QStringLiteral("%network/%Y/%m-%d"));
+        const QString path =
+            store.logFilePath(QStringLiteral("Libera"), QStringLiteral("#x"), QDate(2026, 6, 8));
+        QVERIFY2(path.endsWith(QStringLiteral("Libera/2026/06-08.log")), qPrintable(path));
+    }
+
     void ignoresInvalidOrEmptyWrites() {
         QTemporaryDir temp;
         QVERIFY(temp.isValid());
