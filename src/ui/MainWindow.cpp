@@ -883,7 +883,11 @@ MainWindow::MainWindow(QWidget* parent)
 
     setWindowTitle(QStringLiteral("%1 %2").arg(app::displayName(), app::version()));
     setWindowIcon(QIcon(QStringLiteral(":/icons/maxchat.ico")));
-    resize(1100, 720);
+    const QString savedGeom =
+        m_settings.loadRaw().value(QStringLiteral("window_geometry")).toString();
+    if (savedGeom.isEmpty() || !restoreGeometry(QByteArray::fromBase64(savedGeom.toLatin1()))) {
+        resize(1100, 720);
+    }
 
     if (m_settings.loadWithDefaults().value(QStringLiteral("update_check"), false).toBool()) {
         QTimer::singleShot(3500, this, [this]() { checkForUpdates(/*manual=*/false); });
@@ -5236,6 +5240,9 @@ void MainWindow::closeEvent(QCloseEvent* event) {
             return;
         }
     }
+    QVariantMap s = m_settings.loadRaw();
+    s.insert(QStringLiteral("window_geometry"), QString::fromLatin1(saveGeometry().toBase64()));
+    (void)m_settings.saveRaw(s);
     QMainWindow::closeEvent(event);
 }
 
@@ -6224,9 +6231,27 @@ void maxchat::ui::MainWindow::renderActiveBuffer() {
     dimOptions.bracketColor = dim;
     dimOptions.colorNicks = false;
     dimOptions.renderFormatting = false;
+    // Structural replay→live boundary tracking: the "new" rule must appear after
+    // replayed (dimmed) content even when the buffer is active the whole time
+    // (e.g. the second channel you join — no background-unread-marker is ever set
+    // because no message arrived while it was in the background, so markerIndex
+    // stays -1). When markerIndex IS set it already lands at the replay boundary,
+    // so we only fire the structural path when there is no explicit marker.
+    bool seenDimmed = false;
+    bool replayMarkerInserted = false;
     for (const maxchat::core::ChatBufferLine& line : snapshot.lines) {
         if (lineIndex++ == markerIndex) {
             appendUnreadMarkerLine();
+            replayMarkerInserted = true;
+        }
+        // First live line after any dimmed content — insert the "new" divider here
+        // if the explicit unread marker hasn't already covered this boundary.
+        if (m_markerLine && !line.dimmed && seenDimmed && !replayMarkerInserted && markerIndex < 0) {
+            appendUnreadMarkerLine();
+            replayMarkerInserted = true;
+        }
+        if (line.dimmed) {
+            seenDimmed = true;
         }
         if (line.dimmed && line.systemLine && !line.sourceText.isEmpty()) {
             // The "Chat ended" resume rule is a centered divider (like "new").
