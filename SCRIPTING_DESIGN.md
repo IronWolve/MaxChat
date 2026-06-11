@@ -28,8 +28,17 @@ Status: IN PROGRESS (2026-06-10). Tracked as AUDIT.md FIX BACKLOG #6.
   on_join/on_part/on_quit/on_nick fire from the IRC signals. Scripting lib now
   always built (stub when OFF) and linked into app + MainWindow test. Verified
   default 43/43 and -DMAXCHAT_LUA=ON 45/45.
-- **NEXT — Step 5:** on_command + wire /load /unload /reload /scripts (replace
-  the UserCommandType::Scripts placeholder); unknown /cmd → on_command.
+- **Step 5 DONE (commit 5ee599a):** on_command (scripts get first crack at any
+  /command after alias expansion; true consumes) + real /scripts /load /unload
+  /reload.
+- **Step 6 DONE (commits f14b3c6, b79dd0c):** full api — send_raw, channels()/
+  nicks(), strip(), persistent get/set (JSON in the script's data dir), and
+  timers (api.timer/cancel_timer, QTimer-backed, 50ms floor, cancelled on
+  unload/reload). lua_engine_test now 17 cases incl. timer lifecycle.
+- **NEXT — Step 7:** Scripts dialog (replace menu placeholder) + first-run
+  seeding of the bundled examples.
+- **Remaining:** 7 (dialog+seed), 8 (examples + SCRIPTING.md update), 9-11
+  (Python parity, additive). The full hook+api surface is now implemented.
 
 ---
 
