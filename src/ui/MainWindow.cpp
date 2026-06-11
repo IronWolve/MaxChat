@@ -6231,22 +6231,24 @@ void maxchat::ui::MainWindow::renderActiveBuffer() {
     dimOptions.bracketColor = dim;
     dimOptions.colorNicks = false;
     dimOptions.renderFormatting = false;
-    // Structural replay→live boundary tracking: the "new" rule must appear after
-    // replayed (dimmed) content even when the buffer is active the whole time
-    // (e.g. the second channel you join — no background-unread-marker is ever set
-    // because no message arrived while it was in the background, so markerIndex
-    // stays -1). When markerIndex IS set it already lands at the replay boundary,
-    // so we only fire the structural path when there is no explicit marker.
+    // Structural replay→live boundary: "new" always appears right after the
+    // "Chat ended" divider, even when an explicit unread marker exists further
+    // down (e.g. you joined, watched some live messages, then switched away —
+    // the unread marker would be set mid-live-content, not at the boundary).
+    // Rule: the structural path fires at the first live line after any dimmed
+    // content; the explicit unread marker is suppressed once replay has been
+    // seen (seenDimmed=true) because the structural one already covers it.
     bool seenDimmed = false;
     bool replayMarkerInserted = false;
     for (const maxchat::core::ChatBufferLine& line : snapshot.lines) {
-        if (lineIndex++ == markerIndex) {
+        // Explicit unread marker — only when there is no replay content ahead
+        // of it; once we've passed dimmed lines the structural marker takes over.
+        if (lineIndex++ == markerIndex && !seenDimmed) {
             appendUnreadMarkerLine();
             replayMarkerInserted = true;
         }
-        // First live line after any dimmed content — insert the "new" divider here
-        // if the explicit unread marker hasn't already covered this boundary.
-        if (m_markerLine && !line.dimmed && seenDimmed && !replayMarkerInserted && markerIndex < 0) {
+        // Structural replay→live boundary: first live line after dimmed content.
+        if (m_markerLine && !line.dimmed && seenDimmed && !replayMarkerInserted) {
             appendUnreadMarkerLine();
             replayMarkerInserted = true;
         }
