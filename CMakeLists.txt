@@ -256,6 +256,8 @@ qt_add_executable(maxchat-c
     src/ui/Notifier.h
     src/ui/SoundPlayer.cpp
     src/ui/SoundPlayer.h
+    src/ui/SystemInfo.cpp
+    src/ui/SystemInfo.h
     resources/maxchat.qrc
 )
 
@@ -632,6 +634,25 @@ target_link_libraries(sound_player_test
 
 add_test(NAME sound_player COMMAND sound_player_test)
 
+qt_add_executable(system_info_test
+    tests/unit/system_info_test.cpp
+    src/ui/SystemInfo.cpp
+    src/ui/SystemInfo.h
+)
+
+target_include_directories(system_info_test
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(system_info_test
+    PRIVATE
+        Qt6::Test
+        Qt6::Gui
+)
+
+add_test(NAME system_info COMMAND system_info_test)
+
 qt_add_executable(chat_log_store_test
     tests/unit/chat_log_store_test.cpp
 )
@@ -922,6 +943,8 @@ qt_add_executable(main_window_link_preview_test
     src/ui/Notifier.h
     src/ui/SoundPlayer.cpp
     src/ui/SoundPlayer.h
+    src/ui/SystemInfo.cpp
+    src/ui/SystemInfo.h
     resources/maxchat.qrc
 )
 

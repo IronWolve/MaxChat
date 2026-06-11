@@ -38,6 +38,7 @@
 #include "ui/RawLogDialog.h"
 #include "ui/ServerListDialog.h"
 #include "ui/SpellcheckHighlighter.h"
+#include "ui/SystemInfo.h"
 #include "ui/ThemeCatalog.h"
 #include "ui/UrlListDialog.h"
 #include "ui/AppIcon.h"
@@ -2222,19 +2223,7 @@ void maxchat::ui::MainWindow::showFeaturePlanned(const QString& feature, const Q
 }
 
 QString MainWindow::systemInfoText() const {
-    QString os = QSysInfo::prettyProductName().trimmed();
-    if (os.isEmpty()) {
-        os = QStringLiteral("%1 %2")
-                 .arg(QSysInfo::productType(), QSysInfo::productVersion())
-                 .trimmed();
-    }
-    if (os.isEmpty()) {
-        os = QStringLiteral("unknown OS");
-    }
-
-    return QStringLiteral("%1 %2 on %3 (%4), Qt %5")
-        .arg(app::displayName(), app::version(), os, QSysInfo::currentCpuArchitecture(),
-             QString::fromLatin1(qVersion()));
+    return maxchat::ui::systemInfoLine();
 }
 
 void maxchat::ui::MainWindow::showCommandHelp(const QString& topic) {
@@ -3784,14 +3773,17 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
     }
     if (parsed.type == maxchat::irc::UserCommandType::SysInfo) {
         const QString info = systemInfoText();
-        if (parsed.text.trimmed().compare(QStringLiteral("send"), Qt::CaseInsensitive) == 0) {
-            if (!connection().isConnected() || m_currentTarget.trimmed().isEmpty() ||
-                isTreeStatusTarget(m_currentTarget)) {
-                appendSystemLine(QStringLiteral("! Join a channel or query before "
-                                                "sending sysinfo."));
+        const QStringList args =
+            parsed.text.trimmed().split(QLatin1Char(' '), Qt::SkipEmptyParts);
+        // "/sysinfo send [#chan|nick]" broadcasts; a bare "/sysinfo" shows it to you.
+        if (!args.isEmpty() && args.first().compare(QStringLiteral("send"), Qt::CaseInsensitive) == 0) {
+            const QString target =
+                args.size() > 1 ? args.at(1).trimmed() : m_currentTarget.trimmed();
+            if (!connection().isConnected() || target.isEmpty() || isTreeStatusTarget(target)) {
+                appendSystemLine(QStringLiteral("! Usage: /sysinfo send [#channel|nick] "
+                                                "(needs a connection and a target)."));
                 return;
             }
-            const QString target = m_currentTarget.trimmed();
             if (connection().privmsg(target, info)) {
                 const QString nick =
                     connection().nick().isEmpty() ? m_connectionPlan.nick : connection().nick();
