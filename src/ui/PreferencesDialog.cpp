@@ -305,6 +305,7 @@ QVariantMap PreferencesDialog::settings() const {
     out.insert(QStringLiteral("ignore_invites"), ignoreInvites_->isChecked());
     out.insert(QStringLiteral("invite_protect"), inviteProtect_->isChecked());
     out.insert(QStringLiteral("confirm_quit"), confirmQuit_->isChecked());
+    if (updateCheck_) out.insert(QStringLiteral("update_check"), updateCheck_->isChecked());
     out.insert(QStringLiteral("scrollback"), scrollback_->value());
     out.insert(QStringLiteral("hide_version"), hideVersion_->isChecked());
     out.insert(QStringLiteral("ctcp_version"), ctcpVersion_->text().trimmed());
@@ -950,6 +951,9 @@ void PreferencesDialog::buildMessagesTab(QWidget* tab) {
     confirmQuit_ = new QCheckBox(QString(), tab);
     confirmQuit_->setObjectName(QStringLiteral("confirmQuit"));
     confirmQuit_->setChecked(settings_.value(QStringLiteral("confirm_quit"), true).toBool());
+    updateCheck_ = new QCheckBox(QString(), tab);
+    updateCheck_->setObjectName(QStringLiteral("updateCheck"));
+    updateCheck_->setChecked(settings_.value(QStringLiteral("update_check"), true).toBool());
     scrollback_ = new QSpinBox(tab);
     scrollback_->setObjectName(QStringLiteral("scrollback"));
     scrollback_->setRange(100, 100000);
@@ -968,6 +972,7 @@ void PreferencesDialog::buildMessagesTab(QWidget* tab) {
     form->addRow(QStringLiteral("Hide CTCP VERSION replies"), hideVersion_);
     form->addRow(QStringLiteral("Custom CTCP VERSION"), ctcpVersion_);
     form->addRow(QStringLiteral("Confirm before quitting"), confirmQuit_);
+    form->addRow(QStringLiteral("Check for updates on startup"), updateCheck_);
     form->addRow(QStringLiteral("Scrollback (lines)"), scrollback_);
     root->addLayout(form);
     root->addStretch(1);

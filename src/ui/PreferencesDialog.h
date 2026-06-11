@@ -109,6 +109,7 @@ class PreferencesDialog final : public QDialog {
     QCheckBox* ignoreInvites_ = nullptr;
     QCheckBox* inviteProtect_ = nullptr;
     QCheckBox* confirmQuit_ = nullptr;
+    QCheckBox* updateCheck_ = nullptr;
     QSpinBox* scrollback_ = nullptr;
     QCheckBox* hideVersion_ = nullptr;
     QLineEdit* ctcpVersion_ = nullptr;
