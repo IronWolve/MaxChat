@@ -113,6 +113,7 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     void setSplitterPanelVisible(int index, bool visible, bool save);
     void syncBufferTabs();
     void closeBufferTab(int index); // close the buffer behind a tab (✕ / context menu)
+    void showInputContextMenu(const QPoint& localPos, const QPoint& globalPos); // spell suggestions + edit
     void syncPanelActionsFromSplitter(bool save);
     void updateChatSeparatorGuide();
     void saveViewVisibilitySetting(const QString& key, bool visible);
