@@ -18,6 +18,11 @@ public:
   [[nodiscard]] virtual bool isCorrect(const QString &word) const = 0;
   [[nodiscard]] virtual QStringList suggestions(const QString &word,
                                                 int maxSuggestions = 8) const = 0;
+
+  // Add a word to the live engine so it's no longer flagged this session.
+  // Persistence (the on-disk personal dictionary) is the caller's job. Returns
+  // true if accepted. Default: unsupported (so new backends needn't implement).
+  virtual bool addWord(const QString & /*word*/) { return false; }
 };
 
 // Build the native OS speller for a BCP-47-ish language code (e.g. "en" or

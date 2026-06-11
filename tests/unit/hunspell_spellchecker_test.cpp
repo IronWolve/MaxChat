@@ -28,6 +28,46 @@ private slots:
     QVERIFY(!checker.suggestions(QStringLiteral("speling")).isEmpty());
   }
 
+  void loadsBundledNonEnglishDictionaries() {
+    // Spot-check a few of the bundled language packs actually load and check
+    // words (different FLAG schemes: de default, fr long, tr num, ru default).
+    const QDir dictDir(QStringLiteral(MAXCHAT_TEST_DICTIONARY_DIR));
+    struct Case {
+      QString code;
+      QString correct;
+      QString wrong;
+    };
+    const QList<Case> cases = {
+        {QStringLiteral("de_DE"), QStringLiteral("Haus"), QStringLiteral("zzqxhaus")},
+        {QStringLiteral("fr_FR"), QStringLiteral("bonjour"), QStringLiteral("zzqxbonjour")},
+        {QStringLiteral("ru_RU"), QString::fromUtf8("\xD0\xB4\xD0\xBE\xD0\xBC"),
+         QStringLiteral("zzqxdom")},
+    };
+    for (const Case &c : cases) {
+      const QString aff = dictDir.filePath(c.code + QStringLiteral(".aff"));
+      const QString dic = dictDir.filePath(c.code + QStringLiteral(".dic"));
+      if (!QFileInfo::exists(aff) || !QFileInfo::exists(dic)) {
+        continue; // language not bundled in this build configuration
+      }
+      HunspellSpellchecker checker;
+      QVERIFY2(checker.loadDictionary(aff, dic), qPrintable(c.code));
+      QVERIFY2(checker.isCorrect(c.correct), qPrintable(c.code + ": " + c.correct));
+      QVERIFY2(!checker.isCorrect(c.wrong), qPrintable(c.code + ": " + c.wrong));
+    }
+  }
+
+  void addWordMakesItCorrect() {
+    // Personal-dictionary path: a non-word becomes accepted after addWord().
+    const QDir dictDir(QStringLiteral(MAXCHAT_TEST_DICTIONARY_DIR));
+    HunspellSpellchecker checker;
+    QVERIFY(checker.loadDictionary(dictDir.filePath(QStringLiteral("en_US.aff")),
+                                   dictDir.filePath(QStringLiteral("en_US.dic"))));
+    const QString word = QStringLiteral("zzqxwidget");
+    QVERIFY(!checker.isCorrect(word));
+    QVERIFY(checker.addWord(word));
+    QVERIFY(checker.isCorrect(word));
+  }
+
   void missingDictionaryUnloadsEngine() {
     HunspellSpellchecker checker;
     QVERIFY(!checker.loadDictionary(QStringLiteral("/tmp/missing.aff"),

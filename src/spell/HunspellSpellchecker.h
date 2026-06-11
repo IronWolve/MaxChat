@@ -31,6 +31,7 @@ public:
   [[nodiscard]] bool isCorrect(const QString &word) const override;
   [[nodiscard]] QStringList suggestions(const QString &word,
                                         int maxSuggestions = 8) const override;
+  bool addWord(const QString &word) override;
 
 private:
   std::unique_ptr<Hunspell> hunspell_;

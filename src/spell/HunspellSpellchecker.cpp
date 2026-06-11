@@ -80,6 +80,17 @@ bool HunspellSpellchecker::isCorrect(const QString &word) const {
   return hunspell_->spell(toUtf8String(cleaned));
 }
 
+bool HunspellSpellchecker::addWord(const QString &word) {
+  if (hunspell_ == nullptr) {
+    return false;
+  }
+  const QString cleaned = word.trimmed();
+  if (cleaned.isEmpty()) {
+    return false;
+  }
+  return hunspell_->add(toUtf8String(cleaned)) == 0; // Hunspell::add: 0 == success
+}
+
 QStringList HunspellSpellchecker::suggestions(const QString &word,
                                               int maxSuggestions) const {
   if (hunspell_ == nullptr || maxSuggestions <= 0) {
