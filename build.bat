@@ -124,9 +124,13 @@ if errorlevel 1 (
     exit /b 1
 )
 
-cmake --build "%BUILD_DIR%" %BUILD_ARGS%
-if errorlevel 1 (
-    echo ERROR: Build failed.
+rem Capture build output to a log (no native tee on cmd) so failures are
+rem inspectable after the fact; print it, preserving the real exit code.
+cmake --build "%BUILD_DIR%" %BUILD_ARGS% > "%BUILD_DIR%\build-output.log" 2>&1
+set "BUILD_RC=%errorlevel%"
+type "%BUILD_DIR%\build-output.log"
+if not "%BUILD_RC%"=="0" (
+    echo ERROR: Build failed. Full log: %BUILD_DIR%\build-output.log
     popd >nul
     exit /b 1
 )

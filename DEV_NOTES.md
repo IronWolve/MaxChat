@@ -29,6 +29,19 @@ When adding anything that should survive a buffer switch, store it in the model.
 
 ## THINGS I GOT WRONG
 
+- **2026-06-11 — `m_spellchecker` + `spell/Speller.h` left inside `#ifdef
+  MAXCHAT_WITH_HUNSPELL` in MainWindow.h, but the OS-speller refactor uses them
+  unconditionally.** Linux (always has Hunspell → macro defined) compiled fine;
+  the Windows/MinGW build (no Hunspell) failed with `'m_spellchecker' was not
+  declared in this scope` (configureSpellcheck + showInputContextMenu). Fixed by
+  moving the include and the member OUT of the guard — the whole point of the OS
+  backend is to work *without* Hunspell. **This is the SAME hunspell-`#ifdef`
+  trap already logged below (2026-06-10).** Lesson, again: the dev box's Hunspell
+  hides these; verify with `-DCMAKE_DISABLE_FIND_PACKAGE_PkgConfig=ON` (or just
+  keep spell members/includes unconditional unless they truly need Hunspell).
+  Also: build.bat now writes `build-win-mingw/build-output.log` so Windows
+  failures are inspectable from WSL.
+
 - **2026-06-11 — "complete" features that were hollow (inline images, X/Twitter
   cards).** Both compiled and had all the scaffolding (enum kinds, classifier,
   prefs toggles, renderers) so they *looked* done, but end-to-end they did
