@@ -112,6 +112,7 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     void setNickColumnWidth(int nickWidth, bool save);
     void setSplitterPanelVisible(int index, bool visible, bool save);
     void syncBufferTabs();
+    void closeBufferTab(int index); // close the buffer behind a tab (✕ / context menu)
     void syncPanelActionsFromSplitter(bool save);
     void updateChatSeparatorGuide();
     void saveViewVisibilitySetting(const QString& key, bool visible);
