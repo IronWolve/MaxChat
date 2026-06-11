@@ -23,8 +23,13 @@ Status: IN PROGRESS (2026-06-10). Tracked as AUDIT.md FIX BACKLOG #6.
 - **Step 3 DONE (commit 27c4c8e):** api core — say/insert_input/notify/me/target/
   network/timestamp + basename-jailed data_dir/append_file/read_file. 9 engine
   tests incl. `../..` traversal jailing.
-- **NEXT — Step 4:** dispatch hooks from MainWindow signals (make MainWindow a
-  ScriptHost; link the lib into the app, stub when OFF).
+- **Step 4 DONE (commit b0161e3):** LuaEngine.dispatch + typed-arg callHook;
+  MainWindow implements ScriptHost and owns the engine. on_message/on_notice/
+  on_join/on_part/on_quit/on_nick fire from the IRC signals. Scripting lib now
+  always built (stub when OFF) and linked into app + MainWindow test. Verified
+  default 43/43 and -DMAXCHAT_LUA=ON 45/45.
+- **NEXT — Step 5:** on_command + wire /load /unload /reload /scripts (replace
+  the UserCommandType::Scripts placeholder); unknown /cmd → on_command.
 
 ---
 
