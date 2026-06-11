@@ -47,7 +47,14 @@ flagged "medium+ — push past the checklist for extra attack angles."
 the recommended model/effort or change it — before reading any files.** Do not begin the
 phase work until the user confirms.
 
-**Last session:** 2026-06-10 — Phase 8 done (Opus 4.8 low-med). **Log-path security is
+**Last session:** 2026-06-10 — Phase 9 done (Opus 4.8 medium+, hard SSRF push).
+**Found + fixed two SSRF holes** the port had vs Python: (1) redirect targets weren't
+re-validated (public host → 30x → 169.254.169.254/LAN was followed), (2) only the hostname
+string was checked, not the resolved IP (DNS-to-private). Both now match Python (per-hop
+re-check + resolve-and-check). The IP block list itself is thorough (metadata/CGNAT/0.0.0.0/
+IPv6/decimal-IP all blocked — locked with new classifier tests). 42 green. Next: Phase 10.
+
+Phase 8 done (Opus 4.8 low-med). **Log-path security is
 solid** (safePathPart neutralizes separators/reserved/control chars/`..` per component — no
 traversal via channel names). Flood guard exempts friends + self. Auto-replay on open
 exists. 1 cheap fix: replay_lines=0 now means 50 (was 100000 → dumped the whole log every
@@ -100,7 +107,7 @@ resolved (no SCRAM).
 - [x] Phase 6 — Comic mode (parity + decoder robustness) ✅ 2026-06-10
 - [x] Phase 7 — Themes, fonts, notifications, tray, sounds ✅ 2026-06-10
 - [x] Phase 8 — Logging, replay, buffers ✅ 2026-06-10
-- [ ] Phase 9 — Link previews & SSRF
+- [x] Phase 9 — Link previews & SSRF ✅ 2026-06-10
 - [ ] Phase 10 — Cross-cutting security sweep
 - [ ] Phase 11 — Tests & docs closeout
 
@@ -631,9 +638,21 @@ Checklist:
 
 ### Findings — Phase 9
 
-| Sev | Where | Issue | Status |
-|-----|-------|-------|--------|
-| | | | |
+| ID | Sev | Where | Issue | Status |
+|----|-----|-------|-------|--------|
+| P9-1 | **SEC (med-high)** | OpenGraphFetcher.cpp | **SSRF via redirect.** `NoLessSafeRedirectPolicy` only blocks https→http; the final `reply->url()` was never re-checked, so a public host could 302→`http://169.254.169.254/` (cloud metadata) or a LAN IP and we'd fetch it. Python re-validates every hop. | **FIXED** — connect `redirected`, abort on a disallowed target ("blocked redirect"). |
+| P9-2 | **SEC (med)** | OpenGraphFetcher.cpp | **SSRF via DNS.** The guard checked the hostname *string* only — a public-looking domain whose A record resolves to a private/loopback IP passed. Python resolves (getaddrinfo) and rejects any private IP. | **FIXED** — `resolvesToPublicOnly()` (QHostInfo) re-checks every resolved address against the IP block list; can't-resolve → blocked. |
+| P9-3 | SEC (low) | MainWindow.cpp preview / QTextBrowser | DirectImage previews are SSRF-checked at **classification** (string check blocks private-IP literals), but the image the chat view loads isn't resolve-checked or redirect-guarded. Lower risk: display-only, private literals already blocked, body not read into logic. | Note → Phase 10 |
+| P9-4 | PERF (low) | OpenGraphFetcher.cpp | `resolvesToPublicOnly` does synchronous DNS on the GUI thread (parity with Python's blocking getaddrinfo); slow DNS could stall the UI. | Backlog #25 |
+| — | OK | LinkPreviewClassifier.cpp | Block list thorough: 0/8, 10/8, 100.64/10 CGNAT, 127/8, 169.254 metadata, 172.16/12, 192.168, RFC-test nets, ≥224 multicast; all IPv6 blocked (colon); dotless-decimal IP rejected; credentials rejected; data:/ftp:/file: + SVG rejected. Locked by classifier test `blocksSsrfSensitiveIpForms`. | VERIFIED |
+| — | OK | OpenGraphFetcher / LinkPreviewRenderer | Size cap (256KB), timeout (10s), content-type HTML check; OG metadata (title/desc/domain/url) all `toHtmlEscaped`; og:image re-fetch goes back through classify→fetch (SSRF-checked); content_services gates each type. | VERIFIED |
+
+Checklist status: redirect re-validation ✓ (P9-1 fixed); resolve-and-check ✓ (P9-2 fixed);
+IP block-list completeness ✓✓ (incl. metadata/CGNAT/IPv6/decimal — tested); credentials,
+scheme, SVG rejection ✓; size/timeout caps ✓; metadata escaping ✓; per-type gating ✓.
+Both SSRF holes were C++-only regressions (Python had both protections) — NOT backports.
+Residual: image-path resolve/redirect (P9-3) + sync-DNS UI stall (P9-4) noted/backlogged;
+fetch-storm cap (many URLs in one line) shared with Python, low — note only.
 
 ---
 
@@ -776,3 +795,4 @@ Big items deferred from phases. Each entry must be actionable cold: what, where,
 | 22 | 7 (S3b) | MISS | CTCP SOUND receive + play | Plumb a sound signal: IrcSession detect incoming CTCP `SOUND <file> [text]` → emit → IrcConnection → MainWindow; gate on the `ctcp_sound` pref; play only via an own-file-only resolver (basename, force `.wav`, must already exist in `<config>/sounds/` — never fetch). Mirror Python sounds.resolve(). | OPEN |
 | 23 | 8 (P8-2) | DIFF low | Full strftime tokens in log mask | ChatLogStore.logFilePath only maps %Y/%m/%d. Map the common strftime codes (%H %M %S %y %b %B %a %A %j %p) to QDateTime formats so masks match Python's `strftime`. | OPEN |
 | 24 | 8 (P8-3) | DIFF low | Dimmed replay + "Ended" divider | Render replayed log lines in a dimmed style and use an "Ended <date> <time>" divider (Python look) instead of the plain `--- Log replay ---` header/footer. | OPEN |
+| 25 | 9 (P9-4) | PERF low | Async SSRF resolve | `resolvesToPublicOnly` blocks the GUI thread on DNS. Move the resolve off-thread (QHostInfo::lookupHost async, or a worker) and complete the fetch in the callback, so a slow/black-hole DNS can't stall the UI. Also add a live-redirect integration test (302→private aborts) + a DNS-to-private test once resolution is mockable. | OPEN |

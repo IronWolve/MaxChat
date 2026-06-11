@@ -4,6 +4,20 @@ Internal notes for this port. Not shipped.
 
 ## THINGS I GOT WRONG
 
+- **2026-06-10 — Link-preview SSRF guard only checked the first URL (audit phase
+  9, SECURITY).** Two gaps vs the Python original: (1) `buildRequest` set
+  `NoLessSafeRedirectPolicy` (which only blocks https→http downgrades) and the
+  `finished` handler never re-checked `reply->url()`, so a public host could
+  302-redirect to `http://169.254.169.254/` (cloud metadata) or a LAN IP and we
+  followed it. (2) the guard checked the hostname *string* only — a public-looking
+  domain whose DNS A record points at a private IP sailed through. Python does
+  both: it re-runs the guard on every redirect (`reply.redirected`) and resolves
+  the host (getaddrinfo) rejecting any private/loopback/link-local/reserved IP.
+  Fixed: re-validate each redirect hop (abort on a disallowed target) and add a
+  synchronous resolve-and-check that reuses the existing IP block list on every
+  resolved address. Lesson: an SSRF allowlist must be applied to the *connection
+  target* (post-DNS, post-redirect), not just the URL the user typed.
+
 - **2026-06-10 — Comic art decoder trusted a file-supplied length → OOM
   (audit phase 6, SECURITY).** `ComicArt.cpp inflateDib` prepends the DIB's
   `origLen` field to the zlib stream for `qUncompress`, which allocates that

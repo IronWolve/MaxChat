@@ -87,6 +87,26 @@ private slots:
         QUrl(QStringLiteral("https://example.com/card"))));
   }
 
+  void blocksSsrfSensitiveIpForms() {
+    // These literal forms feed the resolved-IP re-check in OpenGraphFetcher, so
+    // lock them down: loopback, cloud metadata, CGNAT, unspecified, IPv6, and
+    // the dotless-decimal IP bypass must all be rejected.
+    const QStringList blocked = {
+        QStringLiteral("http://127.0.0.1/x"),
+        QStringLiteral("http://169.254.169.254/latest/meta-data"), // cloud metadata
+        QStringLiteral("http://100.64.0.1/x"),                     // CGNAT
+        QStringLiteral("http://0.0.0.0/x"),                        // unspecified
+        QStringLiteral("http://[::1]/x"),                          // IPv6 loopback
+        QStringLiteral("http://[fc00::1]/x"),                      // IPv6 ULA
+        QStringLiteral("http://2130706433/x"),                     // decimal 127.0.0.1
+        QStringLiteral("http://internalhost/x"),                   // dotless host
+    };
+    for (const QString &url : blocked) {
+      QVERIFY2(!isAllowedPreviewFetchUrl(QUrl(url)), qPrintable(url));
+    }
+    QVERIFY(isAllowedPreviewFetchUrl(QUrl(QStringLiteral("https://8.8.8.8/x"))));
+  }
+
   void doesNotTreatSvgAsDirectImage() {
     const auto candidate = classifyLinkPreview(
         QStringLiteral("https://cdn.example.com/icons/logo.svg"));

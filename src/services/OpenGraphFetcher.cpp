@@ -2,6 +2,8 @@
 
 #include "services/LinkPreviewClassifier.h"
 
+#include <QHostAddress>
+#include <QHostInfo>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QPointer>
@@ -19,11 +21,44 @@ bool isHttpUrlWithoutCredentials(const QUrl &url) {
          !url.host().isEmpty() && url.userInfo().isEmpty();
 }
 
+// Resolve the host and reject if ANY resolved address is private/loopback/etc.
+// (the hostname string check can't catch a public-looking domain whose DNS A
+// record points at 127.0.0.1 / 169.254.169.254 / 10.x …). Mirrors the Python
+// is_safe_fetch_url getaddrinfo check. Synchronous, like Python's.
+bool resolvesToPublicOnly(const QUrl &url) {
+  const QString host = url.host();
+  if (host.isEmpty()) {
+    return false;
+  }
+  // An IP literal was already vetted by isAllowedPreviewFetchUrl — no DNS.
+  if (!QHostAddress(host).isNull()) {
+    return true;
+  }
+  const QHostInfo info = QHostInfo::fromName(host);
+  if (info.error() != QHostInfo::NoError || info.addresses().isEmpty()) {
+    return false; // can't resolve → don't fetch (Python parity)
+  }
+  for (const QHostAddress &address : info.addresses()) {
+    QUrl probe;
+    probe.setScheme(url.scheme());
+    probe.setHost(address.toString());
+    // Reuse the literal-address rules: blocks IPv6 (colon) and every
+    // private/loopback/link-local/reserved IPv4 range.
+    if (!isAllowedPreviewFetchUrl(probe)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool canFetchUrl(const QUrl &url, bool allowPrivateNetwork) {
   if (!isHttpUrlWithoutCredentials(url)) {
     return false;
   }
-  return allowPrivateNetwork || isAllowedPreviewFetchUrl(url);
+  if (allowPrivateNetwork) {
+    return true;
+  }
+  return isAllowedPreviewFetchUrl(url) && resolvesToPublicOnly(url);
 }
 
 bool looksLikeHtmlContent(const QString &contentType) {
@@ -76,13 +111,28 @@ void OpenGraphFetcher::fetch(const QUrl &url, OpenGraphFetchOptions options) {
     }
   });
 
+  // Re-run the SSRF guard on every redirect hop — a public host can 30x to an
+  // internal address, and NoLessSafeRedirectPolicy only blocks downgrades, not
+  // redirects to private IPs.
+  const bool allowPrivate = options.allowPrivateNetwork;
+  connect(reply, &QNetworkReply::redirected, this,
+          [this, reply, allowPrivate](const QUrl &target) {
+            if (!canFetchUrl(target, allowPrivate)) {
+              reply->setProperty("maxchat_blocked_redirect", true);
+              reply->abort();
+            }
+          });
+
   connect(reply, &QNetworkReply::finished, this, [this, reply, url, options]() {
     const auto cleanup = qScopeGuard([reply]() { reply->deleteLater(); });
 
     if (reply->error() != QNetworkReply::NoError) {
-      const QString reason = reply->property("maxchat_timeout").toBool()
-                                 ? QStringLiteral("preview fetch timed out")
-                                 : reply->errorString();
+      QString reason = reply->errorString();
+      if (reply->property("maxchat_blocked_redirect").toBool()) {
+        reason = QStringLiteral("blocked redirect to a private address");
+      } else if (reply->property("maxchat_timeout").toBool()) {
+        reason = QStringLiteral("preview fetch timed out");
+      }
       emit fetchFailed(url, reason);
       return;
     }
