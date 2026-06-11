@@ -32,7 +32,7 @@ copy_file() {
   fi
 }
 
-for dir in src tests assets resources licenses; do
+for dir in src tests assets resources licenses third_party; do
   sync_dir "$dir"
 done
 
