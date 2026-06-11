@@ -44,6 +44,19 @@ if(MAXCHAT_LUA)
     set_target_properties(maxchat_lua PROPERTIES C_STANDARD 99)
     # No LUA_USE_POSIX/DLL: the dlopen-based `require`/loadlib stays inert, which
     # suits the script sandbox. Build as portable ANSI C.
+
+    # The scripting engine: GUI-free, so it can be unit-tested with a fake host.
+    add_library(maxchat_scripting STATIC
+        src/scripting/LuaEngine.cpp
+        src/scripting/LuaEngine.h
+        src/scripting/ScriptHost.h
+    )
+    target_include_directories(maxchat_scripting PUBLIC
+         "${CMAKE_CURRENT_SOURCE_DIR}/src")
+    target_compile_definitions(maxchat_scripting PUBLIC MAXCHAT_LUA=1)
+    target_link_libraries(maxchat_scripting
+        PUBLIC Qt6::Core
+        PRIVATE maxchat_lua)
 endif()
 
 add_library(maxchat_core STATIC
@@ -1014,4 +1027,16 @@ if(MAXCHAT_LUA)
     )
 
     add_test(NAME lua_smoke COMMAND lua_smoke_test)
+
+    qt_add_executable(lua_engine_test
+        tests/unit/lua_engine_test.cpp
+    )
+
+    target_link_libraries(lua_engine_test
+        PRIVATE
+            maxchat_scripting
+            Qt6::Test
+    )
+
+    add_test(NAME lua_engine COMMAND lua_engine_test)
 endif()
