@@ -50,9 +50,19 @@ QString ChatLogStore::logFilePath(const QString& network, const QString& target,
     }
     mask.replace(QStringLiteral("%network"), networkPart);
     mask.replace(QStringLiteral("%channel"), targetPart);
+    // strftime-style date codes (the log path is per-day, so only date-derivable
+    // codes are supported — not %H/%M/%S). %B/%A before %b/%a so the longer code
+    // wins; %Y before %y likewise.
     mask.replace(QStringLiteral("%Y"), date.toString(QStringLiteral("yyyy")));
+    mask.replace(QStringLiteral("%y"), date.toString(QStringLiteral("yy")));
     mask.replace(QStringLiteral("%m"), date.toString(QStringLiteral("MM")));
     mask.replace(QStringLiteral("%d"), date.toString(QStringLiteral("dd")));
+    mask.replace(QStringLiteral("%B"), date.toString(QStringLiteral("MMMM")));
+    mask.replace(QStringLiteral("%b"), date.toString(QStringLiteral("MMM")));
+    mask.replace(QStringLiteral("%A"), date.toString(QStringLiteral("dddd")));
+    mask.replace(QStringLiteral("%a"), date.toString(QStringLiteral("ddd")));
+    mask.replace(QStringLiteral("%j"),
+                 QStringLiteral("%1").arg(date.dayOfYear(), 3, 10, QLatin1Char('0')));
 
     QString path = logRoot_;
     const QStringList parts =
