@@ -427,6 +427,18 @@ target_link_libraries(open_graph_fetcher_test
 
 add_test(NAME open_graph_fetcher COMMAND open_graph_fetcher_test)
 
+qt_add_executable(image_fetcher_test
+    tests/unit/image_fetcher_test.cpp
+)
+
+target_link_libraries(image_fetcher_test
+    PRIVATE
+        maxchat_services
+        Qt6::Test
+)
+
+add_test(NAME image_fetcher COMMAND image_fetcher_test)
+
 qt_add_executable(link_preview_classifier_test
     tests/unit/link_preview_classifier_test.cpp
 )
