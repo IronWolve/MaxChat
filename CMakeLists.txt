@@ -140,6 +140,24 @@ target_link_libraries(maxchat_network
         Qt6::Network
 )
 
+add_library(maxchat_upload STATIC
+    src/upload/ImageUploader.h
+    src/upload/ImgbbUploader.cpp
+    src/upload/ImgbbUploader.h
+    src/upload/ImgboxUploader.cpp
+    src/upload/ImgboxUploader.h
+    src/upload/ImgurUploader.cpp
+    src/upload/ImgurUploader.h
+    src/upload/PostimagesUploader.cpp
+    src/upload/PostimagesUploader.h
+    src/upload/ImageUploaderFactory.cpp
+    src/upload/ImageUploaderFactory.h
+)
+
+target_include_directories(maxchat_upload PUBLIC src)
+target_link_libraries(maxchat_upload PUBLIC Qt6::Core Qt6::Gui Qt6::Network)
+set_target_properties(maxchat_upload PROPERTIES AUTOMOC ON)
+
 add_library(maxchat_services STATIC
     src/services/ImageFetcher.cpp
     src/services/ImageFetcher.h
@@ -282,6 +300,8 @@ qt_add_executable(maxchat-c
     src/ui/ShortcutEditorDialog.h
     src/ui/SpellcheckHighlighter.cpp
     src/ui/SpellcheckHighlighter.h
+    src/ui/SpellTextEdit.cpp
+    src/ui/SpellTextEdit.h
     src/ui/ThemeCatalog.cpp
     src/ui/ThemeCatalog.h
     src/ui/UrlListDialog.cpp
@@ -309,6 +329,7 @@ target_link_libraries(maxchat-c
         maxchat_core
         maxchat_network
         maxchat_services
+        maxchat_upload
         maxchat_spell
         maxchat_scripting
         Qt6::Widgets
@@ -472,6 +493,19 @@ target_link_libraries(image_fetcher_test
 )
 
 add_test(NAME image_fetcher COMMAND image_fetcher_test)
+
+qt_add_executable(image_uploader_test
+    tests/unit/image_uploader_test.cpp
+)
+
+target_link_libraries(image_uploader_test
+    PRIVATE
+        maxchat_upload
+        Qt6::Network
+        Qt6::Test
+)
+
+add_test(NAME image_uploader COMMAND image_uploader_test)
 
 qt_add_executable(link_preview_classifier_test
     tests/unit/link_preview_classifier_test.cpp
@@ -984,6 +1018,8 @@ qt_add_executable(main_window_link_preview_test
     src/ui/ShortcutEditorDialog.h
     src/ui/SpellcheckHighlighter.cpp
     src/ui/SpellcheckHighlighter.h
+    src/ui/SpellTextEdit.cpp
+    src/ui/SpellTextEdit.h
     src/ui/ThemeCatalog.cpp
     src/ui/ThemeCatalog.h
     src/ui/UrlListDialog.cpp
@@ -1006,6 +1042,7 @@ target_link_libraries(main_window_link_preview_test
         maxchat_core
         maxchat_network
         maxchat_services
+        maxchat_upload
         maxchat_spell
         maxchat_scripting
         Qt6::Widgets
