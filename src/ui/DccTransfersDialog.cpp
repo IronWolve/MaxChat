@@ -8,8 +8,11 @@
 #include <QHeaderView>
 #include <QPushButton>
 #include <QTableWidget>
+#include <QTimer>
 #include <QUrl>
 #include <QVBoxLayout>
+
+#include <algorithm>
 
 namespace maxchat::ui {
 
@@ -51,6 +54,28 @@ QString humanBytes(qint64 bytes) {
     return QStringLiteral("%1 B").arg(bytes);
 }
 
+// Em dash placeholder for "no estimate".
+const QString kNoEta = QString::fromUtf8("\xE2\x80\x94");
+
+QString etaLabel(double secs) {
+    if (secs <= 0 || secs != secs) { // 0 or NaN
+        return kNoEta;
+    }
+    const qint64 s = static_cast<qint64>(secs);
+    if (s < 60) {
+        return QStringLiteral("%1s").arg(s);
+    }
+    if (s < 3600) {
+        return QStringLiteral("%1m %2s").arg(s / 60).arg(s % 60, 2, 10, QLatin1Char('0'));
+    }
+    return QStringLiteral("%1h %2m").arg(s / 3600).arg((s % 3600) / 60, 2, 10, QLatin1Char('0'));
+}
+
+bool isTerminal(DccTransfer::State state) {
+    return state == DccTransfer::State::Done || state == DccTransfer::State::Failed ||
+           state == DccTransfer::State::Cancelled;
+}
+
 } // namespace
 
 DccTransfersDialog::DccTransfersDialog(DccManager* manager, QWidget* parent)
@@ -60,10 +85,11 @@ DccTransfersDialog::DccTransfersDialog(DccManager* manager, QWidget* parent)
 
     auto* root = new QVBoxLayout(this);
     table_ = new QTableWidget(this);
-    table_->setColumnCount(5);
+    table_->setColumnCount(7);
     table_->setHorizontalHeaderLabels(
         {QStringLiteral("Dir"), QStringLiteral("Peer"), QStringLiteral("File"),
-         QStringLiteral("Progress"), QStringLiteral("State")});
+         QStringLiteral("Progress"), QStringLiteral("Rate"), QStringLiteral("ETA"),
+         QStringLiteral("State")});
     table_->horizontalHeader()->setStretchLastSection(true);
     table_->setEditTriggers(QAbstractItemView::NoEditTriggers);
     table_->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -113,6 +139,37 @@ DccTransfersDialog::DccTransfersDialog(DccManager* manager, QWidget* parent)
     });
     connect(close, &QPushButton::clicked, this, &QDialog::accept);
     connect(manager_, &DccManager::transfersChanged, this, &DccTransfersDialog::refresh);
+
+    // Recompute rate/ETA once a second; the data-changed signal handles the rest.
+    clock_.start();
+    rateTimer_ = new QTimer(this);
+    connect(rateTimer_, &QTimer::timeout, this, &DccTransfersDialog::sampleRates);
+    rateTimer_->start(1000);
+    refresh();
+}
+
+void DccTransfersDialog::sampleRates() {
+    const qint64 now = clock_.elapsed();
+    for (const DccTransfer& t : manager_->transfers()) {
+        if (t.state != DccTransfer::State::Active) {
+            // Drop the running average so a resumed transfer measures afresh.
+            sampleRate_.remove(t.id);
+            sampleBytes_[t.id] = t.transferred;
+            sampleTimeMs_[t.id] = now;
+            continue;
+        }
+        if (sampleTimeMs_.contains(t.id)) {
+            const qint64 dt = now - sampleTimeMs_.value(t.id);
+            if (dt > 0) {
+                const double inst =
+                    std::max(0.0, double(t.transferred - sampleBytes_.value(t.id)) * 1000.0 / dt);
+                sampleRate_[t.id] =
+                    sampleRate_.contains(t.id) ? sampleRate_.value(t.id) * 0.4 + inst * 0.6 : inst;
+            }
+        }
+        sampleBytes_[t.id] = t.transferred;
+        sampleTimeMs_[t.id] = now;
+    }
     refresh();
 }
 
@@ -136,7 +193,22 @@ void DccTransfersDialog::refresh() {
         fileItem->setData(Qt::UserRole + 1, t.localPath);
         table_->setItem(row, 2, fileItem);
         table_->setItem(row, 3, new QTableWidgetItem(progress));
-        table_->setItem(row, 4, new QTableWidgetItem(stateLabel(t.state)));
+
+        QString rate;
+        QString eta = kNoEta;
+        const double r = sampleRate_.value(t.id, 0.0);
+        if (t.state == DccTransfer::State::Active && r > 1.0) {
+            rate = humanBytes(static_cast<qint64>(r)) + QStringLiteral("/s");
+            const double remaining = t.size > t.transferred ? double(t.size - t.transferred) / r : 0.0;
+            eta = etaLabel(remaining);
+        }
+        if (isTerminal(t.state)) {
+            rate.clear();
+            eta = kNoEta;
+        }
+        table_->setItem(row, 4, new QTableWidgetItem(rate));
+        table_->setItem(row, 5, new QTableWidgetItem(eta));
+        table_->setItem(row, 6, new QTableWidgetItem(stateLabel(t.state)));
     }
 }
 
