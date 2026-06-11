@@ -44,6 +44,18 @@ QString unescapeTagValue(const QString& value) {
     return out;
 }
 
+namespace {
+// Strip leading spaces only — NOT trailing — so the trailing parameter keeps any
+// significant whitespace (Python only rstrips \r\n from the whole line).
+QString lstripSpaces(const QString& in) {
+    int i = 0;
+    while (i < in.size() && in.at(i) == QLatin1Char(' ')) {
+        ++i;
+    }
+    return in.mid(i);
+}
+} // namespace
+
 IrcMessage parseMessage(const QString& line) {
     QString s = line;
     while (s.endsWith(QLatin1Char('\r')) || s.endsWith(QLatin1Char('\n'))) {
@@ -72,7 +84,7 @@ IrcMessage parseMessage(const QString& line) {
         }
     }
 
-    s = s.trimmed();
+    s = lstripSpaces(s);
 
     if (s.startsWith(QLatin1Char(':'))) {
         const int space = s.indexOf(QLatin1Char(' '));
@@ -85,11 +97,11 @@ IrcMessage parseMessage(const QString& line) {
         }
     }
 
-    s = s.trimmed();
+    s = lstripSpaces(s);
     const int commandSpace = s.indexOf(QLatin1Char(' '));
     if (commandSpace >= 0) {
         msg.command = s.left(commandSpace).toUpper();
-        s = s.mid(commandSpace + 1).trimmed();
+        s = lstripSpaces(s.mid(commandSpace + 1));
     } else {
         msg.command = s.toUpper();
         s.clear();
@@ -104,7 +116,7 @@ IrcMessage parseMessage(const QString& line) {
         const int space = s.indexOf(QLatin1Char(' '));
         if (space >= 0) {
             msg.params.append(s.left(space));
-            s = s.mid(space + 1).trimmed();
+            s = lstripSpaces(s.mid(space + 1));
         } else {
             msg.params.append(s);
             break;

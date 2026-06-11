@@ -36,6 +36,14 @@ class IrcMessageTest final : public QObject {
         QCOMPARE(msg.trailing(), QStringLiteral("a : b : c"));
     }
 
+    void trailingKeepsLeadingAndTrailingSpaces() {
+        // Only \r\n is stripped from the line; whitespace inside the trailing
+        // parameter (including the very ends) is preserved.
+        const auto msg = parseMessage(QStringLiteral(":n!u@h PRIVMSG #c :  hi there  \r\n"));
+        QCOMPARE(msg.trailing(), QStringLiteral("  hi there  "));
+        QCOMPARE(msg.params.at(0), QStringLiteral("#c"));
+    }
+
     void ircv3Tags() {
         const auto msg =
             parseMessage(QStringLiteral("@id=123;+comic/v1=char:3 :n!u@h PRIVMSG #c :hi"));
