@@ -5754,8 +5754,21 @@ maxchat::comic::Character* maxchat::ui::MainWindow::comicCharacterForNick(const 
     }
     const QString low = nick.trimmed().toLower();
     const QVariantMap settings = m_settings.loadWithDefaults();
+    // A per-channel assignment (comic_channels[net/target].chars) wins over the
+    // global comic_chars map.
+    const QString chanKey =
+        activeNetworkName().trimmed() + QStringLiteral("/") + m_currentTarget.trimmed();
+    const QVariantMap chanChars = settings.value(QStringLiteral("comic_channels"))
+                                      .toMap()
+                                      .value(chanKey)
+                                      .toMap()
+                                      .value(QStringLiteral("chars"))
+                                      .toMap();
     const QVariantMap manual = settings.value(QStringLiteral("comic_chars")).toMap();
-    QString stem = manual.value(low).toString();
+    QString stem = chanChars.value(low).toString();
+    if (stem.isEmpty()) {
+        stem = manual.value(low).toString();
+    }
     if (stem.isEmpty()) {
         const QString self = settings.value(QStringLiteral("comic_self_char")).toString();
         if (!self.isEmpty() && low == currentNickForNetwork(activeNetworkName()).toLower()) {
@@ -5791,7 +5804,16 @@ maxchat::comic::Character* maxchat::ui::MainWindow::comicCharacterForNick(const 
 
 QImage maxchat::ui::MainWindow::comicBackground() {
     const QVariantMap settings = m_settings.loadWithDefaults();
-    QString file = settings.value(QStringLiteral("comic_bg")).toString().toLower();
+    // A per-channel background (comic_channels[net/target].bg) wins over the
+    // global comic_bg.
+    const QString chanKey =
+        activeNetworkName().trimmed() + QStringLiteral("/") + m_currentTarget.trimmed();
+    const QVariantMap chanCfg =
+        settings.value(QStringLiteral("comic_channels")).toMap().value(chanKey).toMap();
+    QString file = chanCfg.value(QStringLiteral("bg")).toString().toLower();
+    if (file.isEmpty()) {
+        file = settings.value(QStringLiteral("comic_bg")).toString().toLower();
+    }
     QString path = m_comicBackgroundPaths.value(file);
     if (path.isEmpty() && !m_comicBackgroundPaths.isEmpty()) {
         if (file.isEmpty() &&
@@ -5841,7 +5863,19 @@ void maxchat::ui::MainWindow::refreshComic() {
     const int panelCount = std::clamp(settings.value(QStringLiteral("comic_panels"), 4).toInt(), 1, 6);
     const int perPanel = std::clamp(settings.value(QStringLiteral("comic_per_panel"), 4).toInt(), 1, 6);
     const int minFont = std::clamp(settings.value(QStringLiteral("comic_min_font"), 9).toInt(), 6, 13);
-    const QStringList comicIgnore = settings.value(QStringLiteral("comic_ignore")).toStringList();
+    QStringList comicIgnore = settings.value(QStringLiteral("comic_ignore")).toStringList();
+    // Per-channel "hide from comic" nicks add to the global comic_ignore list.
+    const QString comicChanKey =
+        activeNetworkName().trimmed() + QStringLiteral("/") + m_currentTarget.trimmed();
+    const QVariantList chanIgnore = settings.value(QStringLiteral("comic_channels"))
+                                        .toMap()
+                                        .value(comicChanKey)
+                                        .toMap()
+                                        .value(QStringLiteral("ignore"))
+                                        .toList();
+    for (const QVariant& entry : chanIgnore) {
+        comicIgnore.append(entry.toString().toLower());
+    }
     const bool ignoreCmds = settings.value(QStringLiteral("comic_ignore_cmds"), true).toBool();
     const QStringList botPatterns = settings.value(QStringLiteral("comic_bot_patterns")).toStringList();
     QRegularExpression excludeRe;
