@@ -58,7 +58,8 @@ target_include_directories(maxchat_scripting PUBLIC
 target_link_libraries(maxchat_scripting PUBLIC Qt6::Core)
 if(MAXCHAT_LUA)
     target_compile_definitions(maxchat_scripting PUBLIC MAXCHAT_LUA=1)
-    target_link_libraries(maxchat_scripting PRIVATE maxchat_lua)
+    # maxchat_core for stripFormatting; maxchat_lua for the interpreter.
+    target_link_libraries(maxchat_scripting PRIVATE maxchat_core maxchat_lua)
 endif()
 
 add_library(maxchat_core STATIC

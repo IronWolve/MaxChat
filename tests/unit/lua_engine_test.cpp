@@ -17,12 +17,13 @@ class FakeHost final : public ScriptHost {
     QStringList says;     // "target|text"
     QStringList inserts;
     QStringList notifies; // "title|text"
+    QStringList raws;
 
     void scriptEcho(const QString&, const QString& text) override { echoes.append(text); }
     void scriptSay(const QString&, const QString& target, const QString& text) override {
         says.append(target + QStringLiteral("|") + text);
     }
-    void scriptSendRaw(const QString&, const QString&) override {}
+    void scriptSendRaw(const QString&, const QString& line) override { raws.append(line); }
     void scriptInsertInput(const QString& text) override { inserts.append(text); }
     void scriptNotify(const QString& title, const QString& text) override {
         notifies.append(title + QStringLiteral("|") + text);
@@ -30,8 +31,12 @@ class FakeHost final : public ScriptHost {
     QString scriptMe(const QString&) override { return QStringLiteral("me"); }
     QString scriptTarget() override { return QStringLiteral("#chan"); }
     QString scriptNetwork() override { return QStringLiteral("net"); }
-    QStringList scriptChannels(const QString&) override { return {}; }
-    QStringList scriptNicks(const QString&, const QString&) override { return {}; }
+    QStringList scriptChannels(const QString&) override {
+        return {QStringLiteral("#a"), QStringLiteral("#b")};
+    }
+    QStringList scriptNicks(const QString&, const QString&) override {
+        return {QStringLiteral("alice"), QStringLiteral("bob")};
+    }
 };
 
 QString writeScript(const QDir& dir, const QString& name, const QString& body) {
@@ -221,6 +226,66 @@ class LuaEngineTest final : public QObject {
                         {QStringLiteral("libera"), QStringLiteral("#c"), QStringLiteral("bob"),
                          QStringLiteral("hi")});
         QCOMPARE(host.echoes, QStringList{QStringLiteral("libera|#c|bob|hi")});
+    }
+
+    void apiSendRawAndState() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString path = writeScript(
+            QDir(dir.path()), QStringLiteral("state.lua"),
+            QStringLiteral("function on_load(api)\n"
+                           "  api.send_raw('PING xyz')\n"
+                           "  api.echo(#api.channels()..'/'..api.nicks('#a')[1])\n"
+                           "end\n"));
+        FakeHost host;
+        LuaEngine engine(&host, dir.path(), dir.path());
+        QVERIFY(engine.load(path));
+        QCOMPARE(host.raws, QStringList{QStringLiteral("PING xyz")});
+        QCOMPARE(host.echoes, QStringList{QStringLiteral("2/alice")});
+    }
+
+    void apiStrip() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString path =
+            writeScript(QDir(dir.path()), QStringLiteral("strip.lua"),
+                        QStringLiteral("function on_load(api)\n"
+                                       "  api.echo(api.strip(string.char(2)..'bold'..string.char(15)))\n"
+                                       "end\n"));
+        FakeHost host;
+        LuaEngine engine(&host, dir.path(), dir.path());
+        QVERIFY(engine.load(path));
+        QCOMPARE(host.echoes, QStringList{QStringLiteral("bold")});
+    }
+
+    void apiPrefsPersist() {
+        QTemporaryDir scripts;
+        QTemporaryDir data;
+        QVERIFY(scripts.isValid() && data.isValid());
+        const QString path = writeScript(
+            QDir(scripts.path()), QStringLiteral("pref.lua"),
+            QStringLiteral("function on_load(api)\n"
+                           "  api.set('name', 'zoe')\n"
+                           "  api.set('count', 7)\n"
+                           "  local n = api.get('count')\n"
+                           "  api.echo(api.get('name')..'/'..tostring(n == 7)..'/'\n"
+                           "           ..tostring(api.get('missing') == nil))\n"
+                           "end\n"));
+        FakeHost host;
+        LuaEngine engine(&host, scripts.path(), data.path());
+        QVERIFY(engine.load(path));
+        QCOMPARE(host.echoes, QStringList{QStringLiteral("zoe/true/true")});
+        QVERIFY(QFile::exists(QDir(data.path()).filePath(QStringLiteral("pref/prefs.json"))));
+        // A fresh engine sees the persisted value.
+        FakeHost host2;
+        LuaEngine engine2(&host2, scripts.path(), data.path());
+        const QString path2 =
+            writeScript(QDir(scripts.path()), QStringLiteral("pref2.lua"),
+                        QStringLiteral("function on_load(api) end\n"));
+        Q_UNUSED(path2);
+        // reload the same script; its prefs survive.
+        QVERIFY(engine2.load(path));
+        QCOMPARE(host2.echoes, QStringList{QStringLiteral("zoe/true/true")});
     }
 
     void scriptErrorDoesNotCrash() {

@@ -2,10 +2,15 @@
 
 #include "scripting/ScriptHost.h"
 
+#include "irc/IrcFormat.h"
+
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonValue>
 #include <QMetaType>
 #include <QVariant>
 
@@ -144,6 +149,92 @@ int l_read_file(lua_State* L) {
     return 1;
 }
 
+void pushStringList(lua_State* L, const QStringList& items) {
+    lua_createtable(L, static_cast<int>(items.size()), 0);
+    int index = 1;
+    for (const QString& item : items) {
+        const QByteArray v = item.toUtf8();
+        lua_pushlstring(L, v.constData(), v.size());
+        lua_rawseti(L, -2, index++);
+    }
+}
+
+// api.send_raw(line)
+int l_send_raw(lua_State* L) {
+    engineOf(L)->hostSendRaw(QString::fromUtf8(luaL_checkstring(L, 1)));
+    return 0;
+}
+
+// api.channels()
+int l_channels(lua_State* L) {
+    pushStringList(L, engineOf(L)->hostChannels());
+    return 1;
+}
+
+// api.nicks([target])
+int l_nicks(lua_State* L) {
+    pushStringList(L, engineOf(L)->hostNicks(QString::fromUtf8(luaL_optstring(L, 1, ""))));
+    return 1;
+}
+
+// api.strip(text) — remove IRC colour/format codes.
+int l_strip(lua_State* L) {
+    const QByteArray v =
+        maxchat::irc::stripFormatting(QString::fromUtf8(luaL_checkstring(L, 1))).toUtf8();
+    lua_pushlstring(L, v.constData(), v.size());
+    return 1;
+}
+
+// Per-script persistent prefs live in <dataDir>/prefs.json.
+QString prefsPath(const QString& dataDir) {
+    return QDir(dataDir).filePath(QStringLiteral("prefs.json"));
+}
+QJsonObject loadPrefs(const QString& dataDir) {
+    QFile f(prefsPath(dataDir));
+    if (!f.open(QIODevice::ReadOnly)) {
+        return {};
+    }
+    return QJsonDocument::fromJson(f.readAll()).object();
+}
+
+// api.get(key) -> string|number|boolean|nil
+int l_get(lua_State* L) {
+    const QString key = QString::fromUtf8(luaL_checkstring(L, 1));
+    const QJsonValue v = loadPrefs(dataDirOf(L)).value(key);
+    if (v.isString()) {
+        const QByteArray s = v.toString().toUtf8();
+        lua_pushlstring(L, s.constData(), s.size());
+    } else if (v.isDouble()) {
+        lua_pushnumber(L, v.toDouble());
+    } else if (v.isBool()) {
+        lua_pushboolean(L, v.toBool() ? 1 : 0);
+    } else {
+        lua_pushnil(L);
+    }
+    return 1;
+}
+
+// api.set(key, value) — value is string, number, or boolean.
+int l_set(lua_State* L) {
+    const QString key = QString::fromUtf8(luaL_checkstring(L, 1));
+    const QString dataDir = dataDirOf(L);
+    QJsonObject obj = loadPrefs(dataDir);
+    if (lua_isboolean(L, 2)) {
+        obj.insert(key, lua_toboolean(L, 2) != 0);
+    } else if (lua_isnumber(L, 2)) {
+        obj.insert(key, lua_tonumber(L, 2));
+    } else {
+        obj.insert(key, QString::fromUtf8(luaL_checkstring(L, 2)));
+    }
+    QDir().mkpath(dataDir);
+    QFile f(prefsPath(dataDir));
+    if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        return luaL_error(L, "cannot write prefs");
+    }
+    f.write(QJsonDocument(obj).toJson(QJsonDocument::Compact));
+    return 0;
+}
+
 // Build a fresh, sandboxed state. Only known-safe libraries are opened, and the
 // base-library escape hatches (load/dofile/loadfile/…) are removed. There is no
 // `io`, `os`, `package`/`require`, or `debug`, so a script cannot reach the
@@ -216,6 +307,12 @@ void LuaEngine::hostNotify(const QString& title, const QString& text) {
     }
 }
 
+void LuaEngine::hostSendRaw(const QString& line) {
+    if (host_ != nullptr) {
+        host_->scriptSendRaw(currentNetwork_, line);
+    }
+}
+
 QString LuaEngine::hostMe() {
     return host_ != nullptr ? host_->scriptMe(currentNetwork_) : QString();
 }
@@ -226,6 +323,14 @@ QString LuaEngine::hostTarget() {
 
 QString LuaEngine::hostNetwork() {
     return host_ != nullptr ? host_->scriptNetwork() : QString();
+}
+
+QStringList LuaEngine::hostChannels() {
+    return host_ != nullptr ? host_->scriptChannels(currentNetwork_) : QStringList();
+}
+
+QStringList LuaEngine::hostNicks(const QString& target) {
+    return host_ != nullptr ? host_->scriptNicks(currentNetwork_, target) : QStringList();
 }
 
 QStringList LuaEngine::loaded() const {
@@ -264,6 +369,12 @@ static int installApi(lua_State* L, LuaEngine* engine, const QString& dataDir) {
     reg("data_dir", l_data_dir);
     reg("append_file", l_append_file);
     reg("read_file", l_read_file);
+    reg("send_raw", l_send_raw);
+    reg("channels", l_channels);
+    reg("nicks", l_nicks);
+    reg("strip", l_strip);
+    reg("get", l_get);
+    reg("set", l_set);
     lua_pushvalue(L, -1);
     lua_setglobal(L, "api");
     return luaL_ref(L, LUA_REGISTRYINDEX); // pops the table
@@ -440,6 +551,7 @@ void LuaEngine::hostEcho(const QString&) {}
 void LuaEngine::hostSay(const QString&, const QString&) {}
 void LuaEngine::hostInsertInput(const QString&) {}
 void LuaEngine::hostNotify(const QString&, const QString&) {}
+void LuaEngine::hostSendRaw(const QString&) {}
 QString LuaEngine::hostMe() {
     return {};
 }
@@ -447,6 +559,12 @@ QString LuaEngine::hostTarget() {
     return {};
 }
 QString LuaEngine::hostNetwork() {
+    return {};
+}
+QStringList LuaEngine::hostChannels() {
+    return {};
+}
+QStringList LuaEngine::hostNicks(const QString&) {
     return {};
 }
 
