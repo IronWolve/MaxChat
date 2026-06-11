@@ -150,6 +150,7 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     [[nodiscard]] maxchat::scripting::ScriptPermissions buildScriptPermissions() const;
     void applyScriptPermissions(); // re-apply perms + reload scripts if they changed
     void updateWindowTitle();      // "MaxChat <ver> — <network> / <channel>" (active context)
+    void updateNickLabel();        // your-nick label by the input box
     void leaveCurrentChannel();
     void replayCurrentLog();
     void markAllRead();

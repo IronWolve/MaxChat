@@ -2908,6 +2908,7 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
                 QStringLiteral("! Connected to %1 as %2.").arg(m_connectionPlan.networkName, nick));
             statusBar()->showMessage(
                 QStringLiteral("Connected to %1 as %2").arg(m_connectionPlan.networkName, nick));
+            updateNickLabel(); // your nick is known now — show it by the input box
             // First connect only: widen the nick column to fit your nick (never
             // shrinks a column you've already widened; runs once). Python parity.
             if (m_alignNicks && !nick.isEmpty() &&
@@ -3089,6 +3090,7 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
                 runInContext([&]() {
                     m_lua->dispatch(QStringLiteral("on_nick"), signalNetwork,
                                     {signalNetwork, oldNick, newNick});
+                    updateNickLabel(); // refresh in case it was your own nick that changed
                     const QStringList affectedChannels = channelTargetsContainingMember(oldNick);
                     renameMemberInChannelBuffers(oldNick, newNick);
                     if (m_memberList != nullptr) {
@@ -5474,6 +5476,16 @@ void maxchat::ui::MainWindow::updateWindowTitle() {
     setWindowTitle(title);
 }
 
+void maxchat::ui::MainWindow::updateNickLabel() {
+    if (m_nickLabel == nullptr) {
+        return;
+    }
+    const QString nick =
+        m_hasConnectionPlan ? currentNickForNetwork(activeNetworkName()) : QString();
+    m_nickLabel->setText(nick.isEmpty() ? QString() : QStringLiteral("%1:").arg(nick));
+    m_nickLabel->setVisible(!nick.isEmpty());
+}
+
 maxchat::core::ChatBufferId MainWindow::bufferIdForTarget(const QString& target) {
     return bufferIdForNetworkTarget(currentLogNetwork(), target);
 }
@@ -5654,6 +5666,7 @@ void maxchat::ui::MainWindow::renderActiveBufferMetadata() {
         m_topicLabel->setText(topic);
     }
     updateWindowTitle();
+    updateNickLabel();
 }
 
 namespace {
@@ -7433,12 +7446,9 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
     statusBar()->setFont(
         areaFont("status_font_family", "status_font_size", "status_font_bold", baseFont));
 
-    // Your-nick label beside the input (text, font, colour).
+    // Your-nick label beside the input (text via updateNickLabel; font/colour here).
     if (m_nickLabel != nullptr) {
-        const QString nick = m_hasConnectionPlan ? currentNickForNetwork(activeNetworkName())
-                                                 : QString();
-        m_nickLabel->setText(nick.isEmpty() ? QString() : QStringLiteral("%1:").arg(nick));
-        m_nickLabel->setVisible(!nick.isEmpty());
+        updateNickLabel();
         m_nickLabel->setFont(
             areaFont("nick_font_family", "nick_font_size", "nick_font_bold", baseFont));
         const QString nickColor = colorOverride("nick_label_color");
