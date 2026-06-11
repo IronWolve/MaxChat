@@ -6451,12 +6451,17 @@ void maxchat::ui::MainWindow::refreshComic() {
                                                          captionScale, captionColors));
     }
 
-    // Empty state: if we have art but nothing to draw yet, show blank background
-    // panels so the comic area is visibly alive (matches the Python app). With no
-    // art at all, leave it empty so ComicView shows its "set an art folder" hint.
+    // Always present `panelCount` slots when art is available (Python parity):
+    // pad with blank background panels so the configured number of panels is
+    // visible even before enough messages arrive to fill them all. With no art at
+    // all, leave it empty so ComicView shows its "set an art folder" hint.
     const bool haveArt = !m_comicCharacterPaths.isEmpty() || !background.isNull();
-    if (rendered.isEmpty() && haveArt) {
-        rendered.append(maxchat::comic::renderComicPanel(kSize, background, {}, {}, false, 1.0, {}));
+    if (haveArt && rendered.size() < panelCount) {
+        const QPixmap blank =
+            maxchat::comic::renderComicPanel(kSize, background, {}, {}, false, 1.0, {});
+        while (rendered.size() < panelCount) {
+            rendered.append(blank);
+        }
     }
     m_comicView->setPanels(rendered);
 }
