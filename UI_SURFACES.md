@@ -111,7 +111,7 @@ is the plain-language lists below.
 | Window title | `updateWindowTitle()` → `setWindowTitle` | `_refresh_title()` |
 | Topic bar | `renderActiveBufferMetadata()` → `m_topicLabel` | `_set_topic()` → `self.topic` |
 | Status bar | `showConnectionStatus()` / `statusBar()->showMessage()` | `self.statusBar().showMessage()` |
-| Nick label | `m_nickLabel` (updated on register/nick change) | `self.nick_label` |
+| Nick label | `updateNickLabel()` — called on register, nick change, and buffer/network switch | `self.nick_label` |
 | Chat view | `append*ChatLine` / `appendSystemLine*` | `_append*` |
 | Server tree | `rebuildNetworkTree()` / `updateNetworkTreeLabels()` | `_rebuild_tree()` |
 | Member list | `renderActiveBufferMetadata()` / `recolorMemberList()` | `_refresh_active_members()` |
