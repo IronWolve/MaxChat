@@ -1,5 +1,7 @@
 #pragma once
 
+#include "spell/Speller.h"
+
 #include <QString>
 #include <QStringList>
 
@@ -9,10 +11,10 @@ class Hunspell;
 
 namespace maxchat::spell {
 
-class HunspellSpellchecker final {
+class HunspellSpellchecker final : public Speller {
 public:
   HunspellSpellchecker();
-  ~HunspellSpellchecker();
+  ~HunspellSpellchecker() override;
 
   HunspellSpellchecker(const HunspellSpellchecker &) = delete;
   HunspellSpellchecker &operator=(const HunspellSpellchecker &) = delete;
@@ -23,12 +25,12 @@ public:
                                     const QString &dicPath);
   void unload();
 
-  [[nodiscard]] bool isLoaded() const;
+  [[nodiscard]] bool isLoaded() const override;
   [[nodiscard]] QString affPath() const;
   [[nodiscard]] QString dicPath() const;
-  [[nodiscard]] bool isCorrect(const QString &word) const;
+  [[nodiscard]] bool isCorrect(const QString &word) const override;
   [[nodiscard]] QStringList suggestions(const QString &word,
-                                        int maxSuggestions = 8) const;
+                                        int maxSuggestions = 8) const override;
 
 private:
   std::unique_ptr<Hunspell> hunspell_;

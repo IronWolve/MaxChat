@@ -15,7 +15,7 @@
 #include "scripting/ScriptHost.h"
 #include "ui/SoundPlayer.h"
 #ifdef MAXCHAT_WITH_HUNSPELL
-#include "spell/HunspellSpellchecker.h"
+#include "spell/Speller.h"
 #endif
 
 #include <QElapsedTimer>
@@ -484,7 +484,7 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     QTextEdit* m_input = nullptr;
     SpellcheckHighlighter* m_spellcheckHighlighter = nullptr;
 #ifdef MAXCHAT_WITH_HUNSPELL
-    std::unique_ptr<maxchat::spell::HunspellSpellchecker> m_spellchecker;
+    std::unique_ptr<maxchat::spell::Speller> m_spellchecker; // internal (Hunspell) or OS engine
 #endif
     QPointer<ChatFindDialog> m_chatFindDialog;
     QPointer<BanListDialog> m_banListDialog;

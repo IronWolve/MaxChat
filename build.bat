@@ -84,6 +84,13 @@ set "MAXCHAT_LUA=ON"
 if /I "%~1"=="nolua" set "MAXCHAT_LUA=OFF"
 set "CONFIG_ARGS=%CONFIG_ARGS% -DMAXCHAT_LUA=%MAXCHAT_LUA%"
 echo Lua scripting: %MAXCHAT_LUA%
+rem Native OS speller (Windows ISpellChecker) is opt-in: "build.bat osspell".
+rem Gives spellcheck on Windows without bundling Hunspell dictionaries.
+set "MAXCHAT_OS_SPELL=OFF"
+if /I "%~1"=="osspell" set "MAXCHAT_OS_SPELL=ON"
+if /I "%~2"=="osspell" set "MAXCHAT_OS_SPELL=ON"
+set "CONFIG_ARGS=%CONFIG_ARGS% -DMAXCHAT_OS_SPELL=%MAXCHAT_OS_SPELL%"
+echo OS spell engine: %MAXCHAT_OS_SPELL%
 set "BUILD_ARGS="
 set "CTEST_ARGS="
 set "EXE_PATH=%BUILD_DIR%\maxchat-c.exe"

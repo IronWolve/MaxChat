@@ -17,6 +17,16 @@ in the model (or be re-applied inside `renderActiveBuffer`):
   a future tweak): seed replay into the buffer model instead of painting it.
 When adding anything that should survive a buffer switch, store it in the model.
 
+## UNVERIFIED CODE (needs target-OS build)
+
+- **`src/spell/WindowsSpeller.cpp`** (native OS speller via COM `ISpellChecker`,
+  built only with `build.bat osspell` → `-DMAXCHAT_OS_SPELL=ON`, WIN32-only).
+  Written against the documented API but **NOT compile-tested** — the Linux dev
+  box never builds it (no Q_OS_WIN). Verify on a Windows MinGW build; likely
+  needs fixups around `<spellcheck.h>` availability, `__uuidof(SpellCheckerFactory)`,
+  and `ole32` linkage. The default Windows build is unaffected (flag is OFF).
+  macOS `NSSpellChecker` backend is still TODO. See AUDIT #30.
+
 ## THINGS I GOT WRONG
 
 - **2026-06-11 — "complete" features that were hollow (inline images, X/Twitter

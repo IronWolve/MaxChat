@@ -149,6 +149,8 @@ target_link_libraries(maxchat_services
 )
 
 add_library(maxchat_spell STATIC
+    src/spell/Speller.h
+    src/spell/SpellerFactory.cpp
     src/spell/SpellcheckDictionaryCatalog.cpp
     src/spell/SpellcheckDictionaryCatalog.h
 )
@@ -162,6 +164,16 @@ target_link_libraries(maxchat_spell
     PUBLIC
         Qt6::Core
 )
+
+# Native OS speller (opt-in; Windows ISpellChecker). OFF by default so the
+# normal build is never affected by the platform COM code. Only meaningful on
+# Windows; the factory stub in SpellerFactory.cpp covers every other build.
+option(MAXCHAT_OS_SPELL "Build the native OS spell engine (Windows ISpellChecker)" OFF)
+if(MAXCHAT_OS_SPELL AND WIN32)
+    target_sources(maxchat_spell PRIVATE src/spell/WindowsSpeller.cpp)
+    target_compile_definitions(maxchat_spell PRIVATE MAXCHAT_OS_SPELL)
+    target_link_libraries(maxchat_spell PRIVATE ole32)
+endif()
 
 if(HUNSPELL_FOUND)
     add_library(maxchat_spell_engine STATIC
