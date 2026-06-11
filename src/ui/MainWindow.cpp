@@ -1297,6 +1297,7 @@ void maxchat::ui::MainWindow::buildLayout() {
     // Comic panels sit ABOVE the chat in a vertical splitter so the chat stays
     // visible beneath them when Comic Mode is on (MS Comic Chat style).
     m_comicView = new ComicView(chatColumn);
+    connect(m_comicView, &ComicView::saveRequested, this, &MainWindow::saveComic);
     m_comicView->setVisible(false);
     m_chatSplitter = new QSplitter(Qt::Vertical, chatColumn);
     m_chatSplitter->setObjectName(QStringLiteral("chatSplitter"));
