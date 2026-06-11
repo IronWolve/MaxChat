@@ -32,12 +32,31 @@ private slots:
     const QString html = renderOpenGraphPreviewHtml(candidate, card);
 
     QVERIFY(html.contains(QStringLiteral("A &lt;Title&gt;")));
-    QVERIFY(html.contains(QStringLiteral("Summary &amp; details")));
+    // The card has an image, so the description is dropped (Discord-style) and
+    // the image carries the content.
+    QVERIFY(!html.contains(QStringLiteral("Summary &amp; details")));
     QVERIFY(html.contains(QStringLiteral("Example Site")));
     QVERIFY(html.contains(
         QStringLiteral("href=\"https://example.com/story?ref=irc\"")));
     QVERIFY(html.contains(QStringLiteral(
         "src=\"https://cdn.example.com/card.png?x=1&amp;y=2\"")));
+  }
+
+  void keepsAndEscapesDescriptionWhenNoImage() {
+    LinkPreviewCandidate candidate;
+    candidate.kind = LinkPreviewKind::OpenGraph;
+    candidate.fetchUrl = QUrl(QStringLiteral("https://example.com/article"));
+
+    OpenGraphCard card;
+    card.title = QStringLiteral("Headline");
+    card.description = QStringLiteral("Body & more");
+    card.siteName = QStringLiteral("News");
+    // no imageUrl — the description is the substance, so it must show (escaped).
+
+    const QString html = renderOpenGraphPreviewHtml(candidate, card);
+
+    QVERIFY(html.contains(QStringLiteral("Headline")));
+    QVERIFY(html.contains(QStringLiteral("Body &amp; more")));
   }
 
   void fallsBackToCandidateTargetAndPrimaryDomain() {
