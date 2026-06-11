@@ -1,71 +1,127 @@
-# MaxChat UI surfaces — the placement contract
+# MaxChat UI design — what each window/area is for
 
 **Internal design doc** (keep local; gitignore before any public push, like
-AUDIT.md). Applies to BOTH clients — the C++ port (`maxchat-c`) and the Python
-original (`maxchat`). Mirror changes into `maxchat/DEVDOCS/`.
+AUDIT.md). Applies to BOTH clients — `maxchat-c` (C++) and `maxchat` (Python).
+Mirror changes into `maxchat/DEVDOCS/`.
 
-## Why this exists
+## Purpose of this doc
 
-Several bugs came from one root cause: **one piece of information being written
-to the wrong surface** — your sent message echoed into the bottom status bar,
-"Not connected" shown in the topic bar, "network - channel" context dumped into
-the topic bar, etc. Each surface must have a **single responsibility**. Before
-adding any `setText`/`showMessage`/`setWindowTitle`, check this table: if the
-content doesn't match the surface's responsibility, it goes somewhere else.
+Each area of the window has **one job**. Most of our UI bugs were one piece of
+information shown in the wrong place (your message in the status bar, "Not
+connected" in the topic bar, the network/channel name in the topic bar). This
+doc is the source of truth for **what belongs in each area**. Before putting any
+text in an area, find it below and check the text matches that area's job. If it
+mixes jobs (e.g. "network – channel – topic"), split it across the right areas.
 
-## The surfaces and what each may show
+The implementation mapping (which widget/function) is in the appendix; the design
+is the plain-language lists below.
 
-| Surface | Sole responsibility | MAY contain | MUST NOT contain | C++ writer | Python writer |
-|---------|---------------------|-------------|------------------|------------|---------------|
-| **Window title** | Identity + active context + unread | `(unread) MaxChat <ver> — <network> / <channel>` | chat text, transient status | `updateWindowTitle()` | `_refresh_title()` |
-| **Topic bar** (top) | The **active channel's topic** | topic text, or empty | connection state, network/channel names, chat | `renderActiveBufferMetadata()` → `m_topicLabel` only | `_set_topic()` → `self.topic` only |
-| **Status bar** (bottom) | **Transient connection lifecycle / one-shot status** | "Not connected", "Connecting…", "Connected to X as nick", "Disconnected", "Saved.", "Found …" | chat lines, the channel topic | `showConnectionStatus()` / `statusBar()->showMessage()` | `self.statusBar().showMessage()` |
-| **Nick label** (input row) | **Your current nick** on the active network | the nick (or "—"/empty when none) | anything else | `m_nickLabel` (`updateNickLabel`) | `self.nick_label` |
-| **Chat view** (center) | The conversation | messages, `*` events, `!` system lines, replays, previews | status that belongs in the bars | `append*ChatLine` / `appendSystemLine*` | `_append*` |
-| **Server/network tree** (left) | Networks → channels/queries + per-buffer unread/highlight badges | network + buffer names, activity markers | topics, status | `rebuildNetworkTree()` / `updateNetworkTreeLabels()` | `_rebuild_tree()` |
-| **Member list** (right) | Members of the active channel | nicks, role-group headers, "N users" header | non-members, status | `renderActiveBufferMetadata()` / `recolorMemberList()` | `_refresh_active_members()` |
-| **Buffer tabs** | Open buffers for quick switching | buffer names + activity | — | `syncBufferTabs()` | tab bar |
-| **Comic panels** | Comic-mode render of recent chat | comic panels (fixed count) | — | `refreshComic()` | `_render_strip()` |
-| **Toasts / tray** (`Notifier`) | Out-of-focus alerts (PM/highlight) | title + text, network/target to focus on click | — | `notify()` | `notifier` / tray |
+---
 
-### Rules of thumb
+## 1. Window title (the OS title bar)
+**Job:** tell you, at a glance, which app + where you are + if anything's waiting.
+**Shows:**
+- App name + version.
+- Active network, and the active channel/PM when one is selected.
+- (TODO) an unread/highlight count prefix.
 
-1. **Topic bar = topic, full stop.** Empty on the server tab, in a PM, when not
-   connected, or when the channel has no topic. Never connection state.
-2. **Status bar = transient status only.** Never the topic, never chat. It is the
-   place for "what just happened / what's the connection doing".
-3. **Active context (which network/channel you're on) lives in the window title**
-   and is implied by the tree selection — not in the topic or status bars.
-4. **Your nick** goes in the nick label by the input box (and is part of the
-   "Connected to X as nick" status message), nowhere else.
-5. A toast/notification is **not** the status bar — alerts go through `notify()`.
+**Never shows:** chat text, the channel topic, connection status.
+**Example:** `MaxChat — synIRC / #iw-test-stuff`
 
-## Audit — C++ vs Python (2026-06-11)
+## 2. Topic bar (the strip across the top)
+**Job:** show the **topic of the channel you're currently looking at** — nothing else.
+**Shows:**
+- The active channel's topic text.
+- Nothing (empty) when: not connected, on the server tab, in a private message, or the channel has no topic.
 
-| Surface | Python | C++ now | Status |
-|---------|--------|---------|--------|
-| Topic bar | topic only (empty otherwise) | topic only (fixed: was a catch-all) | ✅ match |
-| Status bar | lifecycle + one-shots | lifecycle + one-shots (fixed: was mirroring every chat line) | ✅ match |
-| Nick label | current nick / "—" | `<nick>:` prefix, hidden when none | ✅ parity (cosmetic: prefix style) |
-| Chat view | messages/events/system | same | ✅ match |
-| Member list + header | members + "N users" | members + "N users" | ✅ match |
-| Server tree | nets/buffers + activity | nets/buffers + activity | ✅ match |
-| **Window title** | `(unread) MaxChat — net / chan` | **was static `MaxChat <ver>`** → now `MaxChat <ver> — net / chan` | ⚠→✅ **fixed here**; unread-count prefix still TODO |
-| Comic panels | fixed N-panel grid | fixed N-panel grid (fixed earlier) | ✅ match |
+**Never shows:** connection status, network/channel names, your nick, chat.
+**Does:** double-click → set the channel topic.
 
-### Known remaining gaps (tracked)
+## 3. Status bar (the strip across the bottom)
+**Job:** report **what just happened / what the connection is doing** — transient, one line.
+**Shows:**
+- Connection lifecycle: "Not connected — Server ▸ Server List…", "Connecting…", "Connected to <net> as <nick>", "Disconnected".
+- One-shot results of an action: "Saved.", "Found 'x'.", "Marked 3 chats read.", "Do Not Disturb on".
 
-- **Unread count in the window title** — Python prefixes `(3)` / `(1⚑)`; C++
-  title shows context but not yet the unread/highlight count. Low priority; the
-  tree already shows per-buffer activity. (TODO)
-- **Status-bar context vs title** — C++ still shows "network - channel" *context*
-  in the status bar on buffer switch (harmless, informative). Python keeps the
-  status bar purely lifecycle and puts context in the title. Acceptable
-  divergence; revisit if it feels noisy.
+**Never shows:** chat lines, the channel topic.
+**Note:** it's transient status, **not** a place for alerts — see Notifications (#10).
 
-## How to use this when adding UI
+## 4. Nick label (next to the message box)
+**Job:** show **your current nick** on the active network.
+**Shows:** your nick (or "—"/empty when not connected).
+**Never shows:** anything else.
 
-Before writing to any surface, ask: **"is this content the surface's sole
-responsibility?"** If a string mixes concerns (e.g. "network - channel - topic"),
-split it: topic → topic bar, network/channel → title, lifecycle → status bar.
-When in doubt, match the Python writer named in the table above.
+## 5. Chat view (the big center area)
+**Job:** the conversation itself.
+**Shows:**
+- Messages (`<nick> text`), actions (`* nick …`).
+- Events: joins/parts/quits/nick changes/mode changes (subject to hide-join/part).
+- System/notice lines (`! …`, `-nick- …`), link previews, and dimmed log replay with a "Chat ended" divider.
+
+**Never shows:** status that belongs in the bars.
+**Does:** click links; right-click for context actions; scrollback.
+
+## 6. Server / network tree (left panel)
+**Job:** navigate — networks and their channels/PMs — and signal activity.
+**Shows:**
+- Each network, expandable to its channels and private-message buffers.
+- Per-buffer activity markers (unread / highlight).
+
+**Never shows:** topics, status, chat.
+**Does:** click → switch buffer; right-click → join/part/close/refresh topic·names·modes, etc.
+
+## 7. Member list (right panel)
+**Job:** who's in the **active channel**.
+**Shows:**
+- The channel's members, grouped by role (ops/voiced/…), away users dimmed.
+- A header: "N users" (or "Members").
+
+**Never shows:** members of other channels, status.
+**Does:** double-click → open query / whois; right-click → op/kick/ban/ignore/etc.
+
+## 8. Buffer tabs (optional bar)
+**Job:** quick-switch between open buffers.
+**Shows:** open buffer names + activity. **Does:** click → switch; Alt+1..9 too.
+
+## 9. Comic panels (when Comic Mode is on)
+**Job:** render recent chat as comic panels.
+**Shows:** a fixed grid of `comic_panels` panels (blanks until filled).
+**Does:** right-click → copy / save comic.
+
+## 10. Notifications — toasts & tray (not a window area)
+**Job:** alert you when a PM/highlight arrives **while MaxChat isn't focused**.
+**Shows:** title + text; clicking focuses that network/buffer.
+**Never:** use the status bar for alerts — alerts go here.
+
+---
+
+## Decision rule (use this every time)
+
+> Take the thing you want to show. Which **one** area's job (above) does it match?
+> Put it only there. If it's two things glued together, split it:
+> **topic → topic bar · network/channel → title · status → status bar ·
+> your nick → nick label · conversation → chat view.**
+
+---
+
+## Appendix — implementation map (for devs)
+
+| Area | C++ (maxchat-c) | Python (maxchat) |
+|------|-----------------|------------------|
+| Window title | `updateWindowTitle()` → `setWindowTitle` | `_refresh_title()` |
+| Topic bar | `renderActiveBufferMetadata()` → `m_topicLabel` | `_set_topic()` → `self.topic` |
+| Status bar | `showConnectionStatus()` / `statusBar()->showMessage()` | `self.statusBar().showMessage()` |
+| Nick label | `m_nickLabel` (updated on register/nick change) | `self.nick_label` |
+| Chat view | `append*ChatLine` / `appendSystemLine*` | `_append*` |
+| Server tree | `rebuildNetworkTree()` / `updateNetworkTreeLabels()` | `_rebuild_tree()` |
+| Member list | `renderActiveBufferMetadata()` / `recolorMemberList()` | `_refresh_active_members()` |
+| Buffer tabs | `syncBufferTabs()` | tab bar |
+| Comic panels | `refreshComic()` | `_render_strip()` |
+| Toasts / tray | `notify()` / `Notifier` | `notifier` / tray |
+
+## Audit status (2026-06-11)
+
+All areas match Python after the recent fixes (topic bar made topic-only, status
+bar stopped mirroring chat, window title now carries network/channel context).
+Remaining gap: unread-count prefix in the window title (TODO, cosmetic — the tree
+already shows per-buffer activity).
