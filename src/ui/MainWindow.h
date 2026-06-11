@@ -12,6 +12,7 @@
 #include "services/OpenGraphFetcher.h"
 #ifdef MAXCHAT_WITH_HUNSPELL
 #include "spell/HunspellSpellchecker.h"
+#include "ui/SoundPlayer.h"
 #endif
 
 #include <QElapsedTimer>
@@ -124,6 +125,9 @@ class MainWindow final : public QMainWindow {
     void openAbout();
     // Quiet GitHub Releases check (manual=true also reports "you're up to date").
     void checkForUpdates(bool manual);
+    // Play a received CTCP SOUND if enabled and the .wav is one the user owns.
+    void handleCtcpSound(const QString& network, const QString& sender, const QString& target,
+                         const QString& file, const QString& text);
     void leaveCurrentChannel();
     void replayCurrentLog();
     void markAllRead();
@@ -302,6 +306,7 @@ class MainWindow final : public QMainWindow {
     QHash<QString, maxchat::irc::IrcConnection*> m_connectionsByNetwork;
     QNetworkAccessManager m_previewNetworkManager;
     QNetworkAccessManager m_updateNetworkManager;
+    SoundPlayer m_soundPlayer;
     maxchat::services::OpenGraphFetcher m_openGraphFetcher;
     maxchat::core::NetworkConnectionPlan m_connectionPlan;
     QString m_currentTarget;

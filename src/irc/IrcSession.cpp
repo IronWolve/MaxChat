@@ -6,6 +6,7 @@
 
 #include <QByteArray>
 #include <QDateTime>
+#include <QRegularExpression>
 
 #include <algorithm>
 
@@ -382,6 +383,17 @@ void IrcSession::handleLine(const QString &line) {
         return;
       }
       ctcpReplyTimer_.restart();
+
+      if (ctcp.command == QStringLiteral("SOUND")) {
+        // "SOUND <file> [text]" — split on whitespace into file + optional text.
+        const QString args = ctcp.args.trimmed();
+        const int sep = args.indexOf(QRegularExpression(QStringLiteral("\\s")));
+        const QString file = sep >= 0 ? args.left(sep) : args;
+        const QString soundText = sep >= 0 ? args.mid(sep + 1).trimmed() : QString();
+        emit ctcpSound(msg.nick(), params.first(), file, soundText);
+        emit replyText(ctcpSummary(QStringLiteral("request"), msg.nick(), ctcp));
+        return;
+      }
 
       QString response;
       if (ctcp.command == QStringLiteral("PING")) {
