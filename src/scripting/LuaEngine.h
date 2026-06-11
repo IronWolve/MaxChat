@@ -47,9 +47,12 @@ class LuaEngine final : public QObject {
     void hostSay(const QString& target, const QString& text);
     void hostInsertInput(const QString& text);
     void hostNotify(const QString& title, const QString& text);
+    void hostSendRaw(const QString& line);
     [[nodiscard]] QString hostMe();
     [[nodiscard]] QString hostTarget();
     [[nodiscard]] QString hostNetwork();
+    [[nodiscard]] QStringList hostChannels();
+    [[nodiscard]] QStringList hostNicks(const QString& target);
 
   private:
     bool callHook(ScriptState* state, const char* hook, const QVariantList& args = {});
