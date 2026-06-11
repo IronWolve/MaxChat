@@ -100,14 +100,28 @@ void IrcConnection::connectTo(const ConnectConfig &config) {
 
   auto *socket = new QSslSocket(this);
   const QString proxyType = config.proxyType.trimmed().toLower();
-  if ((proxyType == QStringLiteral("socks5") ||
-       proxyType == QStringLiteral("http")) &&
-      !config.proxyHost.trimmed().isEmpty()) {
+  if (!proxyType.isEmpty() && proxyType != QStringLiteral("none")) {
+    // A configured proxy must be valid — fail loudly rather than silently
+    // connecting direct (Python's _proxy_from_config raises here).
+    const QString proxyHost = config.proxyHost.trimmed();
+    const bool knownType = proxyType == QStringLiteral("socks5") ||
+                           proxyType == QStringLiteral("http");
+    const bool validPort = config.proxyPort >= 1 && config.proxyPort <= 65535;
+    if (!knownType || proxyHost.isEmpty() || !validPort) {
+      socket->deleteLater();
+      const QString why =
+          !knownType ? QStringLiteral("unsupported proxy type '%1'")
+                           .arg(config.proxyType.trimmed())
+          : proxyHost.isEmpty() ? QStringLiteral("proxy host is required")
+                                : QStringLiteral("proxy port must be 1-65535");
+      emit errorOccurred(QStringLiteral("Proxy configuration error: %1").arg(why));
+      emit disconnected(QStringLiteral("proxy configuration error"));
+      return;
+    }
     QNetworkProxy proxy(proxyType == QStringLiteral("socks5")
                             ? QNetworkProxy::Socks5Proxy
                             : QNetworkProxy::HttpProxy,
-                        config.proxyHost.trimmed(),
-                        static_cast<quint16>(config.proxyPort));
+                        proxyHost, static_cast<quint16>(config.proxyPort));
     if (!config.proxyUsername.isEmpty()) {
       proxy.setUser(config.proxyUsername);
     }
