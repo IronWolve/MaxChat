@@ -15,6 +15,16 @@ Status: IN PROGRESS (2026-06-10). Tracked as AUDIT.md FIX BACKLOG #6.
   relying on scripting, run `build.bat` once with `-DMAXCHAT_LUA=ON` to confirm
   Lua compiles under the Windows toolchain (MinGW). Steps 2+ stay gated, so the
   default Windows build is unaffected until then.
+- **Step 2 DONE (commit 486a3f8):** `LuaEngine` + `ScriptHost` (gated
+  `maxchat_scripting` lib). One sandboxed `lua_State` per script; load + on_load/
+  on_unload; sandbox opens only base/table/string/math/utf8 and strips
+  load/dofile/loadfile/loadstring (no io/os/package/debug). Errors caught, never
+  crash. `lua_engine_test`.
+- **Step 3 DONE (commit 27c4c8e):** api core — say/insert_input/notify/me/target/
+  network/timestamp + basename-jailed data_dir/append_file/read_file. 9 engine
+  tests incl. `../..` traversal jailing.
+- **NEXT — Step 4:** dispatch hooks from MainWindow signals (make MainWindow a
+  ScriptHost; link the lib into the app, stub when OFF).
 
 ---
 
