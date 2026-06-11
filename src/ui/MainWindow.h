@@ -122,6 +122,8 @@ class MainWindow final : public QMainWindow {
     void openUrlList();
     void openCommandHelp();
     void openAbout();
+    // Quiet GitHub Releases check (manual=true also reports "you're up to date").
+    void checkForUpdates(bool manual);
     void leaveCurrentChannel();
     void replayCurrentLog();
     void markAllRead();
@@ -299,6 +301,7 @@ class MainWindow final : public QMainWindow {
     maxchat::irc::IrcConnection m_connection;
     QHash<QString, maxchat::irc::IrcConnection*> m_connectionsByNetwork;
     QNetworkAccessManager m_previewNetworkManager;
+    QNetworkAccessManager m_updateNetworkManager;
     maxchat::services::OpenGraphFetcher m_openGraphFetcher;
     maxchat::core::NetworkConnectionPlan m_connectionPlan;
     QString m_currentTarget;

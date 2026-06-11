@@ -71,6 +71,9 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QKeyEvent>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QUrl>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
@@ -861,6 +864,10 @@ MainWindow::MainWindow(QWidget* parent)
     setWindowTitle(QStringLiteral("%1 %2").arg(app::displayName(), app::version()));
     setWindowIcon(QIcon(QStringLiteral(":/icons/maxchat.ico")));
     resize(1100, 720);
+
+    if (m_settings.loadWithDefaults().value(QStringLiteral("update_check"), true).toBool()) {
+        QTimer::singleShot(3500, this, [this]() { checkForUpdates(/*manual=*/false); });
+    }
 }
 
 bool MainWindow::selfTest() const {
@@ -1086,10 +1093,8 @@ void maxchat::ui::MainWindow::buildMenus() {
                                               &MainWindow::openCommandHelp);
     helpAction->setShortcut(QKeySequence(Qt::Key_F1));
     helpMenu->addSeparator();
-    helpMenu->addAction(QStringLiteral("Check for Updates..."), this, [this]() {
-        showFeaturePlanned(QStringLiteral("Check for Updates"),
-                           QStringLiteral("Release update checking is planned."));
-    });
+    helpMenu->addAction(QStringLiteral("Check for Updates..."), this,
+                        [this]() { checkForUpdates(/*manual=*/true); });
     helpMenu->addAction(QStringLiteral("About"), this, &MainWindow::openAbout);
 
     m_buttonBar = addToolBar(QStringLiteral("Button Bar"));
@@ -1706,6 +1711,82 @@ void maxchat::ui::MainWindow::openAbout() {
                        "daily chat tools are in progress. Comic mode, DCC, and media "
                        "playback are still deferred.")
             .arg(app::displayName().toHtmlEscaped(), app::version().toHtmlEscaped()));
+}
+
+namespace {
+// Compare two version strings by their integer components (Python parity:
+// pull out every digit-run and compare them in order). Missing trailing
+// components count as 0, so "1.0" and "1" are equal. Returns true if
+// `remote` is strictly newer than `local`.
+bool versionIsNewer(const QString& remote, const QString& local) {
+    const QRegularExpression digits(QStringLiteral("\\d+"));
+    const auto parts = [&](const QString& s) {
+        QList<int> out;
+        auto it = digits.globalMatch(s);
+        while (it.hasNext()) {
+            out.append(it.next().captured(0).toInt());
+        }
+        return out;
+    };
+    const QList<int> r = parts(remote);
+    const QList<int> l = parts(local);
+    const int n = std::max(r.size(), l.size());
+    for (int i = 0; i < n; ++i) {
+        const int rv = i < r.size() ? r.at(i) : 0;
+        const int lv = i < l.size() ? l.at(i) : 0;
+        if (rv != lv) {
+            return rv > lv;
+        }
+    }
+    return false;
+}
+} // namespace
+
+void maxchat::ui::MainWindow::checkForUpdates(bool manual) {
+    QNetworkRequest req(QUrl(
+        QStringLiteral("https://api.github.com/repos/IronWolve/MaxChat/releases/latest")));
+    req.setRawHeader("User-Agent", "MaxChat-update-check");
+    req.setRawHeader("Accept", "application/vnd.github+json");
+    QNetworkReply* reply = m_updateNetworkManager.get(req);
+    connect(reply, &QNetworkReply::finished, this, [this, reply, manual]() {
+        reply->deleteLater();
+        const bool ok = reply->error() == QNetworkReply::NoError;
+        QString latest;
+        QString url = QStringLiteral("https://github.com/IronWolve/MaxChat/releases");
+        bool parsed = ok;
+        if (ok) {
+            const QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
+            if (doc.isObject()) {
+                const QJsonObject obj = doc.object();
+                latest = obj.value(QStringLiteral("tag_name")).toString();
+                while (latest.startsWith(QLatin1Char('v')) || latest.startsWith(QLatin1Char('V'))) {
+                    latest.remove(0, 1);
+                }
+                const QString html = obj.value(QStringLiteral("html_url")).toString();
+                if (!html.isEmpty()) {
+                    url = html;
+                }
+            } else {
+                parsed = false;
+            }
+        }
+        if (!latest.isEmpty() && versionIsNewer(latest, app::version())) {
+            const auto choice = QMessageBox::question(
+                this, QStringLiteral("Update available"),
+                QStringLiteral("%1 v%2 is available — you have v%3.\n\nOpen the releases page?")
+                    .arg(app::displayName(), latest, app::version()),
+                QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+            if (choice == QMessageBox::Yes) {
+                QDesktopServices::openUrl(QUrl(url));
+            }
+        } else if (manual) {
+            const QString msg =
+                parsed ? QStringLiteral("You're on the latest version (v%1).").arg(app::version())
+                       : QStringLiteral(
+                             "Couldn't check for updates (no releases yet, or no connection).");
+            QMessageBox::information(this, QStringLiteral("Check for Updates"), msg);
+        }
+    });
 }
 
 void maxchat::ui::MainWindow::leaveCurrentChannel() {

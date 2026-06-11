@@ -367,6 +367,8 @@ QVariantMap SettingsStore::defaultSettings() {
   // the central defaults so they round-trip on export (Python parity).
   settings.insert(QStringLiteral("shortcuts"), QVariantMap());
   settings.insert(QStringLiteral("looks"), QVariantMap());
+  // Quietly check GitHub Releases for a newer build shortly after launch.
+  settings.insert(QStringLiteral("update_check"), true);
   settings.insert(QStringLiteral("networks"),
                   networkConfigListToVariantList(defaultNetworkConfigs()));
   return settings;
