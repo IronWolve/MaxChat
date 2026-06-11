@@ -149,6 +149,7 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     void seedBundledScripts(const QString& destDir); // copy examples on first run
     [[nodiscard]] maxchat::scripting::ScriptPermissions buildScriptPermissions() const;
     void applyScriptPermissions(); // re-apply perms + reload scripts if they changed
+    void updateWindowTitle();      // "MaxChat <ver> — <network> / <channel>" (active context)
     void leaveCurrentChannel();
     void replayCurrentLog();
     void markAllRead();

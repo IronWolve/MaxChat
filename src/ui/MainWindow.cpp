@@ -5460,6 +5460,20 @@ void maxchat::ui::MainWindow::showConnectionStatus(const QString& line) {
     statusBar()->showMessage(line);
 }
 
+void maxchat::ui::MainWindow::updateWindowTitle() {
+    // Active network/channel context lives in the window title (UI_SURFACES.md),
+    // not the topic or status bars.
+    QString title = QStringLiteral("%1 %2").arg(app::displayName(), app::version());
+    if (m_hasConnectionPlan && !m_connectionPlan.networkName.isEmpty()) {
+        title += QStringLiteral(" — %1").arg(m_connectionPlan.networkName);
+        const QString target = m_currentTarget.trimmed();
+        if (!target.isEmpty() && !isTreeStatusTarget(target)) {
+            title += QStringLiteral(" / %1").arg(target);
+        }
+    }
+    setWindowTitle(title);
+}
+
 maxchat::core::ChatBufferId MainWindow::bufferIdForTarget(const QString& target) {
     return bufferIdForNetworkTarget(currentLogNetwork(), target);
 }
@@ -5639,6 +5653,7 @@ void maxchat::ui::MainWindow::renderActiveBufferMetadata() {
                 : QString();
         m_topicLabel->setText(topic);
     }
+    updateWindowTitle();
 }
 
 namespace {
