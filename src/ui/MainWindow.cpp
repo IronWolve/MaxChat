@@ -4276,12 +4276,15 @@ void MainWindow::applyCtcpVersion(const QVariantMap& settings) {
 }
 
 bool MainWindow::textHighlightsMe(const QString& text, const QString& nick) const {
-    if (!nick.isEmpty() && text.contains(nick, Qt::CaseInsensitive)) {
+    // Match against the plain text (Python strips mIRC codes first) so a colour
+    // or bold code adjacent to / inside your nick can't hide a highlight.
+    const QString plain = maxchat::irc::stripFormatting(text);
+    if (!nick.isEmpty() && plain.contains(nick, Qt::CaseInsensitive)) {
         return true;
     }
     for (const QString& word : m_highlightWords) {
         const QString trimmed = word.trimmed();
-        if (!trimmed.isEmpty() && text.contains(trimmed, Qt::CaseInsensitive)) {
+        if (!trimmed.isEmpty() && plain.contains(trimmed, Qt::CaseInsensitive)) {
             return true;
         }
     }

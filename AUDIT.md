@@ -47,7 +47,14 @@ flagged "medium+ — push past the checklist for extra attack angles."
 the recommended model/effort or change it — before reading any files.** Do not begin the
 phase work until the user confirms.
 
-**Last session:** 2026-06-10 — Phase 6 done (Opus 4.8 medium+, decoder-safety push).
+**Last session:** 2026-06-10 — Phase 7 done (Opus 4.8 medium, audit + cheap wins).
+Big surprise: S2/S3/S4/S5 were **largely stale** — tray icon, tray menu, minimize-to-tray,
+taskbar flash, beep, OS notifications, DND, notify_pm/highlight, highlight_words, and Saved
+Looks are all implemented. Genuine remaining gaps: real .wav playback (notify_sound only
+beeps; CTCP SOUND receive not plumbed) and the update checker — both backlogged as builds.
+1 cheap fix: highlight matching now strips mIRC codes (Python parity). 42 tests green. Next: Phase 8.
+
+Phase 6 done (Opus 4.8 medium+, decoder-safety push).
 **Found + fixed another real vuln**: the .avb/.bgb decoder trusted a file-supplied inflate
 length → ~4GB OOM from a tiny hostile file (C++-only; Python immune). Also capped
 dimensions + fixed abs(INT_MIN) UB. New comic_art_test (hostile inputs). The S10 comic
@@ -84,7 +91,7 @@ resolved (no SCRAM).
 - [x] Phase 4 — Chat rendering & input ✅ 2026-06-10
 - [x] Phase 5 — DCC (parity + security) ✅ 2026-06-10
 - [x] Phase 6 — Comic mode (parity + decoder robustness) ✅ 2026-06-10
-- [ ] Phase 7 — Themes, fonts, notifications, tray, sounds
+- [x] Phase 7 — Themes, fonts, notifications, tray, sounds ✅ 2026-06-10
 - [ ] Phase 8 — Logging, replay, buffers
 - [ ] Phase 9 — Link previews & SSRF
 - [ ] Phase 10 — Cross-cutting security sweep
@@ -97,10 +104,10 @@ resolved (no SCRAM).
 | # | Sev | Area | Issue | Phase | Status |
 |---|-----|------|-------|-------|--------|
 | S1 | MISS | Scripting | Entire Python plugin API (`scripting.py`: hooks, /load /unload /reload, scripts dialog) not ported. **DECISION 2026-06-10: DEFER** — keep the placeholder, design a C++-native plugin system later (Lua or IPC bridge, not embedded Python). Recorded in DEV_NOTES. Backlog #6. | 2 | DEFERRED |
-| S2 | MISS | Update checker | Python has Help ▸ Check for Updates + quiet startup check (GitHub releases). C++ has none. When built: HTTPS-only. | 7 | OPEN |
-| S3 | MISS | Sounds | notify.wav playback, beep, CTCP SOUND (`/sound`, plays from `<config>/sounds/`) unwired. Qt6Multimedia is already linked for the media player. | 7 | OPEN |
-| S4 | MISS | Notifications | Taskbar flash (notify_flash), tray icon not visually present, highlight_words matching incomplete, DND coverage unverified. | 7 | OPEN |
-| S5 | MISS | Themes | "Looks" (saved theme+font combos) — verify completeness in Phase 7. **S5a default-theme mismatch is WRONG (debunked Phase 3): Python config.py defaults to "synthwave" too.** | 7 | PARTIAL (S5a closed) |
+| S2 | MISS | Update checker | Confirmed absent (Phase 7). Python has Help ▸ Check for Updates + quiet startup check (GitHub releases). → Backlog #20 (confirm repo URL at build time; HTTPS-only, no auto-download). | 7 | Backlog #20 |
+| S3 | MISS | Sounds | Partially valid (Phase 7): notify_sound only **beeps** (no notify.wav playback), and **CTCP SOUND receive isn't plumbed** (IrcSession emits no sound signal). `/sound` send was added in Phase 2. → Backlog #21 (notify.wav player) + #22 (CTCP SOUND receive+play, own-file-only). | 7 | Backlog #21-22 |
+| S4 | MISS | Notifications | **MOSTLY STALE (debunked Phase 7):** taskbar flash (QApplication::alert), tray icon + context menu (Show/Hide, DND, Quit), minimize_to_tray, OS notifications (showMessage), DND, notify_pm/notify_highlight, beep_highlight, and highlight_words are ALL implemented. Only fix: highlight matching now strips mIRC codes (P7-1). | 7 | VERIFIED |
+| S5 | MISS | Themes | DEBUNKED (Phase 7): "Saved Looks" IS implemented (View ▸ Saved Looks, Save Current Look, rebuildLooksMenu, apply). S5a default-theme mismatch already closed Phase 3 (both = synthwave). | 7 | VERIFIED |
 | S6 | BUG? | SASL | ~~Python does PLAIN only; C++ claims PLAIN + SCRAM-SHA-256.~~ RESOLVED 2026-06-10: no SCRAM exists in src/ — the inventory over-claimed. C++ does PLAIN only, matching Python. No action. | 1 | VERIFIED |
 | S7 | MISS | Settings | ~~175 vs ~70~~ QUANTIFIED Phase 3: Python has **127** default keys, C++ **100**. Gap = renames (2) + comic_* (16, inline fallbacks → Phase 6) + migration flags (3, N/A for fresh port) + deferred features (update_check/seeded_scripts/nick_width_autoset) + legacy notify_method. No data-loss bug. Map in Phase 3 section. | 3 | VERIFIED |
 | S8 | BUG? | Rendering | ~~colors 16–98 + hex likely missing~~ DEBUNKED 2026-06-10: IrcFormat.cpp has the full 0–98 palette (identical RRGGBB), the 0x04 hex code, and all control codes (bold/italic/underline/strike/reverse/mono/reset). Reverse-video swap + color-parse edge cases match Python. No bug. | 4 | VERIFIED |
@@ -518,9 +525,22 @@ Checklist:
 
 ### Findings — Phase 7
 
-| Sev | Where | Issue | Status |
-|-----|-------|-------|--------|
-| | | | |
+| ID | Sev | Where | Issue | Status |
+|----|-----|-------|-------|--------|
+| P7-1 | BUG (low) | MainWindow.cpp textHighlightsMe | Highlight matching ran against raw text incl. mIRC codes; Python strips formatting first, so a colour/bold code by your nick could hide a highlight. | **FIXED** — strip via stripFormatting() before matching (parity). |
+| S3a | MISS | notification path | `notify_sound` only calls `QApplication::beep()`; Python plays `<config>/sounds/notify.wav` (user's, else bundled) via QSoundEffect. Qt6::Multimedia is already linked. | Backlog #21 |
+| S3b | MISS | IrcSession / MainWindow | CTCP SOUND **receive** isn't plumbed — IrcSession emits no sound signal (SOUND falls through as a generic CTCP, Phase 1), so sounds others send never play. Python's sounds.resolve() is own-file-only (basename, .wav, must exist locally) — port that safety. | Backlog #22 |
+| S2 | MISS | — | Update checker absent (Help menu + optional quiet startup, pref `update_check`). | Backlog #20 |
+| S4 | OK | MainWindow.cpp | Tray icon + menu, minimize_to_tray, taskbar flash, beep, OS notifications, DND, notify_pm/highlight, highlight_words all implemented. | VERIFIED |
+| S5 | OK | MainWindow.cpp | Saved Looks implemented (menu + Save Current Look + apply). | VERIFIED |
+
+Checklist status: themes/chat-themes/wallpaper/fonts/per-area colours were verified in earlier
+phases + tasks #17-21 and read as complete; default theme = synthwave both sides (S5a closed).
+Notifications subsystem is far more complete than the seed implied — flash/beep/tray/OS-toast/
+DND/per-event gating/highlight all present; the only fix was the highlight formatting-strip
+(P7-1). Genuine remaining builds: real .wav playback (notify_sound + CTCP SOUND receive) and
+the update checker — backlogged. cheap-wins directive satisfied (P7-1); the rest are true
+feature builds, not cheap.
 
 ---
 
@@ -732,3 +752,6 @@ Big items deferred from phases. Each entry must be actionable cold: what, where,
 | 17 | 6 (P6-4) | MISS | Wire comic_random_bg | The checkbox is saved but unused. In comicBackground(), when a channel has no set bg and comic_random_bg is on, pick a stable per-channel background (seed a hash by network/#channel → index into m_comicBackgroundPaths), mirroring Python's stable random. | OPEN |
 | 18 | 6 (S10e) | MISS | Comic panel context menu | Add a right-click menu to ComicView panels: Copy panel, Save panel as PNG. | OPEN |
 | 19 | 6 | TEST | Comic renderer/filter tests | Port test_comic_speech.py / test_comic_filter.py / test_character_cells.py: emotion guessing, bot-pattern/ignore filtering, cell layout. | OPEN |
+| 20 | 7 (S2) | MISS | Update checker | Help ▸ Check for Updates + optional quiet startup check (pref `update_check`). HTTPS GitHub releases API; **confirm the correct repo for the C++ port with the user before wiring the URL** (the Python one is IronWolve/MaxChat). No auto-download — link to the release page only. | OPEN |
+| 21 | 7 (S3a) | MISS | notify.wav playback | Replace the `QApplication::beep()` for `notify_sound` with a QSoundEffect player: play `<config>/sounds/notify.wav` (user's, else a bundled default if one ships) at low latency; fall back to beep if Multimedia/file absent. Port Python sounds.py SoundPlayer/notify_path. | OPEN |
+| 22 | 7 (S3b) | MISS | CTCP SOUND receive + play | Plumb a sound signal: IrcSession detect incoming CTCP `SOUND <file> [text]` → emit → IrcConnection → MainWindow; gate on the `ctcp_sound` pref; play only via an own-file-only resolver (basename, force `.wav`, must already exist in `<config>/sounds/` — never fetch). Mirror Python sounds.resolve(). | OPEN |
