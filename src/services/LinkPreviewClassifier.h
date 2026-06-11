@@ -3,6 +3,10 @@
 #include <QString>
 #include <QUrl>
 
+#include <functional>
+
+class QObject;
+
 namespace maxchat::services {
 
 enum class LinkPreviewKind {
@@ -36,6 +40,13 @@ struct LinkPreviewCandidate {
 // OpenGraph and image fetchers so SSRF rules can't drift apart.
 [[nodiscard]] bool canFetchPreviewUrl(const QUrl &url,
                                       bool allowPrivateNetwork = false);
+// Same gate as canFetchPreviewUrl, but the DNS resolution runs OFF the GUI
+// thread (QHostInfo::lookupHost) so a slow/black-hole DNS can't stall the UI.
+// `callback` is invoked on `context`'s thread with the allow/deny result. Fast
+// rejects and IP-literal/allow-private cases call back synchronously (no DNS).
+void resolvePreviewUrlPublicAsync(const QUrl &url, bool allowPrivateNetwork,
+                                  const QObject *context,
+                                  std::function<void(bool)> callback);
 [[nodiscard]] bool isDirectRasterImageUrl(const QUrl &url);
 
 } // namespace maxchat::services

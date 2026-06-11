@@ -11,12 +11,6 @@
 namespace maxchat::services {
 namespace {
 
-// SSRF gate is shared with the image fetcher (canFetchPreviewUrl in
-// LinkPreviewClassifier): http(s), no creds, allowed host, public-only DNS.
-bool canFetchUrl(const QUrl &url, bool allowPrivateNetwork) {
-  return canFetchPreviewUrl(url, allowPrivateNetwork);
-}
-
 bool looksLikeHtmlContent(const QString &contentType) {
   return contentType.isEmpty() || contentType.contains(QStringLiteral("html"));
 }
@@ -50,11 +44,18 @@ void OpenGraphFetcher::fetch(const QUrl &url, OpenGraphFetchOptions options) {
     emit fetchFailed(url, QStringLiteral("network manager missing"));
     return;
   }
-  if (!canFetchUrl(url, options.allowPrivateNetwork)) {
-    emit fetchFailed(url, QStringLiteral("blocked preview URL"));
-    return;
-  }
+  // SSRF gate runs its DNS off the GUI thread; the GET only fires once it passes.
+  resolvePreviewUrlPublicAsync(
+      url, options.allowPrivateNetwork, this, [this, url, options](bool allowed) {
+        if (!allowed) {
+          emit fetchFailed(url, QStringLiteral("blocked preview URL"));
+          return;
+        }
+        issueRequest(url, options);
+      });
+}
 
+void OpenGraphFetcher::issueRequest(const QUrl &url, OpenGraphFetchOptions options) {
   options.maxBytes = normalizedMaxBytes(options.maxBytes);
   options.timeoutMs = normalizedTimeoutMs(options.timeoutMs);
   QNetworkReply *reply = manager_->get(buildRequest(url));
@@ -69,14 +70,19 @@ void OpenGraphFetcher::fetch(const QUrl &url, OpenGraphFetchOptions options) {
 
   // Re-run the SSRF guard on every redirect hop — a public host can 30x to an
   // internal address, and NoLessSafeRedirectPolicy only blocks downgrades, not
-  // redirects to private IPs.
+  // redirects to private IPs. Literal private IPs reject synchronously inside
+  // the gate; public-domain hops resolve off-thread, then abort if private.
   const bool allowPrivate = options.allowPrivateNetwork;
   connect(reply, &QNetworkReply::redirected, this,
-          [this, reply, allowPrivate](const QUrl &target) {
-            if (!canFetchUrl(target, allowPrivate)) {
-              reply->setProperty("maxchat_blocked_redirect", true);
-              reply->abort();
-            }
+          [this, guardedReply, allowPrivate](const QUrl &target) {
+            resolvePreviewUrlPublicAsync(
+                target, allowPrivate, this, [guardedReply](bool allowed) {
+                  if (allowed || guardedReply == nullptr) {
+                    return;
+                  }
+                  guardedReply->setProperty("maxchat_blocked_redirect", true);
+                  guardedReply->abort();
+                });
           });
 
   connect(reply, &QNetworkReply::finished, this, [this, reply, url, options]() {

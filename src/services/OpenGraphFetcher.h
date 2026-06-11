@@ -33,6 +33,8 @@ signals:
   void fetchFailed(const QUrl &url, const QString &reason);
 
 private:
+  void issueRequest(const QUrl &url, OpenGraphFetchOptions options); // after the SSRF gate passes
+
   QNetworkAccessManager *manager_ = nullptr;
 };
 

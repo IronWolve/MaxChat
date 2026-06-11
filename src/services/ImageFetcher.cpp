@@ -39,11 +39,18 @@ void ImageFetcher::fetch(const QUrl &url, ImageFetchOptions options) {
     emit imageFetchFailed(url, QStringLiteral("network manager missing"));
     return;
   }
-  if (!canFetchPreviewUrl(url, options.allowPrivateNetwork)) {
-    emit imageFetchFailed(url, QStringLiteral("blocked image URL"));
-    return;
-  }
+  // SSRF gate runs its DNS off the GUI thread; the GET only fires once it passes.
+  resolvePreviewUrlPublicAsync(
+      url, options.allowPrivateNetwork, this, [this, url, options](bool allowed) {
+        if (!allowed) {
+          emit imageFetchFailed(url, QStringLiteral("blocked image URL"));
+          return;
+        }
+        issueRequest(url, options);
+      });
+}
 
+void ImageFetcher::issueRequest(const QUrl &url, ImageFetchOptions options) {
   options.maxBytes = normalizedMaxBytes(options.maxBytes);
   options.timeoutMs = normalizedTimeoutMs(options.timeoutMs);
   QNetworkReply *reply = manager_->get(buildRequest(url));
@@ -60,11 +67,16 @@ void ImageFetcher::fetch(const QUrl &url, ImageFetchOptions options) {
   // private address, which NoLessSafeRedirectPolicy alone does not block.
   const bool allowPrivate = options.allowPrivateNetwork;
   connect(reply, &QNetworkReply::redirected, this,
-          [reply, allowPrivate](const QUrl &target) {
-            if (!canFetchPreviewUrl(target, allowPrivate)) {
-              reply->setProperty("maxchat_blocked_redirect", true);
-              reply->abort();
-            }
+          [this, guardedReply, allowPrivate](const QUrl &target) {
+            // Literal private IPs reject synchronously inside the gate (abort
+            // immediately); only public-domain hops do an off-thread resolve.
+            resolvePreviewUrlPublicAsync(
+                target, allowPrivate, this, [guardedReply](bool allowed) {
+                  if (!allowed && guardedReply != nullptr) {
+                    guardedReply->setProperty("maxchat_blocked_redirect", true);
+                    guardedReply->abort();
+                  }
+                });
           });
 
   connect(reply, &QNetworkReply::finished, this, [this, reply, url, options]() {
