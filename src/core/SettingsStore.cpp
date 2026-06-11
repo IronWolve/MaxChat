@@ -350,6 +350,7 @@ QVariantMap SettingsStore::defaultSettings() {
   settings.insert(QStringLiteral("align_nicks"), true);
   settings.insert(QStringLiteral("separator_line"), true);
   settings.insert(QStringLiteral("nick_width"), 16);
+  settings.insert(QStringLiteral("nick_width_autoset"), false);
   settings.insert(QStringLiteral("word_wrap"), true);
   QVariantMap contentServices;
   contentServices.insert(QStringLiteral("images"), true);
