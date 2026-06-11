@@ -82,6 +82,7 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     QString scriptNetwork() override;
     QStringList scriptChannels(const QString& network) override;
     QStringList scriptNicks(const QString& network, const QString& target) override;
+    QString scriptHttpGet(const QString& url) override;
 
   private:
     bool eventFilter(QObject* watched, QEvent* event) override;
@@ -146,6 +147,8 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     void handleScriptsCommand(const QString& command, const QString& arg);
     void openScriptsManager();
     void seedBundledScripts(const QString& destDir); // copy examples on first run
+    [[nodiscard]] maxchat::scripting::ScriptPermissions buildScriptPermissions() const;
+    void applyScriptPermissions(); // re-apply perms + reload scripts if they changed
     void leaveCurrentChannel();
     void replayCurrentLog();
     void markAllRead();

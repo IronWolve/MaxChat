@@ -67,16 +67,36 @@ Difference from Python: `me`/`target` were **properties** there; here they are
 
 ## Sandbox (enforced by the engine)
 
-- Available: `math` (with `math.random` pre-seeded), `string`, `table`, `utf8`,
-  `tostring`/`tonumber`/`pairs`/`ipairs`/`select`, `pcall`, etc.
-- Removed: `io`, `os`, `package`/`require`, `dofile`/`loadfile`/`load`, `debug`.
-  File access goes only through `api.append_file`/`api.read_file` (basename-only,
-  jailed to the script's data dir). Persisted prefs go through `api.get`/`api.set`.
-- No raw sockets, HTTP, process spawning, or native loading — a script can only
-  act on networks you are already connected to.
+Scripts start **fully sandboxed**. The always-available core:
+
+- `math` (with `math.random` pre-seeded), `string`, `table`, `utf8`,
+  `tostring`/`tonumber`/`pairs`/`ipairs`/`select`, `pcall`, and a read-only `os`
+  subset (`os.time`/`date`/`clock`/`difftime`).
+- File access through `api.append_file`/`api.read_file` (basename-only, jailed to
+  the script's own data dir) and persisted prefs via `api.get`/`api.set`.
 - Lua patterns, not full regex (e.g. `https?://%S+`, `^(%d*)d(%d+)$`).
-- Script and hook errors are caught: a broken hook prints `[scripts] name.hook:
-  …` and never crashes the client.
+- Script/hook errors are caught: a broken hook prints `[scripts] name.hook: …`
+  and never crashes the client.
+
+By default there is **no** `io`, no process spawning, no `require`, no network,
+and `os.exit` is never available.
+
+### Permissions (Preferences ▸ Scripts)
+
+Extra abilities are opt-in per capability — grant them only for scripts you
+trust. Changing any of these reloads your scripts under the new rules.
+
+| Permission | Unlocks |
+|------------|---------|
+| **Read files** | `io.open(path, "r")` within the allowed folders |
+| **Write files** | `io.open(path, "w"/"a")` within the allowed folders |
+| **Run programs** | `os.execute`, `io.popen`, `os.remove`/`rename`/`getenv` |
+| **Load modules** | `require`/`package` + `load`/`loadfile`/`dofile` |
+| **Network access** | `api.http_get(url)` → page body (string) or nil |
+
+`os.exit` is removed even with "Run programs" — a script can never quit the
+client. File reads/writes are confined to the **allowed folders** list (the
+script's own data dir is always allowed); add folders or a drive/path there.
 
 ## Bundled examples (`assets/scripts/`)
 

@@ -27,14 +27,15 @@ class PreferencesDialogTest final : public QObject {
         QVERIFY(buttons != nullptr);
         QVERIFY(pages != nullptr);
         QVERIFY(dialog.findChild<QTabWidget*>() == nullptr);
-        QCOMPARE(buttons->count(), 12);
-        QCOMPARE(pages->count(), 12);
+        QCOMPARE(buttons->count(), 13);
+        QCOMPARE(pages->count(), 13);
         QCOMPARE(buttons->item(0)->text(), QStringLiteral("Appearance"));
         QCOMPARE(buttons->item(3)->text(), QStringLiteral("Notifications"));
         QCOMPARE(buttons->item(6)->text(), QStringLiteral("Themes"));
         QCOMPARE(buttons->item(7)->text(), QStringLiteral("Fonts"));
         QCOMPARE(buttons->item(9)->text(), QStringLiteral("Comic"));
-        QCOMPARE(buttons->item(11)->text(), QStringLiteral("Data"));
+        QCOMPARE(buttons->item(10)->text(), QStringLiteral("Scripts"));
+        QCOMPARE(buttons->item(12)->text(), QStringLiteral("Data"));
         QCOMPARE(buttons->currentRow(), 0);
         QCOMPARE(pages->currentIndex(), 0);
 

@@ -1,5 +1,6 @@
 #include "scripting/LuaEngine.h"
 #include "scripting/ScriptHost.h"
+#include "scripting/ScriptPermissions.h"
 
 #include <QDir>
 #include <QTemporaryDir>
@@ -37,6 +38,7 @@ class FakeHost final : public ScriptHost {
     QStringList scriptNicks(const QString&, const QString&) override {
         return {QStringLiteral("alice"), QStringLiteral("bob")};
     }
+    QString scriptHttpGet(const QString&) override { return QStringLiteral("BODY"); }
 };
 
 QString writeScript(const QDir& dir, const QString& name, const QString& body) {
@@ -350,6 +352,109 @@ class LuaEngineTest final : public QObject {
 #else
         QSKIP("example scripts dir not defined");
 #endif
+    }
+
+    void permsGateFileExecModules() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        // With all permissions off (default), io/os.execute/require are absent.
+        const QString locked =
+            writeScript(QDir(dir.path()), QStringLiteral("probe.lua"),
+                        QStringLiteral("function on_load(api)\n"
+                                       "  api.echo(tostring(io)..'/'..tostring(os.execute)..'/'\n"
+                                       "           ..tostring(require))\n"
+                                       "end\n"));
+        FakeHost host;
+        LuaEngine engine(&host, dir.path(), dir.path());
+        QVERIFY(engine.load(locked));
+        QCOMPARE(host.echoes, QStringList{QStringLiteral("nil/nil/nil")});
+    }
+
+    void readPermJailsToAllowedDirs() {
+        QTemporaryDir scripts;
+        QTemporaryDir allowed;
+        QTemporaryDir off; // NOT in the allow-list
+        QVERIFY(scripts.isValid() && allowed.isValid() && off.isValid());
+        // A readable file in each location.
+        QFile a(QDir(allowed.path()).filePath(QStringLiteral("ok.txt")));
+        QVERIFY(a.open(QIODevice::WriteOnly));
+        a.write("yes");
+        a.close();
+        QFile b(QDir(off.path()).filePath(QStringLiteral("secret.txt")));
+        QVERIFY(b.open(QIODevice::WriteOnly));
+        b.write("no");
+        b.close();
+
+        const QString okPath = QDir(allowed.path()).filePath(QStringLiteral("ok.txt"));
+        const QString offPath = QDir(off.path()).filePath(QStringLiteral("secret.txt"));
+        const QString script = writeScript(
+            QDir(scripts.path()), QStringLiteral("reader.lua"),
+            QStringLiteral("function on_load(api)\n"
+                           "  local f = io.open([[%1]], 'r')\n"
+                           "  api.echo(f and (f:read('a')) or 'DENIED')\n"
+                           "  if f then f:close() end\n"
+                           "  local g = io.open([[%2]], 'r')\n"
+                           "  api.echo(g and 'LEAK' or 'DENIED')\n"
+                           "  if g then g:close() end\n"
+                           "end\n")
+                .arg(okPath, offPath));
+
+        maxchat::scripting::ScriptPermissions perms;
+        perms.readFiles = true;
+        perms.allowedDirs = {allowed.path()};
+        FakeHost host;
+        LuaEngine engine(&host, scripts.path(), scripts.path());
+        engine.setPermissions(perms);
+        QVERIFY(engine.load(script));
+        QCOMPARE(host.echoes, (QStringList{QStringLiteral("yes"), QStringLiteral("DENIED")}));
+    }
+
+    void writeDeniedWithoutWritePerm() {
+        QTemporaryDir scripts;
+        QTemporaryDir allowed;
+        QVERIFY(scripts.isValid() && allowed.isValid());
+        const QString target = QDir(allowed.path()).filePath(QStringLiteral("out.txt"));
+        const QString script =
+            writeScript(QDir(scripts.path()), QStringLiteral("writer.lua"),
+                        QStringLiteral("function on_load(api)\n"
+                                       "  local f = io.open([[%1]], 'w')\n"
+                                       "  api.echo(f and 'WROTE' or 'DENIED')\n"
+                                       "  if f then f:close() end\n"
+                                       "end\n")
+                            .arg(target));
+        // read granted (so io exists) but NOT write.
+        maxchat::scripting::ScriptPermissions perms;
+        perms.readFiles = true;
+        perms.allowedDirs = {allowed.path()};
+        FakeHost host;
+        LuaEngine engine(&host, scripts.path(), scripts.path());
+        engine.setPermissions(perms);
+        QVERIFY(engine.load(script));
+        QCOMPARE(host.echoes, QStringList{QStringLiteral("DENIED")});
+        QVERIFY(!QFile::exists(target));
+    }
+
+    void networkPermGatesHttpGet() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString script =
+            writeScript(QDir(dir.path()), QStringLiteral("net.lua"),
+                        QStringLiteral("function on_load(api)\n"
+                                       "  api.echo(api.http_get and api.http_get('x') or 'NOFUNC')\n"
+                                       "end\n"));
+        // Off by default → api.http_get absent.
+        FakeHost host;
+        LuaEngine engine(&host, dir.path(), dir.path());
+        QVERIFY(engine.load(script));
+        QCOMPARE(host.echoes, QStringList{QStringLiteral("NOFUNC")});
+        // On → present, returns the host body.
+        maxchat::scripting::ScriptPermissions perms;
+        perms.network = true;
+        FakeHost host2;
+        LuaEngine engine2(&host2, dir.path(), dir.path());
+        engine2.setPermissions(perms);
+        QVERIFY(engine2.load(script));
+        QCOMPARE(host2.echoes, QStringList{QStringLiteral("BODY")});
     }
 
     void scriptErrorDoesNotCrash() {

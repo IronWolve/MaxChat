@@ -58,6 +58,7 @@
 #include <QDateTime>
 #include <QCoreApplication>
 #include <QDir>
+#include <QEventLoop>
 #include <QElapsedTimer>
 #include <QEvent>
 #include <QFile>
@@ -876,6 +877,7 @@ MainWindow::MainWindow(QWidget* parent)
         QDir(m_settings.paths().configDir).filePath(QStringLiteral("scripts"));
     m_lua = new maxchat::scripting::LuaEngine(
         this, scriptsDir, QDir(scriptsDir).filePath(QStringLiteral("data")), this);
+    m_lua->setPermissions(buildScriptPermissions());
     if (maxchat::scripting::LuaEngine::available()) {
         QDir().mkpath(scriptsDir);
         seedBundledScripts(scriptsDir);
@@ -1905,6 +1907,75 @@ QStringList maxchat::ui::MainWindow::scriptNicks(const QString& network, const Q
     const QString net = network.isEmpty() ? activeNetworkName() : network;
     const QString tgt = target.trimmed().isEmpty() ? m_currentTarget : target;
     return m_chatBuffers.snapshot(bufferIdForNetworkTarget(net, tgt)).members;
+}
+
+QString maxchat::ui::MainWindow::scriptHttpGet(const QString& url) {
+    const QUrl parsed(url);
+    if (!parsed.isValid() || (parsed.scheme() != QLatin1String("http") &&
+                              parsed.scheme() != QLatin1String("https"))) {
+        return {};
+    }
+    QNetworkRequest request(parsed);
+    request.setRawHeader("User-Agent", "MaxChat-script");
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
+                         QNetworkRequest::NoLessSafeRedirectPolicy);
+    QNetworkReply* reply = m_updateNetworkManager.get(request);
+
+    // Block (with a timeout) until the request finishes — scripts opt into this
+    // by enabling the network permission, and accept the synchronous wait.
+    QEventLoop loop;
+    QTimer timeout;
+    timeout.setSingleShot(true);
+    connect(&timeout, &QTimer::timeout, &loop, &QEventLoop::quit);
+    connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    timeout.start(10000);
+    loop.exec();
+
+    QString body;
+    if (reply->isFinished() && reply->error() == QNetworkReply::NoError) {
+        body = QString::fromUtf8(reply->readAll());
+    } else if (!reply->isFinished()) {
+        reply->abort();
+    }
+    reply->deleteLater();
+    return body;
+}
+
+maxchat::scripting::ScriptPermissions maxchat::ui::MainWindow::buildScriptPermissions() const {
+    const QVariantMap settings = m_settings.loadWithDefaults();
+    const QVariantMap perms = settings.value(QStringLiteral("script_perms")).toMap();
+    maxchat::scripting::ScriptPermissions out;
+    out.readFiles = perms.value(QStringLiteral("read"), false).toBool();
+    out.writeFiles = perms.value(QStringLiteral("write"), false).toBool();
+    out.runPrograms = perms.value(QStringLiteral("exec"), false).toBool();
+    out.loadModules = perms.value(QStringLiteral("modules"), false).toBool();
+    out.network = perms.value(QStringLiteral("network"), false).toBool();
+    for (const QVariant& dir : settings.value(QStringLiteral("script_dirs")).toList()) {
+        const QString path = dir.toString().trimmed();
+        if (!path.isEmpty()) {
+            out.allowedDirs << path;
+        }
+    }
+    return out;
+}
+
+void maxchat::ui::MainWindow::applyScriptPermissions() {
+    if (m_lua == nullptr) {
+        return;
+    }
+    const maxchat::scripting::ScriptPermissions next = buildScriptPermissions();
+    if (next == m_lua->permissions()) {
+        return; // nothing changed — don't disturb running scripts
+    }
+    m_lua->setPermissions(next);
+    if (maxchat::scripting::LuaEngine::available()) {
+        const QStringList loaded = m_lua->loaded();
+        for (const QString& name : loaded) {
+            m_lua->reload(name); // re-sandbox each script under the new capabilities
+        }
+        appendSystemLine(QStringLiteral("! Script permissions updated; reloaded %1 script(s).")
+                             .arg(loaded.size()));
+    }
 }
 
 void maxchat::ui::MainWindow::handleScriptsCommand(const QString& command, const QString& arg) {
@@ -7387,6 +7458,7 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
     renderActiveBufferMetadata();
     updateNetworkTreeLabels();
     updateChannelModeButton();
+    applyScriptPermissions(); // re-sandbox scripts if the permission prefs changed
     }
 void maxchat::ui::MainWindow::notify(const QString& title, const QString& text,
                         const QString& network, const QString& target) {

@@ -7,6 +7,7 @@ class QCheckBox;
 class QComboBox;
 class QFontComboBox;
 class QLineEdit;
+class QListWidget;
 class QSpinBox;
 
 namespace maxchat::ui {
@@ -42,11 +43,18 @@ class PreferencesDialog final : public QDialog {
     void buildFilesTab(QWidget* tab);
     void buildFontsTab(QWidget* tab);
     void buildComicTab(QWidget* tab);
+    void buildScriptsTab(QWidget* tab);
     void buildServicesTab(QWidget* tab);
     void buildLocalizationTab(QWidget* tab);
     void buildDataTab(QWidget* tab);
 
     QVariantMap settings_;
+    QCheckBox* scriptRead_ = nullptr;
+    QCheckBox* scriptWrite_ = nullptr;
+    QCheckBox* scriptExec_ = nullptr;
+    QCheckBox* scriptModules_ = nullptr;
+    QCheckBox* scriptNetwork_ = nullptr;
+    QListWidget* scriptDirs_ = nullptr;
     QComboBox* theme_ = nullptr;
     QComboBox* chatTheme_ = nullptr;
     QComboBox* wallpaper_ = nullptr;

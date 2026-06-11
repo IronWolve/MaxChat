@@ -261,31 +261,44 @@ int l_cancel_timer(lua_State* L) {
     return 0;
 }
 
-// Build a fresh, sandboxed state. Only known-safe libraries are opened, and the
-// base-library escape hatches (load/dofile/loadfile/…) are removed. There is no
-// `io`, `os`, `package`/`require`, or `debug`, so a script cannot reach the
-// filesystem, run programs, or load C modules. (Step 3 adds the controlled
-// api.* file/time calls back in.)
-lua_State* makeSandboxedState() {
-    lua_State* L = luaL_newstate();
-    if (L == nullptr) {
-        return nullptr;
-    }
-    static const luaL_Reg kSafeLibs[] = {
-        {LUA_GNAME, luaopen_base},      {LUA_TABLIBNAME, luaopen_table},
-        {LUA_STRLIBNAME, luaopen_string}, {LUA_MATHLIBNAME, luaopen_math},
-        {LUA_UTF8LIBNAME, luaopen_utf8}, {nullptr, nullptr}};
-    for (const luaL_Reg* lib = kSafeLibs; lib->func != nullptr; ++lib) {
-        luaL_requiref(L, lib->name, lib->func, 1);
-        lua_pop(L, 1);
-    }
-    static const char* kBanned[] = {"dofile",   "loadfile",       "load",
-                                    "loadstring", "collectgarbage", nullptr};
-    for (int i = 0; kBanned[i] != nullptr; ++i) {
+// api.http_get(url) -> string|nil  (only registered when the network permission
+// is granted; the actual fetch is the host's, synchronous).
+int l_http_get(lua_State* L) {
+    LuaEngine* engine = engineOf(L);
+    const QString url = QString::fromUtf8(luaL_checkstring(L, 1));
+    const QString body = engine != nullptr ? engine->hostHttpGet(url) : QString();
+    if (body.isEmpty()) {
         lua_pushnil(L);
-        lua_setglobal(L, kBanned[i]);
+        return 1;
     }
-    return L;
+    const QByteArray b = body.toUtf8();
+    lua_pushlstring(L, b.constData(), b.size());
+    return 1;
+}
+
+// Guarded io.open: enforces the read/write permission + the allowed-dir list
+// before delegating to the real io.open (saved in the registry). Upvalues:
+// (1) engine, (2) this script's data dir.
+int l_guarded_open(lua_State* L) {
+    LuaEngine* engine = engineOf(L);
+    const QString dataDir = dataDirOf(L);
+    const QString path = QString::fromUtf8(luaL_checkstring(L, 1));
+    const QString mode = QString::fromUtf8(luaL_optstring(L, 2, "r"));
+    const bool write =
+        mode.contains(QLatin1Char('w')) || mode.contains(QLatin1Char('a')) ||
+        mode.contains(QLatin1Char('+'));
+    if (engine == nullptr || !engine->fileAccessAllowed(path, write, dataDir)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "permission denied (enable file access in Preferences > Scripts)");
+        return 2;
+    }
+    const int base = lua_gettop(L);
+    lua_getfield(L, LUA_REGISTRYINDEX, "maxchat_io_open"); // the real io.open
+    lua_pushvalue(L, 1);                                   // path
+    const QByteArray m = mode.toUtf8();
+    lua_pushlstring(L, m.constData(), m.size()); // mode
+    lua_call(L, 2, LUA_MULTRET);
+    return lua_gettop(L) - base;
 }
 
 } // namespace
@@ -303,6 +316,106 @@ LuaEngine::~LuaEngine() {
 
 bool LuaEngine::available() {
     return true;
+}
+
+void LuaEngine::setPermissions(const ScriptPermissions& perms) {
+    perms_ = perms;
+}
+
+bool LuaEngine::fileAccessAllowed(const QString& path, bool write, const QString& dataDir) const {
+    if (write ? !perms_.writeFiles : !perms_.readFiles) {
+        return false;
+    }
+#ifdef Q_OS_WIN
+    const Qt::CaseSensitivity cs = Qt::CaseInsensitive;
+#else
+    const Qt::CaseSensitivity cs = Qt::CaseSensitive;
+#endif
+    const QString abs = QDir::cleanPath(QFileInfo(path).absoluteFilePath());
+    const auto within = [&](const QString& root) {
+        if (root.trimmed().isEmpty()) {
+            return false;
+        }
+        const QString r = QDir::cleanPath(QFileInfo(root).absoluteFilePath());
+        if (abs.compare(r, cs) == 0) {
+            return true;
+        }
+        return abs.startsWith(r.endsWith(QLatin1Char('/')) ? r : r + QLatin1Char('/'), cs);
+    };
+    if (within(dataDir)) {
+        return true; // a script's own data dir is always in-bounds
+    }
+    for (const QString& dir : perms_.allowedDirs) {
+        if (within(dir)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Open a fresh state with exactly the libraries the current permissions allow.
+// The safe core (base/table/string/math/utf8 + a read-only os subset) is always
+// present; io/package/os-danger/load are gated.
+lua_State* LuaEngine::createState(const QString& dataDir) {
+    lua_State* L = luaL_newstate();
+    if (L == nullptr) {
+        return nullptr;
+    }
+    static const luaL_Reg kSafeLibs[] = {
+        {LUA_GNAME, luaopen_base},        {LUA_TABLIBNAME, luaopen_table},
+        {LUA_STRLIBNAME, luaopen_string}, {LUA_MATHLIBNAME, luaopen_math},
+        {LUA_UTF8LIBNAME, luaopen_utf8},  {nullptr, nullptr}};
+    for (const luaL_Reg* lib = kSafeLibs; lib->func != nullptr; ++lib) {
+        luaL_requiref(L, lib->name, lib->func, 1);
+        lua_pop(L, 1);
+    }
+
+    // os: open it, then always strip os.exit (a script must never kill the
+    // client) and — unless "run programs" is granted — the process/file verbs.
+    luaL_requiref(L, LUA_OSLIBNAME, luaopen_os, 1);
+    lua_pushnil(L);
+    lua_setfield(L, -2, "exit");
+    if (!perms_.runPrograms) {
+        for (const char* fn : {"execute", "getenv", "remove", "rename", "tmpname", "setlocale"}) {
+            lua_pushnil(L);
+            lua_setfield(L, -2, fn);
+        }
+    }
+    lua_pop(L, 1); // os table
+
+    // load/dofile/loadfile + package/require: only with "load modules".
+    if (perms_.loadModules) {
+        luaL_requiref(L, LUA_LOADLIBNAME, luaopen_package, 1);
+        lua_pop(L, 1);
+    } else {
+        for (const char* fn : {"dofile", "loadfile", "load", "loadstring"}) {
+            lua_pushnil(L);
+            lua_setglobal(L, fn);
+        }
+    }
+
+    // io: only when read or write is granted. io.open is replaced with a guarded
+    // version; the unguarded openers are removed, and io.popen needs exec.
+    if (perms_.anyFileAccess()) {
+        luaL_requiref(L, LUA_IOLIBNAME, luaopen_io, 1);
+        lua_getfield(L, -1, "open"); // save the real io.open in the registry
+        lua_setfield(L, LUA_REGISTRYINDEX, "maxchat_io_open");
+        lua_pushlightuserdata(L, this);
+        const QByteArray dd = dataDir.toUtf8();
+        lua_pushlstring(L, dd.constData(), dd.size());
+        lua_pushcclosure(L, l_guarded_open, 2);
+        lua_setfield(L, -2, "open");
+        for (const char* fn : {"lines", "input", "output", "tmpfile"}) {
+            lua_pushnil(L);
+            lua_setfield(L, -2, fn);
+        }
+        if (!perms_.runPrograms) {
+            lua_pushnil(L);
+            lua_setfield(L, -2, "popen");
+        }
+        lua_pop(L, 1); // io table
+    }
+    return L;
 }
 
 void LuaEngine::setCurrentNetwork(const QString& network) {
@@ -357,6 +470,10 @@ QStringList LuaEngine::hostChannels() {
 
 QStringList LuaEngine::hostNicks(const QString& target) {
     return host_ != nullptr ? host_->scriptNicks(currentNetwork_, target) : QStringList();
+}
+
+QString LuaEngine::hostHttpGet(const QString& url) {
+    return host_ != nullptr ? host_->scriptHttpGet(url) : QString();
 }
 
 int LuaEngine::createTimer(void* luaState, int intervalMs, int funcRef) {
@@ -442,7 +559,8 @@ void LuaEngine::reportError(const QString& script, const QString& where, const Q
 // Installs the `api` table into L (also as the global `api`) and returns a
 // registry ref to it, used as the first argument to every hook. Each closure
 // gets two upvalues: the engine and this script's data-dir path.
-static int installApi(lua_State* L, LuaEngine* engine, const QString& dataDir) {
+static int installApi(lua_State* L, LuaEngine* engine, const QString& dataDir,
+                      const ScriptPermissions& perms) {
     lua_newtable(L);
     const QByteArray dd = dataDir.toUtf8();
     const auto reg = [&](const char* name, lua_CFunction fn) {
@@ -470,6 +588,9 @@ static int installApi(lua_State* L, LuaEngine* engine, const QString& dataDir) {
     reg("set", l_set);
     reg("timer", l_timer);
     reg("cancel_timer", l_cancel_timer);
+    if (perms.network) {
+        reg("http_get", l_http_get);
+    }
     lua_pushvalue(L, -1);
     lua_setglobal(L, "api");
     return luaL_ref(L, LUA_REGISTRYINDEX); // pops the table
@@ -544,12 +665,12 @@ bool LuaEngine::load(const QString& path) {
     if (scripts_.contains(name)) {
         unload(name);
     }
-    lua_State* L = makeSandboxedState();
+    const QString dataDir = QDir(dataRoot_).filePath(name);
+    lua_State* L = createState(dataDir);
     if (L == nullptr) {
         return false;
     }
-    const QString dataDir = QDir(dataRoot_).filePath(name);
-    const int apiRef = installApi(L, this, dataDir);
+    const int apiRef = installApi(L, this, dataDir, perms_);
     if (luaL_loadfile(L, path.toUtf8().constData()) != LUA_OK) {
         reportError(name, QStringLiteral("load"), QString::fromUtf8(lua_tostring(L, -1)));
         lua_close(L);
@@ -662,6 +783,15 @@ QStringList LuaEngine::hostChannels() {
 }
 QStringList LuaEngine::hostNicks(const QString&) {
     return {};
+}
+QString LuaEngine::hostHttpGet(const QString&) {
+    return {};
+}
+void LuaEngine::setPermissions(const ScriptPermissions& perms) {
+    perms_ = perms;
+}
+bool LuaEngine::fileAccessAllowed(const QString&, bool, const QString&) const {
+    return false;
 }
 int LuaEngine::createTimer(void*, int, int) {
     return 0;

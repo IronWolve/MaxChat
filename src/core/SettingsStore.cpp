@@ -369,6 +369,15 @@ QVariantMap SettingsStore::defaultSettings() {
   settings.insert(QStringLiteral("looks"), QVariantMap());
   // Quietly check GitHub Releases for a newer build shortly after launch.
   settings.insert(QStringLiteral("update_check"), true);
+  // Lua script capabilities — all off by default (scripts start fully sandboxed).
+  QVariantMap scriptPerms;
+  scriptPerms.insert(QStringLiteral("read"), false);
+  scriptPerms.insert(QStringLiteral("write"), false);
+  scriptPerms.insert(QStringLiteral("exec"), false);
+  scriptPerms.insert(QStringLiteral("modules"), false);
+  scriptPerms.insert(QStringLiteral("network"), false);
+  settings.insert(QStringLiteral("script_perms"), scriptPerms);
+  settings.insert(QStringLiteral("script_dirs"), QVariantList());
   settings.insert(QStringLiteral("networks"),
                   networkConfigListToVariantList(defaultNetworkConfigs()));
   return settings;
