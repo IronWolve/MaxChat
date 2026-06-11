@@ -38,6 +38,12 @@ class LuaEngine final : public QObject {
 
     // --- bridge helpers invoked by the C api closures (treat as internal) ---
     void hostEcho(const QString& text);
+    void hostSay(const QString& target, const QString& text);
+    void hostInsertInput(const QString& text);
+    void hostNotify(const QString& title, const QString& text);
+    [[nodiscard]] QString hostMe();
+    [[nodiscard]] QString hostTarget();
+    [[nodiscard]] QString hostNetwork();
 
   private:
     bool callHook(ScriptState* state, const char* hook);
