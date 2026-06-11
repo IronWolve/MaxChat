@@ -26,10 +26,29 @@ endif()
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Test Multimedia
                                      MultimediaWidgets)
-find_package(PkgConfig QUIET)
-if(PkgConfig_FOUND)
-    pkg_check_modules(HUNSPELL QUIET hunspell)
-endif()
+# Spellcheck uses a VENDORED Hunspell (third_party/hunspell) so the internal
+# engine works on every platform (incl. Windows/MinGW) without a system package.
+# Define the same HUNSPELL_* variables the downstream targets already consume.
+add_library(maxchat_hunspell STATIC
+    third_party/hunspell/affentry.cxx
+    third_party/hunspell/affixmgr.cxx
+    third_party/hunspell/csutil.cxx
+    third_party/hunspell/filemgr.cxx
+    third_party/hunspell/hashmgr.cxx
+    third_party/hunspell/hunspell.cxx
+    third_party/hunspell/hunzip.cxx
+    third_party/hunspell/phonet.cxx
+    third_party/hunspell/replist.cxx
+    third_party/hunspell/suggestmgr.cxx
+)
+target_include_directories(maxchat_hunspell PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/hunspell)
+target_compile_definitions(maxchat_hunspell PUBLIC HUNSPELL_STATIC)
+set(HUNSPELL_FOUND TRUE)
+set(HUNSPELL_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/hunspell)
+set(HUNSPELL_LIBRARY_DIRS "")
+set(HUNSPELL_CFLAGS_OTHER "")
+set(HUNSPELL_LIBRARIES maxchat_hunspell)
 
 qt_standard_project_setup()
 
@@ -164,6 +183,9 @@ target_link_libraries(maxchat_spell
     PUBLIC
         Qt6::Core
 )
+
+target_compile_definitions(maxchat_spell PRIVATE
+    MAXCHAT_BUNDLED_DICTIONARY_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/dictionaries")
 
 # Native OS speller (opt-in; Windows ISpellChecker). OFF by default so the
 # normal build is never affected by the platform COM code. Only meaningful on
@@ -528,6 +550,9 @@ if(HUNSPELL_FOUND)
             maxchat_spell_engine
             Qt6::Test
     )
+
+    target_compile_definitions(hunspell_spellchecker_test PRIVATE
+        MAXCHAT_TEST_DICTIONARY_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/dictionaries")
 
     add_test(NAME hunspell_spellchecker COMMAND hunspell_spellchecker_test)
 endif()

@@ -131,6 +131,11 @@ QStringList defaultDictionarySearchPaths() {
   addUniquePath(paths, QDir(appDir).filePath(QStringLiteral("dictionaries")));
   addUniquePath(paths,
                 QDir(appDir).filePath(QStringLiteral("assets/dictionaries")));
+  // Bundled dictionaries shipped with the source — lets dev builds find the
+  // bundled en_US without copying it next to the exe (harmless if absent).
+#ifdef MAXCHAT_BUNDLED_DICTIONARY_DIR
+  addUniquePath(paths, QStringLiteral(MAXCHAT_BUNDLED_DICTIONARY_DIR));
+#endif
   addUniquePath(paths, QStringLiteral("/usr/share/hunspell"));
   addUniquePath(paths, QStringLiteral("/usr/share/myspell/dicts"));
 

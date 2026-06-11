@@ -85,7 +85,8 @@ if /I "%~1"=="nolua" set "MAXCHAT_LUA=OFF"
 set "CONFIG_ARGS=%CONFIG_ARGS% -DMAXCHAT_LUA=%MAXCHAT_LUA%"
 echo Lua scripting: %MAXCHAT_LUA%
 rem Native OS speller (Windows ISpellChecker) is opt-in: "build.bat osspell".
-rem Gives spellcheck on Windows without bundling Hunspell dictionaries.
+rem Alternative to the internal vendored Hunspell + bundled en_US (uses the OS's
+rem own dictionaries instead).
 set "MAXCHAT_OS_SPELL=OFF"
 if /I "%~1"=="osspell" set "MAXCHAT_OS_SPELL=ON"
 if /I "%~2"=="osspell" set "MAXCHAT_OS_SPELL=ON"
@@ -282,6 +283,12 @@ xcopy /E /I /Y "%ROOT%\assets\themes" "%DIST_DIR%\assets\themes" >nul
 if errorlevel 1 exit /b 1
 xcopy /E /I /Y "%ROOT%\assets\wallpapers" "%DIST_DIR%\assets\wallpapers" >nul
 if errorlevel 1 exit /b 1
+rem Spellcheck dictionaries (.aff/.dic) load from disk at runtime; ship the
+rem bundled en_US so the internal engine works out of the box.
+if exist "%ROOT%\assets\dictionaries" (
+    xcopy /E /I /Y "%ROOT%\assets\dictionaries" "%DIST_DIR%\assets\dictionaries" >nul
+    if errorlevel 1 exit /b 1
+)
 exit /b 0
 
 :copy_notices
