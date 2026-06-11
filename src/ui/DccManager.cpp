@@ -7,6 +7,7 @@
 #include <QRandomGenerator>
 #include <QTcpServer>
 #include <QTcpSocket>
+#include <QTimer>
 #include <QtEndian>
 
 #include <algorithm>
@@ -631,6 +632,15 @@ void DccManager::offerChat(const QString& peer) {
 
     if (passive_) {
         chat->pendingToken = newToken();
+        // Expire the pending token after 2 min so a stale/forged late reply can't
+        // reactivate the offer (matches the Python 120s timeout).
+        const QString expiringToken = chat->pendingToken;
+        QTimer::singleShot(120000, this, [this, key, expiringToken]() {
+            ChatRuntime* c = chats_.value(key);
+            if (c != nullptr && c->pendingToken == expiringToken && c->socket == nullptr) {
+                c->pendingToken.clear();
+            }
+        });
         emit ctcpToSend(peer, QStringLiteral("CHAT chat %1 0 %2")
                                   .arg(QString::number(QHostAddress(advertisedIp()).toIPv4Address()),
                                        chat->pendingToken));
