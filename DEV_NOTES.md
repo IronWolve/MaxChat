@@ -2,6 +2,21 @@
 
 Internal notes for this port. Not shipped.
 
+## ARCHITECTURE — chat view is a single shared, model-rebuilt widget
+
+Unlike the Python app (one persistent QTextBrowser **per buffer**, in a
+QStackedWidget), this port uses ONE shared `m_chatView` that is **cleared and
+rebuilt from `ChatBufferStore` on every buffer switch** (`renderActiveBuffer`).
+Consequence: anything painted directly onto the view that isn't in the stored
+line-model gets wiped on the next switch. Anything that must persist has to live
+in the model (or be re-applied inside `renderActiveBuffer`):
+- Inline preview **images** are re-registered as document resources on each
+  render (cached by URL) for exactly this reason — see `registerCachedImagesIn`.
+- Log-**resume replay** + the `new` marker currently DON'T follow this rule —
+  they're painted, so they break on switch. Tracked as AUDIT backlog #29 (likely
+  a future tweak): seed replay into the buffer model instead of painting it.
+When adding anything that should survive a buffer switch, store it in the model.
+
 ## THINGS I GOT WRONG
 
 - **2026-06-11 — "complete" features that were hollow (inline images, X/Twitter
