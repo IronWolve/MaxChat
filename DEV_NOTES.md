@@ -4,6 +4,23 @@ Internal notes for this port. Not shipped.
 
 ## THINGS I GOT WRONG
 
+- **2026-06-11 — "complete" features that were hollow (inline images, X/Twitter
+  cards).** Both compiled and had all the scaffolding (enum kinds, classifier,
+  prefs toggles, renderers) so they *looked* done, but end-to-end they did
+  nothing: inline `<img src=remote>` never renders in a QTextBrowser (it doesn't
+  fetch over the network → broken-image glyph), and X posts were fetched from
+  raw x.com, which serves a JS shell with no OpenGraph tags. **Lesson:** "builds
+  + has the code path" ≠ "works." Verify a feature produces its visible result,
+  not just that the plumbing exists. Fix: services/ImageFetcher downloads +
+  embeds images as document resources; X posts fetch via fxtwitter.
+- **2026-06-11 — added xPostFetchUrl() but forgot to call it from the classifier
+  dispatch.** The helper existed; the dispatch still used the raw URL, so the
+  fix was inert until a unit test caught it. **Lesson:** when adding a transform,
+  assert the *observable* output (fetchUrl), not just that the helper compiles.
+- **2026-06-11 — raw-string regex delimiter clash.** `R"(...([^"]+)"...)"` was
+  terminated early by the `)"` inside the pattern. Use a custom delimiter
+  (`R"RX(...)RX"`) whenever the pattern can contain `)"`.
+
 - **2026-06-10 — Scripting/SoundPlayer includes landed inside `#ifdef
   MAXCHAT_WITH_HUNSPELL` in MainWindow.h.** Successive include edits anchored on
   the spell include, which was already inside the hunspell guard, so
