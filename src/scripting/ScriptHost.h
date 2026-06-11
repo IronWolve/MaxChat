@@ -1,0 +1,33 @@
+#pragma once
+
+#include <QString>
+#include <QStringList>
+
+namespace maxchat::scripting {
+
+// The narrow callback surface the Lua `api` table calls into. MainWindow
+// implements it; unit tests use a fake. Keeping this interface free of any Qt
+// widget / Lua dependency is what lets LuaEngine be tested headless.
+//
+// `network` is the network a hook is firing for (so `api.echo` lands in the
+// right buffer). An empty network means "the active one".
+class ScriptHost {
+  public:
+    virtual ~ScriptHost() = default;
+
+    virtual void scriptEcho(const QString& network, const QString& text) = 0;
+    virtual void scriptSay(const QString& network, const QString& target,
+                           const QString& text) = 0;
+    virtual void scriptSendRaw(const QString& network, const QString& line) = 0;
+    virtual void scriptInsertInput(const QString& text) = 0;
+    virtual void scriptNotify(const QString& title, const QString& text) = 0;
+
+    [[nodiscard]] virtual QString scriptMe(const QString& network) = 0;
+    [[nodiscard]] virtual QString scriptTarget() = 0;
+    [[nodiscard]] virtual QString scriptNetwork() = 0;
+    [[nodiscard]] virtual QStringList scriptChannels(const QString& network) = 0;
+    [[nodiscard]] virtual QStringList scriptNicks(const QString& network,
+                                                  const QString& target) = 0;
+};
+
+} // namespace maxchat::scripting
