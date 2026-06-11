@@ -1,5 +1,7 @@
 #include "ui/MainWindow.h"
 
+#include "upload/ImageUploaderFactory.h"
+
 #include "app/AppInfo.h"
 #include "core/CommandAlias.h"
 #include "core/ConnectionPlan.h"
@@ -38,6 +40,7 @@
 #include "ui/QuickConnectDialog.h"
 #include "ui/RawLogDialog.h"
 #include "ui/ServerListDialog.h"
+#include "ui/SpellTextEdit.h"
 #include "ui/SpellcheckHighlighter.h"
 #include "ui/SystemInfo.h"
 #include "ui/ThemeCatalog.h"
@@ -64,6 +67,9 @@
 #include <QEvent>
 #include <QFile>
 #include <QFileDialog>
+#include <QFormLayout>
+#include <QGroupBox>
+#include <QTextStream>
 #include <QFont>
 #include <QFontDatabase>
 #include <QFontMetrics>
@@ -106,6 +112,9 @@
 #include <QTextBlockFormat>
 #include <QTextBrowser>
 #include <QContextMenuEvent>
+#include <QDragEnterEvent>
+#include <QDropEvent>
+#include <QMimeData>
 #include <QTextCursor>
 #include <QTextDocument>
 #include <QTextEdit>
@@ -908,6 +917,43 @@ void MainWindow::changeEvent(QEvent* event) {
     QMainWindow::changeEvent(event);
 }
 
+void MainWindow::dragEnterEvent(QDragEnterEvent* event) {
+    if (m_imageUploader != nullptr && event->mimeData() != nullptr &&
+        (event->mimeData()->hasImage() || event->mimeData()->hasUrls())) {
+        event->acceptProposedAction();
+    } else {
+        QMainWindow::dragEnterEvent(event);
+    }
+}
+
+void MainWindow::dropEvent(QDropEvent* event) {
+    if (m_imageUploader == nullptr || event->mimeData() == nullptr) {
+        QMainWindow::dropEvent(event);
+        return;
+    }
+    // Image data (e.g. copied from a browser / screenshot tool)
+    if (event->mimeData()->hasImage()) {
+        const QImage img = qvariant_cast<QImage>(event->mimeData()->imageData());
+        if (!img.isNull()) {
+            event->acceptProposedAction();
+            startImageUpload(img);
+            return;
+        }
+    }
+    // File(s) dragged from a file manager
+    const QList<QUrl> urls = event->mimeData()->urls();
+    for (const QUrl& url : urls) {
+        if (!url.isLocalFile()) continue;
+        const QImage img(url.toLocalFile());
+        if (!img.isNull()) {
+            event->acceptProposedAction();
+            startImageUpload(img);
+            return; // upload the first valid image
+        }
+    }
+    QMainWindow::dropEvent(event);
+}
+
 bool MainWindow::eventFilter(QObject* watched, QEvent* event) {
     if (watched == m_input && event->type() == QEvent::KeyPress) {
         auto* keyEvent = static_cast<QKeyEvent*>(event);
@@ -924,8 +970,22 @@ bool MainWindow::eventFilter(QObject* watched, QEvent* event) {
         if (keyEvent->key() == Qt::Key_Tab || keyEvent->key() == Qt::Key_Backtab) {
             return completeInput(keyEvent->key() == Qt::Key_Tab);
         }
+        // Autocorrect: a Space may replace the word just typed; an immediate
+        // Backspace undoes that. Any other key cancels the pending undo window.
+        if (keyEvent->key() == Qt::Key_Space && keyEvent->modifiers() == Qt::NoModifier) {
+            if (tryAutocorrectAtSpace()) {
+                return true;
+            }
+        } else if (keyEvent->key() == Qt::Key_Backspace) {
+            if (undoAutocorrect()) {
+                return true;
+            }
+        } else {
+            m_autocorrect.active = false;
+        }
     }
-    if (watched == m_input && event->type() == QEvent::ContextMenu) {
+    if ((watched == m_input || (m_input != nullptr && watched == m_input->viewport())) &&
+        event->type() == QEvent::ContextMenu) {
         auto* contextEvent = static_cast<QContextMenuEvent*>(event);
         showInputContextMenu(contextEvent->pos(), contextEvent->globalPos());
         return true;
@@ -966,10 +1026,144 @@ void maxchat::ui::MainWindow::showInputContextMenu(const QPoint& localPos,
                     menu->insertAction(anchor, action);
                 }
             }
+            auto* addAction =
+                new QAction(QStringLiteral("Add to Dictionary"), menu);
+            const QString plainWord = word;
+            connect(addAction, &QAction::triggered, this,
+                    [this, plainWord]() { addWordToPersonalDictionary(plainWord); });
+            menu->insertAction(anchor, addAction);
             menu->insertSeparator(anchor);
         }
     }
     menu->popup(globalPos);
+}
+
+namespace {
+bool isAutocorrectWordChar(const QChar ch) {
+    return ch.isLetter() || ch == QLatin1Char('\'') || ch == QLatin1Char('-');
+}
+
+// Case-insensitive Levenshtein edit distance, capped — used to reject
+// autocorrections that are too far from what the user typed (so "chatgpt" never
+// becomes "chatting"). Returns a value > cap as soon as it's clearly too far.
+int boundedEditDistance(const QString& a, const QString& b, const int cap) {
+    const QString lhs = a.toLower();
+    const QString rhs = b.toLower();
+    const int n = static_cast<int>(lhs.size());
+    const int m = static_cast<int>(rhs.size());
+    if (std::abs(n - m) > cap) {
+        return cap + 1;
+    }
+    QVector<int> prev(m + 1);
+    QVector<int> cur(m + 1);
+    for (int j = 0; j <= m; ++j) {
+        prev[j] = j;
+    }
+    for (int i = 1; i <= n; ++i) {
+        cur[0] = i;
+        int rowBest = cur[0];
+        for (int j = 1; j <= m; ++j) {
+            const int cost = (lhs[i - 1] == rhs[j - 1]) ? 0 : 1;
+            cur[j] = std::min({prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost});
+            rowBest = std::min(rowBest, cur[j]);
+        }
+        if (rowBest > cap) {
+            return cap + 1; // whole row already past the cap — bail
+        }
+        prev.swap(cur);
+    }
+    return prev[m];
+}
+} // namespace
+
+bool maxchat::ui::MainWindow::tryAutocorrectAtSpace() {
+    m_autocorrect.active = false;
+    if (!m_autocorrectEnabled || m_input == nullptr || m_spellchecker == nullptr ||
+        !m_spellchecker->isLoaded()) {
+        return false;
+    }
+
+    const QTextCursor cursor = m_input->textCursor();
+    if (cursor.hasSelection()) {
+        return false;
+    }
+    const int pos = cursor.position();
+    const QString text = m_input->toPlainText();
+    int start = pos;
+    while (start > 0 && isAutocorrectWordChar(text.at(start - 1))) {
+        --start;
+    }
+    const QString word = text.mid(start, pos - start);
+
+    // Skip the word the user just deliberately restored (one-shot), then resume.
+    if (!m_autocorrectSuppress.isEmpty() && word == m_autocorrectSuppress) {
+        m_autocorrectSuppress.clear();
+        return false;
+    }
+    // Conservative: leave short words, capitalised words (likely names), and
+    // anything with digits alone — autocorrect should never surprise-mangle.
+    if (word.size() < 3 || word.front().isUpper()) {
+        return false;
+    }
+    for (const QChar ch : word) {
+        if (ch.isDigit()) {
+            return false;
+        }
+    }
+    if (m_spellchecker->isCorrect(word)) {
+        return false;
+    }
+    const QStringList suggestions = m_spellchecker->suggestions(word, 1);
+    if (suggestions.isEmpty()) {
+        return false;
+    }
+    const QString corrected = suggestions.first();
+    if (corrected.compare(word, Qt::CaseInsensitive) == 0 || corrected.contains(QLatin1Char(' '))) {
+        return false;
+    }
+    // Only replace when the suggestion is close to what was typed (a real typo),
+    // not a wildly different word — this is the "aggressiveness" control.
+    if (boundedEditDistance(word, corrected, m_autocorrectMaxDistance) > m_autocorrectMaxDistance) {
+        return false;
+    }
+
+    QTextCursor edit = cursor;
+    edit.beginEditBlock();
+    edit.setPosition(start);
+    edit.setPosition(pos, QTextCursor::KeepAnchor);
+    edit.insertText(corrected + QLatin1Char(' '));
+    edit.endEditBlock();
+    m_input->setTextCursor(edit);
+
+    m_autocorrect = {true, start, word, corrected};
+    m_autocorrectSuppress.clear();
+    return true;
+}
+
+bool maxchat::ui::MainWindow::undoAutocorrect() {
+    if (!m_autocorrect.active || m_input == nullptr) {
+        return false;
+    }
+    QTextCursor cursor = m_input->textCursor();
+    const int pos = cursor.position();
+    // Only undo if the caret is still right after "<corrected> " untouched.
+    const int expectedEnd = m_autocorrect.wordStart +
+                            static_cast<int>(m_autocorrect.corrected.size()) + 1;
+    if (cursor.hasSelection() || pos != expectedEnd) {
+        m_autocorrect.active = false;
+        return false;
+    }
+
+    cursor.beginEditBlock();
+    cursor.setPosition(m_autocorrect.wordStart);
+    cursor.setPosition(pos, QTextCursor::KeepAnchor);
+    cursor.insertText(m_autocorrect.original);
+    cursor.endEditBlock();
+    m_input->setTextCursor(cursor);
+
+    m_autocorrectSuppress = m_autocorrect.original;
+    m_autocorrect.active = false;
+    return true;
 }
 
 void maxchat::ui::MainWindow::buildMenus() {
@@ -1350,7 +1544,7 @@ void maxchat::ui::MainWindow::buildLayout() {
     memberPanelLayout->addWidget(m_membersHeader);
     memberPanelLayout->addWidget(m_memberList, 1);
 
-    m_input = new QTextEdit(root);
+    m_input = new SpellTextEdit(root);
     m_input->setObjectName(QStringLiteral("messageInput"));
     m_input->setPlaceholderText(QStringLiteral("Message"));
     m_input->setAcceptRichText(false);
@@ -1360,8 +1554,12 @@ void maxchat::ui::MainWindow::buildLayout() {
     m_input->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     m_input->document()->setDocumentMargin(4);
     resizeMessageInput();
-    m_spellcheckHighlighter = new SpellcheckHighlighter(m_input->document());
     m_input->installEventFilter(this);
+    // QTextEdit is a scroll area: mouse-driven context-menu events go to the
+    // viewport, not the widget, so the viewport must be filtered too or
+    // right-click spelling suggestions never fire.
+    m_input->viewport()->installEventFilter(this);
+    connect(m_input, &SpellTextEdit::imageReceived, this, &MainWindow::startImageUpload);
 
     // mIRC formatting: Ctrl+B/I/U insert the control codes, Ctrl+K opens the
     // colour picker. Widget-scoped so they only fire while typing.
@@ -1486,7 +1684,11 @@ void maxchat::ui::MainWindow::openJoinDialog() {
 }
 
 void maxchat::ui::MainWindow::openPreferences() {
-    PreferencesDialog dialog(m_settings.loadWithDefaults(), this);
+    const QString scriptsDir =
+        QDir(m_settings.paths().configDir).filePath(QStringLiteral("scripts"));
+    const QStringList loadedScripts =
+        maxchat::scripting::LuaEngine::available() ? m_lua->loaded() : QStringList{};
+    PreferencesDialog dialog(m_settings.loadWithDefaults(), loadedScripts, scriptsDir, this);
     connect(&dialog, &PreferencesDialog::exportSettingsRequested, this,
             &MainWindow::exportSettings);
     connect(&dialog, &PreferencesDialog::importSettingsRequested, this, [this, &dialog]() {
@@ -2138,19 +2340,25 @@ void maxchat::ui::MainWindow::openScriptsManager() {
         for (const QFileInfo& fi : files) {
             const QString name = fi.completeBaseName();
             // Show the full filename (foo.lua) so it reads as a Lua script; the
-            // base name (used by load/unload) lives in UserRole.
+            // base name (used by load/unload) lives in UserRole; the full path
+            // lives in UserRole+1 for Edit/Settings.
             const QString display = fi.fileName();
             auto* item = new QListWidgetItem(
                 loaded.contains(name) ? QStringLiteral("%1   [loaded]").arg(display) : display);
             item->setData(Qt::UserRole, name);
+            item->setData(Qt::UserRole + 1, fi.absoluteFilePath());
             list->addItem(item);
         }
     };
     refresh();
 
     const auto selectedName = [list]() -> QString {
-        QListWidgetItem* item = list->currentItem();
+        const QListWidgetItem* item = list->currentItem();
         return item != nullptr ? item->data(Qt::UserRole).toString() : QString();
+    };
+    const auto selectedPath = [list]() -> QString {
+        const QListWidgetItem* item = list->currentItem();
+        return item != nullptr ? item->data(Qt::UserRole + 1).toString() : QString();
     };
 
     auto* buttons = new QHBoxLayout();
@@ -2180,6 +2388,65 @@ void maxchat::ui::MainWindow::openScriptsManager() {
             refresh();
         }
     });
+    addButton(QStringLiteral("Edit"), [selectedPath]() {
+        const QString path = selectedPath();
+        if (!path.isEmpty())
+            QDesktopServices::openUrl(QUrl::fromLocalFile(path));
+    });
+    addButton(QStringLiteral("Settings"), [this, dialog, selectedName, selectedPath]() {
+        const QString name = selectedName();
+        const QString path = selectedPath();
+        if (name.isEmpty())
+            return;
+
+        // Read header comments (lines starting with "--") for script metadata.
+        QStringList headerLines;
+        QFile f(path);
+        if (f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QTextStream in(&f);
+            for (int i = 0; i < 30 && !in.atEnd(); ++i) {
+                const QString line = in.readLine();
+                if (!line.startsWith(QStringLiteral("--")))
+                    break;
+                const QString text = line.mid(2).trimmed();
+                if (!text.isEmpty())
+                    headerLines << text;
+            }
+        }
+
+        auto* info = new QDialog(dialog);
+        info->setAttribute(Qt::WA_DeleteOnClose);
+        info->setWindowTitle(QStringLiteral("Script: %1").arg(name));
+        info->setMinimumWidth(400);
+        auto* root = new QVBoxLayout(info);
+
+        auto* form = new QFormLayout();
+        form->addRow(QStringLiteral("Name:"), new QLabel(name, info));
+        auto* pathLabel = new QLabel(path, info);
+        pathLabel->setWordWrap(true);
+        form->addRow(QStringLiteral("File:"), pathLabel);
+        const bool isLoaded = m_lua->loaded().contains(name);
+        form->addRow(QStringLiteral("Status:"),
+                     new QLabel(isLoaded ? QStringLiteral("Loaded") : QStringLiteral("Not loaded"),
+                                info));
+        root->addLayout(form);
+
+        if (!headerLines.isEmpty()) {
+            auto* hdrGroup = new QGroupBox(QStringLiteral("Script header"), info);
+            auto* hdrLayout = new QVBoxLayout(hdrGroup);
+            for (const QString& line : std::as_const(headerLines))
+                hdrLayout->addWidget(new QLabel(line, hdrGroup));
+            root->addWidget(hdrGroup);
+        }
+
+        auto* closeBtn = new QPushButton(QStringLiteral("Close"), info);
+        connect(closeBtn, &QPushButton::clicked, info, &QDialog::accept);
+        auto* closeRow = new QHBoxLayout();
+        closeRow->addStretch(1);
+        closeRow->addWidget(closeBtn);
+        root->addLayout(closeRow);
+        info->exec();
+    });
     addButton(QStringLiteral("Open folder"),
               [scriptsDir]() { QDesktopServices::openUrl(QUrl::fromLocalFile(scriptsDir)); });
     buttons->addStretch(1);
@@ -2201,69 +2468,96 @@ void maxchat::ui::MainWindow::leaveCurrentChannel() {
     sendCommandOrMessage(QStringLiteral("/part %1").arg(channel));
 }
 
-void maxchat::ui::MainWindow::replayCurrentLog() {
-    if (m_chatView == nullptr) {
-        return;
+bool maxchat::ui::MainWindow::seedReplayForBuffer(const QString& network, const QString& target,
+                                                  const bool force) {
+    if (!force && !m_replayLogEnabled) {
+        return false;
+    }
+    const QString trimmedTarget = target.trimmed();
+    if (trimmedTarget.isEmpty() || isTreeStatusTarget(trimmedTarget)) {
+        return false; // no resume for the server buffer
     }
 
-    const QString network = currentLogNetwork();
-    const QString target = currentLogTarget();
-    // replay_lines == 0 means "a sensible default", not "everything" — Python
-    // uses 50. Dumping an entire multi-thousand-line log on every buffer open is
-    // both slow and unhelpful.
+    const QString key = network + QChar(0x1f) + trimmedTarget;
+    if (!force && m_replayedBuffers.contains(key)) {
+        return false;
+    }
+
+    const maxchat::core::ChatBufferId id = bufferIdForNetworkTarget(network, trimmedTarget);
+    // Seed history only into an empty buffer so it prepends cleanly; never inject
+    // it between live messages that already arrived. (force bypasses this for the
+    // manual Tools ▸ Replay action.)
+    if (!force && !m_chatBuffers.snapshot(id).lines.isEmpty()) {
+        m_replayedBuffers.insert(key);
+        return false;
+    }
+    m_replayedBuffers.insert(key);
+
+    // replay_lines == 0 means "a sensible default" (Python uses 50), not
+    // "everything" — dumping a whole multi-thousand-line log is slow/unhelpful.
     constexpr int DefaultReplayLines = 50;
     const QStringList lines = m_chatLogStore.recentLines(
-        network, target, m_replayLines > 0 ? m_replayLines : DefaultReplayLines);
+        network, trimmedTarget, m_replayLines > 0 ? m_replayLines : DefaultReplayLines);
     if (lines.isEmpty()) {
-        statusBar()->showMessage(
-            QStringLiteral("No saved log lines for %1/%2.").arg(network, target));
-        return;
+        return false;
     }
 
-    m_replayingLog = true;
-
-    // Replayed history is rendered dimmed (whole line in the timestamp grey, no
-    // nick colours, formatting stripped) so it reads as "the past" — aligned to
-    // the live chat, Python parity.
-    const maxchat::core::ChatLineFormatOptions base = chatLineFormatOptions();
-    const QString dim = base.timestampColor.isEmpty() ? QStringLiteral("#8a8a8a") : base.timestampColor;
-    maxchat::core::ChatLineFormatOptions dimOptions = base;
-    dimOptions.defaultForeground = dim;
-    dimOptions.systemColor = dim;
-    dimOptions.bracketColor = dim;
-    dimOptions.colorNicks = false;
-    dimOptions.renderFormatting = false;
-
     QDateTime lastWhen;
+    int added = 0;
     for (const QString& line : lines) {
         const ReplayLogLine replayLine = parseReplayLogLine(line);
         if (replayLine.body.trimmed().isEmpty()) {
             continue;
         }
-
-        maxchat::core::ChatLineFormatOptions options = dimOptions;
+        maxchat::core::ChatBufferLine stored;
+        stored.timestamp = replayLine.timestamp;
+        stored.sourceText = replayLine.body;
+        stored.dimmed = true; // renderActiveBuffer formats dimmed history lines
         if (replayLine.timestamp.isValid()) {
-            options.timestamp = replayLine.timestamp.toString(qtDateTimeFormat(m_timestampFormat));
             lastWhen = replayLine.timestamp;
         }
-        const maxchat::core::FormattedChatLine display =
-            maxchat::core::formatChatLine(replayLine.body, options);
-        appendFormattedChatLine(display);
+        if (m_chatBuffers.appendLine(id, stored)) {
+            ++added;
+        }
+    }
+    if (added == 0) {
+        return false;
     }
 
-    // A dimmed divider marks where the previous session left off.
-    maxchat::core::ChatLineFormatOptions ruleOptions = dimOptions;
-    ruleOptions.systemLine = true;
-    ruleOptions.showTimestamp = false;
+    // A dimmed divider names when the previous session left off (date + time) in
+    // the text, so the resume point is unmistakable.
     const QString when =
-        lastWhen.isValid() ? lastWhen.toString(qtDateTimeFormat(m_timestampFormat)) : QString();
-    const QString endLabel =
-        when.isEmpty() ? QStringLiteral("--- Chat ended ---")
-                       : QStringLiteral("--- Chat ended %1 ---").arg(when);
-    appendFormattedChatLine(maxchat::core::formatChatLine(endLabel, ruleOptions));
-    m_replayingLog = false;
+        lastWhen.isValid()
+            ? lastWhen.toString(QStringLiteral("ddd MMM d ")) +
+                  lastWhen.toString(qtDateTimeFormat(m_timestampFormat))
+            : QString();
+    maxchat::core::ChatBufferLine divider;
+    divider.sourceText = when.isEmpty()
+                           ? QStringLiteral("──────────  Chat ended  ──────────")
+                           : QStringLiteral("──────  Chat ended %1  ──────").arg(when);
+    divider.dimmed = true;
+    divider.systemLine = true; // time is in the text, not the gutter
+    (void)m_chatBuffers.appendLine(id, divider);
+    return true;
+}
+
+void maxchat::ui::MainWindow::replayCurrentLog() {
+    if (m_chatView == nullptr) {
+        return;
+    }
+    const QString network = currentLogNetwork();
+    const QString target = currentLogTarget();
+    const maxchat::core::ChatBufferId id = bufferIdForNetworkTarget(network, target);
+    const int before = static_cast<int>(m_chatBuffers.snapshot(id).lines.size());
+    const bool seeded = seedReplayForBuffer(network, target, /*force=*/true);
+    if (seeded) {
+        (void)m_chatBuffers.markRead(id);
+    }
+    const int added = static_cast<int>(m_chatBuffers.snapshot(id).lines.size()) - before;
+    renderActiveBuffer();
     statusBar()->showMessage(
-        QStringLiteral("Replayed %1 log lines for %2/%3.").arg(lines.size()).arg(network, target));
+        added > 0 ? QStringLiteral("Replayed %1 log lines for %2/%3.").arg(added).arg(network, target)
+                  : QStringLiteral("No saved log lines for %1/%2.").arg(network, target));
 }
 
 void maxchat::ui::MainWindow::markAllRead() {
@@ -2764,6 +3058,23 @@ void maxchat::ui::MainWindow::exportSettings() {
         maxchat::core::networkConfigListToVariantList(maxchat::core::networkConfigListFromVariant(
             settings.value(QStringLiteral("networks")))));
 
+    // Carry the personal dictionary in the same file so a profile export is
+    // self-contained (the words live in a separate file on disk normally).
+    QStringList personalWords;
+    QFile personalFile(personalDictionaryPath());
+    if (personalFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QTextStream in(&personalFile);
+        while (!in.atEnd()) {
+            const QString word = in.readLine().trimmed();
+            if (!word.isEmpty()) {
+                personalWords.append(word);
+            }
+        }
+    }
+    if (!personalWords.isEmpty()) {
+        settings.insert(QStringLiteral("personal_dictionary"), personalWords);
+    }
+
     QSaveFile file(path);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         appendSystemLine(QStringLiteral("! Could not open settings export file."));
@@ -2800,8 +3111,43 @@ void maxchat::ui::MainWindow::importSettings() {
         return;
     }
 
-    const QVariantMap prepared =
-        m_settings.prepareImportedSettings(document.object().toVariantMap());
+    QVariantMap rawImported = document.object().toVariantMap();
+    // Merge any bundled personal-dictionary words into the on-disk file (union
+    // with what's already there), then drop the key from the settings map.
+    const QVariantList importedWords = rawImported.take(QStringLiteral("personal_dictionary")).toList();
+    if (!importedWords.isEmpty()) {
+        QStringList merged;
+        QSet<QString> seen;
+        const auto addWord = [&](const QString& w) {
+            const QString c = w.trimmed();
+            if (!c.isEmpty() && !seen.contains(c)) {
+                seen.insert(c);
+                merged.append(c);
+            }
+        };
+        QFile existingFile(personalDictionaryPath());
+        if (existingFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QTextStream in(&existingFile);
+            while (!in.atEnd()) {
+                addWord(in.readLine());
+            }
+            existingFile.close();
+        }
+        for (const QVariant& w : importedWords) {
+            addWord(w.toString());
+        }
+        QDir().mkpath(m_settings.paths().configDir);
+        QSaveFile out(personalDictionaryPath());
+        if (out.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+            QTextStream stream(&out);
+            for (const QString& w : merged) {
+                stream << w << '\n';
+            }
+            out.commit();
+        }
+    }
+
+    const QVariantMap prepared = m_settings.prepareImportedSettings(rawImported);
     if (!m_settings.saveRaw(prepared)) {
         appendSystemLine(QStringLiteral("! Could not save imported settings."));
         return;
@@ -3586,9 +3932,8 @@ void maxchat::ui::MainWindow::startConnection(const maxchat::core::NetworkConfig
 
     rebuildNetworkTree();
     updateChannelModeButton();
-    if (m_replayLogEnabled) {
-        replayCurrentLog();
-    }
+    // Replay is seeded per-buffer on first open (activateBufferTarget above), so
+    // it survives buffer switches; no separate connect-time replay needed.
     connectNextServer(m_connectionPlan.networkName);
 }
 
@@ -5391,8 +5736,26 @@ void maxchat::ui::MainWindow::appendPreviewHtmlLine(const QString& html) {
     // cached images now, and kick off downloads for the rest (which re-render
     // this buffer on arrival).
     registerCachedImagesIn(html);
+
+    // insertHtml with block-level elements (<div>, <p>) creates multiple
+    // QTextBlocks. The blockFormat set above only applies to the first one;
+    // subsequent blocks get default formatting (leftMargin=0), so the card
+    // text renders at the left edge instead of aligned with chat text.
+    // Fix: walk every block that insertHtml created and apply the format.
+    const int insertStart = cursor.position();
     cursor.insertHtml(html);
-    cursor.mergeBlockFormat(blockFormat);
+    const int insertEnd = cursor.position();
+
+    if (blockFormat.leftMargin() > 0.0) {
+        QTextDocument* doc = m_chatView->document();
+        QTextBlock block = doc->findBlock(insertStart);
+        while (block.isValid() && block.position() <= insertEnd) {
+            QTextCursor bc(block);
+            bc.mergeBlockFormat(blockFormat);
+            block = block.next();
+        }
+    }
+
     m_chatView->setTextCursor(cursor);
     m_chatView->ensureCursorVisible();
     requestPreviewImagesIn(html);
@@ -5465,7 +5828,14 @@ void maxchat::ui::MainWindow::handlePreviewImageFetched(const QUrl& url, const Q
     if (image.isNull()) {
         return;
     }
-    m_previewImageCache.insert(key, image);
+    // QTextDocument doesn't honour CSS max-width/max-height, so images render
+    // at native resolution and overflow the chat pane. Scale before caching.
+    const int maxW = m_ogRenderOptions.maxImageWidth;
+    const int maxH = m_ogRenderOptions.maxImageHeight;
+    const QImage stored = (image.width() > maxW || image.height() > maxH)
+        ? image.scaled(maxW, maxH, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+        : image;
+    m_previewImageCache.insert(key, stored);
     // The image landed after the line was already laid out with a broken <img>.
     // Re-render the active buffer (preserving scroll position) so it now shows.
     if (m_chatView != nullptr && activeBufferReferencesImage(key)) {
@@ -5502,9 +5872,13 @@ void maxchat::ui::MainWindow::appendPreviewHtmlToNetworkTarget(const QString& ne
     maxchat::core::ChatBufferLine line;
     line.htmlText = html;
     line.localEcho = true;
-    const bool stored = m_chatBuffers.appendLine(bufferIdForNetworkTarget(network, target), line);
+    const maxchat::core::ChatBufferId bufferId = bufferIdForNetworkTarget(network, target);
+    const int lineCountBefore = static_cast<int>(m_chatBuffers.snapshot(bufferId).lines.size());
+    const bool stored = m_chatBuffers.appendLine(bufferId, line);
     Q_UNUSED(stored);
-    if (isActiveBufferTarget(network, target)) {
+    const bool active = isActiveBufferTarget(network, target);
+    noteUnreadBoundary(bufferId, active, lineCountBefore);
+    if (active) {
         appendPreviewHtmlLine(html);
     }
 }
@@ -5539,14 +5913,16 @@ void maxchat::ui::MainWindow::appendSystemLineToNetworkTarget(const QString& net
     bufferLine.localEcho = localEcho;
     bufferLine.highlight = highlight;
     bufferLine.systemLine = systemStyling;
-    const bool stored =
-        m_chatBuffers.appendLine(bufferIdForNetworkTarget(network, target), bufferLine);
+    const maxchat::core::ChatBufferId bufferId = bufferIdForNetworkTarget(network, target);
+    const int lineCountBefore = static_cast<int>(m_chatBuffers.snapshot(bufferId).lines.size());
+    const bool stored = m_chatBuffers.appendLine(bufferId, bufferLine);
     Q_UNUSED(stored);
     if (stored) {
         updateNetworkTreeLabels();
     }
 
     const bool active = isActiveBufferTarget(network, target);
+    noteUnreadBoundary(bufferId, active, lineCountBefore);
     if (active) {
         appendFormattedChatLine(display);
         if (m_comicMode) {
@@ -5665,7 +6041,10 @@ void maxchat::ui::MainWindow::queueLinkPreviewsFromLine(const QString& line) {
             if (m_pendingPreviewCandidates.contains(key)) {
                 break;
             }
-            m_pendingPreviewCandidates.insert(key, candidate);
+            maxchat::services::LinkPreviewCandidate tagged = candidate;
+            tagged.originNetwork = currentLogNetwork();
+            tagged.originTarget  = m_currentTarget;
+            m_pendingPreviewCandidates.insert(key, tagged);
             m_openGraphFetcher.fetch(candidate.fetchUrl);
             break;
         }
@@ -5694,7 +6073,14 @@ void maxchat::ui::MainWindow::handlePreviewCardFetched(const QUrl& url,
         !maxchat::services::isAllowedPreviewFetchUrl(displayCard.imageUrl)) {
         displayCard.imageUrl = QUrl();
     }
-    appendPreviewHtml(maxchat::services::renderOpenGraphPreviewHtml(candidate, displayCard));
+    const QString html = maxchat::services::renderOpenGraphPreviewHtml(
+        candidate, displayCard, m_ogRenderOptions);
+    // Route to the buffer that posted the URL, not the currently-visible one.
+    const QString net = candidate.originNetwork.isEmpty()
+                            ? currentLogNetwork() : candidate.originNetwork;
+    const QString tgt = candidate.originTarget.isEmpty()
+                            ? m_currentTarget : candidate.originTarget;
+    appendPreviewHtmlToNetworkTarget(net, tgt, html);
 }
 
 void maxchat::ui::MainWindow::handlePreviewFetchFailed(const QUrl& url, const QString& reason) {
@@ -5782,37 +6168,71 @@ void maxchat::ui::MainWindow::activateBufferTarget(const QString& target) {
     m_currentTargetByNetwork.insert(activeNetworkName(), m_currentTarget);
     m_openTargetsByNetwork.insert(activeNetworkName(), m_openTargets);
 
-    const int unreadBefore =
-        m_chatBuffers.snapshot(bufferIdForTarget(m_currentTarget)).unreadCount;
-    const bool activeSet = m_chatBuffers.setActiveBuffer(bufferIdForTarget(m_currentTarget));
+    // On a buffer's first open, seed its stored history (dimmed) + "Chat ended"
+    // divider so resume shows and survives later switches. Replay isn't "unread".
+    const bool seeded =
+        m_currentTarget.isEmpty()
+            ? false
+            : seedReplayForBuffer(activeNetworkName(), m_currentTarget);
+    if (seeded) {
+        (void)m_chatBuffers.markRead(bufferIdForTarget(m_currentTarget));
+    }
+
+    const maxchat::core::ChatBufferId incoming = bufferIdForTarget(m_currentTarget);
+    const bool activeSet = m_chatBuffers.setActiveBuffer(incoming);
     Q_UNUSED(activeSet);
-    renderActiveBuffer(unreadBefore);
+    renderActiveBuffer();
     renderActiveBufferMetadata();
     updateNetworkTreeLabels();
     syncBufferTabs();
 }
 
-void maxchat::ui::MainWindow::renderActiveBuffer(const int unreadMarkerFromEnd) {
+void maxchat::ui::MainWindow::renderActiveBuffer() {
     if (m_chatView == nullptr) {
         return;
     }
 
     m_chatView->clear();
-    const maxchat::core::ChatBufferSnapshot snapshot =
-        m_chatBuffers.snapshot(bufferIdForTarget(m_currentTarget));
+    const maxchat::core::ChatBufferId currentId = bufferIdForTarget(m_currentTarget);
+    const maxchat::core::ChatBufferSnapshot snapshot = m_chatBuffers.snapshot(currentId);
+    // The `──── new ────` marker sits before the first line that arrived since we
+    // last left this buffer; the boundary is stored per buffer so it survives
+    // switching and shows in every channel that has new activity.
+    const QString markerKey = currentId.network + QChar(0x1f) + currentId.target;
+    const int markerCount = m_bufferMarkerCount.value(markerKey, -1);
     const qsizetype markerIndex =
-        m_markerLine && unreadMarkerFromEnd > 0 && unreadMarkerFromEnd < snapshot.lines.size()
-            ? snapshot.lines.size() - unreadMarkerFromEnd
-            : -1;
+        m_markerLine && markerCount > 0 && markerCount < snapshot.lines.size() ? markerCount : -1;
     qsizetype lineIndex = 0;
     const maxchat::core::ChatLineFormatOptions baseOptions = chatLineFormatOptions();
+    // Dimmed palette for replayed history (matches seedReplayForBuffer): whole
+    // line in the timestamp grey, no nick colours, formatting stripped.
+    const QString dim =
+        baseOptions.timestampColor.isEmpty() ? QStringLiteral("#8a8a8a") : baseOptions.timestampColor;
+    maxchat::core::ChatLineFormatOptions dimOptions = baseOptions;
+    dimOptions.defaultForeground = dim;
+    dimOptions.systemColor = dim;
+    dimOptions.bracketColor = dim;
+    dimOptions.colorNicks = false;
+    dimOptions.renderFormatting = false;
     for (const maxchat::core::ChatBufferLine& line : snapshot.lines) {
         if (lineIndex++ == markerIndex) {
             appendUnreadMarkerLine();
         }
-        if (!line.sourceText.isEmpty()) {
-            maxchat::core::ChatLineFormatOptions options = baseOptions;
+        if (line.dimmed && line.systemLine && !line.sourceText.isEmpty()) {
+            // The "Chat ended" resume rule is a centered divider (like "new").
+            appendCenteredDivider(line.sourceText, dim);
+        } else if (!line.sourceText.isEmpty()) {
+            maxchat::core::ChatLineFormatOptions options = line.dimmed ? dimOptions : baseOptions;
             options.systemLine = line.systemLine;
+            // Replayed lines keep their original time; live lines use the
+            // default (current) timestamp already baked into baseOptions. A
+            // dimmed line with no timestamp (the "Chat ended" divider, whose
+            // date+time is in its text) must NOT fall back to the current time.
+            if (line.timestamp.isValid()) {
+                options.timestamp = line.timestamp.toString(qtDateTimeFormat(m_timestampFormat));
+            } else if (line.dimmed) {
+                options.timestamp.clear();
+            }
             const maxchat::core::FormattedChatLine display =
                 maxchat::core::formatChatLine(line.sourceText, options);
             appendFormattedChatLine(display);
@@ -6146,21 +6566,40 @@ void maxchat::ui::MainWindow::appendUnreadMarkerLine() {
     if (m_chatView == nullptr) {
         return;
     }
-    // Render the unread boundary as a dim "new" divider in the SAME style as the
-    // "Chat ended" replay rule, so when unread starts right after a resume it
-    // reads as a clean marker directly under that rule — not a stray left stub.
-    maxchat::core::ChatLineFormatOptions opts = chatLineFormatOptions();
+    const maxchat::core::ChatLineFormatOptions opts = chatLineFormatOptions();
     const QString dim =
         opts.timestampColor.isEmpty() ? QStringLiteral("#8a8a8a") : opts.timestampColor;
-    opts.defaultForeground = dim;
-    opts.systemColor = dim;
-    opts.bracketColor = dim;
-    opts.colorNicks = false;
-    opts.renderFormatting = false;
-    opts.systemLine = true;
-    opts.showTimestamp = false;
-    appendFormattedChatLine(
-        maxchat::core::formatChatLine(QStringLiteral("──────── new ────────"), opts));
+    appendCenteredDivider(QStringLiteral("──────────  new  ──────────"), dim);
+}
+
+void maxchat::ui::MainWindow::appendCenteredDivider(const QString& text, const QString& color) {
+    if (m_chatView == nullptr) {
+        return;
+    }
+    QTextCursor cursor = m_chatView->textCursor();
+    cursor.movePosition(QTextCursor::End);
+    QTextBlockFormat blockFormat; // fresh format: centered, no inherited margins
+    blockFormat.setAlignment(Qt::AlignHCenter);
+    if (!m_chatView->document()->isEmpty()) {
+        cursor.insertBlock(blockFormat);
+    } else {
+        cursor.setBlockFormat(blockFormat);
+    }
+    QTextCharFormat charFormat;
+    charFormat.setForeground(QColor(color));
+    cursor.setCharFormat(charFormat);
+    cursor.insertText(text);
+    m_chatView->setTextCursor(cursor);
+}
+
+void maxchat::ui::MainWindow::noteUnreadBoundary(const maxchat::core::ChatBufferId& id,
+                                                 const bool active, const int lineCountBeforeAppend) {
+    const QString key = id.network + QChar(0x1f) + id.target;
+    if (active) {
+        m_bufferMarkerCount.remove(key); // read live → caught up, no boundary
+    } else if (!m_bufferMarkerCount.contains(key)) {
+        m_bufferMarkerCount.insert(key, lineCountBeforeAppend); // first unread sits here
+    }
 }
 
 void maxchat::ui::MainWindow::configureDcc() {
@@ -7227,6 +7666,66 @@ void maxchat::ui::MainWindow::rebuildNetworkTree() {
     syncBufferTabs();
 }
 
+QString maxchat::ui::MainWindow::personalDictionaryPath() const {
+    return QDir(m_settings.paths().configDir).filePath(QStringLiteral("personal_dict.dic"));
+}
+
+void maxchat::ui::MainWindow::loadPersonalDictionary() {
+    if (m_spellchecker == nullptr) {
+        return;
+    }
+    QFile file(personalDictionaryPath());
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        return; // none saved yet
+    }
+    QTextStream in(&file);
+    while (!in.atEnd()) {
+        const QString word = in.readLine().trimmed();
+        if (!word.isEmpty()) {
+            m_spellchecker->addWord(word);
+        }
+    }
+}
+
+void maxchat::ui::MainWindow::addWordToPersonalDictionary(const QString& word) {
+    const QString cleaned = word.trimmed();
+    if (cleaned.isEmpty()) {
+        return;
+    }
+
+    // Persist (de-duped) to <config>/personal_dict.dic.
+    const QString path = personalDictionaryPath();
+    QSet<QString> existing;
+    QFile readFile(path);
+    if (readFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QTextStream in(&readFile);
+        while (!in.atEnd()) {
+            const QString w = in.readLine().trimmed();
+            if (!w.isEmpty()) {
+                existing.insert(w);
+            }
+        }
+        readFile.close();
+    }
+    if (!existing.contains(cleaned)) {
+        QDir().mkpath(m_settings.paths().configDir);
+        QFile writeFile(path);
+        if (writeFile.open(QIODevice::Append | QIODevice::Text)) {
+            QTextStream out(&writeFile);
+            out << cleaned << '\n';
+        }
+    }
+
+    // Teach the live engine + refresh the underlines immediately.
+    if (m_spellchecker != nullptr) {
+        m_spellchecker->addWord(cleaned);
+    }
+    if (m_input != nullptr) {
+        m_input->viewport()->update();
+    }
+    statusBar()->showMessage(QStringLiteral("Added “%1” to your dictionary.").arg(cleaned));
+}
+
 void maxchat::ui::MainWindow::updateChannelModeButton() {
     if (m_channelModesButton != nullptr) {
         m_channelModesButton->setEnabled(connection().isConnected() &&
@@ -7306,14 +7805,23 @@ void maxchat::ui::MainWindow::loadFonts() {
 }
 
 void maxchat::ui::MainWindow::configureSpellcheck(const QVariantMap& settings) {
-    if (m_spellcheckHighlighter == nullptr) {
+    if (m_input == nullptr) {
         return;
     }
 
+    // Autocorrect only applies while spellcheck is on; it shares the engine.
+    m_autocorrectEnabled =
+        settings.value(QStringLiteral("spellcheck_autocorrect"), false).toBool();
+    // How far (edit distance) a suggestion may be from the typed word before we
+    // auto-replace it. Keeps "chatgpt" from becoming "chatting". Default 2.
+    m_autocorrectMaxDistance =
+        std::clamp(settings.value(QStringLiteral("autocorrect_max_distance"), 2).toInt(), 1, 6);
+
     const auto disableSpell = [this]() {
-        m_spellcheckHighlighter->setWordChecker({});
-        m_spellcheckHighlighter->setSpellcheckEnabled(false);
+        m_input->setWordChecker({});
+        m_input->setSpellcheckEnabled(false);
         m_spellchecker.reset();
+        m_autocorrectEnabled = false;
     };
 
     if (!settings.value(QStringLiteral("spellcheck_enabled"), true).toBool()) {
@@ -7322,11 +7830,12 @@ void maxchat::ui::MainWindow::configureSpellcheck(const QVariantMap& settings) {
     }
 
     const auto wireActiveSpeller = [this]() {
-        m_spellcheckHighlighter->setWordChecker([this](const QString& word) {
+        m_input->setWordChecker([this](const QString& word) {
             return m_spellchecker != nullptr && m_spellchecker->isLoaded() &&
                    m_spellchecker->isCorrect(word);
         });
-        m_spellcheckHighlighter->setSpellcheckEnabled(true);
+        loadPersonalDictionary(); // teach the engine the user's saved words
+        m_input->setSpellcheckEnabled(true);
     };
 
     const QString languageCode =
@@ -7366,8 +7875,8 @@ void maxchat::ui::MainWindow::configureSpellcheck(const QVariantMap& settings) {
     if (languageIt == languages.cend() || !languageIt->dictionaryAvailable()) {
         disableSpell();
         statusBar()->showMessage(
-            osRequested ? QStringLiteral("OS spell engine isn't in this build (rebuild with "
-                                         "build.bat osspell), and no internal dictionary was found.")
+            osRequested ? QStringLiteral("OS spell engine isn't in this build (rebuild without "
+                                         "the noosspell flag), and no internal dictionary was found.")
                         : QStringLiteral("No spelling dictionary found — add a .aff/.dic to the "
                                          "'dictionaries' folder."));
         return;
@@ -7383,17 +7892,49 @@ void maxchat::ui::MainWindow::configureSpellcheck(const QVariantMap& settings) {
     if (osUnavailable) {
         statusBar()->showMessage(QStringLiteral(
             "OS spell engine isn't in this build; using the internal dictionary "
-            "(rebuild with build.bat osspell for the native engine)."));
+            "(rebuild without the noosspell flag for the native engine)."));
     }
 #else
     // No internal engine compiled in (e.g. the Windows build without Hunspell).
     disableSpell();
     statusBar()->showMessage(
         osRequested
-            ? QStringLiteral("OS spell engine isn't in this build — rebuild with build.bat osspell.")
+            ? QStringLiteral("OS spell engine isn't in this build — rebuild without the noosspell flag.")
             : QStringLiteral("Spellcheck has no internal engine in this build — use the OS engine "
-                             "(build.bat osspell)."));
+                             "(rebuild without the noosspell flag)."));
 #endif
+}
+
+void maxchat::ui::MainWindow::configureImageUploader(const QVariantMap& settings) {
+    m_imageUploader = maxchat::upload::makeImageUploader(settings, &m_previewNetworkManager, this);
+    setAcceptDrops(m_imageUploader != nullptr);
+}
+
+void maxchat::ui::MainWindow::startImageUpload(const QImage& image) {
+    if (m_imageUploader == nullptr || image.isNull()) {
+        return;
+    }
+    statusBar()->showMessage(QStringLiteral("Uploading image…"));
+    // Reconnect fresh each call so there's only one active upload at a time.
+    disconnect(m_imageUploader.get(), nullptr, this, nullptr);
+    connect(m_imageUploader.get(), &maxchat::upload::ImageUploader::uploaded,
+            this, [this](const QString& url) {
+                statusBar()->clearMessage();
+                if (m_input != nullptr) {
+                    // Insert URL at current cursor; add a space if the input isn't empty.
+                    const QString existing = m_input->toPlainText();
+                    const QString text =
+                        existing.isEmpty() ? url : (existing.endsWith(QLatin1Char(' ')) ? url : QStringLiteral(" ") + url);
+                    m_input->moveCursor(QTextCursor::End);
+                    m_input->insertPlainText(text);
+                    m_input->setFocus();
+                }
+            });
+    connect(m_imageUploader.get(), &maxchat::upload::ImageUploader::uploadFailed,
+            this, [this](const QString& reason) {
+                statusBar()->showMessage(QStringLiteral("Image upload failed: ") + reason, 6000);
+            });
+    m_imageUploader->upload(image);
 }
 
 void maxchat::ui::MainWindow::resizeMessageInput() {
@@ -7564,6 +8105,10 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
     applyNavShortcutOverrides(settings);
     recolorMemberList();
     m_linkPreviewToggles = maxchat::services::linkPreviewTogglesFromSettings(settings);
+    m_ogRenderOptions.showSiteName    = settings.value(QStringLiteral("og_show_site_name"),    true).toBool();
+    m_ogRenderOptions.showTitle       = settings.value(QStringLiteral("og_show_title"),        true).toBool();
+    m_ogRenderOptions.showDescription = settings.value(QStringLiteral("og_show_description"),  true).toBool();
+    m_ogRenderOptions.showImage       = settings.value(QStringLiteral("og_show_image"),        true).toBool();
     if (m_mainSplitter != nullptr) {
         const QVariantList savedSizes = settings.value(QStringLiteral("splitter_sizes")).toList();
         if (savedSizes.size() >= 3) {
@@ -7602,6 +8147,7 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
                            settings.value(QStringLiteral("flood_msgs"), 10).toInt(),
                            settings.value(QStringLiteral("flood_secs"), 4).toInt());
     configureSpellcheck(settings);
+    configureImageUploader(settings);
     m_connection.setIgnoreMasks(m_ignoreMasks);
     for (auto* irc : std::as_const(m_connectionsByNetwork)) {
         if (irc != nullptr) {

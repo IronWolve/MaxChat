@@ -32,9 +32,8 @@ private slots:
     const QString html = renderOpenGraphPreviewHtml(candidate, card);
 
     QVERIFY(html.contains(QStringLiteral("A &lt;Title&gt;")));
-    // The card has an image, so the description is dropped (Discord-style) and
-    // the image carries the content.
-    QVERIFY(!html.contains(QStringLiteral("Summary &amp; details")));
+    // Description is shown alongside the image (image renders below the card).
+    QVERIFY(html.contains(QStringLiteral("Summary &amp; details")));
     QVERIFY(html.contains(QStringLiteral("Example Site")));
     QVERIFY(html.contains(
         QStringLiteral("href=\"https://example.com/story?ref=irc\"")));

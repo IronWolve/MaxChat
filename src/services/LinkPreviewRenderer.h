@@ -9,9 +9,13 @@ namespace maxchat::services {
 
 struct LinkPreviewRenderOptions {
   int maxTitleChars = 120;
-  int maxDescriptionChars = 160; // keep cards tight — long boilerplate is noise
+  int maxDescriptionChars = 160;
   int maxImageWidth = 320;
   int maxImageHeight = 240;
+  bool showSiteName    = true;
+  bool showTitle       = true;
+  bool showDescription = true;
+  bool showImage       = true;
 };
 
 [[nodiscard]] QString primaryDomainForPreview(const QUrl &url);
