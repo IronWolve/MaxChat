@@ -2497,6 +2497,19 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
             appendSystemLineToTarget(
                 QStringLiteral("server"),
                 QStringLiteral("! Connected to %1 as %2.").arg(m_connectionPlan.networkName, nick));
+            // First connect only: widen the nick column to fit your nick (never
+            // shrinks a column you've already widened; runs once). Python parity.
+            if (m_alignNicks && !nick.isEmpty() &&
+                !m_settings.loadWithDefaults()
+                     .value(QStringLiteral("nick_width_autoset"), false)
+                     .toBool()) {
+                static_cast<void>(
+                    m_settings.setValue(QStringLiteral("nick_width_autoset"), true));
+                const int want = static_cast<int>(nick.size()) + 2; // < > around it
+                if (want > m_nickColumnWidth) {
+                    setNickColumnWidth(want, true);
+                }
+            }
             for (const QString& performLine : m_connectionPlan.perform) {
                 const QString trimmedPerform = performLine.trimmed();
                 if (trimmedPerform.isEmpty()) {
