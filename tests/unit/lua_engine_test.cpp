@@ -334,6 +334,24 @@ class LuaEngineTest final : public QObject {
         QVERIFY(host.echoes.isEmpty());
     }
 
+    void bundledExamplesAllLoad() {
+#ifdef MAXCHAT_EXAMPLE_SCRIPTS_DIR
+        const QString dir = QStringLiteral(MAXCHAT_EXAMPLE_SCRIPTS_DIR);
+        QTemporaryDir data;
+        QVERIFY(data.isValid());
+        FakeHost host;
+        LuaEngine engine(&host, dir, data.path());
+        const QFileInfoList files =
+            QDir(dir).entryInfoList({QStringLiteral("*.lua")}, QDir::Files, QDir::Name);
+        QVERIFY(!files.isEmpty());
+        for (const QFileInfo& fi : files) {
+            QVERIFY2(engine.load(fi.absoluteFilePath()), qPrintable(fi.fileName()));
+        }
+#else
+        QSKIP("example scripts dir not defined");
+#endif
+    }
+
     void scriptErrorDoesNotCrash() {
         QTemporaryDir dir;
         QVERIFY(dir.isValid());
