@@ -149,9 +149,15 @@ bool IrcSession::action(const QString &target, const QString &text) {
 bool IrcSession::ctcp(const QString &target, const QString &command,
                       const QString &arg) {
   const QString upperCommand = command.toUpper();
-  const QString body = arg.isEmpty()
+  QString effectiveArg = arg;
+  if (upperCommand == QStringLiteral("PING") && effectiveArg.isEmpty()) {
+    // Carry a timestamp so the matching reply can be timed (Python parity).
+    effectiveArg = QString::number(
+        double(QDateTime::currentMSecsSinceEpoch()) / 1000.0, 'f', 3);
+  }
+  const QString body = effectiveArg.isEmpty()
                            ? upperCommand
-                           : QStringLiteral("%1 %2").arg(upperCommand, arg);
+                           : QStringLiteral("%1 %2").arg(upperCommand, effectiveArg);
   return sendRaw(QStringLiteral("PRIVMSG %1 :%2").arg(target, ctcpWrap(body)));
 }
 
@@ -345,6 +351,19 @@ void IrcSession::handleLine(const QString &line) {
     const CtcpMessage ctcp = parseCtcpMessage(text);
     if (ctcp.valid) {
       if (command == QStringLiteral("NOTICE")) {
+        // A CTCP PING reply echoes our timestamp — show the round-trip time.
+        if (ctcp.command == QStringLiteral("PING")) {
+          bool ok = false;
+          const double sent = ctcp.args.trimmed().toDouble(&ok);
+          if (ok) {
+            const double elapsed =
+                double(QDateTime::currentMSecsSinceEpoch()) / 1000.0 - sent;
+            emit replyText(QStringLiteral("[ctcp] PING reply from %1: %2s")
+                               .arg(msg.nick(),
+                                    QString::number(std::max(0.0, elapsed), 'f', 3)));
+            return;
+          }
+        }
         emit replyText(ctcpSummary(QStringLiteral("reply"), msg.nick(), ctcp));
         return;
       }

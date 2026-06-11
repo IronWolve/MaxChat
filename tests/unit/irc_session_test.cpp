@@ -443,6 +443,21 @@ private slots:
              QStringLiteral("[ctcp] VERSION reply from alice: client 1.2"));
   }
 
+  void ctcpPingReplyShowsRoundTripTime() {
+    IrcSession session;
+    QSignalSpy replies(&session, &IrcSession::replyText);
+
+    // A PING reply echoing a timestamp (epoch 1.000s ago-ish) → "[...]: N.NNNs".
+    session.handleLine(QStringLiteral(":alice!u@h NOTICE bob :") +
+                       ctcpPayload(QStringLiteral("PING 1.000")));
+
+    QCOMPARE(replies.count(), 1);
+    const QString line = replies.at(0).at(0).toString();
+    QVERIFY2(line.startsWith(QStringLiteral("[ctcp] PING reply from alice: ")),
+             qPrintable(line));
+    QVERIFY2(line.endsWith(QStringLiteral("s")), qPrintable(line));
+  }
+
   void unknownCtcpRequestDoesNotBecomeChatText() {
     IrcSession session;
     QList<QByteArray> writes;
