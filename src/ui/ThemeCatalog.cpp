@@ -649,7 +649,15 @@ QString styleSheetForAppearance(const QString& theme, const QString& chatTheme,
     }
 
     const AppThemeDefinition p = appThemeById(themeId);
-    const QString wallpaperPath = effectiveWallpaperPath(themeId, wallpaper);
+    QString wallpaperPath = effectiveWallpaperPath(themeId, wallpaper);
+    // The path is interpolated into a quote-delimited QSS url("..."); a quote or
+    // newline could break out and inject styles. Real wallpaper paths never
+    // contain these, so just drop the wallpaper if one does.
+    if (wallpaperPath.contains(QLatin1Char('"')) ||
+        wallpaperPath.contains(QLatin1Char('\n')) ||
+        wallpaperPath.contains(QLatin1Char('\r'))) {
+        wallpaperPath.clear();
+    }
     const bool hasWallpaper = !wallpaperPath.isEmpty();
 
     const QString background = gradientCss(p);
