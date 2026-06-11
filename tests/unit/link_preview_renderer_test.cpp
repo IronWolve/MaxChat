@@ -75,6 +75,26 @@ private slots:
     QVERIFY(html.contains(QStringLiteral("mastodon.social")));
   }
 
+  void socialPostKeepsTextEvenWithImage() {
+    LinkPreviewCandidate candidate;
+    candidate.kind = LinkPreviewKind::XPost;
+    candidate.originalUrl = QUrl(QStringLiteral("https://x.com/user/status/1"));
+    candidate.fetchUrl =
+        QUrl(QStringLiteral("https://fxtwitter.com/user/status/1"));
+
+    OpenGraphCard card;
+    card.title = QStringLiteral("user");
+    card.description = QStringLiteral("the actual tweet text");
+    card.imageUrl = QUrl(QStringLiteral("https://pbs.twimg.com/media/x.jpg"));
+
+    const QString html = renderOpenGraphPreviewHtml(candidate, card);
+
+    // The post text is the content — it must survive even though there's an
+    // image (unlike a generic web card, where the image replaces the blurb).
+    QVERIFY(html.contains(QStringLiteral("the actual tweet text")));
+    QVERIFY(html.contains(QStringLiteral("media/x.jpg")));
+  }
+
   void rendersDirectImagePreview() {
     LinkPreviewCandidate candidate;
     candidate.kind = LinkPreviewKind::DirectImage;
