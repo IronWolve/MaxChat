@@ -98,8 +98,13 @@ QString renderOpenGraphPreviewHtml(const LinkPreviewCandidate &candidate,
   }
   html += QStringLiteral("<div style=\"margin-top:1px;\"><a href=\"%1\"><b>%2</b></a></div>")
               .arg(htmlUrl(targetUrl), title.toHtmlEscaped());
-  // Skip a description that just echoes the title (common on aggregators).
-  if (!description.isEmpty() && description.compare(title, Qt::CaseInsensitive) != 0) {
+  // When the card has an image, let the image carry the content and drop the
+  // description — this is what Discord does, and it strips noise like imgur's
+  // generic "Discover topics…" blurb. Keep the description only for text-only
+  // cards (no image), where it's the actual substance. Also skip a description
+  // that merely echoes the title.
+  if (!card.imageUrl.isValid() && !description.isEmpty() &&
+      description.compare(title, Qt::CaseInsensitive) != 0) {
     html += QStringLiteral("<div style=\"margin-top:2px;\">%1</div>")
                 .arg(description.toHtmlEscaped());
   }
