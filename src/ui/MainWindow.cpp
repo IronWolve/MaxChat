@@ -877,6 +877,7 @@ MainWindow::MainWindow(QWidget* parent)
         this, scriptsDir, QDir(scriptsDir).filePath(QStringLiteral("data")), this);
     if (maxchat::scripting::LuaEngine::available()) {
         QDir().mkpath(scriptsDir);
+        seedBundledScripts(scriptsDir);
         m_lua->loadAll();
     }
 }
@@ -1058,8 +1059,7 @@ void maxchat::ui::MainWindow::buildMenus() {
                             &MainWindow::openShortcutEditor);
     settingsMenu->addAction(QStringLiteral("Friends / Notify..."), this,
                             &MainWindow::openFriendsNotify);
-    settingsMenu->addAction(QStringLiteral("Scripts..."), this,
-                            [this]() { showScriptsPlaceholder(QStringLiteral("scripts")); });
+    settingsMenu->addAction(QStringLiteral("Scripts..."), this, &MainWindow::openScriptsManager);
     QAction* transfersAction =
         settingsMenu->addAction(QStringLiteral("File Transfers..."), this,
                                 &MainWindow::openDccTransfers);
@@ -1941,6 +1941,104 @@ void maxchat::ui::MainWindow::handleScriptsCommand(const QString& command, const
     }
 }
 
+void maxchat::ui::MainWindow::seedBundledScripts(const QString& destDir) {
+    const QString appDir = QCoreApplication::applicationDirPath();
+    const QStringList candidates = {QDir(appDir).filePath(QStringLiteral("assets/scripts")),
+                                    QDir(appDir).filePath(QStringLiteral("../assets/scripts")),
+                                    QDir::current().filePath(QStringLiteral("assets/scripts"))};
+    QString src;
+    for (const QString& candidate : candidates) {
+        if (QDir(candidate).exists()) {
+            src = candidate;
+            break;
+        }
+    }
+    if (src.isEmpty()) {
+        return;
+    }
+    const QFileInfoList examples =
+        QDir(src).entryInfoList({QStringLiteral("*.lua")}, QDir::Files, QDir::Name);
+    for (const QFileInfo& fi : examples) {
+        const QString dest = QDir(destDir).filePath(fi.fileName());
+        if (!QFile::exists(dest)) {
+            QFile::copy(fi.absoluteFilePath(), dest); // never overwrite user edits
+        }
+    }
+}
+
+void maxchat::ui::MainWindow::openScriptsManager() {
+    if (!maxchat::scripting::LuaEngine::available()) {
+        showFeaturePlanned(QStringLiteral("Scripts"),
+                           QStringLiteral("This build was compiled without scripting support."));
+        return;
+    }
+    const QString scriptsDir =
+        QDir(m_settings.paths().configDir).filePath(QStringLiteral("scripts"));
+
+    auto* dialog = new QDialog(this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->setWindowTitle(QStringLiteral("Scripts"));
+    dialog->resize(460, 380);
+    auto* root = new QVBoxLayout(dialog);
+    root->addWidget(new QLabel(QStringLiteral("Lua scripts in %1").arg(scriptsDir), dialog));
+    auto* list = new QListWidget(dialog);
+    root->addWidget(list, 1);
+
+    const auto refresh = [this, list, scriptsDir]() {
+        list->clear();
+        const QStringList loaded = m_lua->loaded();
+        const QFileInfoList files =
+            QDir(scriptsDir).entryInfoList({QStringLiteral("*.lua")}, QDir::Files, QDir::Name);
+        for (const QFileInfo& fi : files) {
+            const QString name = fi.completeBaseName();
+            auto* item = new QListWidgetItem(
+                loaded.contains(name) ? QStringLiteral("%1   [loaded]").arg(name) : name);
+            item->setData(Qt::UserRole, name);
+            list->addItem(item);
+        }
+    };
+    refresh();
+
+    const auto selectedName = [list]() -> QString {
+        QListWidgetItem* item = list->currentItem();
+        return item != nullptr ? item->data(Qt::UserRole).toString() : QString();
+    };
+
+    auto* buttons = new QHBoxLayout();
+    const auto addButton = [&](const QString& label, std::function<void()> handler) {
+        auto* button = new QPushButton(label, dialog);
+        connect(button, &QPushButton::clicked, dialog, std::move(handler));
+        buttons->addWidget(button);
+    };
+    addButton(QStringLiteral("Load"), [this, selectedName, refresh]() {
+        const QString name = selectedName();
+        if (!name.isEmpty()) {
+            handleScriptsCommand(QStringLiteral("load"), name);
+            refresh();
+        }
+    });
+    addButton(QStringLiteral("Unload"), [this, selectedName, refresh]() {
+        const QString name = selectedName();
+        if (!name.isEmpty()) {
+            handleScriptsCommand(QStringLiteral("unload"), name);
+            refresh();
+        }
+    });
+    addButton(QStringLiteral("Reload"), [this, selectedName, refresh]() {
+        const QString name = selectedName();
+        if (!name.isEmpty()) {
+            handleScriptsCommand(QStringLiteral("reload"), name);
+            refresh();
+        }
+    });
+    addButton(QStringLiteral("Open folder"),
+              [scriptsDir]() { QDesktopServices::openUrl(QUrl::fromLocalFile(scriptsDir)); });
+    buttons->addStretch(1);
+    addButton(QStringLiteral("Close"), [dialog]() { dialog->accept(); });
+    root->addLayout(buttons);
+    dialog->show();
+}
+
 void maxchat::ui::MainWindow::leaveCurrentChannel() {
     const QString channel = m_currentTarget.trimmed();
     if (!connection().isConnected()) {
@@ -2137,14 +2235,6 @@ QString MainWindow::systemInfoText() const {
     return QStringLiteral("%1 %2 on %3 (%4), Qt %5")
         .arg(app::displayName(), app::version(), os, QSysInfo::currentCpuArchitecture(),
              QString::fromLatin1(qVersion()));
-}
-
-void maxchat::ui::MainWindow::showScriptsPlaceholder(const QString& command) {
-    const QString name =
-        command.trimmed().isEmpty() ? QStringLiteral("scripts") : command.trimmed();
-    appendSystemLine(QStringLiteral("! /%1 is planned for the C++ port. /sysinfo is "
-                                    "built in now.")
-                         .arg(name));
 }
 
 void maxchat::ui::MainWindow::showCommandHelp(const QString& topic) {
