@@ -1042,6 +1042,8 @@ if(MAXCHAT_LUA)
             maxchat_scripting
             Qt6::Test
     )
+    target_compile_definitions(lua_engine_test PRIVATE
+        MAXCHAT_EXAMPLE_SCRIPTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/scripts")
 
     add_test(NAME lua_engine COMMAND lua_engine_test)
 endif()
