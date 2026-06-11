@@ -9,7 +9,7 @@ namespace maxchat::services {
 
 struct LinkPreviewRenderOptions {
   int maxTitleChars = 120;
-  int maxDescriptionChars = 220;
+  int maxDescriptionChars = 160; // keep cards tight — long boilerplate is noise
   int maxImageWidth = 320;
   int maxImageHeight = 240;
 };

@@ -6003,13 +6003,21 @@ void maxchat::ui::MainWindow::appendUnreadMarkerLine() {
     if (m_chatView == nullptr) {
         return;
     }
-    QTextCursor cursor = m_chatView->textCursor();
-    cursor.movePosition(QTextCursor::End);
-    if (!m_chatView->document()->isEmpty()) {
-        cursor.insertBlock(QTextBlockFormat());
-    }
-    cursor.insertHtml(QStringLiteral("<hr/>"));
-    m_chatView->setTextCursor(cursor);
+    // Render the unread boundary as a dim "new" divider in the SAME style as the
+    // "Chat ended" replay rule, so when unread starts right after a resume it
+    // reads as a clean marker directly under that rule — not a stray left stub.
+    maxchat::core::ChatLineFormatOptions opts = chatLineFormatOptions();
+    const QString dim =
+        opts.timestampColor.isEmpty() ? QStringLiteral("#8a8a8a") : opts.timestampColor;
+    opts.defaultForeground = dim;
+    opts.systemColor = dim;
+    opts.bracketColor = dim;
+    opts.colorNicks = false;
+    opts.renderFormatting = false;
+    opts.systemLine = true;
+    opts.showTimestamp = false;
+    appendFormattedChatLine(
+        maxchat::core::formatChatLine(QStringLiteral("──────── new ────────"), opts));
 }
 
 void maxchat::ui::MainWindow::configureDcc() {
