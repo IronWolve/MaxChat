@@ -257,6 +257,22 @@ QVariantMap SettingsStore::defaultSettings() {
   settings.insert(QStringLiteral("spellcheck_enabled"), true);
   settings.insert(QStringLiteral("spellcheck_backend"), QStringLiteral("internal"));
   settings.insert(QStringLiteral("spell_language"), QStringLiteral("en"));
+  settings.insert(QStringLiteral("spellcheck_autocorrect"), false);
+  settings.insert(QStringLiteral("autocorrect_max_distance"), 2);
+  settings.insert(QStringLiteral("og_show_site_name"),    true);
+  settings.insert(QStringLiteral("og_show_title"),        true);
+  settings.insert(QStringLiteral("og_show_description"),  true);
+  settings.insert(QStringLiteral("og_show_image"),        true);
+  settings.insert(QStringLiteral("image_upload_service"), QString());
+  settings.insert(QStringLiteral("imgbb_tos"),       false);
+  settings.insert(QStringLiteral("imgbb_api_key"),   QString());
+  settings.insert(QStringLiteral("imgur_tos"),       false);
+  settings.insert(QStringLiteral("imgur_client_id"), QString());
+  settings.insert(QStringLiteral("postimages_tos"),  false);
+  settings.insert(QStringLiteral("postimages_token"), QString());
+  settings.insert(QStringLiteral("imgbox_tos"),      false);
+  settings.insert(QStringLiteral("imgbox_username"), QString());
+  settings.insert(QStringLiteral("imgbox_password"), QString());
   settings.insert(QStringLiteral("wallpaper"), QString());
   settings.insert(QStringLiteral("show_timestamps"), true);
   settings.insert(QStringLiteral("timestamp_format"),

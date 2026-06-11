@@ -9,12 +9,14 @@
 #include "core/SettingsStore.h"
 #include "irc/IrcConnection.h"
 #include "services/LinkPreviewPolicy.h"
+#include "services/LinkPreviewRenderer.h"
 #include "services/ImageFetcher.h"
 #include "services/OpenGraphFetcher.h"
 #include "scripting/LuaEngine.h"
 #include "scripting/ScriptHost.h"
 #include "ui/SoundPlayer.h"
 #include "spell/Speller.h" // backend-neutral; OS speller works without Hunspell
+#include "upload/ImageUploader.h"
 
 #include <QElapsedTimer>
 #include <QHash>
@@ -62,7 +64,7 @@ class BanListDialog;
 class ChannelListDialog;
 class ChatFindDialog;
 class RawLogDialog;
-class SpellcheckHighlighter;
+class SpellTextEdit;
 class UrlListDialog;
 
 class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHost {
@@ -88,6 +90,8 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     bool eventFilter(QObject* watched, QEvent* event) override;
     void changeEvent(QEvent* event) override;
     void closeEvent(QCloseEvent* event) override;
+    void dragEnterEvent(QDragEnterEvent* event) override;
+    void dropEvent(QDropEvent* event) override;
 
     void buildMenus();
     void buildLayout();
@@ -101,6 +105,8 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     void setWallpaper(const QString& wallpaper, bool save);
     void syncWallpaperActions(const QString& wallpaper);
     void configureSpellcheck(const QVariantMap& settings);
+    void configureImageUploader(const QVariantMap& settings);
+    void startImageUpload(const QImage& image);
     void resizeMessageInput();
     void setServerListVisible(bool visible, bool save);
     void setMembersVisible(bool visible, bool save);
@@ -155,6 +161,12 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     void updateNickLabel();        // your-nick label by the input box
     void leaveCurrentChannel();
     void replayCurrentLog();
+    // Seed a buffer's stored line model with dimmed log history + a "Chat ended"
+    // divider so resume survives buffer switches (rendered, not painted). Returns
+    // true if any history was added. force=true re-seeds even a non-empty buffer
+    // (manual Tools ▸ Replay).
+    bool seedReplayForBuffer(const QString& network, const QString& target, bool force = false);
+    QSet<QString> m_replayedBuffers; // network\x1ftarget already seeded
     void markAllRead();
     void clearCurrentChat();
     void clearAllChats();
@@ -194,6 +206,27 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
         QString lastText;      // input after our last insertion (to detect a continued cycle)
         int lastCursor = -1;
     } m_completion;
+
+    // Autocorrect-on-space state. After a word is auto-replaced, an immediate
+    // Backspace undoes it and suppresses re-correcting that exact word once
+    // (so deliberately "wrong" spellings stick); typing past it resumes.
+    struct AutocorrectState {
+        bool active = false;   // a correction was just applied; next key decides
+        int wordStart = 0;     // doc offset where the corrected word began
+        QString original;      // what the user typed
+        QString corrected;     // what we replaced it with
+    } m_autocorrect;
+    QString m_autocorrectSuppress; // word the user undid; don't re-correct it next
+    int m_autocorrectMaxDistance = 2; // max edit distance for an auto-replacement
+    bool tryAutocorrectAtSpace();  // returns true if it consumed the space
+    bool undoAutocorrect();        // returns true if a pending correction was undone
+
+    // Personal dictionary: words the user added ("Add to Dictionary"), one per
+    // line in <config>/personal_dict.dic. Loaded into the live speller and folded
+    // into settings export/import.
+    [[nodiscard]] QString personalDictionaryPath() const;
+    void loadPersonalDictionary();
+    void addWordToPersonalDictionary(const QString& word);
     void showNetworkTreeContextMenu(const QPoint& pos);
     void showMemberContextMenu(const QPoint& pos);
     void openQueryForNick(const QString& nick);
@@ -262,8 +295,19 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     [[nodiscard]] bool isActiveBufferTarget(const QString& target) const;
     [[nodiscard]] bool isActiveBufferTarget(const QString& network, const QString& target) const;
     void activateBufferTarget(const QString& target);
-    void renderActiveBuffer(int unreadMarkerFromEnd = 0);
+    void renderActiveBuffer();
     void renderActiveBufferMetadata();
+    // Per-buffer unread boundary: the line index of the first message that arrived
+    // while the buffer was NOT active. Keyed network\x1ftarget. The `──── new ────`
+    // marker is drawn before that line, so it persists across switches and shows
+    // per channel; cleared once a message arrives while the buffer IS active (you
+    // read it live). Absent = no unread boundary.
+    QHash<QString, int> m_bufferMarkerCount;
+    void noteUnreadBoundary(const maxchat::core::ChatBufferId& id, bool active,
+                            int lineCountBeforeAppend);
+    // A centered, dim full-width divider (the "Chat ended" resume rule and the
+    // "new" unread marker). Painted directly; callers come from renderActiveBuffer.
+    void appendCenteredDivider(const QString& text, const QString& color);
     void setComicMode(bool enabled);
     void refreshComic();
     void ensureComicArt();
@@ -397,6 +441,7 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     QString m_currentWallpaper;
     QVariantMap m_commandAliases;
     maxchat::services::LinkPreviewToggles m_linkPreviewToggles;
+    maxchat::services::LinkPreviewRenderOptions m_ogRenderOptions;
     QHash<QString, maxchat::services::LinkPreviewCandidate> m_pendingPreviewCandidates;
     QHash<QString, QStringList> m_pendingNamesByChannel;
     QHash<QString, QString> m_channelModeLines;
@@ -479,11 +524,12 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     QListWidget* m_memberList = nullptr;
     QPushButton* m_channelModesButton = nullptr;
     QLabel* m_topicLabel = nullptr;
-    QTextEdit* m_input = nullptr;
-    SpellcheckHighlighter* m_spellcheckHighlighter = nullptr;
+    SpellTextEdit* m_input = nullptr;
     // Active speller (internal Hunspell or native OS engine) — declared
     // unconditionally so the OS backend works on builds without Hunspell.
     std::unique_ptr<maxchat::spell::Speller> m_spellchecker;
+    std::unique_ptr<maxchat::upload::ImageUploader> m_imageUploader;
+    bool m_autocorrectEnabled = false;
     QPointer<ChatFindDialog> m_chatFindDialog;
     QPointer<BanListDialog> m_banListDialog;
     QPointer<ChannelListDialog> m_channelListDialog;

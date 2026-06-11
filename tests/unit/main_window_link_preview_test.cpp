@@ -32,6 +32,7 @@
 
 #define private public
 #include "ui/MainWindow.h"
+#include "ui/SpellTextEdit.h"
 #undef private
 
 using maxchat::ui::MainWindow;
@@ -150,6 +151,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void directImagePreviewRendersWhenEnabled() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(chatView != nullptr);
 
@@ -163,6 +165,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void directImagePreviewDoesNotRenderWhenDisabled() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(chatView != nullptr);
 
@@ -174,6 +177,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void rawLogDisplayDoesNotRenderPreview() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(chatView != nullptr);
 
@@ -187,6 +191,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void rawIrcLinesDoNotPrintInChatView() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(chatView != nullptr);
 
@@ -202,6 +207,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void directMediaPreviewUsesMediaToggle() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(chatView != nullptr);
 
@@ -216,6 +222,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void linkPreviewUsesMessageColumnIndent() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(chatView != nullptr);
 
@@ -245,6 +252,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void menuExposesPlannedFeatureStubs() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
 
         QAction* buttonsAsTabs =
             findMenuAction(window.menuBar(), QStringLiteral("Buttons as Tabs"));
@@ -297,6 +305,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void viewMenuTogglesSidePanelsAndPersistsSettings() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* networkTree = window.findChild<QTreeWidget*>(QStringLiteral("networkTree"));
         auto* memberPanel = window.findChild<QWidget*>(QStringLiteral("memberPanel"));
         auto* splitter = window.findChild<QSplitter*>(QStringLiteral("mainSplitter"));
@@ -352,6 +361,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void buttonBarAndChatSeparatorTogglePersistAndRerender() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         auto* toolbar = window.findChild<QToolBar*>(QStringLiteral("mainToolbar"));
         auto* tabBar = window.findChild<QTabBar*>(QStringLiteral("bufferTabBar"));
@@ -425,6 +435,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void themeMenuChangesSavedThemeAndApplicationStyle() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         QAction* synthwaveAction = findMenuAction(window.menuBar(), QStringLiteral("Synthwave"));
         QAction* vaporwaveAction = findMenuAction(window.menuBar(), QStringLiteral("Vaporwave"));
         QAction* defaultAction = findMenuAction(window.menuBar(), QStringLiteral("Default"));
@@ -481,6 +492,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void draggingChatSeparatorChangesNickColumnWidth() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(chatView != nullptr);
 
@@ -510,6 +522,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void targetSwitchRestoresSeparateBufferHistory() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(chatView != nullptr);
 
@@ -540,6 +553,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void targetSwitchRestoresMembersAndTopic() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* memberList = window.findChild<QListWidget*>(QStringLiteral("memberList"));
         auto* topicLabel = window.findChild<QLabel*>(QStringLiteral("topicLabel"));
         QVERIFY(memberList != nullptr);
@@ -578,6 +592,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void networkTreeSelectionUsesStoredTargetNotDisplayLabel() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* networkTree = window.findChild<QTreeWidget*>(QStringLiteral("networkTree"));
         QVERIFY(networkTree != nullptr);
 
@@ -601,6 +616,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void networkTreeShowsServerBufferInsteadOfConnectionState() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* networkTree = window.findChild<QTreeWidget*>(QStringLiteral("networkTree"));
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(networkTree != nullptr);
@@ -631,6 +647,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void tabCompletionCyclesThroughCandidates() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         QVERIFY(window.m_input != nullptr);
 
         // "/" matches every slash command, so this is a guaranteed multi-candidate
@@ -655,6 +672,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void networkTreeShowsUnreadAndHighlightCounts() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* networkTree = window.findChild<QTreeWidget*>(QStringLiteral("networkTree"));
         QVERIFY(networkTree != nullptr);
 
@@ -705,6 +723,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void networkTreeKeepsSeparateNetworkBuffers() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* networkTree = window.findChild<QTreeWidget*>(QStringLiteral("networkTree"));
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(networkTree != nullptr);
@@ -741,6 +760,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void inactiveNetworkSignalUpdatesOnlyThatNetworkBuffer() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* networkTree = window.findChild<QTreeWidget*>(QStringLiteral("networkTree"));
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(networkTree != nullptr);
@@ -803,6 +823,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void incomingPrivateMessageOpensBackgroundQuery() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* networkTree = window.findChild<QTreeWidget*>(QStringLiteral("networkTree"));
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(networkTree != nullptr);
@@ -842,6 +863,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void messageQueryAndActionCommandsRouteCleanly() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* networkTree = window.findChild<QTreeWidget*>(QStringLiteral("networkTree"));
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(networkTree != nullptr);
@@ -908,6 +930,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void incomingChannelMessagesSetUnreadAndHighlightsInBackgroundOnly() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* networkTree = window.findChild<QTreeWidget*>(QStringLiteral("networkTree"));
         QVERIFY(networkTree != nullptr);
 
@@ -954,6 +977,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void networkTreeRootIgnoresHiddenUnreadBuffers() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* networkTree = window.findChild<QTreeWidget*>(QStringLiteral("networkTree"));
         QVERIFY(networkTree != nullptr);
 
@@ -983,6 +1007,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void markAllReadClearsTreeCounters() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* networkTree = window.findChild<QTreeWidget*>(QStringLiteral("networkTree"));
         QVERIFY(networkTree != nullptr);
 
@@ -1010,6 +1035,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void clearCommandClearsCurrentViewAndStoredBuffer() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(chatView != nullptr);
 
@@ -1043,6 +1069,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void localConnectionCommandsBypassGenericDisconnectedGuard() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(chatView != nullptr);
 
@@ -1063,6 +1090,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void serverCommandStartsLocalConnectionPlanWhileDisconnected() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(chatView != nullptr);
 
@@ -1082,6 +1110,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void closeCommandRemovesCurrentTargetButKeepsStoredHistory() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
 
         window.m_hasConnectionPlan = true;
         window.m_connectionPlan.networkName = QStringLiteral("Libera.Chat");
@@ -1109,6 +1138,7 @@ class MainWindowLinkPreviewTest final : public QObject {
         QVERIFY(temp.isValid());
 
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(chatView != nullptr);
 
@@ -1147,8 +1177,87 @@ class MainWindowLinkPreviewTest final : public QObject {
         QVERIFY(!html.contains(today.toString(QStringLiteral("yyyy-MM-dd"))));
     }
 
+    void replayHistorySurvivesBufferSwitch() {
+        // AUDIT #29: resume history must be stored in the buffer model (not just
+        // painted), so it shows on first open AND survives switching away/back.
+        QTemporaryDir temp;
+        QVERIFY(temp.isValid());
+
+        MainWindow window;
+        auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
+        QVERIFY(chatView != nullptr);
+        window.m_chatLogStore = maxchat::core::ChatLogStore(temp.path());
+        window.m_hasConnectionPlan = true;
+        window.m_connectionPlan.networkName = QStringLiteral("Libera.Chat");
+        window.m_replayLogEnabled = true;
+
+        const QDate today = QDate::currentDate();
+        QVERIFY(window.m_chatLogStore.appendLine(
+            QStringLiteral("Libera.Chat"), QStringLiteral("#chat"),
+            QStringLiteral("<bob> hello there"), QDateTime(today, QTime(1, 2, 3))));
+
+        // First open seeds dimmed history + a "Chat ended" divider into the model.
+        window.activateBufferTarget(QStringLiteral("#chat"));
+        const maxchat::core::ChatBufferId chatId = window.bufferIdForTarget(QStringLiteral("#chat"));
+        const QList<maxchat::core::ChatBufferLine> seeded =
+            window.m_chatBuffers.snapshot(chatId).lines;
+        QVERIFY(std::any_of(seeded.cbegin(), seeded.cend(),
+                            [](const maxchat::core::ChatBufferLine& l) {
+                                return l.dimmed && l.sourceText.contains(QStringLiteral("hello there"));
+                            }));
+        QVERIFY(std::any_of(seeded.cbegin(), seeded.cend(),
+                            [](const maxchat::core::ChatBufferLine& l) {
+                                return l.systemLine && l.dimmed &&
+                                       l.sourceText.contains(QStringLiteral("Chat ended"));
+                            }));
+
+        // Switching away and back must reproduce it (the old bug wiped it).
+        window.activateBufferTarget(QStringLiteral("#other"));
+        window.activateBufferTarget(QStringLiteral("#chat"));
+        QVERIFY(chatView->toHtml().contains(QStringLiteral("hello there")));
+        QVERIFY(chatView->toHtml().contains(QStringLiteral("Chat ended")));
+
+        // Re-opening must not seed the history a second time.
+        const int afterFirst = static_cast<int>(window.m_chatBuffers.snapshot(chatId).lines.size());
+        window.activateBufferTarget(QStringLiteral("#other"));
+        window.activateBufferTarget(QStringLiteral("#chat"));
+        QCOMPARE(static_cast<int>(window.m_chatBuffers.snapshot(chatId).lines.size()), afterFirst);
+    }
+
+    void unreadMarkerPersistsAcrossRerender() {
+        // The "new" marker must appear in a channel that got messages while you
+        // were away, and survive a re-render (the old painted version vanished).
+        MainWindow window;
+        window.m_replayLogEnabled = false;
+        window.m_markerLine = true;
+        window.m_hasConnectionPlan = true;
+        window.m_connectionPlan.networkName = QStringLiteral("Libera.Chat");
+        auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
+        QVERIFY(chatView != nullptr);
+
+        // Open #a and read a couple of messages (seen while active).
+        window.activateBufferTarget(QStringLiteral("#a"));
+        window.appendSystemLineToTarget(QStringLiteral("#a"), QStringLiteral("<bob> one"));
+        window.appendSystemLineToTarget(QStringLiteral("#a"), QStringLiteral("<bob> two"));
+        QVERIFY(!chatView->toPlainText().contains(QStringLiteral("new"))); // nothing unread yet
+
+        // Leave to #b; a message arrives in #a while we're away.
+        window.activateBufferTarget(QStringLiteral("#b"));
+        window.appendSystemLineToNetworkTarget(QStringLiteral("Libera.Chat"), QStringLiteral("#a"),
+                                               QStringLiteral("<bob> while away"));
+
+        // Returning shows the marker before the new message...
+        window.activateBufferTarget(QStringLiteral("#a"));
+        QVERIFY(chatView->toPlainText().contains(QStringLiteral("new")));
+
+        // ...and a re-render (e.g. theme/metadata refresh) keeps it.
+        window.renderActiveBuffer();
+        QVERIFY(chatView->toPlainText().contains(QStringLiteral("new")));
+    }
+
     void chatLinesUseViewHangingIndent() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(chatView != nullptr);
 
@@ -1182,6 +1291,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void serverRepliesStayInServerBuffer() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(chatView != nullptr);
 
@@ -1202,6 +1312,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void noisyChannelNumericsDoNotDuplicateChatLines() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(chatView != nullptr);
 
@@ -1242,6 +1353,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void channelStateRepliesDoNotSpamChat() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(chatView != nullptr);
 
@@ -1272,6 +1384,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void liveNickAndQuitEventsRouteToAffectedChannels() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(chatView != nullptr);
 
@@ -1309,6 +1422,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void serverScopedRepliesStayOutOfChannelBuffers() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(chatView != nullptr);
 
@@ -1343,6 +1457,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
     void applyingMessagePreferencesRerendersCurrentBuffer() {
         MainWindow window;
+        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(chatView != nullptr);
 

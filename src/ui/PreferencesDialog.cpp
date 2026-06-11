@@ -19,6 +19,7 @@
 #include <QFontComboBox>
 #include <QFontDatabase>
 #include <QFormLayout>
+#include <QFrame>
 #include <QLabel>
 #include <QUrl>
 #include <QGroupBox>
@@ -29,6 +30,7 @@
 #include <QRegularExpression>
 #include <QSpinBox>
 #include <QStackedWidget>
+#include <QToolButton>
 #include <QVBoxLayout>
 
 #include <utility>
@@ -150,8 +152,10 @@ QVariantMap contentServicesFromSettings(const QVariantMap& settings) {
 
 } // namespace
 
-PreferencesDialog::PreferencesDialog(QVariantMap settings, QWidget* parent)
-    : QDialog(parent), settings_(std::move(settings)) {
+PreferencesDialog::PreferencesDialog(QVariantMap settings, QStringList loadedScripts,
+                                     QString scriptsDir, QWidget* parent)
+    : QDialog(parent), settings_(std::move(settings)),
+      loadedScripts_(std::move(loadedScripts)), scriptsDir_(std::move(scriptsDir)) {
     setWindowTitle(QStringLiteral("Preferences"));
     resize(1000, 680);
 
@@ -193,6 +197,8 @@ PreferencesDialog::PreferencesDialog(QVariantMap settings, QWidget* parent)
 
     addPage(QStringLiteral("Fonts"), [this](QWidget* page) { buildFontsTab(page); });
 
+    addPage(QStringLiteral("Spelling"), [this](QWidget* page) { buildSpellingTab(page); });
+
     addPage(QStringLiteral("Localization"), [this](QWidget* page) { buildLocalizationTab(page); });
 
     addPage(QStringLiteral("Comic"), [this](QWidget* page) { buildComicTab(page); });
@@ -200,6 +206,8 @@ PreferencesDialog::PreferencesDialog(QVariantMap settings, QWidget* parent)
     addPage(QStringLiteral("Scripts"), [this](QWidget* page) { buildScriptsTab(page); });
 
     addPage(QStringLiteral("Services"), [this](QWidget* page) { buildServicesTab(page); });
+
+    addPage(QStringLiteral("Image Hosting"), [this](QWidget* page) { buildUploadsTab(page); });
 
     addPage(QStringLiteral("Data"), [this](QWidget* page) { buildDataTab(page); });
 
@@ -336,6 +344,12 @@ QVariantMap PreferencesDialog::settings() const {
         out.insert(QStringLiteral("spellcheck_backend"), spellBackend_->currentData().toString());
     }
     out.insert(QStringLiteral("spell_language"), spellLanguage_->currentData().toString());
+    if (autocorrectEnabled_) {
+        out.insert(QStringLiteral("spellcheck_autocorrect"), autocorrectEnabled_->isChecked());
+    }
+    if (autocorrectDistance_) {
+        out.insert(QStringLiteral("autocorrect_max_distance"), autocorrectDistance_->value());
+    }
     // Notifications
     if (dnd_) out.insert(QStringLiteral("dnd"), dnd_->isChecked());
     if (notifyPopup_) out.insert(QStringLiteral("notify_popup"), notifyPopup_->currentData().toString());
@@ -357,6 +371,36 @@ QVariantMap PreferencesDialog::settings() const {
     services.insert(QStringLiteral("xcards"), linkXCards_->isChecked());
     services.insert(QStringLiteral("webcards"), linkWebCards_->isChecked());
     out.insert(QStringLiteral("content_services"), services);
+
+    if (ogShowSiteName_)    out.insert(QStringLiteral("og_show_site_name"),    ogShowSiteName_->isChecked());
+    if (ogShowTitle_)       out.insert(QStringLiteral("og_show_title"),        ogShowTitle_->isChecked());
+    if (ogShowDescription_) out.insert(QStringLiteral("og_show_description"),  ogShowDescription_->isChecked());
+    if (ogShowImage_)       out.insert(QStringLiteral("og_show_image"),        ogShowImage_->isChecked());
+
+    if (uploadService_) {
+        out.insert(QStringLiteral("image_upload_service"),
+                   uploadService_->currentData().toString());
+    }
+    if (imgbbTos_)       out.insert(QStringLiteral("imgbb_tos"),       imgbbTos_->isChecked());
+    if (imgurTos_)       out.insert(QStringLiteral("imgur_tos"),       imgurTos_->isChecked());
+    if (postimagesTos_)  out.insert(QStringLiteral("postimages_tos"),  postimagesTos_->isChecked());
+    if (imgboxTos_)      out.insert(QStringLiteral("imgbox_tos"),      imgboxTos_->isChecked());
+    if (imgbbKey_) {
+        out.insert(QStringLiteral("imgbb_api_key"), imgbbKey_->text().trimmed());
+    }
+    if (imgurClientId_) {
+        out.insert(QStringLiteral("imgur_client_id"), imgurClientId_->text().trimmed());
+    }
+    if (postimagesToken_) {
+        out.insert(QStringLiteral("postimages_token"), postimagesToken_->text().trimmed());
+    }
+    if (imgboxUsername_) {
+        out.insert(QStringLiteral("imgbox_username"), imgboxUsername_->text().trimmed());
+    }
+    if (imgboxPassword_) {
+        out.insert(QStringLiteral("imgbox_password"), imgboxPassword_->text());
+    }
+
     return out;
 }
 
@@ -683,6 +727,22 @@ void PreferencesDialog::buildComicTab(QWidget* tab) {
 
 void PreferencesDialog::buildScriptsTab(QWidget* tab) {
     auto* root = new QVBoxLayout(tab);
+
+    // Currently loaded scripts — populated from the live engine at dialog open.
+    auto* loadedGroup = new QGroupBox(QStringLiteral("Currently loaded"), tab);
+    auto* loadedLayout = new QVBoxLayout(loadedGroup);
+    loadedLayout->setSpacing(2);
+    if (loadedScripts_.isEmpty()) {
+        auto* none = new QLabel(QStringLiteral("No scripts loaded."), loadedGroup);
+        none->setEnabled(false);
+        loadedLayout->addWidget(none);
+    } else {
+        for (const QString& name : std::as_const(loadedScripts_)) {
+            loadedLayout->addWidget(new QLabel(name, loadedGroup));
+        }
+    }
+    root->addWidget(loadedGroup);
+
     auto* note = new QLabel(
         QStringLiteral("Lua scripts run sandboxed by default — they can react to chat, add "
                        "commands, and use their own private data folder. Grant extra abilities "
@@ -762,6 +822,18 @@ void PreferencesDialog::buildScriptsTab(QWidget* tab) {
     connect(removeDir, &QPushButton::clicked, this, [this]() {
         delete scriptDirs_->takeItem(scriptDirs_->currentRow());
     });
+
+    if (!scriptsDir_.isEmpty()) {
+        auto* openFolder = new QPushButton(QStringLiteral("Open scripts folder..."), tab);
+        openFolder->setToolTip(scriptsDir_);
+        connect(openFolder, &QPushButton::clicked, this, [this]() {
+            QDesktopServices::openUrl(QUrl::fromLocalFile(scriptsDir_));
+        });
+        auto* folderRow = new QHBoxLayout();
+        folderRow->addWidget(openFolder);
+        folderRow->addStretch(1);
+        root->addLayout(folderRow);
+    }
 }
 
 void PreferencesDialog::buildFontsTab(QWidget* tab) {
@@ -1231,6 +1303,8 @@ void PreferencesDialog::buildFilesTab(QWidget* tab) {
 void PreferencesDialog::buildServicesTab(QWidget* tab) {
     auto* root = new QVBoxLayout(tab);
     const QVariantMap services = contentServicesFromSettings(settings_);
+
+    // ── Link preview types ────────────────────────────────────────────
     linkImages_ = new QCheckBox(QStringLiteral("Image previews"), tab);
     linkImages_->setObjectName(QStringLiteral("linkImages"));
     linkImages_->setChecked(services.value(QStringLiteral("images")).toBool());
@@ -1247,6 +1321,40 @@ void PreferencesDialog::buildServicesTab(QWidget* tab) {
     root->addWidget(linkMedia_);
     root->addWidget(linkXCards_);
     root->addWidget(linkWebCards_);
+
+    // ── Separator ─────────────────────────────────────────────────────
+    auto* sep = new QFrame(tab);
+    sep->setFrameShape(QFrame::HLine);
+    sep->setFrameShadow(QFrame::Sunken);
+    root->addSpacing(6);
+    root->addWidget(sep);
+    root->addSpacing(4);
+
+    // ── OG card fields ────────────────────────────────────────────────
+    auto* cardLabel = new QLabel(QStringLiteral("Card fields to display:"), tab);
+    root->addWidget(cardLabel);
+    root->addSpacing(2);
+
+    ogShowSiteName_ = new QCheckBox(QStringLiteral("Site name"), tab);
+    ogShowSiteName_->setObjectName(QStringLiteral("ogShowSiteName"));
+    ogShowSiteName_->setChecked(settings_.value(QStringLiteral("og_show_site_name"), true).toBool());
+
+    ogShowTitle_ = new QCheckBox(QStringLiteral("Title"), tab);
+    ogShowTitle_->setObjectName(QStringLiteral("ogShowTitle"));
+    ogShowTitle_->setChecked(settings_.value(QStringLiteral("og_show_title"), true).toBool());
+
+    ogShowDescription_ = new QCheckBox(QStringLiteral("Description"), tab);
+    ogShowDescription_->setObjectName(QStringLiteral("ogShowDescription"));
+    ogShowDescription_->setChecked(settings_.value(QStringLiteral("og_show_description"), true).toBool());
+
+    ogShowImage_ = new QCheckBox(QStringLiteral("Photo (shown below card)"), tab);
+    ogShowImage_->setObjectName(QStringLiteral("ogShowImage"));
+    ogShowImage_->setChecked(settings_.value(QStringLiteral("og_show_image"), true).toBool());
+
+    root->addWidget(ogShowSiteName_);
+    root->addWidget(ogShowTitle_);
+    root->addWidget(ogShowDescription_);
+    root->addWidget(ogShowImage_);
     root->addStretch(1);
 }
 
@@ -1277,6 +1385,15 @@ void PreferencesDialog::buildLocalizationTab(QWidget* tab) {
     setComboByData(interfaceLanguage_,
                    settings_.value(QStringLiteral("interface_language"), QStringLiteral("system")));
 
+    form->addRow(QStringLiteral("Interface Language"), interfaceLanguage_);
+    root->addLayout(form);
+    root->addStretch(1);
+}
+
+void PreferencesDialog::buildSpellingTab(QWidget* tab) {
+    auto* root = new QVBoxLayout(tab);
+    auto* form = new QFormLayout();
+
     spellcheckEnabled_ = new QCheckBox(QStringLiteral("Enable spellcheck"), tab);
     spellcheckEnabled_->setObjectName(QStringLiteral("spellcheckEnabled"));
     spellcheckEnabled_->setChecked(settings_.value(QStringLiteral("spellcheck_enabled")).toBool());
@@ -1298,11 +1415,248 @@ void PreferencesDialog::buildLocalizationTab(QWidget* tab) {
     setComboByData(spellLanguage_,
                    settings_.value(QStringLiteral("spell_language"), QStringLiteral("en")));
 
-    form->addRow(QStringLiteral("Interface Language"), interfaceLanguage_);
+    autocorrectEnabled_ = new QCheckBox(
+        QStringLiteral("Autocorrect words while typing"), tab);
+    autocorrectEnabled_->setObjectName(QStringLiteral("autocorrectEnabled"));
+    autocorrectEnabled_->setToolTip(QStringLiteral(
+        "Replace a misspelled word with the top suggestion when you press space. "
+        "Press Backspace right after to undo and keep your spelling."));
+    autocorrectEnabled_->setChecked(
+        settings_.value(QStringLiteral("spellcheck_autocorrect"), false).toBool());
+
+    autocorrectDistance_ = new QSpinBox(tab);
+    autocorrectDistance_->setObjectName(QStringLiteral("autocorrectDistance"));
+    autocorrectDistance_->setRange(1, 6);
+    autocorrectDistance_->setValue(
+        settings_.value(QStringLiteral("autocorrect_max_distance"), 2).toInt());
+    autocorrectDistance_->setEnabled(autocorrectEnabled_->isChecked());
+    connect(autocorrectEnabled_, &QCheckBox::toggled, autocorrectDistance_,
+            &QWidget::setEnabled);
+    auto* distanceHelp = new QLabel(
+        QStringLiteral("How far a fix may be from what you typed (edit distance). "
+                       "Lower = safer: only obvious typos are changed. 2 is a good "
+                       "start; raise it to catch more, lower it if it over-corrects."),
+        tab);
+    distanceHelp->setWordWrap(true);
+    distanceHelp->setStyleSheet(QStringLiteral("color: palette(mid);"));
+
     form->addRow(QString(), spellcheckEnabled_);
     form->addRow(QStringLiteral("Spell Engine"), spellBackend_);
-    form->addRow(QStringLiteral("Spell Language"), spellLanguage_);
+    form->addRow(QStringLiteral("Dictionary"), spellLanguage_);
+    form->addRow(QString(), autocorrectEnabled_);
+    form->addRow(QStringLiteral("Autocorrect strength"), autocorrectDistance_);
+    form->addRow(QString(), distanceHelp);
     root->addLayout(form);
+    root->addStretch(1);
+}
+
+void PreferencesDialog::buildUploadsTab(QWidget* tab) {
+    auto* root = new QVBoxLayout(tab);
+
+    // Service selector
+    uploadService_ = new QComboBox(tab);
+    uploadService_->setObjectName(QStringLiteral("uploadService"));
+    uploadService_->addItem(QStringLiteral("Disabled"),   QString());
+    uploadService_->addItem(QStringLiteral("ImgBB"),      QStringLiteral("imgbb"));
+    uploadService_->addItem(QStringLiteral("Imgur"),      QStringLiteral("imgur"));
+    uploadService_->addItem(QStringLiteral("Postimages"), QStringLiteral("postimages"));
+    uploadService_->addItem(QStringLiteral("Imgbox"),     QStringLiteral("imgbox"));
+    setComboByData(uploadService_,
+                   settings_.value(QStringLiteral("image_upload_service"), QString()));
+
+    auto* svcForm = new QFormLayout();
+    svcForm->addRow(QStringLiteral("Service"), uploadService_);
+    root->addLayout(svcForm);
+    root->addSpacing(8);
+
+    // Stacked panels — one per service, index matches combo
+    uploadStack_ = new QStackedWidget(tab);
+
+    // Page 0 — Disabled
+    {
+        auto* p = new QWidget();
+        auto* vbox = new QVBoxLayout(p);
+        auto* lbl = new QLabel(
+            QStringLiteral("Select a service above to configure image hosting."), p);
+        lbl->setWordWrap(true);
+        vbox->addWidget(lbl);
+        vbox->addStretch(1);
+        uploadStack_->addWidget(p);
+    }
+
+    // Page 1 — ImgBB
+    {
+        auto* panel = new QGroupBox(QStringLiteral("ImgBB"), tab);
+        auto* vbox = new QVBoxLayout(panel);
+
+        auto* signup = new QToolButton(panel);
+        signup->setText(QStringLiteral("🌐  Open imgbb.com  —  create account / get API key"));
+        signup->setAutoRaise(true);
+        signup->setToolTip(QStringLiteral("Opens imgbb.com in your browser"));
+        connect(signup, &QToolButton::clicked, []() {
+            QDesktopServices::openUrl(QUrl(QStringLiteral("https://imgbb.com")));
+        });
+        vbox->addWidget(signup);
+        vbox->addSpacing(4);
+
+        imgbbTos_ = new QCheckBox(
+            QStringLiteral("I have read and accepted the Terms of Service"), panel);
+        imgbbTos_->setChecked(settings_.value(QStringLiteral("imgbb_tos")).toBool());
+        vbox->addWidget(imgbbTos_);
+        vbox->addSpacing(4);
+
+        auto* creds = new QWidget(panel);
+        auto* form = new QFormLayout(creds);
+        imgbbKey_ = new QLineEdit(creds);
+        imgbbKey_->setObjectName(QStringLiteral("imgbbKey"));
+        imgbbKey_->setPlaceholderText(QStringLiteral("Paste your API key here"));
+        imgbbKey_->setText(settings_.value(QStringLiteral("imgbb_api_key")).toString());
+        form->addRow(QStringLiteral("API key"), imgbbKey_);
+        creds->setEnabled(imgbbTos_->isChecked());
+        connect(imgbbTos_, &QCheckBox::toggled, creds, &QWidget::setEnabled);
+        vbox->addWidget(creds);
+
+        uploadStack_->addWidget(panel);
+    }
+
+    // Page 2 — Imgur
+    {
+        auto* panel = new QGroupBox(QStringLiteral("Imgur"), tab);
+        auto* vbox = new QVBoxLayout(panel);
+
+        auto* signup = new QToolButton(panel);
+        signup->setText(QStringLiteral("🌐  Open imgur.com  —  create account / register app"));
+        signup->setAutoRaise(true);
+        signup->setToolTip(QStringLiteral("Opens imgur.com in your browser"));
+        connect(signup, &QToolButton::clicked, []() {
+            QDesktopServices::openUrl(QUrl(QStringLiteral("https://imgur.com")));
+        });
+        vbox->addWidget(signup);
+        vbox->addSpacing(4);
+
+        imgurTos_ = new QCheckBox(
+            QStringLiteral("I have read and accepted the Terms of Service"), panel);
+        imgurTos_->setChecked(settings_.value(QStringLiteral("imgur_tos")).toBool());
+        vbox->addWidget(imgurTos_);
+        vbox->addSpacing(4);
+
+        auto* creds = new QWidget(panel);
+        auto* form = new QFormLayout(creds);
+        imgurClientId_ = new QLineEdit(creds);
+        imgurClientId_->setObjectName(QStringLiteral("imgurClientId"));
+        imgurClientId_->setPlaceholderText(QStringLiteral("Paste your Client-ID here"));
+        imgurClientId_->setText(settings_.value(QStringLiteral("imgur_client_id")).toString());
+        form->addRow(QStringLiteral("Client-ID"), imgurClientId_);
+        creds->setEnabled(imgurTos_->isChecked());
+        connect(imgurTos_, &QCheckBox::toggled, creds, &QWidget::setEnabled);
+        vbox->addWidget(creds);
+
+        uploadStack_->addWidget(panel);
+    }
+
+    // Page 3 — Postimages
+    {
+        auto* panel = new QGroupBox(QStringLiteral("Postimages"), tab);
+        auto* vbox = new QVBoxLayout(panel);
+
+        auto* signup = new QToolButton(panel);
+        signup->setText(QStringLiteral("🌐  Open postimages.org  —  create account / get API token"));
+        signup->setAutoRaise(true);
+        signup->setToolTip(QStringLiteral("Opens postimages.org in your browser"));
+        connect(signup, &QToolButton::clicked, []() {
+            QDesktopServices::openUrl(QUrl(QStringLiteral("https://postimages.org")));
+        });
+        vbox->addWidget(signup);
+        vbox->addSpacing(4);
+
+        postimagesTos_ = new QCheckBox(
+            QStringLiteral("I have read and accepted the Terms of Service"), panel);
+        postimagesTos_->setChecked(settings_.value(QStringLiteral("postimages_tos")).toBool());
+        vbox->addWidget(postimagesTos_);
+        vbox->addSpacing(4);
+
+        auto* creds = new QWidget(panel);
+        auto* form = new QFormLayout(creds);
+        postimagesToken_ = new QLineEdit(creds);
+        postimagesToken_->setObjectName(QStringLiteral("postimagesToken"));
+        postimagesToken_->setPlaceholderText(QStringLiteral("Paste your API token here"));
+        postimagesToken_->setText(settings_.value(QStringLiteral("postimages_token")).toString());
+        form->addRow(QStringLiteral("API token"), postimagesToken_);
+        creds->setEnabled(postimagesTos_->isChecked());
+        connect(postimagesTos_, &QCheckBox::toggled, creds, &QWidget::setEnabled);
+        vbox->addWidget(creds);
+
+        uploadStack_->addWidget(panel);
+    }
+
+    // Page 4 — Imgbox
+    {
+        auto* panel = new QGroupBox(QStringLiteral("Imgbox"), tab);
+        auto* vbox = new QVBoxLayout(panel);
+
+        auto* signup = new QToolButton(panel);
+        signup->setText(QStringLiteral("🌐  Open imgbox.com  —  create account"));
+        signup->setAutoRaise(true);
+        signup->setToolTip(QStringLiteral("Opens imgbox.com in your browser"));
+        connect(signup, &QToolButton::clicked, []() {
+            QDesktopServices::openUrl(QUrl(QStringLiteral("https://imgbox.com")));
+        });
+        vbox->addWidget(signup);
+        vbox->addSpacing(4);
+
+        imgboxTos_ = new QCheckBox(
+            QStringLiteral("I have read and accepted the Terms of Service"), panel);
+        imgboxTos_->setChecked(settings_.value(QStringLiteral("imgbox_tos")).toBool());
+        vbox->addWidget(imgboxTos_);
+        vbox->addSpacing(4);
+
+        auto* creds = new QWidget(panel);
+        auto* form = new QFormLayout(creds);
+
+        imgboxUsername_ = new QLineEdit(creds);
+        imgboxUsername_->setObjectName(QStringLiteral("imgboxUsername"));
+        imgboxUsername_->setPlaceholderText(QStringLiteral("Your username"));
+        imgboxUsername_->setText(settings_.value(QStringLiteral("imgbox_username")).toString());
+        form->addRow(QStringLiteral("Username"), imgboxUsername_);
+
+        imgboxPassword_ = new QLineEdit(creds);
+        imgboxPassword_->setObjectName(QStringLiteral("imgboxPassword"));
+        imgboxPassword_->setEchoMode(QLineEdit::Password);
+        imgboxPassword_->setPlaceholderText(QStringLiteral("Your password"));
+        imgboxPassword_->setText(settings_.value(QStringLiteral("imgbox_password")).toString());
+
+        auto* pwdReveal = new QToolButton(creds);
+        pwdReveal->setText(QStringLiteral("🔍"));
+        pwdReveal->setCheckable(true);
+        pwdReveal->setToolTip(QStringLiteral("Show / hide password"));
+        connect(pwdReveal, &QToolButton::toggled, imgboxPassword_, [this](bool show) {
+            imgboxPassword_->setEchoMode(show ? QLineEdit::Normal : QLineEdit::Password);
+        });
+
+        auto* pwdRow = new QHBoxLayout();
+        pwdRow->setContentsMargins(0, 0, 0, 0);
+        pwdRow->addWidget(imgboxPassword_);
+        pwdRow->addWidget(pwdReveal);
+        form->addRow(QStringLiteral("Password"), pwdRow);
+
+        creds->setEnabled(imgboxTos_->isChecked());
+        connect(imgboxTos_, &QCheckBox::toggled, creds, &QWidget::setEnabled);
+        vbox->addWidget(creds);
+
+        uploadStack_->addWidget(panel);
+    }
+
+    connect(uploadService_, &QComboBox::currentIndexChanged,
+            uploadStack_, &QStackedWidget::setCurrentIndex);
+    uploadStack_->setCurrentIndex(uploadService_->currentIndex());
+    root->addWidget(uploadStack_);
+
+    root->addSpacing(8);
+    auto* hint = new QLabel(
+        QStringLiteral("Paste or drop an image while chatting to upload and insert the link."),
+        tab);
+    hint->setWordWrap(true);
+    root->addWidget(hint);
     root->addStretch(1);
 }
 

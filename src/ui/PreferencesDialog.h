@@ -9,6 +9,7 @@ class QFontComboBox;
 class QLineEdit;
 class QListWidget;
 class QSpinBox;
+class QStackedWidget;
 
 namespace maxchat::ui {
 
@@ -18,7 +19,7 @@ class PreferencesDialog final : public QDialog {
     Q_OBJECT
 
   public:
-    explicit PreferencesDialog(QVariantMap settings, QWidget* parent = nullptr);
+    explicit PreferencesDialog(QVariantMap settings, QStringList loadedScripts = {}, QString scriptsDir = {}, QWidget* parent = nullptr);
 
     [[nodiscard]] QVariantMap settings() const;
 
@@ -45,10 +46,14 @@ class PreferencesDialog final : public QDialog {
     void buildComicTab(QWidget* tab);
     void buildScriptsTab(QWidget* tab);
     void buildServicesTab(QWidget* tab);
+    void buildUploadsTab(QWidget* tab);
     void buildLocalizationTab(QWidget* tab);
+    void buildSpellingTab(QWidget* tab);
     void buildDataTab(QWidget* tab);
 
     QVariantMap settings_;
+    QStringList loadedScripts_;
+    QString scriptsDir_;
     QCheckBox* scriptRead_ = nullptr;
     QCheckBox* scriptWrite_ = nullptr;
     QCheckBox* scriptExec_ = nullptr;
@@ -134,6 +139,10 @@ class PreferencesDialog final : public QDialog {
     QCheckBox* linkMedia_ = nullptr;
     QCheckBox* linkXCards_ = nullptr;
     QCheckBox* linkWebCards_ = nullptr;
+    QCheckBox* ogShowSiteName_ = nullptr;
+    QCheckBox* ogShowTitle_ = nullptr;
+    QCheckBox* ogShowDescription_ = nullptr;
+    QCheckBox* ogShowImage_ = nullptr;
     QCheckBox* dnd_ = nullptr;
     QComboBox* notifyPopup_ = nullptr;
     QCheckBox* notifyPm_ = nullptr;
@@ -151,6 +160,19 @@ class PreferencesDialog final : public QDialog {
     QCheckBox* spellcheckEnabled_ = nullptr;
     QComboBox* spellBackend_ = nullptr;
     QComboBox* spellLanguage_ = nullptr;
+    QCheckBox* autocorrectEnabled_ = nullptr;
+    QSpinBox* autocorrectDistance_ = nullptr;
+    QStackedWidget* uploadStack_ = nullptr;
+    QComboBox* uploadService_ = nullptr;
+    QCheckBox* imgbbTos_ = nullptr;
+    QCheckBox* imgurTos_ = nullptr;
+    QCheckBox* postimagesTos_ = nullptr;
+    QCheckBox* imgboxTos_ = nullptr;
+    QLineEdit* imgbbKey_ = nullptr;
+    QLineEdit* imgurClientId_ = nullptr;
+    QLineEdit* postimagesToken_ = nullptr;
+    QLineEdit* imgboxUsername_ = nullptr;
+    QLineEdit* imgboxPassword_ = nullptr;
 };
 
 } // namespace maxchat::ui

@@ -85,41 +85,37 @@ QString renderOpenGraphPreviewHtml(const LinkPreviewCandidate &candidate,
                              ? cleanedText(card.siteName, 80)
                              : primaryDomainForPreview(targetUrl);
 
+  // Card box: site name + title + description.
   QString html = QStringLiteral(
-      "<div style=\"margin:4px 0 6px 0;padding:6px 8px;border-left:3px solid "
+      "<div style=\"margin:4px 0 2px 0;padding:6px 8px;border-left:3px solid "
       "#6f8cff;background:rgba(255,255,255,0.06);\">");
-  // Site name on top as a small header, then the title — the clean layout other
-  // clients (e.g. Discord) use. The raw URL is intentionally NOT repeated here:
-  // the link is already in the chat line above, and the title/image are clickable.
-  if (!domain.isEmpty()) {
+  if (options.showSiteName && !domain.isEmpty()) {
     html += QStringLiteral(
                 "<div style=\"font-size:small;opacity:0.7;\">%1</div>")
                 .arg(domain.toHtmlEscaped());
   }
-  html += QStringLiteral("<div style=\"margin-top:1px;\"><a href=\"%1\"><b>%2</b></a></div>")
-              .arg(htmlUrl(targetUrl), title.toHtmlEscaped());
-  // For a social post (X / Mastodon) the description IS the post text — always
-  // keep it, even with an image (the photo doesn't replace the words). For a
-  // plain web card, when there's an image let it carry the content and drop the
-  // description (Discord-style), which strips noise like imgur's generic
-  // "Discover topics…" blurb. Either way, skip a description that just echoes
-  // the title.
-  const bool isSocialPost = candidate.kind == LinkPreviewKind::XPost ||
-                            candidate.kind == LinkPreviewKind::MastodonPost;
-  const bool showDescription =
+  if (options.showTitle) {
+    html += QStringLiteral("<div style=\"margin-top:1px;\"><a href=\"%1\"><b>%2</b></a></div>")
+                .arg(htmlUrl(targetUrl), title.toHtmlEscaped());
+  }
+  const bool showDesc =
+      options.showDescription &&
       !description.isEmpty() &&
-      description.compare(title, Qt::CaseInsensitive) != 0 &&
-      (isSocialPost || !card.imageUrl.isValid());
-  if (showDescription) {
+      description.compare(title, Qt::CaseInsensitive) != 0;
+  if (showDesc) {
     html += QStringLiteral("<div style=\"margin-top:2px;\">%1</div>")
                 .arg(description.toHtmlEscaped());
   }
-  if (card.imageUrl.isValid()) {
-    html += QStringLiteral("<a href=\"%1\"><img src=\"%2\" style=\"%3\"></a>")
+  html += QStringLiteral("</div>");
+
+  // Photo below the card, not inside it.
+  if (options.showImage && card.imageUrl.isValid()) {
+    html += QStringLiteral(
+                "<div style=\"margin:0 0 6px 0;\"><a href=\"%1\">"
+                "<img src=\"%2\" style=\"%3\"></a></div>")
                 .arg(htmlUrl(targetUrl), htmlUrl(card.imageUrl),
                      imageStyle(options));
   }
-  html += QStringLiteral("</div>");
   return html;
 }
 

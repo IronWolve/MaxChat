@@ -25,6 +25,10 @@ struct LinkPreviewCandidate {
   QUrl fetchUrl;
   QString serviceName;
   QString normalizedHost;
+  // Buffer where the URL was posted — set by MainWindow so async results
+  // (OG card fetches) go back to the originating channel, not the current one.
+  QString originNetwork;
+  QString originTarget;
 
   [[nodiscard]] bool isPreviewable() const;
   [[nodiscard]] bool needsHtmlFetch() const;
