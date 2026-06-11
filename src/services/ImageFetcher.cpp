@@ -1,9 +1,10 @@
-#include "services/OpenGraphFetcher.h"
+#include "services/ImageFetcher.h"
 
 #include "services/LinkPreviewClassifier.h"
 
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QNetworkRequest>
 #include <QPointer>
 #include <QScopeGuard>
 #include <QTimer>
@@ -11,47 +12,35 @@
 namespace maxchat::services {
 namespace {
 
-// SSRF gate is shared with the image fetcher (canFetchPreviewUrl in
-// LinkPreviewClassifier): http(s), no creds, allowed host, public-only DNS.
-bool canFetchUrl(const QUrl &url, bool allowPrivateNetwork) {
-  return canFetchPreviewUrl(url, allowPrivateNetwork);
-}
-
-bool looksLikeHtmlContent(const QString &contentType) {
-  return contentType.isEmpty() || contentType.contains(QStringLiteral("html"));
-}
-
 qsizetype normalizedMaxBytes(qsizetype value) {
-  return value > 0 ? value : 256 * 1024;
+  return value > 0 ? value : 5 * 1024 * 1024;
 }
 
-int normalizedTimeoutMs(int value) { return value > 0 ? value : 10000; }
+int normalizedTimeoutMs(int value) { return value > 0 ? value : 12000; }
 
-} // namespace
-
-OpenGraphFetcher::OpenGraphFetcher(QNetworkAccessManager *manager,
-                                   QObject *parent)
-    : QObject(parent), manager_(manager) {}
-
-QNetworkRequest OpenGraphFetcher::buildRequest(const QUrl &url) {
+QNetworkRequest buildRequest(const QUrl &url) {
   QNetworkRequest request(url);
   request.setHeader(QNetworkRequest::UserAgentHeader,
                     QStringLiteral("MaxChat/0.1 link-preview"));
-  request.setRawHeader("Accept",
-                       "text/html,application/xhtml+xml;q=0.9,*/*;q=0.1");
+  request.setRawHeader("Accept", "image/*;q=0.9,*/*;q=0.1");
   request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                        QNetworkRequest::NoLessSafeRedirectPolicy);
   request.setMaximumRedirectsAllowed(5);
   return request;
 }
 
-void OpenGraphFetcher::fetch(const QUrl &url, OpenGraphFetchOptions options) {
+} // namespace
+
+ImageFetcher::ImageFetcher(QNetworkAccessManager *manager, QObject *parent)
+    : QObject(parent), manager_(manager) {}
+
+void ImageFetcher::fetch(const QUrl &url, ImageFetchOptions options) {
   if (manager_ == nullptr) {
-    emit fetchFailed(url, QStringLiteral("network manager missing"));
+    emit imageFetchFailed(url, QStringLiteral("network manager missing"));
     return;
   }
-  if (!canFetchUrl(url, options.allowPrivateNetwork)) {
-    emit fetchFailed(url, QStringLiteral("blocked preview URL"));
+  if (!canFetchPreviewUrl(url, options.allowPrivateNetwork)) {
+    emit imageFetchFailed(url, QStringLiteral("blocked image URL"));
     return;
   }
 
@@ -67,13 +56,12 @@ void OpenGraphFetcher::fetch(const QUrl &url, OpenGraphFetchOptions options) {
     }
   });
 
-  // Re-run the SSRF guard on every redirect hop — a public host can 30x to an
-  // internal address, and NoLessSafeRedirectPolicy only blocks downgrades, not
-  // redirects to private IPs.
+  // Re-run the SSRF guard on every redirect — a public host can 30x to a
+  // private address, which NoLessSafeRedirectPolicy alone does not block.
   const bool allowPrivate = options.allowPrivateNetwork;
   connect(reply, &QNetworkReply::redirected, this,
-          [this, reply, allowPrivate](const QUrl &target) {
-            if (!canFetchUrl(target, allowPrivate)) {
+          [reply, allowPrivate](const QUrl &target) {
+            if (!canFetchPreviewUrl(target, allowPrivate)) {
               reply->setProperty("maxchat_blocked_redirect", true);
               reply->abort();
             }
@@ -87,28 +75,36 @@ void OpenGraphFetcher::fetch(const QUrl &url, OpenGraphFetchOptions options) {
       if (reply->property("maxchat_blocked_redirect").toBool()) {
         reason = QStringLiteral("blocked redirect to a private address");
       } else if (reply->property("maxchat_timeout").toBool()) {
-        reason = QStringLiteral("preview fetch timed out");
+        reason = QStringLiteral("image fetch timed out");
       }
-      emit fetchFailed(url, reason);
+      emit imageFetchFailed(url, reason);
       return;
     }
 
     const QString contentType =
         reply->header(QNetworkRequest::ContentTypeHeader).toString().toLower();
-    if (!looksLikeHtmlContent(contentType)) {
-      emit fetchFailed(url, QStringLiteral("preview response was not HTML"));
+    if (!contentType.isEmpty() &&
+        !contentType.startsWith(QStringLiteral("image/"))) {
+      emit imageFetchFailed(url, QStringLiteral("response was not an image"));
       return;
     }
 
     const QByteArray payload = reply->read(options.maxBytes + 1);
-    const QString html = QString::fromUtf8(payload.left(options.maxBytes));
-    const OpenGraphCard card = parseOpenGraphCard(html, reply->url());
-    if (card.isEmpty()) {
-      emit fetchFailed(url, QStringLiteral("preview metadata was not found"));
+    if (static_cast<qsizetype>(payload.size()) > options.maxBytes) {
+      emit imageFetchFailed(url, QStringLiteral("image exceeded size cap"));
       return;
     }
 
-    emit cardFetched(url, card);
+    QImage image;
+    if (!image.loadFromData(payload) || image.isNull()) {
+      emit imageFetchFailed(url, QStringLiteral("could not decode image"));
+      return;
+    }
+    if (image.width() > options.maxWidth || image.height() > options.maxHeight) {
+      image = image.scaled(options.maxWidth, options.maxHeight,
+                           Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    }
+    emit imageFetched(url, image);
   });
 }
 

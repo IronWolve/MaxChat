@@ -122,6 +122,8 @@ target_link_libraries(maxchat_network
 )
 
 add_library(maxchat_services STATIC
+    src/services/ImageFetcher.cpp
+    src/services/ImageFetcher.h
     src/services/LinkPreviewClassifier.cpp
     src/services/LinkPreviewClassifier.h
     src/services/LinkPreviewPolicy.cpp
@@ -142,6 +144,7 @@ target_include_directories(maxchat_services
 target_link_libraries(maxchat_services
     PUBLIC
         Qt6::Core
+        Qt6::Gui
         Qt6::Network
 )
 
