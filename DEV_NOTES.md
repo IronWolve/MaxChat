@@ -93,13 +93,17 @@ Internal notes for this port. Not shipped.
 
 ## DECISIONS
 
-- **2026-06-10 — Scripting/plugins: DEFER (audit phase 2).** Python ships a Python
-  plugin API (`scripting.py`: on_message/on_join/on_command/on_image_paste hooks,
-  `/load /unload /reload`, scripts dialog). The C++ port can't run Python plugins,
-  and embedding CPython is heavy/off-scope. Decision (user): **defer** — keep
-  `/scripts /load /unload /reload` as a clear placeholder, and design a
-  C++-native extension system later (candidates: embed Lua, or a subprocess/IPC
-  bridge speaking a small JSON protocol). Tracked as AUDIT FIX BACKLOG #6.
+- **2026-06-10 — Scripting/plugins: use embedded Lua (supersedes the earlier
+  defer).** Python ships a Python plugin API; embedding CPython in a C++/Qt app
+  is heavy + a Windows packaging headache, so the port adopts **Lua 5.4**
+  (tiny, MIT, built for embedding). User accepted dropping Python-plugin parity.
+  The Lua **API contract + the three bundled example scripts are done**
+  (`SCRIPTING.md`, `assets/scripts/{_hello,dice,url_logger}.lua`); converting the
+  scripts pinned the API and surfaced the sandbox needs (e.g. `api.append_file`
+  instead of raw `io` for url_logger). **Still to build:** the C++ Lua host —
+  vendor the Lua sources, embed the interpreter, dispatch the hooks, enforce the
+  sandbox, wire `/load /unload /reload` — AUDIT FIX BACKLOG #6. Note: this adds
+  Lua sources to the Windows `build.bat`, which can't be tested from WSL.
 
 ## Conversion debt spotted while comparing themes (2026-06-09)
 
