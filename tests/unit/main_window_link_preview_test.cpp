@@ -553,7 +553,7 @@ class MainWindowLinkPreviewTest final : public QObject {
             oneBuffer, {QStringLiteral("@alice"), QStringLiteral("+bob")}));
         window.renderActiveBufferMetadata();
 
-        QCOMPARE(topicLabel->text(), QStringLiteral("Libera.Chat - #one - First topic"));
+        QCOMPARE(topicLabel->text(), QStringLiteral("First topic"));
         QCOMPARE(memberList->count(), 2);
         QCOMPARE(memberList->findItems(QStringLiteral("@alice"), Qt::MatchExactly).size(), 1);
         QCOMPARE(memberList->findItems(QStringLiteral("+bob"), Qt::MatchExactly).size(), 1);
@@ -563,12 +563,12 @@ class MainWindowLinkPreviewTest final : public QObject {
         QVERIFY(window.m_chatBuffers.setTopic(twoBuffer, QStringLiteral("Second topic")));
         QVERIFY(window.m_chatBuffers.setMembers(twoBuffer, {QStringLiteral("carol")}));
         window.renderActiveBufferMetadata();
-        QCOMPARE(topicLabel->text(), QStringLiteral("Libera.Chat - #two - Second topic"));
+        QCOMPARE(topicLabel->text(), QStringLiteral("Second topic"));
         QCOMPARE(memberList->count(), 1);
         QCOMPARE(memberList->item(0)->text(), QStringLiteral("carol"));
 
         window.activateBufferTarget(QStringLiteral("#one"));
-        QCOMPARE(topicLabel->text(), QStringLiteral("Libera.Chat - #one - First topic"));
+        QCOMPARE(topicLabel->text(), QStringLiteral("First topic"));
         QCOMPARE(memberList->count(), 2);
         QCOMPARE(memberList->findItems(QStringLiteral("@alice"), Qt::MatchExactly).size(), 1);
         QCOMPARE(memberList->findItems(QStringLiteral("+bob"), Qt::MatchExactly).size(), 1);

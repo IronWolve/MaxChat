@@ -236,7 +236,7 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     void queueLinkPreviewsFromLine(const QString& line);
     void handlePreviewCardFetched(const QUrl& url, const maxchat::services::OpenGraphCard& card);
     void handlePreviewFetchFailed(const QUrl& url, const QString& reason);
-    void setConnectionTopic(const QString& line);
+    void showConnectionStatus(const QString& line);
     [[nodiscard]] maxchat::core::ChatBufferId bufferIdForTarget(const QString& target);
     [[nodiscard]] bool isActiveBufferTarget(const QString& target) const;
     [[nodiscard]] bool isActiveBufferTarget(const QString& network, const QString& target) const;
