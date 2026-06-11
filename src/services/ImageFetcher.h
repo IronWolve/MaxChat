@@ -33,6 +33,8 @@ signals:
   void imageFetchFailed(const QUrl &url, const QString &reason);
 
 private:
+  void issueRequest(const QUrl &url, ImageFetchOptions options); // after the SSRF gate passes
+
   QNetworkAccessManager *manager_ = nullptr;
 };
 
