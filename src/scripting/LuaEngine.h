@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QString>
 #include <QStringList>
+#include <QVariantList>
 
 namespace maxchat::scripting {
 
@@ -33,6 +34,11 @@ class LuaEngine final : public QObject {
     bool reload(const QString& name);
     [[nodiscard]] QStringList loaded() const;
 
+    // Call `hook` on every loaded script, passing `args` after the api table.
+    // `network` scopes api.echo to that network for the duration. Returns true
+    // if any script's handler returned true (used by on_command to consume).
+    bool dispatch(const QString& hook, const QString& network, const QVariantList& args = {});
+
     // Scopes api.echo (etc.) to a network while a hook runs.
     void setCurrentNetwork(const QString& network);
 
@@ -46,7 +52,7 @@ class LuaEngine final : public QObject {
     [[nodiscard]] QString hostNetwork();
 
   private:
-    bool callHook(ScriptState* state, const char* hook);
+    bool callHook(ScriptState* state, const char* hook, const QVariantList& args = {});
     void reportError(const QString& script, const QString& where, const QString& message);
 
     ScriptHost* host_ = nullptr;

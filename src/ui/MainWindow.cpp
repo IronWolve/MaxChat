@@ -869,6 +869,16 @@ MainWindow::MainWindow(QWidget* parent)
     if (m_settings.loadWithDefaults().value(QStringLiteral("update_check"), true).toBool()) {
         QTimer::singleShot(3500, this, [this]() { checkForUpdates(/*manual=*/false); });
     }
+
+    // Scripting: load the user's Lua scripts (no-op when built without Lua).
+    const QString scriptsDir =
+        QDir(m_settings.paths().configDir).filePath(QStringLiteral("scripts"));
+    m_lua = new maxchat::scripting::LuaEngine(
+        this, scriptsDir, QDir(scriptsDir).filePath(QStringLiteral("data")), this);
+    if (maxchat::scripting::LuaEngine::available()) {
+        QDir().mkpath(scriptsDir);
+        m_lua->loadAll();
+    }
 }
 
 bool MainWindow::selfTest() const {
@@ -1826,6 +1836,76 @@ void maxchat::ui::MainWindow::handleCtcpSound(const QString& network, const QStr
     }
 }
 
+// --- maxchat::scripting::ScriptHost -----------------------------------------
+
+void maxchat::ui::MainWindow::scriptEcho(const QString& network, const QString& text) {
+    if (network.isEmpty() || network.compare(activeNetworkName(), Qt::CaseInsensitive) == 0) {
+        appendSystemLine(text);
+    } else {
+        appendSystemLineToNetworkTarget(network, QStringLiteral("server"), text);
+    }
+}
+
+void maxchat::ui::MainWindow::scriptSay(const QString& network, const QString& target,
+                                        const QString& text) {
+    const QString net = network.isEmpty() ? activeNetworkName() : network;
+    maxchat::irc::IrcConnection* conn = connectionForNetwork(net);
+    if (conn == nullptr || target.trimmed().isEmpty() || text.isEmpty()) {
+        return;
+    }
+    if (conn->privmsg(target, text)) {
+        appendSystemLineToNetworkTarget(
+            net, target, QStringLiteral("<%1> %2").arg(currentNickForNetwork(net), text), true, true);
+    }
+}
+
+void maxchat::ui::MainWindow::scriptSendRaw(const QString& network, const QString& line) {
+    const QString net = network.isEmpty() ? activeNetworkName() : network;
+    if (maxchat::irc::IrcConnection* conn = connectionForNetwork(net); conn != nullptr) {
+        conn->sendRaw(line); // sendRaw already strips CR/LF
+    }
+}
+
+void maxchat::ui::MainWindow::scriptInsertInput(const QString& text) {
+    if (m_input != nullptr) {
+        m_input->textCursor().insertText(text);
+    }
+}
+
+void maxchat::ui::MainWindow::scriptNotify(const QString& title, const QString& text) {
+    notify(title, text, activeNetworkName(), m_currentTarget);
+}
+
+QString maxchat::ui::MainWindow::scriptMe(const QString& network) {
+    return currentNickForNetwork(network.isEmpty() ? activeNetworkName() : network);
+}
+
+QString maxchat::ui::MainWindow::scriptTarget() {
+    return m_currentTarget.trimmed().isEmpty() ? QStringLiteral("(server)") : m_currentTarget;
+}
+
+QString maxchat::ui::MainWindow::scriptNetwork() {
+    return activeNetworkName();
+}
+
+QStringList maxchat::ui::MainWindow::scriptChannels(const QString& network) {
+    const QString net = network.isEmpty() ? activeNetworkName() : network;
+    QStringList channels;
+    for (const maxchat::core::ChatBufferId& id : m_chatBuffers.buffers()) {
+        if (id.kind == maxchat::core::ChatBufferKind::Channel &&
+            id.network.compare(net, Qt::CaseInsensitive) == 0) {
+            channels.append(id.target);
+        }
+    }
+    return channels;
+}
+
+QStringList maxchat::ui::MainWindow::scriptNicks(const QString& network, const QString& target) {
+    const QString net = network.isEmpty() ? activeNetworkName() : network;
+    const QString tgt = target.trimmed().isEmpty() ? m_currentTarget : target;
+    return m_chatBuffers.snapshot(bufferIdForNetworkTarget(net, tgt)).members;
+}
+
 void maxchat::ui::MainWindow::leaveCurrentChannel() {
     const QString channel = m_currentTarget.trimmed();
     if (!connection().isConnected()) {
@@ -2750,8 +2830,8 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
         });
     });
     connect(irc, &maxchat::irc::IrcConnection::messageReceived, this,
-            [this, runInContext](const QString& sender, const QString& target, const QString& text,
-                                 bool notice, bool action) {
+            [this, runInContext, signalNetwork](const QString& sender, const QString& target,
+                                                const QString& text, bool notice, bool action) {
                 runInContext([&]() {
                     const QString nick =
                         connection().nick().isEmpty() ? m_connectionPlan.nick : connection().nick();
@@ -2808,11 +2888,19 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
                             QApplication::beep();
                         }
                     }
+
+                    if (!action) {
+                        m_lua->dispatch(notice ? QStringLiteral("on_notice")
+                                               : QStringLiteral("on_message"),
+                                        signalNetwork, {signalNetwork, target, sender, text});
+                    }
                 });
             });
     connect(irc, &maxchat::irc::IrcConnection::nickChanged, this,
-            [this, runInContext](const QString& oldNick, const QString& newNick) {
+            [this, runInContext, signalNetwork](const QString& oldNick, const QString& newNick) {
                 runInContext([&]() {
+                    m_lua->dispatch(QStringLiteral("on_nick"), signalNetwork,
+                                    {signalNetwork, oldNick, newNick});
                     const QStringList affectedChannels = channelTargetsContainingMember(oldNick);
                     renameMemberInChannelBuffers(oldNick, newNick);
                     if (m_memberList != nullptr) {
@@ -2833,8 +2921,10 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
                 });
             });
     connect(irc, &maxchat::irc::IrcConnection::userJoined, this,
-            [this, runInContext](const QString& channel, const QString& nick) {
+            [this, runInContext, signalNetwork](const QString& channel, const QString& nick) {
                 runInContext([&]() {
+                    m_lua->dispatch(QStringLiteral("on_join"), signalNetwork,
+                                    {signalNetwork, channel, nick});
                     const QString currentNick =
                         connection().nick().isEmpty() ? m_connectionPlan.nick : connection().nick();
                     const bool ownJoin = nick.compare(currentNick, Qt::CaseInsensitive) == 0;
@@ -2865,8 +2955,11 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
             });
     connect(
         irc, &maxchat::irc::IrcConnection::userParted, this,
-        [this, runInContext](const QString& channel, const QString& nick, const QString& reason) {
+        [this, runInContext, signalNetwork](const QString& channel, const QString& nick,
+                                            const QString& reason) {
             runInContext([&]() {
+                m_lua->dispatch(QStringLiteral("on_part"), signalNetwork,
+                                {signalNetwork, channel, nick});
                 const QString currentNick =
                     connection().nick().isEmpty() ? m_connectionPlan.nick : connection().nick();
                 const bool ownPart = nick.compare(currentNick, Qt::CaseInsensitive) == 0;
@@ -2902,8 +2995,9 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
             });
         });
     connect(irc, &maxchat::irc::IrcConnection::userQuit, this,
-            [this, runInContext](const QString& nick, const QString& reason) {
+            [this, runInContext, signalNetwork](const QString& nick, const QString& reason) {
                 runInContext([&]() {
+                    m_lua->dispatch(QStringLiteral("on_quit"), signalNetwork, {signalNetwork, nick});
                     const QStringList affectedChannels = channelTargetsContainingMember(nick);
                     removeMemberFromChannelBuffers(nick);
                     removeMember(m_memberList, nick);

@@ -11,6 +11,8 @@
 #include "services/LinkPreviewPolicy.h"
 #include "services/OpenGraphFetcher.h"
 #ifdef MAXCHAT_WITH_HUNSPELL
+#include "scripting/LuaEngine.h"
+#include "scripting/ScriptHost.h"
 #include "spell/HunspellSpellchecker.h"
 #include "ui/SoundPlayer.h"
 #endif
@@ -63,11 +65,23 @@ class RawLogDialog;
 class SpellcheckHighlighter;
 class UrlListDialog;
 
-class MainWindow final : public QMainWindow {
+class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHost {
   public:
     explicit MainWindow(QWidget* parent = nullptr);
 
     bool selfTest() const;
+
+    // --- maxchat::scripting::ScriptHost ---
+    void scriptEcho(const QString& network, const QString& text) override;
+    void scriptSay(const QString& network, const QString& target, const QString& text) override;
+    void scriptSendRaw(const QString& network, const QString& line) override;
+    void scriptInsertInput(const QString& text) override;
+    void scriptNotify(const QString& title, const QString& text) override;
+    QString scriptMe(const QString& network) override;
+    QString scriptTarget() override;
+    QString scriptNetwork() override;
+    QStringList scriptChannels(const QString& network) override;
+    QStringList scriptNicks(const QString& network, const QString& target) override;
 
   private:
     bool eventFilter(QObject* watched, QEvent* event) override;
@@ -307,6 +321,7 @@ class MainWindow final : public QMainWindow {
     QNetworkAccessManager m_previewNetworkManager;
     QNetworkAccessManager m_updateNetworkManager;
     SoundPlayer m_soundPlayer;
+    maxchat::scripting::LuaEngine* m_lua = nullptr;
     maxchat::services::OpenGraphFetcher m_openGraphFetcher;
     maxchat::core::NetworkConnectionPlan m_connectionPlan;
     QString m_currentTarget;
