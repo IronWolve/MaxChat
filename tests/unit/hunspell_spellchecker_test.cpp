@@ -1,5 +1,6 @@
 #include "spell/HunspellSpellchecker.h"
 
+#include <QDir>
 #include <QFileInfo>
 #include <QtTest/QtTest>
 
@@ -9,12 +10,14 @@ class HunspellSpellcheckerTest final : public QObject {
   Q_OBJECT
 
 private slots:
-  void loadsEnglishDictionaryAndChecksWords() {
-    const QString affPath = QStringLiteral("/usr/share/hunspell/en_US.aff");
-    const QString dicPath = QStringLiteral("/usr/share/hunspell/en_US.dic");
-    if (!QFileInfo::exists(affPath) || !QFileInfo::exists(dicPath)) {
-      QSKIP("en_US Hunspell dictionary is not installed");
-    }
+  void loadsBundledEnglishDictionaryAndChecksWords() {
+    // The BUNDLED en_US (assets/dictionaries) loaded by the VENDORED engine —
+    // end-to-end coverage for third_party/hunspell + the shipped dictionary.
+    const QDir dictDir(QStringLiteral(MAXCHAT_TEST_DICTIONARY_DIR));
+    const QString affPath = dictDir.filePath(QStringLiteral("en_US.aff"));
+    const QString dicPath = dictDir.filePath(QStringLiteral("en_US.dic"));
+    QVERIFY2(QFileInfo::exists(affPath) && QFileInfo::exists(dicPath),
+             "bundled en_US dictionary is missing from assets/dictionaries");
 
     HunspellSpellchecker checker;
     QVERIFY(checker.loadDictionary(affPath, dicPath));

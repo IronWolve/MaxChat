@@ -63,6 +63,24 @@ the MIT License:
 Vendored source: Lua 5.4.7, `lua-5.4.7.tar.gz`,
 sha256 `9fbf5e28ef86c69858f6d3d34eccc32e911c1a28b4120ff3e84aaa70cfbf1e30`.
 
+## Hunspell
+
+MaxChat statically links the Hunspell 1.7.2 spell-checking engine, whose source
+is vendored under `third_party/hunspell/`. Hunspell is tri-licensed under
+GPL-2.0 / LGPL-2.1 / MPL-1.1; MaxChat uses it under the **LGPL-2.1** (and/or
+MPL-1.1). Full license texts are vendored alongside the source as
+`COPYING` (GPL), `COPYING.LESSER` (LGPL), and `COPYING.MPL` (MPL), plus the
+upstream `license.hunspell` / `license.myspell`.
+
+## Spelling dictionaries
+
+The bundled `en_US` Hunspell dictionary (`assets/dictionaries/en_US.aff` /
+`en_US.dic`) is derived from **SCOWL** (Spell Checker Oriented Word Lists) by
+Kevin Atkinson, distributed under a permissive BSD-style license. The full
+license and provenance are in `assets/dictionaries/README_en_US.txt`.
+Additional language dictionaries can be added at runtime (drop the `.aff`/`.dic`
+into the `dictionaries` folder) and are the property of their respective authors.
+
 ## Fonts
 
 Bundled fonts:
