@@ -4022,6 +4022,40 @@ void maxchat::ui::MainWindow::showMemberContextMenu(const QPoint& pos) {
         menu.addAction(QStringLiteral("Reset Color"), this,
                        [this, nick]() { clearNickColorOverride(nick); });
     }
+    if (!m_comicCharacterPaths.isEmpty()) {
+        menu.addAction(QStringLiteral("Assign Comic Character..."), this, [this, nick]() {
+            QStringList stems = m_comicCharacterPaths.keys();
+            std::sort(stems.begin(), stems.end());
+            QStringList options;
+            options << QStringLiteral("(default / random)") << stems;
+            QVariantMap settings = m_settings.loadWithDefaults();
+            QVariantMap chars = settings.value(QStringLiteral("comic_chars")).toMap();
+            const QString current = chars.value(nick.toLower()).toString();
+            const int idx =
+                current.isEmpty() ? 0 : std::max(0, static_cast<int>(stems.indexOf(current)) + 1);
+            bool ok = false;
+            const QString choice = QInputDialog::getItem(
+                this, QStringLiteral("Assign comic character"),
+                QStringLiteral("Comic character for %1:").arg(nick), options, idx, false, &ok);
+            if (!ok) {
+                return;
+            }
+            if (choice == options.first()) {
+                chars.remove(nick.toLower());
+            } else {
+                chars.insert(nick.toLower(), choice);
+            }
+            settings.insert(QStringLiteral("comic_chars"), chars);
+            if (!m_settings.saveRaw(settings)) {
+                appendSystemLine(QStringLiteral("! Could not save comic character."));
+                return;
+            }
+            appendSystemLine(choice == options.first()
+                                 ? QStringLiteral("! %1: comic character reset to default.").arg(nick)
+                                 : QStringLiteral("! %1: comic character set to %2.").arg(nick, choice));
+            refreshComic();
+        });
+    }
     const QString ignoreMask = normalizeIgnoreMask(nick);
     if (containsCaseInsensitive(m_ignoreMasks, ignoreMask)) {
         menu.addAction(QStringLiteral("Unignore %1").arg(nick), this,
