@@ -182,7 +182,19 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     void sendCommandOrMessage(const QString& text);
     void addInputHistory(const QString& text);
     bool showHistoryEntry(int delta);
-    bool completeInput();
+    bool completeInput(bool forward);
+    void applyCompletionCandidate(); // write the current cycle candidate into the input
+    struct CompletionCycle {
+        bool active = false;
+        bool commandCompletion = false;
+        int tokenStart = 0;
+        QString head;          // input text before the token being completed
+        QString tail;          // input text after the original token
+        QStringList matches;   // all candidates matching the typed prefix
+        int index = -1;        // current position in matches
+        QString lastText;      // input after our last insertion (to detect a continued cycle)
+        int lastCursor = -1;
+    } m_completion;
     void showNetworkTreeContextMenu(const QPoint& pos);
     void showMemberContextMenu(const QPoint& pos);
     void openQueryForNick(const QString& nick);

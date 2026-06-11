@@ -920,7 +920,7 @@ bool MainWindow::eventFilter(QObject* watched, QEvent* event) {
             return showHistoryEntry(1);
         }
         if (keyEvent->key() == Qt::Key_Tab || keyEvent->key() == Qt::Key_Backtab) {
-            return completeInput();
+            return completeInput(keyEvent->key() == Qt::Key_Tab);
         }
     }
     return QMainWindow::eventFilter(watched, event);
@@ -4375,39 +4375,75 @@ bool MainWindow::showHistoryEntry(int delta) {
     return true;
 }
 
-bool MainWindow::completeInput() {
+bool MainWindow::completeInput(const bool forward) {
     if (m_input == nullptr) {
         return false;
     }
 
     const QString text = inputText(m_input);
     const int cursor = inputCursorPosition(m_input);
+
+    // Continuing a cycle: the input hasn't changed since our last insertion, so
+    // Tab/Backtab steps to the next/previous match instead of restarting.
+    if (m_completion.active && !m_completion.matches.isEmpty() &&
+        text == m_completion.lastText && cursor == m_completion.lastCursor) {
+        const int n = m_completion.matches.size();
+        m_completion.index = ((m_completion.index + (forward ? 1 : -1)) % n + n) % n;
+        applyCompletionCandidate();
+        return true;
+    }
+
+    // Fresh completion: collect every candidate matching the typed prefix.
     const QString beforeCursor = text.left(cursor);
     const int lastSpace = std::max(beforeCursor.lastIndexOf(QLatin1Char(' ')),
                                    beforeCursor.lastIndexOf(QLatin1Char('\t')));
     const int tokenStart = lastSpace < 0 ? 0 : lastSpace + 1;
     const QString prefix = beforeCursor.mid(tokenStart);
     if (prefix.isEmpty()) {
+        m_completion.active = false;
         return true;
     }
 
     const bool commandCompletion = prefix.startsWith(QLatin1Char('/')) && tokenStart == 0;
     const QStringList candidates = completionCandidates(commandCompletion);
+    QStringList matches;
     for (const QString& candidate : candidates) {
-        if (!candidate.startsWith(prefix, Qt::CaseInsensitive) || candidate == prefix) {
-            continue;
+        if (candidate.startsWith(prefix, Qt::CaseInsensitive) &&
+            candidate.compare(prefix, Qt::CaseInsensitive) != 0) {
+            matches.append(candidate);
         }
-
-        const bool nickStyleSuffix = !commandCompletion && tokenStart == 0 &&
-                                     !candidate.startsWith(QLatin1Char('#')) &&
-                                     !candidate.startsWith(QLatin1Char('&'));
-        const QString suffix = nickStyleSuffix ? QStringLiteral(": ") : QStringLiteral(" ");
-        const QString completed = text.left(tokenStart) + candidate + suffix + text.mid(cursor);
-        setInputText(m_input, completed);
-        setInputCursorPosition(m_input, tokenStart + candidate.size() + suffix.size());
+    }
+    if (matches.isEmpty()) {
+        m_completion.active = false;
         return true;
     }
+
+    m_completion.active = true;
+    m_completion.commandCompletion = commandCompletion;
+    m_completion.tokenStart = tokenStart;
+    m_completion.head = text.left(tokenStart);
+    m_completion.tail = text.mid(cursor);
+    m_completion.matches = matches;
+    m_completion.index = forward ? 0 : matches.size() - 1;
+    applyCompletionCandidate();
     return true;
+}
+
+void maxchat::ui::MainWindow::applyCompletionCandidate() {
+    if (m_input == nullptr || m_completion.matches.isEmpty()) {
+        return;
+    }
+    const QString candidate = m_completion.matches.at(m_completion.index);
+    const bool nickStyleSuffix = !m_completion.commandCompletion && m_completion.tokenStart == 0 &&
+                                 !candidate.startsWith(QLatin1Char('#')) &&
+                                 !candidate.startsWith(QLatin1Char('&'));
+    const QString suffix = nickStyleSuffix ? QStringLiteral(": ") : QStringLiteral(" ");
+    const QString base = m_completion.head + candidate + suffix;
+    const QString full = base + m_completion.tail;
+    setInputText(m_input, full);
+    setInputCursorPosition(m_input, base.size());
+    m_completion.lastText = full;
+    m_completion.lastCursor = base.size();
 }
 
 void maxchat::ui::MainWindow::showNetworkTreeContextMenu(const QPoint& pos) {

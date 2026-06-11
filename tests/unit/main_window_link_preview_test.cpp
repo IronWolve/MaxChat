@@ -12,6 +12,8 @@
 #include <QSplitter>
 #include <QStandardPaths>
 #include <QTabBar>
+#include <QTextCursor>
+#include <QTextEdit>
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QTemporaryDir>
@@ -625,6 +627,30 @@ class MainWindowLinkPreviewTest final : public QObject {
         QCOMPARE(window.m_currentTarget, QString());
         QVERIFY(chatView->toPlainText().contains(QStringLiteral("server line")));
         QVERIFY(!chatView->toPlainText().contains(QStringLiteral("channel line")));
+    }
+
+    void tabCompletionCyclesThroughCandidates() {
+        MainWindow window;
+        QVERIFY(window.m_input != nullptr);
+
+        // "/" matches every slash command, so this is a guaranteed multi-candidate
+        // cycle without needing a populated member list.
+        window.m_input->setPlainText(QStringLiteral("/"));
+        QTextCursor cursor = window.m_input->textCursor();
+        cursor.movePosition(QTextCursor::End);
+        window.m_input->setTextCursor(cursor);
+
+        QVERIFY(window.completeInput(true));
+        const QString first = window.m_input->toPlainText();
+        QVERIFY(first.startsWith(QStringLiteral("/")));
+
+        QVERIFY(window.completeInput(true)); // Tab again cycles to the next match
+        const QString second = window.m_input->toPlainText();
+        QVERIFY(second.startsWith(QStringLiteral("/")));
+        QVERIFY(second != first);
+
+        QVERIFY(window.completeInput(false)); // Backtab returns to the previous match
+        QCOMPARE(window.m_input->toPlainText(), first);
     }
 
     void networkTreeShowsUnreadAndHighlightCounts() {
