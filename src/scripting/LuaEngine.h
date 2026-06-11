@@ -9,7 +9,8 @@
 namespace maxchat::scripting {
 
 class ScriptHost;
-struct ScriptState; // defined in LuaEngine.cpp (holds the lua_State)
+struct ScriptState;  // defined in LuaEngine.cpp (holds the lua_State)
+struct ScriptTimer;  // defined in LuaEngine.cpp (a QTimer + its Lua callback ref)
 
 // Loads and runs user Lua scripts in a sandbox, dispatching hooks and exposing
 // the `api` table. One isolated lua_State per script (unload == close state).
@@ -53,16 +54,23 @@ class LuaEngine final : public QObject {
     [[nodiscard]] QString hostNetwork();
     [[nodiscard]] QStringList hostChannels();
     [[nodiscard]] QStringList hostNicks(const QString& target);
+    // api.timer / api.cancel_timer (lua_State identifies the owning script).
+    int createTimer(void* luaState, int intervalMs, int funcRef);
+    void cancelTimer(int id);
 
   private:
     bool callHook(ScriptState* state, const char* hook, const QVariantList& args = {});
     void reportError(const QString& script, const QString& where, const QString& message);
+    void fireTimer(int id);
+    void cancelTimersFor(ScriptState* state);
 
     ScriptHost* host_ = nullptr;
     QString scriptsDir_;
     QString dataRoot_;
     QString currentNetwork_;
     QHash<QString, ScriptState*> scripts_;
+    QHash<int, ScriptTimer*> timers_;
+    int nextTimerId_ = 1;
 };
 
 } // namespace maxchat::scripting

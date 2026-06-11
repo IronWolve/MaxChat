@@ -288,6 +288,52 @@ class LuaEngineTest final : public QObject {
         QCOMPARE(host2.echoes, QStringList{QStringLiteral("zoe/true/true")});
     }
 
+    void apiTimerFires() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString path =
+            writeScript(QDir(dir.path()), QStringLiteral("tick.lua"),
+                        QStringLiteral("function on_load(api)\n"
+                                       "  api.timer(50, function() api.echo('tick') end)\n"
+                                       "end\n"));
+        FakeHost host;
+        LuaEngine engine(&host, dir.path(), dir.path());
+        QVERIFY(engine.load(path));
+        QTRY_VERIFY(host.echoes.contains(QStringLiteral("tick")));
+    }
+
+    void apiTimerCancelStops() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString path =
+            writeScript(QDir(dir.path()), QStringLiteral("cancel.lua"),
+                        QStringLiteral("function on_load(api)\n"
+                                       "  local id = api.timer(50, function() api.echo('x') end)\n"
+                                       "  api.cancel_timer(id)\n"
+                                       "end\n"));
+        FakeHost host;
+        LuaEngine engine(&host, dir.path(), dir.path());
+        QVERIFY(engine.load(path));
+        QTest::qWait(200);
+        QVERIFY(host.echoes.isEmpty());
+    }
+
+    void unloadCancelsTimers() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString path =
+            writeScript(QDir(dir.path()), QStringLiteral("ghost.lua"),
+                        QStringLiteral("function on_load(api)\n"
+                                       "  api.timer(50, function() api.echo('boom') end)\n"
+                                       "end\n"));
+        FakeHost host;
+        LuaEngine engine(&host, dir.path(), dir.path());
+        QVERIFY(engine.load(path));
+        QVERIFY(engine.unload(QStringLiteral("ghost"))); // must stop the timer
+        QTest::qWait(200);
+        QVERIFY(host.echoes.isEmpty());
+    }
+
     void scriptErrorDoesNotCrash() {
         QTemporaryDir dir;
         QVERIFY(dir.isValid());
@@ -303,6 +349,6 @@ class LuaEngineTest final : public QObject {
     }
 };
 
-QTEST_APPLESS_MAIN(LuaEngineTest)
+QTEST_GUILESS_MAIN(LuaEngineTest)
 
 #include "lua_engine_test.moc"
