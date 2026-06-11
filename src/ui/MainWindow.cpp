@@ -1179,8 +1179,9 @@ void maxchat::ui::MainWindow::buildLayout() {
     m_bufferTabBar->setDrawBase(false);
     m_bufferTabBar->setExpanding(false);
     m_bufferTabBar->setUsesScrollButtons(true);
-    m_bufferTabBar->setTabsClosable(false);
+    m_bufferTabBar->setTabsClosable(true); // ✕ on channel/query tabs (removed on roots in syncBufferTabs)
     m_bufferTabBar->setFocusPolicy(Qt::NoFocus);
+    m_bufferTabBar->setContextMenuPolicy(Qt::CustomContextMenu);
     m_bufferTabBar->addTab(QStringLiteral("Server"));
     m_bufferTabBar->setVisible(false);
     connect(m_bufferTabBar, &QTabBar::tabBarClicked, this, [this](const int index) {
@@ -1189,6 +1190,26 @@ void maxchat::ui::MainWindow::buildLayout() {
             m_networkTree->setCurrentItem(item);
         }
     });
+    connect(m_bufferTabBar, &QTabBar::tabCloseRequested, this, [this](const int index) {
+        closeBufferTab(index);
+    });
+    connect(m_bufferTabBar, &QTabBar::customContextMenuRequested, this,
+            [this](const QPoint& pos) {
+                const int index = m_bufferTabBar->tabAt(pos);
+                QTreeWidgetItem* item = treeItemForTabIndex(index);
+                if (item == nullptr) {
+                    return;
+                }
+                const QString target = item->data(0, Qt::UserRole).toString();
+                QMenu menu(this);
+                if (!target.isEmpty() && !isTreeStatusTarget(target)) {
+                    menu.addAction(QStringLiteral("Close"), this,
+                                   [this, index]() { closeBufferTab(index); });
+                }
+                if (!menu.isEmpty()) {
+                    menu.exec(m_bufferTabBar->mapToGlobal(pos));
+                }
+            });
 
     m_networkTree = new QTreeWidget(root);
     m_networkTree->setObjectName(QStringLiteral("networkTree"));
@@ -2550,7 +2571,22 @@ void maxchat::ui::MainWindow::syncBufferTabs() {
         QTreeWidgetItem* root = m_networkTree->topLevelItem(top);
         for (int child = -1; child < root->childCount(); ++child) {
             QTreeWidgetItem* item = child < 0 ? root : root->child(child);
-            const int tabIndex = m_bufferTabBar->addTab(item->text(0));
+            const QString label = item->text(0);
+            const int tabIndex = m_bufferTabBar->addTab(label);
+            if (child < 0) {
+                // Network / server roots aren't closable from the tab bar.
+                m_bufferTabBar->setTabButton(tabIndex, QTabBar::RightSide, nullptr);
+                m_bufferTabBar->setTabButton(tabIndex, QTabBar::LeftSide, nullptr);
+            }
+            // Mirror the tree: offline networks grey; otherwise tint by activity
+            // (highlight vs plain unread) so tabs signal it like the tree rows.
+            if (item->foreground(0).style() != Qt::NoBrush) {
+                m_bufferTabBar->setTabTextColor(tabIndex, item->foreground(0).color());
+            } else if (label.contains(QStringLiteral("[!"))) {
+                m_bufferTabBar->setTabTextColor(tabIndex, QColor(0xE2, 0x4B, 0x4A));
+            } else if (label.contains(QStringLiteral(" ["))) {
+                m_bufferTabBar->setTabTextColor(tabIndex, QColor(0x6F, 0x8C, 0xFF));
+            }
             if (item == currentItem) {
                 currentIndex = tabIndex;
             }
@@ -2559,6 +2595,21 @@ void maxchat::ui::MainWindow::syncBufferTabs() {
     if (currentIndex >= 0) {
         m_bufferTabBar->setCurrentIndex(currentIndex);
     }
+}
+
+void maxchat::ui::MainWindow::closeBufferTab(const int index) {
+    QTreeWidgetItem* item = treeItemForTabIndex(index);
+    if (item == nullptr) {
+        return;
+    }
+    const QString target = item->data(0, Qt::UserRole).toString();
+    if (target.trimmed().isEmpty() || isTreeStatusTarget(target)) {
+        return; // network/server roots aren't closable from a tab
+    }
+    if (m_networkTree != nullptr) {
+        m_networkTree->setCurrentItem(item); // switch context to it, then close
+    }
+    closeTarget(target);
 }
 
 QTreeWidgetItem* MainWindow::treeItemForTabIndex(const int index) const {
