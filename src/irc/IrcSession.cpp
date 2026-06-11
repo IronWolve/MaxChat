@@ -296,19 +296,12 @@ void IrcSession::handleLine(const QString &line) {
   }
 
   if (command == QStringLiteral("AWAY")) {
+    // away-notify: emit only the structured signal (drives member-list dimming).
+    // Python stays silent here — printing a line per away/back change spams busy
+    // channels. Your own /away /back acks come via numerics 305/306 instead.
     const QString sender = msg.nick().isEmpty() ? msg.prefix : msg.nick();
     if (!sender.isEmpty()) {
       emit awayChanged(sender, !msg.trailing().trimmed().isEmpty());
-    }
-    if (msg.trailing().trimmed().isEmpty()) {
-      emit replyText(sender.isEmpty()
-                         ? QStringLiteral("[away] Away status cleared.")
-                         : QStringLiteral("[away] %1 is back.").arg(sender));
-    } else {
-      emit replyText(sender.isEmpty()
-                         ? QStringLiteral("[away] %1").arg(msg.trailing())
-                         : QStringLiteral("[away] %1 is away: %2")
-                               .arg(sender, msg.trailing()));
     }
     return;
   }
