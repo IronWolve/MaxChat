@@ -79,6 +79,12 @@ if defined USING_MINGW (
 set "DIST_DIR=%ROOT%\dist-win"
 set "GENERATOR=Ninja"
 set "CONFIG_ARGS=-DCMAKE_BUILD_TYPE=Release"
+rem Opt-in Lua scripting: run "build.bat lua" or set MAXCHAT_LUA=ON beforehand.
+if /I "%~1"=="lua" set "MAXCHAT_LUA=ON"
+if /I "%MAXCHAT_LUA%"=="ON" (
+    set "CONFIG_ARGS=%CONFIG_ARGS% -DMAXCHAT_LUA=ON"
+    echo Lua scripting: ENABLED for this build.
+)
 set "BUILD_ARGS="
 set "CTEST_ARGS="
 set "EXE_PATH=%BUILD_DIR%\maxchat-c.exe"
