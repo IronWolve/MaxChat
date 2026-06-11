@@ -5544,10 +5544,33 @@ void maxchat::ui::MainWindow::openCharacterGallery() {
 }
 
 void maxchat::ui::MainWindow::openEmotionPicker() {
-    showFeaturePlanned(QStringLiteral("Emotion"),
-                       QStringLiteral("Pick an emotion in chat with the comic showing; auto "
-                                      "emotion follows your text for now."));
+    // Set the expression used for YOUR comic panels (overrides the text guess);
+    // "Auto" returns to guessing from your message text. Mirrors the Python
+    // emotion wheel without the live-preview popup.
+    const QStringList options = {QStringLiteral("Auto"),    QStringLiteral("neutral"),
+                                 QStringLiteral("happy"),   QStringLiteral("laughing"),
+                                 QStringLiteral("coy"),     QStringLiteral("scared"),
+                                 QStringLiteral("bored"),   QStringLiteral("angry"),
+                                 QStringLiteral("shouting"), QStringLiteral("sad")};
+    const QString currentLabel =
+        m_comicSelfEmotion == QStringLiteral("auto") ? QStringLiteral("Auto") : m_comicSelfEmotion;
+    const int current = std::max(0, static_cast<int>(options.indexOf(currentLabel)));
+    bool ok = false;
+    const QString choice = QInputDialog::getItem(
+        this, QStringLiteral("Comic emotion"),
+        QStringLiteral("Expression for your comic panels (Auto = guess from your text):"), options,
+        current, false, &ok);
+    if (!ok) {
+        return;
+    }
+    m_comicSelfEmotion =
+        choice == QStringLiteral("Auto") ? QStringLiteral("auto") : choice.toLower();
+    appendSystemLine(m_comicSelfEmotion == QStringLiteral("auto")
+                         ? QStringLiteral("! Comic emotion: auto (guess from text).")
+                         : QStringLiteral("! Comic emotion set to %1.").arg(m_comicSelfEmotion));
+    refreshComic();
 }
+
 
 void maxchat::ui::MainWindow::saveComic() {
     if (m_comicView == nullptr || !m_comicView->hasPanels()) {
@@ -5656,6 +5679,7 @@ QString comicEmotionFor(const QString& body) {
     return QStringLiteral("neutral");
 }
 
+
 struct ComicMsg {
     QString nick;
     QString text;
@@ -5758,6 +5782,18 @@ QImage maxchat::ui::MainWindow::comicBackground() {
         m_comicBgCache.insert(path, maxchat::comic::loadBackground(path));
     }
     return m_comicBgCache.value(path);
+}
+
+QString maxchat::ui::MainWindow::comicEmotionForMessage(const QString& nick,
+                                                        const QString& text) {
+    // Your own lines honour the emotion override (if not "auto"); everyone else
+    // (and you, when auto) get the text-based guess.
+    if (m_comicSelfEmotion != QStringLiteral("auto") &&
+        nick.trimmed().toLower() ==
+            currentNickForNetwork(activeNetworkName()).toLower()) {
+        return m_comicSelfEmotion;
+    }
+    return comicEmotionFor(text);
 }
 
 void maxchat::ui::MainWindow::refreshComic() {
@@ -5870,7 +5906,7 @@ void maxchat::ui::MainWindow::refreshComic() {
                     maxchat::comic::ComicActor a;
                     a.nick = m.nick;
                     a.character = comicCharacterForNick(m.nick);
-                    a.emotion = comicEmotionFor(m.text);
+                    a.emotion = comicEmotionForMessage(m.nick, m.text);
                     a.pose = a.character && a.character->bodyCount() > 0
                                  ? static_cast<int>(comicHash(m.nick.toLower() + QStringLiteral("|") +
                                                               m.text) %
@@ -5923,7 +5959,7 @@ void maxchat::ui::MainWindow::refreshComic() {
                 if (a.character == nullptr) {
                     continue; // no art for this nick → skip (its lines too)
                 }
-                a.emotion = comicEmotionFor(m.text);
+                a.emotion = comicEmotionForMessage(m.nick, m.text);
                 a.pose = a.character->bodyCount() > 0
                              ? static_cast<int>(comicHash(low + QStringLiteral("|") + m.text) %
                                                 a.character->bodyCount())
@@ -5941,7 +5977,7 @@ void maxchat::ui::MainWindow::refreshComic() {
             }
             // Latest emotion/pose for the actor.
             maxchat::comic::ComicActor& a = actors[actorIndex.value(low)];
-            a.emotion = comicEmotionFor(m.text);
+            a.emotion = comicEmotionForMessage(m.nick, m.text);
             if (a.character && a.character->bodyCount() > 0) {
                 a.pose = static_cast<int>(comicHash(low + QStringLiteral("|") + m.text) %
                                           a.character->bodyCount());
