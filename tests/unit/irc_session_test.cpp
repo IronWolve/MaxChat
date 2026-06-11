@@ -805,6 +805,22 @@ private slots:
     QCOMPARE(modeChanges.at(0).at(2).toString(), QStringLiteral("+o bob"));
   }
 
+  void sendRawStripsEmbeddedCrlfToPreventInjection() {
+    IrcSession session;
+    QList<QByteArray> writes;
+    session.setConnected(true);
+    session.setWriter([&writes](const QByteArray &payload) {
+      writes.append(payload);
+      return payload.size();
+    });
+
+    // A crafted message must not smuggle a second command onto the wire.
+    QVERIFY(session.sendRaw(QStringLiteral("PRIVMSG #c :hi\r\nQUIT :owned")));
+    QCOMPARE(writes.size(), 1);
+    QCOMPARE(writes.first(),
+             QByteArray("PRIVMSG #c :hiQUIT :owned\r\n")); // CR/LF removed, single terminator
+  }
+
   void unhandledNumericsAreSurfacedAsStatusText() {
     // Numerics without an explicit handler (LUSERS, server errors, …) must not
     // vanish — the Python client shows them as status text.

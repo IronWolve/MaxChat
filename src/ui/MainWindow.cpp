@@ -1145,6 +1145,9 @@ void maxchat::ui::MainWindow::buildLayout() {
         QStringLiteral("Not connected - Server > Server List... or Quick Connect..."), root);
     m_topicLabel->setObjectName(QStringLiteral("topicLabel"));
     m_topicLabel->setMinimumHeight(30);
+    // The topic is attacker-controlled (anyone can set a channel TOPIC); force
+    // plain text so a topic like "<img src=...>" can't render as rich text.
+    m_topicLabel->setTextFormat(Qt::PlainText);
 
     m_bufferTabBar = new QTabBar(root);
     m_bufferTabBar->setObjectName(QStringLiteral("bufferTabBar"));
