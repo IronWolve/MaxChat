@@ -221,6 +221,7 @@ class MainWindow final : public QMainWindow {
     void refreshComic();
     void ensureComicArt();
     [[nodiscard]] maxchat::comic::Character* comicCharacterForNick(const QString& nick);
+    [[nodiscard]] QString comicEmotionForMessage(const QString& nick, const QString& text);
     [[nodiscard]] QImage comicBackground();
     void openComicSettings();
     void openCharacterGallery();
@@ -403,6 +404,7 @@ class MainWindow final : public QMainWindow {
     QAction* m_comicModeAction = nullptr;
     ComicView* m_comicView = nullptr;
     bool m_comicMode = false;
+    QString m_comicSelfEmotion = QStringLiteral("auto"); // override for your panels; "auto" = guess
     QString m_comicArtDirLoaded;
     QHash<QString, QString> m_comicCharacterPaths;  // stem -> .avb path
     QHash<QString, QString> m_comicBackgroundPaths; // filename -> .bgb path
