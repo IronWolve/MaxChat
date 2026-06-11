@@ -149,6 +149,7 @@ class PreferencesDialog final : public QDialog {
     QCheckBox* minimizeToTray_ = nullptr;
     QComboBox* interfaceLanguage_ = nullptr;
     QCheckBox* spellcheckEnabled_ = nullptr;
+    QComboBox* spellBackend_ = nullptr;
     QComboBox* spellLanguage_ = nullptr;
 };
 

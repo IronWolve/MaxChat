@@ -1,5 +1,6 @@
 #include "ui/SpellcheckHighlighter.h"
 
+#include <QColor>
 #include <QRegularExpression>
 
 #include <algorithm>
@@ -155,8 +156,11 @@ misspelledWordRanges(const QString &text,
 
 SpellcheckHighlighter::SpellcheckHighlighter(QTextDocument *document)
     : QSyntaxHighlighter(document) {
-  misspelledFormat_.setUnderlineStyle(QTextCharFormat::SpellCheckUnderline);
-  misspelledFormat_.setUnderlineColor(Qt::red);
+  // Explicit red wavy underline. SpellCheckUnderline delegates to the platform
+  // style, which renders inconsistently (sometimes a box / dotted line); a plain
+  // WaveUnderline is reliably the red squiggle people expect.
+  misspelledFormat_.setUnderlineStyle(QTextCharFormat::WaveUnderline);
+  misspelledFormat_.setUnderlineColor(QColor(0xE2, 0x4B, 0x4A));
 }
 
 void SpellcheckHighlighter::setSpellcheckEnabled(const bool enabled) {

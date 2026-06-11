@@ -255,6 +255,7 @@ QVariantMap SettingsStore::defaultSettings() {
   settings.insert(QStringLiteral("interface_language"),
                   QStringLiteral("system"));
   settings.insert(QStringLiteral("spellcheck_enabled"), true);
+  settings.insert(QStringLiteral("spellcheck_backend"), QStringLiteral("internal"));
   settings.insert(QStringLiteral("spell_language"), QStringLiteral("en"));
   settings.insert(QStringLiteral("wallpaper"), QString());
   settings.insert(QStringLiteral("show_timestamps"), true);

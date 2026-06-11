@@ -104,6 +104,7 @@
 #include <QTabBar>
 #include <QTextBlockFormat>
 #include <QTextBrowser>
+#include <QContextMenuEvent>
 #include <QTextCursor>
 #include <QTextDocument>
 #include <QTextEdit>
@@ -923,7 +924,51 @@ bool MainWindow::eventFilter(QObject* watched, QEvent* event) {
             return completeInput(keyEvent->key() == Qt::Key_Tab);
         }
     }
+    if (watched == m_input && event->type() == QEvent::ContextMenu) {
+        auto* contextEvent = static_cast<QContextMenuEvent*>(event);
+        showInputContextMenu(contextEvent->pos(), contextEvent->globalPos());
+        return true;
+    }
     return QMainWindow::eventFilter(watched, event);
+}
+
+void maxchat::ui::MainWindow::showInputContextMenu(const QPoint& localPos,
+                                                   const QPoint& globalPos) {
+    if (m_input == nullptr) {
+        return;
+    }
+    QMenu* menu = m_input->createStandardContextMenu();
+    if (menu == nullptr) {
+        return;
+    }
+    menu->setAttribute(Qt::WA_DeleteOnClose);
+
+    // Prepend spelling suggestions for the (misspelled) word under the cursor.
+    if (m_spellchecker != nullptr && m_spellchecker->isLoaded()) {
+        QTextCursor wordCursor = m_input->cursorForPosition(localPos);
+        wordCursor.select(QTextCursor::WordUnderCursor);
+        const QString word = wordCursor.selectedText();
+        if (!word.isEmpty() && !m_spellchecker->isCorrect(word)) {
+            QAction* anchor = menu->actions().isEmpty() ? nullptr : menu->actions().first();
+            const QStringList suggestions = m_spellchecker->suggestions(word);
+            if (suggestions.isEmpty()) {
+                auto* none = new QAction(QStringLiteral("(no suggestions)"), menu);
+                none->setEnabled(false);
+                menu->insertAction(anchor, none);
+            } else {
+                for (const QString& suggestion : suggestions) {
+                    auto* action = new QAction(suggestion, menu);
+                    connect(action, &QAction::triggered, this,
+                            [wordCursor, suggestion]() mutable {
+                                wordCursor.insertText(suggestion);
+                            });
+                    menu->insertAction(anchor, action);
+                }
+            }
+            menu->insertSeparator(anchor);
+        }
+    }
+    menu->popup(globalPos);
 }
 
 void maxchat::ui::MainWindow::buildMenus() {

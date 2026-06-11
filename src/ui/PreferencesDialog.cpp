@@ -332,6 +332,9 @@ QVariantMap PreferencesDialog::settings() const {
     out.insert(QStringLiteral("dcc_dir"), dccDir_->text().trimmed());
     out.insert(QStringLiteral("interface_language"), interfaceLanguage_->currentData().toString());
     out.insert(QStringLiteral("spellcheck_enabled"), spellcheckEnabled_->isChecked());
+    if (spellBackend_) {
+        out.insert(QStringLiteral("spellcheck_backend"), spellBackend_->currentData().toString());
+    }
     out.insert(QStringLiteral("spell_language"), spellLanguage_->currentData().toString());
     // Notifications
     if (dnd_) out.insert(QStringLiteral("dnd"), dnd_->isChecked());
@@ -1274,9 +1277,16 @@ void PreferencesDialog::buildLocalizationTab(QWidget* tab) {
     setComboByData(interfaceLanguage_,
                    settings_.value(QStringLiteral("interface_language"), QStringLiteral("system")));
 
-    spellcheckEnabled_ = new QCheckBox(QStringLiteral("Spellcheck"), tab);
+    spellcheckEnabled_ = new QCheckBox(QStringLiteral("Enable spellcheck"), tab);
     spellcheckEnabled_->setObjectName(QStringLiteral("spellcheckEnabled"));
     spellcheckEnabled_->setChecked(settings_.value(QStringLiteral("spellcheck_enabled")).toBool());
+
+    spellBackend_ = new QComboBox(tab);
+    spellBackend_->setObjectName(QStringLiteral("spellBackend"));
+    spellBackend_->addItem(QStringLiteral("Internal (Hunspell)"), QStringLiteral("internal"));
+    spellBackend_->addItem(QStringLiteral("Operating system"), QStringLiteral("os"));
+    setComboByData(spellBackend_,
+                   settings_.value(QStringLiteral("spellcheck_backend"), QStringLiteral("internal")));
 
     spellLanguage_ = new QComboBox(tab);
     spellLanguage_->setObjectName(QStringLiteral("spellLanguage"));
@@ -1290,6 +1300,7 @@ void PreferencesDialog::buildLocalizationTab(QWidget* tab) {
 
     form->addRow(QStringLiteral("Interface Language"), interfaceLanguage_);
     form->addRow(QString(), spellcheckEnabled_);
+    form->addRow(QStringLiteral("Spell Engine"), spellBackend_);
     form->addRow(QStringLiteral("Spell Language"), spellLanguage_);
     root->addLayout(form);
     root->addStretch(1);
