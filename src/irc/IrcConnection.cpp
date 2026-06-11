@@ -2,9 +2,11 @@
 
 #include <QAbstractSocket>
 #include <QHostAddress>
+#include <QPointer>
 #include <QSslError>
 #include <QNetworkProxy>
 #include <QSslSocket>
+#include <QTimer>
 
 namespace maxchat::irc {
 
@@ -15,6 +17,9 @@ namespace {
 // the 512-byte *send* cap. Matches the Python client (8192 line / 65536 buffer).
 constexpr qsizetype MaxIncomingLineBytes = 8192;
 constexpr qsizetype MaxPendingBytes = 65536;
+// Process at most this many lines per event-loop turn; defer the rest so a flood
+// or netsplit burst can't freeze the UI (Python drains 100 lines per tick).
+constexpr int MaxLinesPerTick = 100;
 
 } // namespace
 
@@ -234,7 +239,9 @@ void IrcConnection::onReadyRead(QSslSocket *socket) {
   }
   buffer_.append(socket->readAll());
   queueIncomingLines(socket);
-  if (buffer_.size() > MaxPendingBytes) {
+  // Only abort on a single oversized *incomplete* line — not on a backlog of
+  // complete lines still being drained in throttled batches (see MaxLinesPerTick).
+  if (buffer_.size() > MaxPendingBytes && !buffer_.contains("\r\n")) {
     buffer_.clear();
     emit errorOccurred(
         QStringLiteral("IRC server sent an oversized line; disconnecting"));
@@ -310,6 +317,7 @@ void IrcConnection::onRegistrationTimeout() {
 }
 
 void IrcConnection::queueIncomingLines(QSslSocket *socket) {
+  int handled = 0;
   while (socket == socket_ && buffer_.contains("\r\n")) {
     const int lineEnd = buffer_.indexOf("\r\n");
     const QByteArray chunk = buffer_.left(lineEnd);
@@ -322,6 +330,19 @@ void IrcConnection::queueIncomingLines(QSslSocket *socket) {
       continue;
     }
     session_.handleLine(QString::fromUtf8(chunk));
+    if (++handled >= MaxLinesPerTick) {
+      break; // yield; finish the remaining lines on the next event-loop turn
+    }
+  }
+  // More complete lines still buffered → keep draining after yielding so a big
+  // burst doesn't block the UI thread.
+  if (socket == socket_ && buffer_.contains("\r\n")) {
+    const QPointer<QSslSocket> guarded(socket);
+    QTimer::singleShot(0, this, [this, guarded]() {
+      if (!guarded.isNull() && guarded == socket_) {
+        queueIncomingLines(guarded);
+      }
+    });
   }
 }
 

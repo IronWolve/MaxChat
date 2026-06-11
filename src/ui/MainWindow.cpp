@@ -5722,7 +5722,20 @@ QImage maxchat::ui::MainWindow::comicBackground() {
     QString file = settings.value(QStringLiteral("comic_bg")).toString().toLower();
     QString path = m_comicBackgroundPaths.value(file);
     if (path.isEmpty() && !m_comicBackgroundPaths.isEmpty()) {
-        path = *m_comicBackgroundPaths.constBegin();
+        if (file.isEmpty() &&
+            settings.value(QStringLiteral("comic_random_bg"), false).toBool()) {
+            // No configured background + random enabled → pick one that's stable
+            // per channel (seed by the current target, sorted keys for determinism).
+            QStringList keys = m_comicBackgroundPaths.keys();
+            std::sort(keys.begin(), keys.end());
+            const QString seed = m_currentTarget.isEmpty()
+                                     ? QStringLiteral("default")
+                                     : m_currentTarget.toLower();
+            const int index = static_cast<int>(comicHash(seed) % static_cast<quint32>(keys.size()));
+            path = m_comicBackgroundPaths.value(keys.at(index));
+        } else {
+            path = *m_comicBackgroundPaths.constBegin();
+        }
     }
     if (path.isEmpty()) {
         return {};
