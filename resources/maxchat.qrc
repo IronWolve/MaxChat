@@ -6,6 +6,10 @@
     <file alias="fonts/ComicRelief-Bold.ttf">../assets/fonts/ComicRelief-Bold.ttf</file>
     <file alias="fonts/SymbolsNerdFontMono-Regular.ttf">../assets/fonts/SymbolsNerdFontMono-Regular.ttf</file>
     <file alias="sounds/notify.wav">../assets/sounds/notify.wav</file>
+    <file alias="sounds/bell.wav">../assets/sounds/bell.wav</file>
+    <file alias="sounds/ping.wav">../assets/sounds/ping.wav</file>
+    <file alias="sounds/scifi_chirp.wav">../assets/sounds/scifi_chirp.wav</file>
+    <file alias="sounds/trek_hail.wav">../assets/sounds/trek_hail.wav</file>
     <file alias="icons/maxchat.ico">../assets/icons/maxchat.ico</file>
   </qresource>
 </RCC>

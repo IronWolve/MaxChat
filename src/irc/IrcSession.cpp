@@ -104,6 +104,13 @@ void IrcSession::setCtcpVersion(bool hide, const QString &custom) {
   ctcpVersion_ = custom.trimmed();
 }
 
+void IrcSession::setCtcpOptions(bool respondPing, bool respondTime,
+                                bool respondClientInfo) {
+  respondPing_ = respondPing;
+  respondTime_ = respondTime;
+  respondClientInfo_ = respondClientInfo;
+}
+
 QString IrcSession::nick() const { return nick_; }
 
 bool IrcSession::isRegistered() const { return registered_; }
@@ -397,7 +404,9 @@ void IrcSession::handleLine(const QString &line) {
 
       QString response;
       if (ctcp.command == QStringLiteral("PING")) {
-        response = ctcpBody(QStringLiteral("PING"), ctcp.args);
+        if (respondPing_) {
+          response = ctcpBody(QStringLiteral("PING"), ctcp.args);
+        }
       } else if (ctcp.command == QStringLiteral("VERSION")) {
         // hide_version suppresses the reply; ctcp_version overrides the text.
         if (!hideVersion_) {
@@ -409,12 +418,16 @@ void IrcSession::handleLine(const QString &line) {
                                                      : ctcpVersion_);
         }
       } else if (ctcp.command == QStringLiteral("TIME")) {
-        response =
-            ctcpBody(QStringLiteral("TIME"),
-                     QDateTime::currentDateTime().toString(Qt::TextDate));
+        if (respondTime_) {
+          response =
+              ctcpBody(QStringLiteral("TIME"),
+                       QDateTime::currentDateTime().toString(Qt::TextDate));
+        }
       } else if (ctcp.command == QStringLiteral("CLIENTINFO")) {
-        response = QStringLiteral("CLIENTINFO ACTION CLIENTINFO PING TIME "
-                                  "VERSION");
+        if (respondClientInfo_) {
+          response = QStringLiteral("CLIENTINFO ACTION CLIENTINFO PING TIME "
+                                    "VERSION");
+        }
       }
 
       if (!response.isEmpty() && !msg.nick().isEmpty()) {

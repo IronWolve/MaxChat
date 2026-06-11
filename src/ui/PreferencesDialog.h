@@ -126,6 +126,9 @@ class PreferencesDialog final : public QDialog {
     QSpinBox* scrollback_ = nullptr;
     QCheckBox* hideVersion_ = nullptr;
     QLineEdit* ctcpVersion_ = nullptr;
+    QCheckBox* ctcpRespondPing_ = nullptr;
+    QCheckBox* ctcpRespondTime_ = nullptr;
+    QCheckBox* ctcpRespondClientInfo_ = nullptr;
     QCheckBox* loggingEnabled_ = nullptr;
     QCheckBox* replayLogEnabled_ = nullptr;
     QComboBox* dccAccept_ = nullptr;
@@ -154,6 +157,7 @@ class PreferencesDialog final : public QDialog {
     QComboBox* notifyTheme_ = nullptr;
     QCheckBox* beepHighlight_ = nullptr;
     QCheckBox* notifySound_ = nullptr;
+    QComboBox* notifySoundFile_ = nullptr;
     QCheckBox* ctcpSound_ = nullptr;
     QCheckBox* minimizeToTray_ = nullptr;
     QComboBox* interfaceLanguage_ = nullptr;
