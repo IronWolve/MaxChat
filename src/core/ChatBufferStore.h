@@ -30,6 +30,7 @@ struct ChatBufferLine {
   bool localEcho = false;
   bool highlight = false;
   bool systemLine = false;
+  bool dimmed = false; // replayed log history / "Chat ended" divider
 };
 
 struct ChatBufferSnapshot {

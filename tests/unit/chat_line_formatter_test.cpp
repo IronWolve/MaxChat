@@ -82,6 +82,32 @@ class ChatLineFormatterTest final : public QObject {
         QVERIFY(!line.html.contains(QStringLiteral("|</span>")));
     }
 
+    void dividerRulesAreNotMisparsedAsNickLabel() {
+        // "--- Chat ended ---" must not be split into a "-" nick label + body;
+        // it belongs whole in the message column, aligned like a system notice.
+        ChatLineFormatOptions options;
+        options.showTimestamp = false;
+        options.nickColumnWidth = 4;
+
+        const auto line = formatChatLine(QStringLiteral("--- Chat ended ---"), options);
+
+        QCOMPARE(line.prefixPlain, QStringLiteral("     "));
+        QCOMPARE(line.messagePlain, QStringLiteral("--- Chat ended ---"));
+        QCOMPARE(line.plainText, QStringLiteral("     --- Chat ended ---"));
+    }
+
+    void realNoticeNicksStillParse() {
+        // The divider fix must not break genuine "-nick- text" notice labels.
+        ChatLineFormatOptions options;
+        options.showTimestamp = false;
+        options.nickColumnWidth = 10;
+
+        const auto line = formatChatLine(QStringLiteral("-NickServ- hello"), options);
+
+        QCOMPARE(line.messagePlain, QStringLiteral("hello"));
+        QVERIFY(line.plainText.contains(QStringLiteral("-NickServ-")));
+    }
+
     void scopedServerLabelsUseTheNickColumn() {
         ChatLineFormatOptions options;
         options.showTimestamp = false;

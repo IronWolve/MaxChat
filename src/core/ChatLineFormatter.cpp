@@ -70,10 +70,17 @@ ParsedLine parseLineShape(const QString& line) {
     } else if (body.startsWith(QLatin1Char('-'))) {
         const qsizetype end = body.indexOf(QStringLiteral("- "), 1);
         if (end > 0) {
-            parsed.label = body.left(end + 1);
-            parsed.labelNick = body.mid(1, end - 1);
-            parsed.message = body.mid(end + 2);
-            parsed.hasLabel = true;
+            // Reject degenerate "nicks" so divider rules like "--- Chat ended ---"
+            // aren't split into a "-" nick label + body. A real notice nick has
+            // at least one non-dash character.
+            const QString candidateNick = body.mid(1, end - 1);
+            const QString trimmedNick = candidateNick.trimmed();
+            if (!trimmedNick.isEmpty() && trimmedNick != QStringLiteral("-")) {
+                parsed.label = body.left(end + 1);
+                parsed.labelNick = candidateNick;
+                parsed.message = body.mid(end + 2);
+                parsed.hasLabel = true;
+            }
         }
     } else if (body.startsWith(QStringLiteral("* "))) {
         const qsizetype end = body.indexOf(QLatin1Char(' '), 2);
