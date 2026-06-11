@@ -4,6 +4,12 @@
 AUDIT.md). Applies to BOTH clients — `maxchat-c` (C++) and `maxchat` (Python).
 Mirror changes into `maxchat/DEVDOCS/`.
 
+> This doc covers *what goes in each surface*. For *how the chat view itself is
+> rendered* — the single-shared-view model and the rule that anything which must
+> survive a buffer switch has to live in `ChatBufferStore` (replay history,
+> unread marker) — see **`CHAT_VIEW_DESIGN.md`**. Read that before adding any new
+> chat-view element.
+
 ## Purpose of this doc
 
 Each area of the window has **one job**. Most of our UI bugs were one piece of

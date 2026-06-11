@@ -1,6 +1,70 @@
 # MaxChat C++ Port Handoff
 
-Date: 2026-06-09 (audit closeout 2026-06-10)
+Date: 2026-06-09 (audit closeout 2026-06-10; UI polish 2026-06-11)
+
+## Latest Completed Slice (UI polish batch, 2026-06-11)
+
+### Upload / Image Hosting tab overhaul
+- Tab renamed "Uploads" → "Image Hosting".
+- `buildUploadsTab` fully rewritten: a `QComboBox` + `QStackedWidget` shows a
+  dedicated panel per service (Disabled, imgbb, Imgur, Postimages, Imgbox).
+- Each panel has a `QToolButton` that opens the service's signup page via
+  `QDesktopServices`, a "TOS Accepted" `QCheckBox` that gates the credential
+  fields (`QWidget creds` enabled/disabled by toggle), and hidden/show password
+  control (Imgbox password row has a `QToolButton("🔍")` that toggles `EchoMode`).
+- Four new `*_tos` boolean settings (`imgbb_tos`, `imgur_tos`, `postimages_tos`,
+  `imgbox_tos`) with `false` defaults added to `SettingsStore`.
+
+### Services tab — OG card display options
+- Added a `QFrame::HLine` separator below the four link-preview-type checkboxes.
+- Added "Card fields to display:" section with four `QCheckBox` widgets:
+  Site name, Title, Description, Photo.
+- Four new `og_show_*` boolean settings (`og_show_site_name`, `og_show_title`,
+  `og_show_description`, `og_show_image`) with `true` defaults.
+- `LinkPreviewRenderOptions` extended with matching fields; `applyCurrentSettings`
+  populates `m_ogRenderOptions` from settings.
+- `renderOpenGraphPreviewHtml` restructured: card `<div>` holds only text fields
+  (site/title/description); image renders in a **separate** `<div>` below the
+  card so the text card and photo don't visually overlap.
+
+### OG image overflow fix
+- `handlePreviewImageFetched`: large fetched images (> `maxImageWidth/Height`) are
+  now scaled via `Qt::KeepAspectRatio + Qt::SmoothTransformation` **before** being
+  stored in `m_previewImageCache`. `QTextDocument` registers the resource at the
+  stored image's native pixel size (ignores CSS `max-width`), so images must be
+  capped before insertion.
+
+### Async OG card wrong-channel routing fix
+- `LinkPreviewCandidate` gained `originNetwork`/`originTarget` fields.
+- `queueLinkPreviewsFromLine` stamps these at queue time (the channel where the
+  URL was posted). `handlePreviewCardFetched` uses the stamped fields (not
+  `m_currentTarget` at callback time) to route the rendered card to the correct
+  buffer. Fixes cards appearing in the wrong channel after the user switches tabs.
+
+### OG card text alignment fix
+- `appendPreviewHtmlLine`'s `QTextBlockFormat::setLeftMargin` only applied to the
+  first block; each `<div>` in the card HTML created additional `QTextBlock`s with
+  default (zero) left margin, causing all card text to render at the left edge.
+  Fix: after `cursor.insertHtml(html)`, iterate over all inserted blocks
+  (`insertStart`→`insertEnd`) and apply `mergeBlockFormat` to each. Card text now
+  aligns with the rest of the chat message column. See DEV_NOTES "THINGS I GOT
+  WRONG" for the full root-cause.
+
+### Scripts tab + Scripts Manager improvements
+- `PreferencesDialog` constructor gained optional `QStringList loadedScripts` and
+  `QString scriptsDir` parameters (backward-compatible defaults).
+- Scripts tab now opens with a "Currently loaded" group box showing which Lua
+  scripts are active at the time the dialog opens (populated from
+  `m_lua->loaded()` in `openPreferences`).
+- "Open scripts folder..." button added at the bottom of the tab when `scriptsDir`
+  is set.
+- `openScriptsManager` (Scripts Manager dialog):
+  - Full file path now stored in `Qt::UserRole + 1` on each list item.
+  - **Edit** button: opens the selected `.lua` in the OS default text editor
+    (`QDesktopServices::openUrl`).
+  - **Settings** button: shows an info dialog with the script's name, path, load
+    status, and any header comment block from the `.lua` file (first consecutive
+    `--` lines read at click time).
 
 ## Port audit complete (2026-06-10) — see AUDIT.md
 

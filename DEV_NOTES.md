@@ -29,6 +29,45 @@ When adding anything that should survive a buffer switch, store it in the model.
 
 ## THINGS I GOT WRONG
 
+- **2026-06-11 — OG card text rendered at the left edge instead of aligned with
+  chat text.** `appendPreviewHtmlLine` computed a `leftMargin` from the chat
+  prefix width and applied it via `QTextBlockFormat` before calling
+  `cursor.insertHtml(html)`. The format set on the initial block was correct, but
+  `insertHtml` with block-level HTML elements (`<div>`) creates additional
+  `QTextBlock`s; those new blocks get default formatting (leftMargin=0) regardless
+  of the cursor's block format. Result: only the first (empty/initial) block had
+  the margin; every card `<div>` appeared at column 0. Fix: after `insertHtml`,
+  iterate over every block from `insertStart` to `insertEnd` and call
+  `mergeBlockFormat` on each. Lesson: `QTextBlockFormat` applied before
+  `insertHtml` only affects the pre-existing block at the cursor — any block
+  element in the HTML creates a fresh block with default formatting; you must
+  apply the format to all inserted blocks post-insert.
+
+- **2026-06-11 — right-click spelling suggestions never appeared.** The input is
+  a `QTextEdit` (a `QAbstractScrollArea`). The event filter was installed only on
+  `m_input`, so keyboard events (which go to the widget) worked, but mouse-driven
+  `QEvent::ContextMenu` is delivered to the **viewport**, not the widget — the
+  filter never saw it and Qt's built-in menu (no suggestions) showed instead.
+  Fix: also `installEventFilter` on `m_input->viewport()` and accept either object
+  in the ContextMenu branch; viewport coords are also what `cursorForPosition`
+  wants. Lesson: for any QAbstractScrollArea, mouse/context-menu events target the
+  viewport — filter the viewport, not just the widget.
+
+- **2026-06-11 — divider rules ("--- Chat ended ---", "──── new ────") rendered
+  ragged, not aligned.** Two compounding bugs: (1) `ChatLineFormatter::parseLineShape`
+  treated a leading `---` as a nick label (nick = `"-"`), splitting the divider into
+  a bogus nick column + body; (2) both divider sites in `MainWindow.cpp` set
+  `showTimestamp=false`, dropping the timestamp gutter so the body started 9 cols left
+  of every other line. Fix: parser now rejects degenerate/empty nicks (real `-NickServ-`
+  notices still parse — sender is non-empty); both dividers now carry their time in the
+  gutter so the body lands in the message column. Regression tests added
+  (`dividerRulesAreNotMisparsedAsNickLabel`, `realNoticeNicksStillParse`). NOTE: this is
+  C++-port-only — Python renders the divider via a dedicated centered `view.insert_rule`
+  (`main_window.py:2657`), so it has neither bug; **no backport**. Design confirmed with
+  user: align-to-message-column (not Python's centered rule). Lesson: routing dividers
+  through the shared chat-line text formatter inherits the nick-parsing heuristics — a
+  dedicated rule render (like Python) sidesteps that class of bug entirely.
+
 - **2026-06-11 — `m_spellchecker` + `spell/Speller.h` left inside `#ifdef
   MAXCHAT_WITH_HUNSPELL` in MainWindow.h, but the OS-speller refactor uses them
   unconditionally.** Linux (always has Hunspell → macro defined) compiled fine;
