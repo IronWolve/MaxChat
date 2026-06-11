@@ -4,6 +4,18 @@ Internal notes for this port. Not shipped.
 
 ## THINGS I GOT WRONG
 
+- **2026-06-10 — Two injection gaps found in the cross-cutting sweep (audit
+  phase 10).** (1) `sendRaw` appended `\r\n` but didn't strip embedded CR/LF, so
+  a lone `\r` mid-message (CR-only paste survives `trimmed()`) could split a
+  second command onto the wire — fixed by stripping CR/LF at the single send
+  choke point (defense-in-depth regardless of input path; Python doesn't do this
+  either → backport BP-10). (2) the topic bar `QLabel` used the default AutoText
+  format, so a channel `TOPIC` containing `<img src=…>`/markup would render as
+  rich text — fixed with `setTextFormat(Qt::PlainText)`. Lesson: any Qt widget
+  that shows remote/attacker text (QLabel, tooltips, QTextBrowser) defaults to
+  rich-text detection — force PlainText unless you are deliberately rendering
+  escaped HTML.
+
 - **2026-06-10 — Link-preview SSRF guard only checked the first URL (audit phase
   9, SECURITY).** Two gaps vs the Python original: (1) `buildRequest` set
   `NoLessSafeRedirectPolicy` (which only blocks https→http downgrades) and the

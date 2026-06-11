@@ -47,7 +47,14 @@ flagged "medium+ — push past the checklist for extra attack angles."
 the recommended model/effort or change it — before reading any files.** Do not begin the
 phase work until the user confirms.
 
-**Last session:** 2026-06-10 — Phase 9 done (Opus 4.8 medium+, hard SSRF push).
+**Last session:** 2026-06-10 — Phase 10 done (Opus 4.8 medium+, security sweep). Redaction
+matches Python exactly; chat-view HTML escaping solid (all via formatChatLine/insertText);
+QSS colours safe (numeric rgb from QColor); settings robust; log/DCC paths safe; cppcheck
+clean. 2 fixes: CR/LF stripped in sendRaw (line-injection defense-in-depth) + topic QLabel
+forced to PlainText (rich-text injection). Passwords-plaintext = parity note. 43 green.
+Next: Phase 11 (closeout).
+
+Phase 9 done (Opus 4.8 medium+, hard SSRF push).
 **Found + fixed two SSRF holes** the port had vs Python: (1) redirect targets weren't
 re-validated (public host → 30x → 169.254.169.254/LAN was followed), (2) only the hostname
 string was checked, not the resolved IP (DNS-to-private). Both now match Python (per-hop
@@ -108,7 +115,7 @@ resolved (no SCRAM).
 - [x] Phase 7 — Themes, fonts, notifications, tray, sounds ✅ 2026-06-10
 - [x] Phase 8 — Logging, replay, buffers ✅ 2026-06-10
 - [x] Phase 9 — Link previews & SSRF ✅ 2026-06-10
-- [ ] Phase 10 — Cross-cutting security sweep
+- [x] Phase 10 — Cross-cutting security sweep ✅ 2026-06-10
 - [ ] Phase 11 — Tests & docs closeout
 
 ---
@@ -698,9 +705,24 @@ Checklist:
 
 ### Findings — Phase 10
 
-| Sev | Where | Issue | Status |
-|-----|-------|-------|--------|
-| | | | |
+| ID | Sev | Where | Issue | Status |
+|----|-----|-------|-------|--------|
+| P10-1 | SEC (low-med) | IrcSession.cpp sendRaw | No CR/LF stripping → a lone `\r` mid-message (CR-only paste survives the per-line split + trim) could split a second IRC command onto the wire. Input-path splitting mostly prevented it, but defense-in-depth belongs at the send choke point. | **FIXED** — strip `\r`/`\n` in sendRaw (+redact the cleaned line). Test: sendRawStripsEmbeddedCrlfToPreventInjection. Backport BP-10 (BOTH). |
+| P10-2 | SEC (low-med) | MainWindow.cpp topic label | Topic bar QLabel used default AutoText, so a channel TOPIC with `<img src=…>`/markup rendered as rich text. | **FIXED** — `setTextFormat(Qt::PlainText)`. |
+| — | OK | IrcRedaction.cpp | Redaction matches Python exactly: PASS, AUTHENTICATE (except +/PLAIN/EXTERNAL), and services IDENTIFY/REGISTER/GHOST/RECOVER/RELEASE/SIDENTIFY/LOGIN. Applied to both sent + received raw-log lines. | VERIFIED |
+| — | OK | chat view paths | No HTML injection: every untrusted string reaches the QTextBrowser via formatChatLine (toHtmlEscaped / stripFormatting+escape) or insertText; preview HTML escapes OG fields (Phase 9); about dialog escapes; tooltips are app-generated static. | VERIFIED |
+| — | OK | ThemeCatalog.cpp | No QSS injection: theme colours are emitted as numeric `rgb()/rgba()` from QColor (cssRgb/cssRgba/borderColor), so a malicious JSON colour string can't break out of the stylesheet. | VERIFIED |
+| — | OK | SettingsStore.cpp | Malformed settings.json → loadRaw returns {} → pure defaults; atomic write via QSaveFile (Phase 3). | VERIFIED |
+| P10-3 | DIFF (note) | settings | Passwords stored plaintext in settings.json — parity with Python (only over TLS by default). Not a regression. Optional future: OS keychain. | NOTED |
+| P10-4 | SEC (low) | ThemeCatalog.cpp effectiveWallpaperPath | The user-chosen wallpaper path is interpolated into QSS `url("…")` unquoted-escaped; a path containing `"` could inject QSS. User-controlled (own file), not remote → very low. | Backlog #26 |
+| — | OK | — | cppcheck (warning,portability) clean on the security-relevant files; build warning-clean. The "trust attacker-supplied length/target" pattern (the root of the DCC/comic/SSRF bugs) swept: only the comic qUncompress site uses an external size, and it's capped (Phase 6). | VERIFIED |
+
+Checklist status: redaction ✓✓; HTML-injection ✓ (chat view, previews, tooltips, about);
+QSS-injection ✓; settings robustness ✓; CR/LF outbound ✓ (P10-1 fixed); topic rich-text ✓
+(P10-2 fixed); untrusted file paths ✓ (DCC Phase 5, log Phase 8, sounds own-file-only spec
+in backlog #22); password-plaintext = parity note; integer/length-trust pattern swept (DCC/
+comic/IRC caps all closed in earlier phases); cppcheck clean. P9-3 (image-path resolve/
+redirect) re-noted here — lower risk, display-only.
 
 ---
 
@@ -762,6 +784,7 @@ Priority: `P1` clear win · `P2` nice to have · `P3` minor/architectural.
 | BP-7 | 2 | P3 | Alias appends unused args | When an alias template has no placeholder, the port appends the args (mIRC-style); Python drops them. | OPEN |
 | BP-8 | 5 | P3 | Validate RESUME/ACCEPT pos (BOTH) | Both clients trust the peer's resume offset without checking it against the file size → a lying peer causes a sparse/corrupt download. Add `0 <= pos <= size` validation on both the RESUME (sender) and ACCEPT (receiver) sides. | OPEN |
 | BP-9 | 5 | P2 | Cap pending DCC offers (BOTH) | Neither client limits incoming DCC offers → offer-spam DoS. Add a per-peer + global cap. | OPEN |
+| BP-10 | 10 | P3 | Strip CR/LF in send_raw (BOTH) | Neither client strips embedded CR/LF before appending the terminator. The C++ multi-line input made it reachable (now fixed there); Python's QLineEdit limits exposure but the defense-in-depth still applies — strip `\r`/`\n` in `IRCClient.send_raw`. | OPEN |
 
 ---
 
@@ -796,3 +819,4 @@ Big items deferred from phases. Each entry must be actionable cold: what, where,
 | 23 | 8 (P8-2) | DIFF low | Full strftime tokens in log mask | ChatLogStore.logFilePath only maps %Y/%m/%d. Map the common strftime codes (%H %M %S %y %b %B %a %A %j %p) to QDateTime formats so masks match Python's `strftime`. | OPEN |
 | 24 | 8 (P8-3) | DIFF low | Dimmed replay + "Ended" divider | Render replayed log lines in a dimmed style and use an "Ended <date> <time>" divider (Python look) instead of the plain `--- Log replay ---` header/footer. | OPEN |
 | 25 | 9 (P9-4) | PERF low | Async SSRF resolve | `resolvesToPublicOnly` blocks the GUI thread on DNS. Move the resolve off-thread (QHostInfo::lookupHost async, or a worker) and complete the fetch in the callback, so a slow/black-hole DNS can't stall the UI. Also add a live-redirect integration test (302→private aborts) + a DNS-to-private test once resolution is mockable. | OPEN |
+| 26 | 10 (P10-4) | SEC low | Escape wallpaper path in QSS | `effectiveWallpaperPath` is interpolated into `url("…")`; escape/validate the path (reject or backslash-escape `"`) so a crafted local filename can't inject QSS. User-controlled → very low priority. | OPEN |

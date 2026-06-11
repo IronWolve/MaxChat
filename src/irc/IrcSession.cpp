@@ -114,7 +114,14 @@ bool IrcSession::sendRaw(const QString &line) {
     return false;
   }
 
-  const QByteArray payload = (line + QStringLiteral("\r\n")).toUtf8();
+  // Strip embedded CR/LF so a crafted target/text/reason can't smuggle extra
+  // commands onto the wire (IRC line injection). The \r\n terminator is added
+  // here; any others in the payload are an injection attempt or a bug.
+  QString clean = line;
+  clean.remove(QLatin1Char('\r'));
+  clean.remove(QLatin1Char('\n'));
+
+  const QByteArray payload = (clean + QStringLiteral("\r\n")).toUtf8();
   if (payload.size() > IrcMaxWireBytes) {
     emit errorOccurred(
         QStringLiteral("IRC line is too long; message not sent"));
@@ -127,7 +134,7 @@ bool IrcSession::sendRaw(const QString &line) {
     return false;
   }
 
-  emit rawLine(QStringLiteral(">>"), redactLine(line));
+  emit rawLine(QStringLiteral(">>"), redactLine(clean));
   return true;
 }
 
