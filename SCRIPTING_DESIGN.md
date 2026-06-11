@@ -35,10 +35,15 @@ Status: IN PROGRESS (2026-06-10). Tracked as AUDIT.md FIX BACKLOG #6.
   nicks(), strip(), persistent get/set (JSON in the script's data dir), and
   timers (api.timer/cancel_timer, QTimer-backed, 50ms floor, cancelled on
   unload/reload). lua_engine_test now 17 cases incl. timer lifecycle.
-- **NEXT — Step 7:** Scripts dialog (replace menu placeholder) + first-run
-  seeding of the bundled examples.
-- **Remaining:** 7 (dialog+seed), 8 (examples + SCRIPTING.md update), 9-11
-  (Python parity, additive). The full hook+api surface is now implemented.
+- **Step 7 DONE (commit 07b3257):** Settings ▸ Scripts… manager dialog
+  (list + Load/Unload/Reload/Open-folder) + first-run seeding of the bundled
+  examples; removed the placeholder.
+- **Step 8 DONE (commit f6dddcb):** SCRIPTING.md updated to the implemented
+  surface; new examples reminder.lua (timer) + seen.lua (get/set); test loads
+  every bundled example. **C++ scripting is FEATURE-COMPLETE.**
+- **Remaining:** Python parity (steps 9-11, additive to the existing
+  scripting.py) — and the standing **Windows-build gate** (build.bat with
+  -DMAXCHAT_LUA=ON) before shipping enabled.
 
 ---
 
