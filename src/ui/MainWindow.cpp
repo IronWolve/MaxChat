@@ -1859,22 +1859,46 @@ void maxchat::ui::MainWindow::replayCurrentLog() {
     }
 
     m_replayingLog = true;
-    appendPlainChatLine(QStringLiteral("--- Log replay for %1/%2 ---").arg(network, target));
+
+    // Replayed history is rendered dimmed (whole line in the timestamp grey, no
+    // nick colours, formatting stripped) so it reads as "the past" — aligned to
+    // the live chat, Python parity.
+    const maxchat::core::ChatLineFormatOptions base = chatLineFormatOptions();
+    const QString dim = base.timestampColor.isEmpty() ? QStringLiteral("#8a8a8a") : base.timestampColor;
+    maxchat::core::ChatLineFormatOptions dimOptions = base;
+    dimOptions.defaultForeground = dim;
+    dimOptions.systemColor = dim;
+    dimOptions.bracketColor = dim;
+    dimOptions.colorNicks = false;
+    dimOptions.renderFormatting = false;
+
+    QDateTime lastWhen;
     for (const QString& line : lines) {
         const ReplayLogLine replayLine = parseReplayLogLine(line);
         if (replayLine.body.trimmed().isEmpty()) {
             continue;
         }
 
-        maxchat::core::ChatLineFormatOptions options = chatLineFormatOptions();
+        maxchat::core::ChatLineFormatOptions options = dimOptions;
         if (replayLine.timestamp.isValid()) {
             options.timestamp = replayLine.timestamp.toString(qtDateTimeFormat(m_timestampFormat));
+            lastWhen = replayLine.timestamp;
         }
         const maxchat::core::FormattedChatLine display =
             maxchat::core::formatChatLine(replayLine.body, options);
         appendFormattedChatLine(display);
     }
-    appendPlainChatLine(QStringLiteral("--- End log replay ---"));
+
+    // A dimmed divider marks where the previous session left off.
+    maxchat::core::ChatLineFormatOptions ruleOptions = dimOptions;
+    ruleOptions.systemLine = true;
+    ruleOptions.showTimestamp = false;
+    const QString when =
+        lastWhen.isValid() ? lastWhen.toString(qtDateTimeFormat(m_timestampFormat)) : QString();
+    const QString endLabel =
+        when.isEmpty() ? QStringLiteral("--- Chat ended ---")
+                       : QStringLiteral("--- Chat ended %1 ---").arg(when);
+    appendFormattedChatLine(maxchat::core::formatChatLine(endLabel, ruleOptions));
     m_replayingLog = false;
     statusBar()->showMessage(
         QStringLiteral("Replayed %1 log lines for %2/%3.").arg(lines.size()).arg(network, target));
