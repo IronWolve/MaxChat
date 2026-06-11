@@ -2905,6 +2905,8 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
             appendSystemLineToTarget(
                 QStringLiteral("server"),
                 QStringLiteral("! Connected to %1 as %2.").arg(m_connectionPlan.networkName, nick));
+            statusBar()->showMessage(
+                QStringLiteral("Connected to %1 as %2").arg(m_connectionPlan.networkName, nick));
             // First connect only: widen the nick column to fit your nick (never
             // shrinks a column you've already widened; runs once). Python parity.
             if (m_alignNicks && !nick.isEmpty() &&
@@ -5307,7 +5309,9 @@ void maxchat::ui::MainWindow::appendSystemLineToNetworkTarget(const QString& net
     if (active && shouldQueuePreviews) {
         queueLinkPreviewsFromLine(display.plainText);
     }
-    statusBar()->showMessage(line);
+    // The status bar is for transient status (connect/find/etc.), not a mirror of
+    // chat — echoing every appended line here is what put your own "<nick> msg"
+    // in the bottom bar.
 }
 
 void maxchat::ui::MainWindow::appendRawLogLine(const QString& line) {
@@ -5453,9 +5457,8 @@ void maxchat::ui::MainWindow::handlePreviewFetchFailed(const QUrl& url, const QS
 
 void maxchat::ui::MainWindow::setConnectionTopic(const QString& line) {
     if (m_topicLabel != nullptr) {
-        m_topicLabel->setText(line);
+        m_topicLabel->setText(line); // topic shows in its label, not the status bar
     }
-    statusBar()->showMessage(line);
 }
 
 maxchat::core::ChatBufferId MainWindow::bufferIdForTarget(const QString& target) {
