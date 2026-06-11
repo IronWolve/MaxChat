@@ -142,6 +142,8 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     // Play a received CTCP SOUND if enabled and the .wav is one the user owns.
     void handleCtcpSound(const QString& network, const QString& sender, const QString& target,
                          const QString& file, const QString& text);
+    // /scripts (list) and /load /unload /reload <name>.
+    void handleScriptsCommand(const QString& command, const QString& arg);
     void leaveCurrentChannel();
     void replayCurrentLog();
     void markAllRead();

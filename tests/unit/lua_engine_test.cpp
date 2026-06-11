@@ -186,6 +186,43 @@ class LuaEngineTest final : public QObject {
         QVERIFY(!QFile::exists(QDir(data.path()).filePath(QStringLiteral("evil.txt"))));
     }
 
+    void dispatchOnCommandConsumes() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString path = writeScript(
+            QDir(dir.path()), QStringLiteral("cmd.lua"),
+            QStringLiteral("function on_command(api, cmd, args)\n"
+                           "  if cmd == 'foo' then api.echo('got '..args) return true end\n"
+                           "  return false\n"
+                           "end\n"));
+        FakeHost host;
+        LuaEngine engine(&host, dir.path(), dir.path());
+        QVERIFY(engine.load(path));
+        QVERIFY(engine.dispatch(QStringLiteral("on_command"), QStringLiteral("net"),
+                                {QStringLiteral("foo"), QStringLiteral("bar")}));
+        QCOMPARE(host.echoes, QStringList{QStringLiteral("got bar")});
+        // A command the script doesn't handle is not consumed.
+        QVERIFY(!engine.dispatch(QStringLiteral("on_command"), QStringLiteral("net"),
+                                 {QStringLiteral("other"), QString()}));
+    }
+
+    void dispatchPassesHookArgs() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString path =
+            writeScript(QDir(dir.path()), QStringLiteral("msg.lua"),
+                        QStringLiteral("function on_message(api, network, target, nick, text)\n"
+                                       "  api.echo(network..'|'..target..'|'..nick..'|'..text)\n"
+                                       "end\n"));
+        FakeHost host;
+        LuaEngine engine(&host, dir.path(), dir.path());
+        QVERIFY(engine.load(path));
+        engine.dispatch(QStringLiteral("on_message"), QStringLiteral("libera"),
+                        {QStringLiteral("libera"), QStringLiteral("#c"), QStringLiteral("bob"),
+                         QStringLiteral("hi")});
+        QCOMPARE(host.echoes, QStringList{QStringLiteral("libera|#c|bob|hi")});
+    }
+
     void scriptErrorDoesNotCrash() {
         QTemporaryDir dir;
         QVERIFY(dir.isValid());
