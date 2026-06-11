@@ -88,18 +88,20 @@ QString renderOpenGraphPreviewHtml(const LinkPreviewCandidate &candidate,
   QString html = QStringLiteral(
       "<div style=\"margin:4px 0 6px 0;padding:6px 8px;border-left:3px solid "
       "#6f8cff;background:rgba(255,255,255,0.06);\">");
-  html += QStringLiteral("<div><a href=\"%1\"><b>%2</b></a></div>")
+  // Site name on top as a small header, then the title — the clean layout other
+  // clients (e.g. Discord) use. The raw URL is intentionally NOT repeated here:
+  // the link is already in the chat line above, and the title/image are clickable.
+  if (!domain.isEmpty()) {
+    html += QStringLiteral(
+                "<div style=\"font-size:small;opacity:0.7;\">%1</div>")
+                .arg(domain.toHtmlEscaped());
+  }
+  html += QStringLiteral("<div style=\"margin-top:1px;\"><a href=\"%1\"><b>%2</b></a></div>")
               .arg(htmlUrl(targetUrl), title.toHtmlEscaped());
-  if (!description.isEmpty()) {
+  // Skip a description that just echoes the title (common on aggregators).
+  if (!description.isEmpty() && description.compare(title, Qt::CaseInsensitive) != 0) {
     html += QStringLiteral("<div style=\"margin-top:2px;\">%1</div>")
                 .arg(description.toHtmlEscaped());
-  }
-  if (!domain.isEmpty()) {
-    html +=
-        QStringLiteral(
-            "<div "
-            "style=\"margin-top:2px;font-size:small;opacity:0.78;\">%1</div>")
-            .arg(domain.toHtmlEscaped());
   }
   if (card.imageUrl.isValid()) {
     html += QStringLiteral("<a href=\"%1\"><img src=\"%2\" style=\"%3\"></a>")
