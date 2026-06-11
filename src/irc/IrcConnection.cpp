@@ -175,6 +175,11 @@ void IrcConnection::setCtcpVersion(bool hide, const QString &custom) {
   session_.setCtcpVersion(hide, custom);
 }
 
+void IrcConnection::setCtcpOptions(bool respondPing, bool respondTime,
+                                   bool respondClientInfo) {
+  session_.setCtcpOptions(respondPing, respondTime, respondClientInfo);
+}
+
 bool IrcConnection::isConnected() const {
   return socket_ != nullptr &&
          socket_->state() == QAbstractSocket::ConnectedState;

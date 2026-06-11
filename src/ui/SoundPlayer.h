@@ -12,9 +12,10 @@ namespace maxchat::ui {
 // anything we don't already own. Mirrors Python sounds.resolve().
 [[nodiscard]] QString resolveSoundPath(const QString& soundsDir, const QString& name);
 
-// The notification chime: the user's own <sounds>/notify.wav if present,
-// otherwise the bundled default under `bundledDir`, otherwise empty.
-[[nodiscard]] QString notifySoundPath(const QString& soundsDir, const QString& bundledDir);
+// The notification chime: the user's own <sounds>/<selectedFile> if present,
+// otherwise the bundled default under `bundledDir`, otherwise a QRC resource
+// path (":/sounds/<selectedFile>"), otherwise empty.
+[[nodiscard]] QString notifySoundPath(const QString& soundsDir, const QString& bundledDir, const QString& selectedFile = {});
 
 // Low-latency .wav playback via QSoundEffect. A safe no-op if the path is empty
 // or missing. One reusable effect, lazily created.

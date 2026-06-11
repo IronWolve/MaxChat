@@ -318,6 +318,9 @@ QVariantMap SettingsStore::defaultSettings() {
   settings.insert(QStringLiteral("auto_away_mins"), 0);
   settings.insert(QStringLiteral("hide_version"), false);
   settings.insert(QStringLiteral("ctcp_version"), QString());
+  settings.insert(QStringLiteral("ctcp_respond_ping"), true);
+  settings.insert(QStringLiteral("ctcp_respond_time"), true);
+  settings.insert(QStringLiteral("ctcp_respond_clientinfo"), true);
   settings.insert(QStringLiteral("paste_guard"), true);
   settings.insert(QStringLiteral("paste_lines"), 4);
   settings.insert(QStringLiteral("ignore_invites"), false);
@@ -341,6 +344,7 @@ QVariantMap SettingsStore::defaultSettings() {
   settings.insert(QStringLiteral("notify_theme"), QStringLiteral("follow"));
   settings.insert(QStringLiteral("beep_highlight"), true);
   settings.insert(QStringLiteral("notify_sound"), false);
+  settings.insert(QStringLiteral("notify_sound_file"), QStringLiteral("notify.wav"));
   settings.insert(QStringLiteral("ctcp_sound"), false);
   settings.insert(QStringLiteral("minimize_to_tray"), false);
   settings.insert(QStringLiteral("logging"), true);

@@ -1,6 +1,7 @@
 #include "ui/SoundPlayer.h"
 
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QSoundEffect>
 #include <QUrl>
@@ -25,13 +26,21 @@ QString resolveSoundPath(const QString& soundsDir, const QString& name) {
     return QFileInfo(path).isFile() ? path : QString();
 }
 
-QString notifySoundPath(const QString& soundsDir, const QString& bundledDir) {
-    const QString user = resolveSoundPath(soundsDir, QStringLiteral("notify.wav"));
+QString notifySoundPath(const QString& soundsDir, const QString& bundledDir, const QString& selectedFile) {
+    const QString file = selectedFile.isEmpty() ? QStringLiteral("notify.wav") : selectedFile;
+    // 1. User's custom file in the sounds directory
+    const QString user = resolveSoundPath(soundsDir, file);
     if (!user.isEmpty()) {
         return user;
     }
-    const QString bundled = QDir(bundledDir).filePath(QStringLiteral("notify.wav"));
-    return QFileInfo(bundled).isFile() ? bundled : QString();
+    // 2. Bundled filesystem copy
+    const QString bundled = QDir(bundledDir).filePath(file);
+    if (QFileInfo(bundled).isFile()) {
+        return bundled;
+    }
+    // 3. QRC resource fallback
+    const QString qrc = QStringLiteral(":/sounds/") + file;
+    return QFile::exists(qrc) ? qrc : QString();
 }
 
 SoundPlayer::~SoundPlayer() {
@@ -39,13 +48,19 @@ SoundPlayer::~SoundPlayer() {
 }
 
 bool SoundPlayer::play(const QString& path) {
-    if (path.isEmpty() || !QFileInfo(path).isFile()) {
+    if (path.isEmpty()) {
+        return false;
+    }
+    const bool isQrc = path.startsWith(QStringLiteral(":/"));
+    if (!isQrc && !QFileInfo(path).isFile()) {
         return false;
     }
     if (effect_ == nullptr) {
         effect_ = new QSoundEffect();
     }
-    effect_->setSource(QUrl::fromLocalFile(path));
+    const QUrl source = isQrc ? QUrl(QStringLiteral("qrc") + path)
+                               : QUrl::fromLocalFile(path);
+    effect_->setSource(source);
     effect_->setVolume(0.9);
     effect_->play();
     return true;

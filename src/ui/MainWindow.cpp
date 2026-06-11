@@ -1727,7 +1727,8 @@ void maxchat::ui::MainWindow::openPreferences() {
                 QDir(m_settings.paths().configDir).filePath(QStringLiteral("sounds"));
             const QString bundled = QDir(QCoreApplication::applicationDirPath())
                                         .filePath(QStringLiteral("assets/sounds"));
-            if (!m_soundPlayer.play(notifySoundPath(soundsDir, bundled))) {
+            const QString selectedSound = testSettings.value(QStringLiteral("notify_sound_file"), QStringLiteral("notify.wav")).toString();
+            if (!m_soundPlayer.play(notifySoundPath(soundsDir, bundled, selectedSound))) {
                 QApplication::beep();
             }
         }
@@ -3202,6 +3203,10 @@ maxchat::irc::IrcConnection* MainWindow::ensureConnectionForNetwork(const QStrin
     const QVariantMap settings = m_settings.loadWithDefaults();
     created->setCtcpVersion(settings.value(QStringLiteral("hide_version"), false).toBool(),
                             settings.value(QStringLiteral("ctcp_version")).toString());
+    created->setCtcpOptions(
+        settings.value(QStringLiteral("ctcp_respond_ping"), true).toBool(),
+        settings.value(QStringLiteral("ctcp_respond_time"), true).toBool(),
+        settings.value(QStringLiteral("ctcp_respond_clientinfo"), true).toBool());
     m_connectionsByNetwork.insert(normalized, created);
     setupConnectionSignals(normalized, created);
     return created;
@@ -5264,12 +5269,17 @@ void MainWindow::triggerAutoAway() {
 void MainWindow::applyCtcpVersion(const QVariantMap& settings) {
     const bool hide = settings.value(QStringLiteral("hide_version"), false).toBool();
     const QString custom = settings.value(QStringLiteral("ctcp_version")).toString();
+    const bool ping = settings.value(QStringLiteral("ctcp_respond_ping"), true).toBool();
+    const bool time = settings.value(QStringLiteral("ctcp_respond_time"), true).toBool();
+    const bool clientInfo = settings.value(QStringLiteral("ctcp_respond_clientinfo"), true).toBool();
     for (auto* irc : std::as_const(m_connectionsByNetwork)) {
         if (irc != nullptr) {
             irc->setCtcpVersion(hide, custom);
+            irc->setCtcpOptions(ping, time, clientInfo);
         }
     }
     m_connection.setCtcpVersion(hide, custom);
+    m_connection.setCtcpOptions(ping, time, clientInfo);
 }
 
 bool MainWindow::textHighlightsMe(const QString& text, const QString& nick) const {
@@ -8327,14 +8337,15 @@ void maxchat::ui::MainWindow::notify(const QString& title, const QString& text,
         QApplication::alert(this, 0);
     }
 
-    // Sound — the user's notify.wav (or a bundled default) via QSoundEffect,
+    // Sound — the user's chosen .wav (or a bundled default) via QSoundEffect,
     // falling back to the system beep if no .wav is available.
     if (m_notifySound) {
         const QString soundsDir =
             QDir(m_settings.paths().configDir).filePath(QStringLiteral("sounds"));
         const QString bundled = QDir(QCoreApplication::applicationDirPath())
                                     .filePath(QStringLiteral("assets/sounds"));
-        if (!m_soundPlayer.play(notifySoundPath(soundsDir, bundled))) {
+        const QString selectedSound = m_settings.loadWithDefaults().value(QStringLiteral("notify_sound_file"), QStringLiteral("notify.wav")).toString();
+        if (!m_soundPlayer.play(notifySoundPath(soundsDir, bundled, selectedSound))) {
             QApplication::beep();
         }
     }

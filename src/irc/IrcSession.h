@@ -39,6 +39,7 @@ public:
   void setWriter(Writer writer);
   void setIgnoreMasks(const QStringList &masks);
   void setCtcpVersion(bool hide, const QString &custom);
+  void setCtcpOptions(bool respondPing, bool respondTime, bool respondClientInfo);
 
   [[nodiscard]] QString nick() const;
   [[nodiscard]] bool isRegistered() const;
@@ -116,6 +117,9 @@ private:
   bool authed_ = false;
   bool hideVersion_ = false;
   QString ctcpVersion_;
+  bool respondPing_ = true;
+  bool respondTime_ = true;
+  bool respondClientInfo_ = true;
   QStringList autojoin_;
   QSet<QString> serverCaps_;
   QHash<QString, QString> isupport_;

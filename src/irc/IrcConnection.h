@@ -43,6 +43,7 @@ public:
   void disconnectFromServer();
   void setIgnoreMasks(const QStringList &masks);
   void setCtcpVersion(bool hide, const QString &custom);
+  void setCtcpOptions(bool respondPing, bool respondTime, bool respondClientInfo);
 
   [[nodiscard]] bool isConnected() const;
   [[nodiscard]] QString nick() const;

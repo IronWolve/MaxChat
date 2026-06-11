@@ -205,7 +205,7 @@ PreferencesDialog::PreferencesDialog(QVariantMap settings, QStringList loadedScr
 
     addPage(QStringLiteral("Scripts"), [this](QWidget* page) { buildScriptsTab(page); });
 
-    addPage(QStringLiteral("Services"), [this](QWidget* page) { buildServicesTab(page); });
+    addPage(QStringLiteral("CTCP/Services"), [this](QWidget* page) { buildServicesTab(page); });
 
     addPage(QStringLiteral("Image Hosting"), [this](QWidget* page) { buildUploadsTab(page); });
 
@@ -327,6 +327,9 @@ QVariantMap PreferencesDialog::settings() const {
     out.insert(QStringLiteral("scrollback"), scrollback_->value());
     out.insert(QStringLiteral("hide_version"), hideVersion_->isChecked());
     out.insert(QStringLiteral("ctcp_version"), ctcpVersion_->text().trimmed());
+    if (ctcpRespondPing_) out.insert(QStringLiteral("ctcp_respond_ping"), ctcpRespondPing_->isChecked());
+    if (ctcpRespondTime_) out.insert(QStringLiteral("ctcp_respond_time"), ctcpRespondTime_->isChecked());
+    if (ctcpRespondClientInfo_) out.insert(QStringLiteral("ctcp_respond_clientinfo"), ctcpRespondClientInfo_->isChecked());
     out.insert(QStringLiteral("logging"), loggingEnabled_->isChecked());
     out.insert(QStringLiteral("replay_log"), replayLogEnabled_->isChecked());
     out.insert(QStringLiteral("dcc_accept"), dccAccept_->currentData().toString());
@@ -362,6 +365,7 @@ QVariantMap PreferencesDialog::settings() const {
     if (notifyTheme_) out.insert(QStringLiteral("notify_theme"), notifyTheme_->currentData().toString());
     if (beepHighlight_) out.insert(QStringLiteral("beep_highlight"), beepHighlight_->isChecked());
     if (notifySound_) out.insert(QStringLiteral("notify_sound"), notifySound_->isChecked());
+    if (notifySoundFile_) out.insert(QStringLiteral("notify_sound_file"), notifySoundFile_->currentData().toString());
     if (ctcpSound_) out.insert(QStringLiteral("ctcp_sound"), ctcpSound_->isChecked());
     if (minimizeToTray_) out.insert(QStringLiteral("minimize_to_tray"), minimizeToTray_->isChecked());
 
@@ -646,6 +650,17 @@ void PreferencesDialog::buildNotificationsTab(QWidget* tab) {
         "Play a chime when a notification fires \u2014 a built-in default, or your own "
         "if you drop a notify.wav in <config>/sounds/."));
 
+    // Sound file picker
+    notifySoundFile_ = new QComboBox(tab);
+    notifySoundFile_->addItem(QStringLiteral("Default (notify)"), QStringLiteral("notify.wav"));
+    notifySoundFile_->addItem(QStringLiteral("Bell (classic)"), QStringLiteral("bell.wav"));
+    notifySoundFile_->addItem(QStringLiteral("Soft ping"), QStringLiteral("ping.wav"));
+    notifySoundFile_->addItem(QStringLiteral("Sci-fi chirp"), QStringLiteral("scifi_chirp.wav"));
+    notifySoundFile_->addItem(QStringLiteral("Trek communicator"), QStringLiteral("trek_hail.wav"));
+    setComboByData(notifySoundFile_, settings_.value(QStringLiteral("notify_sound_file"), QStringLiteral("notify.wav")).toString());
+    connect(notifySound_, &QCheckBox::toggled, notifySoundFile_, &QWidget::setEnabled);
+    notifySoundFile_->setEnabled(notifySound_->isChecked());
+
     // Play CTCP sounds
     ctcpSound_ = new QCheckBox(tab);
     ctcpSound_->setChecked(settings_.value(QStringLiteral("ctcp_sound"), false).toBool());
@@ -678,6 +693,7 @@ void PreferencesDialog::buildNotificationsTab(QWidget* tab) {
     form->addRow(QStringLiteral("Toast theme"), notifyTheme_);
     form->addRow(QStringLiteral("Beep on highlight / PM"), beepHighlight_);
     form->addRow(QStringLiteral("Sound on notification"), notifySound_);
+    form->addRow(QStringLiteral("Sound file"), notifySoundFile_);
     form->addRow(QStringLiteral("Play CTCP sounds"), ctcpSound_);
     form->addRow(QStringLiteral("Minimize to tray"), minimizeToTray_);
     form->addRow(QStringLiteral("Check for updates on startup"), updateCheck_);
@@ -1119,13 +1135,6 @@ void PreferencesDialog::buildMessagesTab(QWidget* tab) {
     autoRejoin_ = new QCheckBox(QString(), tab);
     autoRejoin_->setObjectName(QStringLiteral("autoRejoin"));
     autoRejoin_->setChecked(settings_.value(QStringLiteral("auto_rejoin"), false).toBool());
-    hideVersion_ = new QCheckBox(QString(), tab);
-    hideVersion_->setObjectName(QStringLiteral("hideVersion"));
-    hideVersion_->setChecked(settings_.value(QStringLiteral("hide_version"), false).toBool());
-    ctcpVersion_ = new QLineEdit(settings_.value(QStringLiteral("ctcp_version")).toString(), tab);
-    ctcpVersion_->setObjectName(QStringLiteral("ctcpVersion"));
-    ctcpVersion_->setPlaceholderText(
-        QStringLiteral("custom CTCP VERSION reply (blank = MaxChat <version>)"));
     confirmQuit_ = new QCheckBox(QString(), tab);
     confirmQuit_->setObjectName(QStringLiteral("confirmQuit"));
     confirmQuit_->setChecked(settings_.value(QStringLiteral("confirm_quit"), true).toBool());
@@ -1144,8 +1153,6 @@ void PreferencesDialog::buildMessagesTab(QWidget* tab) {
     form->addRow(QStringLiteral("Lines to replay"), replayLines_);
     form->addRow(QStringLiteral("Auto-reconnect on disconnect"), autoReconnect_);
     form->addRow(QStringLiteral("Auto-rejoin after kick"), autoRejoin_);
-    form->addRow(QStringLiteral("Hide CTCP VERSION replies"), hideVersion_);
-    form->addRow(QStringLiteral("Custom CTCP VERSION"), ctcpVersion_);
     form->addRow(QStringLiteral("Confirm before quitting"), confirmQuit_);
     form->addRow(QStringLiteral("Scrollback (lines)"), scrollback_);
     root->addLayout(form);
@@ -1302,6 +1309,44 @@ void PreferencesDialog::buildFilesTab(QWidget* tab) {
 
 void PreferencesDialog::buildServicesTab(QWidget* tab) {
     auto* root = new QVBoxLayout(tab);
+
+    // ── CTCP Security ─────────────────────────────────────────────────
+    auto* ctcpGroup = new QGroupBox(QStringLiteral("CTCP Security"), tab);
+    auto* ctcpForm = new QFormLayout(ctcpGroup);
+
+    // Moved from Messages:
+    hideVersion_ = new QCheckBox(tab);
+    hideVersion_->setObjectName(QStringLiteral("hideVersion"));
+    hideVersion_->setChecked(settings_.value(QStringLiteral("hide_version"), false).toBool());
+    ctcpForm->addRow(QStringLiteral("Hide CTCP VERSION replies"), hideVersion_);
+
+    ctcpVersion_ = new QLineEdit(settings_.value(QStringLiteral("ctcp_version")).toString(), tab);
+    ctcpVersion_->setObjectName(QStringLiteral("ctcpVersion"));
+    ctcpVersion_->setPlaceholderText(
+        QStringLiteral("custom CTCP VERSION reply (blank = MaxChat <version>)"));
+    QObject::connect(hideVersion_, &QCheckBox::toggled, ctcpVersion_, &QWidget::setDisabled);
+    ctcpVersion_->setDisabled(hideVersion_->isChecked());
+    ctcpForm->addRow(QStringLiteral("Custom CTCP VERSION"), ctcpVersion_);
+
+    // New CTCP security options:
+    ctcpRespondPing_ = new QCheckBox(tab);
+    ctcpRespondPing_->setObjectName(QStringLiteral("ctcpRespondPing"));
+    ctcpRespondPing_->setChecked(settings_.value(QStringLiteral("ctcp_respond_ping"), true).toBool());
+    ctcpForm->addRow(QStringLiteral("Reply to CTCP PING"), ctcpRespondPing_);
+
+    ctcpRespondTime_ = new QCheckBox(tab);
+    ctcpRespondTime_->setObjectName(QStringLiteral("ctcpRespondTime"));
+    ctcpRespondTime_->setChecked(settings_.value(QStringLiteral("ctcp_respond_time"), true).toBool());
+    ctcpForm->addRow(QStringLiteral("Reply to CTCP TIME"), ctcpRespondTime_);
+
+    ctcpRespondClientInfo_ = new QCheckBox(tab);
+    ctcpRespondClientInfo_->setObjectName(QStringLiteral("ctcpRespondClientInfo"));
+    ctcpRespondClientInfo_->setChecked(settings_.value(QStringLiteral("ctcp_respond_clientinfo"), true).toBool());
+    ctcpForm->addRow(QStringLiteral("Reply to CTCP CLIENTINFO"), ctcpRespondClientInfo_);
+
+    root->addWidget(ctcpGroup);
+    root->addSpacing(8);
+
     const QVariantMap services = contentServicesFromSettings(settings_);
 
     // ── Link preview types ────────────────────────────────────────────
