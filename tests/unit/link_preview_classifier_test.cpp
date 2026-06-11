@@ -44,6 +44,12 @@ private slots:
     QCOMPARE(candidate.serviceName, QStringLiteral("X / Twitter"));
     QCOMPARE(candidate.normalizedHost, QStringLiteral("twitter.com"));
     QVERIFY(candidate.needsHtmlFetch());
+    // x.com itself ships no OpenGraph tags — the fetch must target fxtwitter so a
+    // card can actually be built, while the click-through stays on the original.
+    QCOMPARE(candidate.fetchUrl,
+             QUrl(QStringLiteral("https://fxtwitter.com/example/status/12345")));
+    QCOMPARE(candidate.originalUrl,
+             QUrl(QStringLiteral("https://mobile.twitter.com/example/status/12345")));
   }
 
   void classifiesMastodonStatusUrls() {

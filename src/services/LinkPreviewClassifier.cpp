@@ -1,5 +1,7 @@
 #include "services/LinkPreviewClassifier.h"
 
+#include <QHostAddress>
+#include <QHostInfo>
 #include <QRegularExpression>
 #include <QStringList>
 
@@ -240,6 +242,51 @@ bool isAllowedPreviewFetchUrl(const QUrl &url) {
   return host.contains(QLatin1Char('.'));
 }
 
+namespace {
+
+// Resolve the host and reject if ANY resolved address is private/loopback/etc.
+// (a public-looking domain can have a DNS A record pointing at 127.0.0.1 /
+// 169.254.169.254 / 10.x …). Synchronous, matching Python's getaddrinfo check.
+bool resolvesToPublicOnly(const QUrl &url) {
+  const QString host = url.host();
+  if (host.isEmpty()) {
+    return false;
+  }
+  if (!QHostAddress(host).isNull()) {
+    return true; // an IP literal was already vetted by isAllowedPreviewFetchUrl
+  }
+  const QHostInfo info = QHostInfo::fromName(host);
+  if (info.error() != QHostInfo::NoError || info.addresses().isEmpty()) {
+    return false; // can't resolve → don't fetch
+  }
+  for (const QHostAddress &address : info.addresses()) {
+    QUrl probe;
+    probe.setScheme(url.scheme());
+    probe.setHost(address.toString());
+    if (!isAllowedPreviewFetchUrl(probe)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+} // namespace
+
+bool canFetchPreviewUrl(const QUrl &url, bool allowPrivateNetwork) {
+  const QString scheme = url.scheme().toLower();
+  const bool httpNoCreds =
+      url.isValid() &&
+      (scheme == QStringLiteral("http") || scheme == QStringLiteral("https")) &&
+      !url.host().isEmpty() && url.userInfo().isEmpty();
+  if (!httpNoCreds) {
+    return false;
+  }
+  if (allowPrivateNetwork) {
+    return true;
+  }
+  return isAllowedPreviewFetchUrl(url) && resolvesToPublicOnly(url);
+}
+
 bool isDirectRasterImageUrl(const QUrl &url) {
   static const QStringList extensions = {
       QStringLiteral(".jpg"), QStringLiteral(".jpeg"), QStringLiteral(".png"),
@@ -279,8 +326,10 @@ LinkPreviewCandidate classifyLinkPreview(const QUrl &url) {
 
   const QString host = normalizedHost(url);
   if (isXStatusUrl(host, url)) {
-    return makeCandidate(LinkPreviewKind::XPost, url,
-                         QStringLiteral("X / Twitter"));
+    LinkPreviewCandidate candidate =
+        makeCandidate(LinkPreviewKind::XPost, url, QStringLiteral("X / Twitter"));
+    candidate.fetchUrl = xPostFetchUrl(url);
+    return candidate;
   }
   if (isMastodonStatusUrl(url)) {
     return makeCandidate(LinkPreviewKind::MastodonPost, url,

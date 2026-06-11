@@ -9,6 +9,7 @@
 #include "core/SettingsStore.h"
 #include "irc/IrcConnection.h"
 #include "services/LinkPreviewPolicy.h"
+#include "services/ImageFetcher.h"
 #include "services/OpenGraphFetcher.h"
 #include "scripting/LuaEngine.h"
 #include "scripting/ScriptHost.h"
@@ -19,6 +20,7 @@
 
 #include <QElapsedTimer>
 #include <QHash>
+#include <QImage>
 #include <QList>
 #include <QMainWindow>
 #include <QNetworkAccessManager>
@@ -218,6 +220,11 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     void appendHtmlChatLine(const QString& html);
     void appendFormattedChatLine(const maxchat::core::FormattedChatLine& line);
     void appendPreviewHtmlLine(const QString& html);
+    void requestPreviewImagesIn(const QString& html); // kick off fetch for <img> srcs
+    void registerCachedImagesIn(const QString& html); // add cached <img> to the document
+    void handlePreviewImageFetched(const QUrl& url, const QImage& image);
+    void handlePreviewImageFailed(const QUrl& url, const QString& reason);
+    [[nodiscard]] bool activeBufferReferencesImage(const QString& url);
     void appendPreviewHtmlToNetworkTarget(const QString& network, const QString& target,
                                           const QString& html);
     void appendPreviewHtml(const QString& html);
@@ -331,6 +338,10 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     SoundPlayer m_soundPlayer;
     maxchat::scripting::LuaEngine* m_lua = nullptr;
     maxchat::services::OpenGraphFetcher m_openGraphFetcher;
+    maxchat::services::ImageFetcher m_imageFetcher;
+    QHash<QString, QImage> m_previewImageCache;  // url -> decoded, scaled image
+    QSet<QString> m_previewImagePending;          // in-flight image fetches
+    QSet<QString> m_previewImageFailed;           // gave up — don't retry this session
     maxchat::core::NetworkConnectionPlan m_connectionPlan;
     QString m_currentTarget;
     int m_initialConnectAttempts = 0;

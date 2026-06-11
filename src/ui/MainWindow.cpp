@@ -93,6 +93,7 @@
 #include <QPushButton>
 #include <QProcess>
 #include <QRegularExpression>
+#include <QScrollBar>
 #include <QSaveFile>
 #include <QSet>
 #include <QShortcut>
@@ -792,6 +793,7 @@ MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent),
       m_chatLogStore(QDir(m_settings.paths().configDir).filePath(QStringLiteral("logs"))),
       m_openGraphFetcher(&m_previewNetworkManager),
+      m_imageFetcher(&m_previewNetworkManager),
       m_osNotifyAvailable(false) {
     m_appUptime.start();
     loadFonts();
@@ -825,6 +827,10 @@ MainWindow::MainWindow(QWidget* parent)
             &MainWindow::handlePreviewCardFetched);
     connect(&m_openGraphFetcher, &maxchat::services::OpenGraphFetcher::fetchFailed, this,
             &MainWindow::handlePreviewFetchFailed);
+    connect(&m_imageFetcher, &maxchat::services::ImageFetcher::imageFetched, this,
+            &MainWindow::handlePreviewImageFetched);
+    connect(&m_imageFetcher, &maxchat::services::ImageFetcher::imageFetchFailed, this,
+            &MainWindow::handlePreviewImageFailed);
     m_friendPollTimer.setInterval(FriendPollIntervalMs);
     connect(&m_friendPollTimer, &QTimer::timeout, this, &MainWindow::pollFriends);
     m_autoAwayTimer.setSingleShot(true);
@@ -5237,10 +5243,104 @@ void maxchat::ui::MainWindow::appendPreviewHtmlLine(const QString& html) {
     } else {
         cursor.setBlockFormat(blockFormat);
     }
+    // QTextBrowser never fetches remote <img src> over the network: a referenced
+    // image only renders if it's a registered document resource. Add any already
+    // cached images now, and kick off downloads for the rest (which re-render
+    // this buffer on arrival).
+    registerCachedImagesIn(html);
     cursor.insertHtml(html);
     cursor.mergeBlockFormat(blockFormat);
     m_chatView->setTextCursor(cursor);
     m_chatView->ensureCursorVisible();
+    requestPreviewImagesIn(html);
+}
+
+namespace {
+
+// Pull the src URLs out of <img ...> tags in a preview HTML snippet.
+QStringList imageSourcesInHtml(const QString& html) {
+    static const QRegularExpression imgSrc(
+        QStringLiteral(R"RX(<img\b[^>]*\bsrc\s*=\s*"([^"]+)")RX"),
+        QRegularExpression::CaseInsensitiveOption);
+    QStringList sources;
+    auto it = imgSrc.globalMatch(html);
+    while (it.hasNext()) {
+        const QString src = it.next().captured(1).trimmed();
+        if (!src.isEmpty() && !sources.contains(src)) {
+            sources.append(src);
+        }
+    }
+    return sources;
+}
+
+} // namespace
+
+void maxchat::ui::MainWindow::registerCachedImagesIn(const QString& html) {
+    if (m_chatView == nullptr) {
+        return;
+    }
+    const QStringList sources = imageSourcesInHtml(html);
+    for (const QString& src : sources) {
+        const auto cached = m_previewImageCache.constFind(src);
+        if (cached != m_previewImageCache.constEnd()) {
+            m_chatView->document()->addResource(
+                QTextDocument::ImageResource, QUrl(src), QVariant(cached.value()));
+        }
+    }
+}
+
+void maxchat::ui::MainWindow::requestPreviewImagesIn(const QString& html) {
+    const QStringList sources = imageSourcesInHtml(html);
+    for (const QString& src : sources) {
+        if (m_previewImageCache.contains(src) || m_previewImagePending.contains(src) ||
+            m_previewImageFailed.contains(src)) {
+            continue;
+        }
+        const QUrl url(src);
+        if (!maxchat::services::canFetchPreviewUrl(url)) {
+            continue;
+        }
+        m_previewImagePending.insert(src);
+        m_imageFetcher.fetch(url);
+    }
+}
+
+bool maxchat::ui::MainWindow::activeBufferReferencesImage(const QString& url) {
+    const maxchat::core::ChatBufferSnapshot snapshot =
+        m_chatBuffers.snapshot(bufferIdForTarget(m_currentTarget));
+    for (const maxchat::core::ChatBufferLine& line : snapshot.lines) {
+        if (!line.htmlText.isEmpty() && line.htmlText.contains(url)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void maxchat::ui::MainWindow::handlePreviewImageFetched(const QUrl& url, const QImage& image) {
+    const QString key = url.toString();
+    m_previewImagePending.remove(key);
+    if (image.isNull()) {
+        return;
+    }
+    m_previewImageCache.insert(key, image);
+    // The image landed after the line was already laid out with a broken <img>.
+    // Re-render the active buffer (preserving scroll position) so it now shows.
+    if (m_chatView != nullptr && activeBufferReferencesImage(key)) {
+        QScrollBar* bar = m_chatView->verticalScrollBar();
+        const bool atBottom = bar != nullptr && bar->value() >= bar->maximum() - 4;
+        const int previous = bar != nullptr ? bar->value() : 0;
+        renderActiveBuffer();
+        if (bar != nullptr) {
+            bar->setValue(atBottom ? bar->maximum() : qMin(previous, bar->maximum()));
+        }
+    }
+}
+
+void maxchat::ui::MainWindow::handlePreviewImageFailed(const QUrl& url, const QString& reason) {
+    Q_UNUSED(reason);
+    const QString key = url.toString();
+    m_previewImagePending.remove(key);
+    m_previewImageFailed.insert(key); // don't hammer a 404/blocked URL on every render
 }
 
 void maxchat::ui::MainWindow::appendPreviewHtml(const QString& html) {
