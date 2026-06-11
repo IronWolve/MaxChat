@@ -126,7 +126,57 @@ boundary must be tied to *unread arrival*, not to focus changes.
 
 ---
 
-## 6. Checklist — adding ANY new chat-view element
+## 6. Link-preview specific traps
+
+### 6a. Card text alignment — `appendPreviewHtmlLine` block-format pitfall
+
+`appendPreviewHtmlLine` computes a `leftMargin` (pixels wide enough for the chat
+prefix) and applies it via `QTextBlockFormat` before calling `cursor.insertHtml`.
+**The trap:** `insertHtml` with block-level HTML (`<div>`, `<p>`) creates multiple
+`QTextBlock`s. Only the first block inherits the cursor's block format; every
+subsequent block gets default formatting (leftMargin = 0), so card text lands at
+the left edge of the window instead of aligning with chat text.
+
+**Fix** (2026-06-11, commit `8061fdc`): after `cursor.insertHtml(html)`, iterate
+over every block from `insertStart` to `insertEnd` and call `mergeBlockFormat` on
+each:
+
+```cpp
+const int insertStart = cursor.position();
+cursor.insertHtml(html);
+const int insertEnd = cursor.position();
+if (blockFormat.leftMargin() > 0.0) {
+    QTextBlock block = doc->findBlock(insertStart);
+    while (block.isValid() && block.position() <= insertEnd) {
+        QTextCursor bc(block);
+        bc.mergeBlockFormat(blockFormat);
+        block = block.next();
+    }
+}
+```
+
+**Rule:** Never assume a block format set before `insertHtml` propagates into
+block elements inside the HTML. Apply it to all inserted blocks post-insert.
+
+---
+
+### 6b. Async card routing — which channel does the OG card belong to?
+
+OG card fetches are async. If the user switches channels between the URL being
+posted and the fetch completing, `m_currentTarget` at callback time is the *new*
+channel — the card appears in the wrong buffer.
+
+**Fix** (2026-06-11, commit `8061fdc`): `LinkPreviewCandidate` carries
+`originNetwork` / `originTarget` (the channel where the URL was typed).
+`queueLinkPreviewsFromLine` stamps them at queue time; `handlePreviewCardFetched`
+routes to those fields instead of `m_currentTarget`.
+
+**Rule:** Any async work that appends to a specific buffer must stamp the target
+buffer at *dispatch time*, not at *completion time*.
+
+---
+
+## 7. Checklist — adding ANY new chat-view element
 
 1. Does it need to survive a buffer switch? If yes → **store it in
    `ChatBufferStore`** (add a `ChatBufferLine`, or a per-buffer field +

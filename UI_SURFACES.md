@@ -125,6 +125,32 @@ is the plain-language lists below.
 | Comic panels | `refreshComic()` | `_render_strip()` |
 | Toasts / tray | `notify()` / `Notifier` | `notifier` / tray |
 
+## 11. Preferences dialog — key tab designs
+
+### Image Hosting tab (`buildUploadsTab`)
+- Service selector (`QComboBox`) drives a `QStackedWidget` — one panel per
+  service (Disabled / imgbb / Imgur / Postimages / Imgbox).
+- Each panel: signup-link button (`QDesktopServices::openUrl`), "TOS Accepted"
+  checkbox that gates all credential fields (`QWidget creds` enabled/disabled),
+  password `QLineEdit` + show/hide toggle (`QToolButton` toggles `EchoMode`).
+- Settings keys: `upload_service`, `imgbb_key`, `imgur_client_id`,
+  `postimages_token`, `imgbox_username`, `imgbox_password`, `*_tos` booleans.
+
+### Services tab — OG card options
+- Four checkboxes ("Card fields to display"): Site name / Title / Description /
+  Photo. Stored as `og_show_site_name`, `og_show_title`, `og_show_description`,
+  `og_show_image` (all default `true`).
+- Consumed via `m_ogRenderOptions` (`LinkPreviewRenderOptions`) populated in
+  `applyCurrentSettings()`; passed to `renderOpenGraphPreviewHtml`.
+
+### Scripts tab (`buildScriptsTab`)
+- "Currently loaded" group box at top, populated from `m_lua->loaded()` at
+  dialog-open time (passed as `loadedScripts` constructor arg — snapshot, not live).
+- "Open scripts folder" button when `scriptsDir` arg is set.
+- Existing: permissions checkboxes + folder allow-list (unchanged).
+
+---
+
 ## Audit status (2026-06-11)
 
 All areas match Python after the recent fixes (topic bar made topic-only, status

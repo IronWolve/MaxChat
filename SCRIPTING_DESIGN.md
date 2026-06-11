@@ -41,9 +41,17 @@ Status: IN PROGRESS (2026-06-10). Tracked as AUDIT.md FIX BACKLOG #6.
 - **Step 8 DONE (commit f6dddcb):** SCRIPTING.md updated to the implemented
   surface; new examples reminder.lua (timer) + seen.lua (get/set); test loads
   every bundled example. **C++ scripting is FEATURE-COMPLETE.**
-- **Remaining:** Python parity (steps 9-11, additive to the existing
-  scripting.py) — and the standing **Windows-build gate** (build.bat with
-  -DMAXCHAT_LUA=ON) before shipping enabled.
+- **Step 9 DONE (commit 8061fdc, 2026-06-11):** Scripts Manager UX improvements:
+  full file path stored in `UserRole+1` on each list item; **Edit** button opens
+  the selected `.lua` in the OS default editor (`QDesktopServices::openUrl`);
+  **Settings** button shows an info popup (name, path, load status, script header
+  comment block read from the `.lua` file at click time). Preferences ▸ Scripts
+  tab now shows a "Currently loaded" group box and an "Open scripts folder" button
+  (populated from `m_lua->loaded()` at dialog-open time via new optional
+  constructor args `loadedScripts` / `scriptsDir`).
+- **Remaining:** Python parity (additive to the existing scripting.py) — and the
+  standing **Windows-build gate** (build.bat with -DMAXCHAT_LUA=ON) before
+  shipping enabled.
 
 ---
 
