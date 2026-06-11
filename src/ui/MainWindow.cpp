@@ -1160,8 +1160,7 @@ void maxchat::ui::MainWindow::buildLayout() {
     rootLayout->setContentsMargins(6, 6, 6, 6);
     rootLayout->setSpacing(4);
 
-    m_topicLabel = new QLabel(
-        QStringLiteral("Not connected - Server > Server List... or Quick Connect..."), root);
+    m_topicLabel = new QLabel(QString(), root); // topic bar starts empty (no channel yet)
     m_topicLabel->setObjectName(QStringLiteral("topicLabel"));
     m_topicLabel->setMinimumHeight(30);
     m_topicLabel->setAlignment(Qt::AlignCenter); // centred in the bar, Python parity
@@ -1221,7 +1220,7 @@ void maxchat::ui::MainWindow::buildLayout() {
                 }
 
                 activateBufferTarget(target);
-                setConnectionTopic(
+                showConnectionStatus(
                     QStringLiteral("%1 - %2").arg(m_connectionPlan.networkName, target));
                 updateChannelModeButton();
             });
@@ -1359,7 +1358,8 @@ void maxchat::ui::MainWindow::buildLayout() {
     rootLayout->addWidget(m_mainSplitter, 1);
 
     setCentralWidget(root);
-    statusBar()->showMessage(QStringLiteral("Not connected"));
+    statusBar()->showMessage(
+        QStringLiteral("Not connected - Server > Server List... or Quick Connect..."));
 }
 
 void maxchat::ui::MainWindow::openServerList() {
@@ -2360,7 +2360,7 @@ void maxchat::ui::MainWindow::closeTarget(const QString& target) {
     if (cleanTarget.compare(m_currentTarget, Qt::CaseInsensitive) == 0) {
         activateBufferTarget({});
         updateChannelModeButton();
-        setConnectionTopic(m_hasConnectionPlan
+        showConnectionStatus(m_hasConnectionPlan
                                ? QStringLiteral("%1 - Connected").arg(m_connectionPlan.networkName)
                                : QStringLiteral("Not connected"));
     }
@@ -2885,7 +2885,7 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
             appendSystemLineToTarget(
                 QStringLiteral("server"),
                 QStringLiteral("! Socket connected. Registering with IRC server..."));
-            setConnectionTopic(QStringLiteral("Registering with IRC server..."));
+            showConnectionStatus(QStringLiteral("Registering with IRC server..."));
         });
     });
     connect(irc, &maxchat::irc::IrcConnection::registered, this, [this, runInContext]() {
@@ -2932,7 +2932,7 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
                     connection().sendRaw(trimmedPerform);
                 }
             }
-            setConnectionTopic(m_currentTarget.isEmpty()
+            showConnectionStatus(m_currentTarget.isEmpty()
                                    ? QStringLiteral("Connected to %1 as %2")
                                          .arg(m_connectionPlan.networkName, nick)
                                    : QStringLiteral("%1 - %2 as %3")
@@ -3123,7 +3123,7 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
                         activateBufferTarget(channel);
                         const bool joinedSet = m_chatBuffers.setJoined(channelBuffer, true);
                         Q_UNUSED(joinedSet);
-                        setConnectionTopic(
+                        showConnectionStatus(
                             QStringLiteral("%1 - %2").arg(m_connectionPlan.networkName, channel));
                         rebuildNetworkTree();
                         updateChannelModeButton();
@@ -3175,7 +3175,7 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
                     if (m_memberList != nullptr) {
                         m_memberList->clear();
                     }
-                    setConnectionTopic(
+                    showConnectionStatus(
                         QStringLiteral("%1 - Connected").arg(m_connectionPlan.networkName));
                     rebuildNetworkTree();
                     updateChannelModeButton();
@@ -3310,7 +3310,7 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
                         if (m_memberList != nullptr) {
                             m_memberList->clear();
                         }
-                        setConnectionTopic(
+                        showConnectionStatus(
                             QStringLiteral("%1 - Connected").arg(m_connectionPlan.networkName));
                         rebuildNetworkTree();
                         updateChannelModeButton();
@@ -3487,7 +3487,7 @@ void maxchat::ui::MainWindow::connectNextServer(const QString& network, const bo
         if (!m_registered && attempts >= maxInitialConnectAttempts(signalNetwork)) {
             appendSystemLine(QStringLiteral("! Connection attempts exhausted for %1.")
                                  .arg(m_connectionPlan.networkName));
-            setConnectionTopic(QStringLiteral("Not connected"));
+            showConnectionStatus(QStringLiteral("Not connected"));
             return;
         }
 
@@ -3511,7 +3511,7 @@ void maxchat::ui::MainWindow::connectNextServer(const QString& network, const bo
                              .arg(tlsText)
                              .arg(nextAttempts)
                              .arg(maxInitialConnectAttempts(signalNetwork)));
-        setConnectionTopic(
+        showConnectionStatus(
             QStringLiteral("Connecting to %1:%2...").arg(server.host).arg(server.port));
 
         maxchat::irc::IrcConnection* irc = ensureConnectionForNetwork(signalNetwork);
@@ -3578,7 +3578,7 @@ void maxchat::ui::MainWindow::disconnectNetwork(const QString& network) {
             }
         } else {
             appendSystemLine(QStringLiteral("! Not connected."));
-            setConnectionTopic(QStringLiteral("Not connected"));
+            showConnectionStatus(QStringLiteral("Not connected"));
         }
     });
 }
@@ -3593,7 +3593,7 @@ void maxchat::ui::MainWindow::handleDisconnected(const QString& network, const Q
 
 void maxchat::ui::MainWindow::handleDisconnected(const QString& reason) {
     appendSystemLine(QStringLiteral("! Disconnected: %1").arg(reason));
-    setConnectionTopic(QStringLiteral("Not connected"));
+    showConnectionStatus(QStringLiteral("Not connected"));
     const QString networkKeyPrefix = QStringLiteral("%1/").arg(activeNetworkName().toCaseFolded());
     for (const QString& key : m_pendingNamesByChannel.keys()) {
         if (key.startsWith(networkKeyPrefix)) {
@@ -3967,7 +3967,7 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
             forgetTarget(target);
             if (target.compare(m_currentTarget, Qt::CaseInsensitive) == 0) {
                 activateBufferTarget({});
-                setConnectionTopic(
+                showConnectionStatus(
                     QStringLiteral("%1 - Connected").arg(m_connectionPlan.networkName));
             }
             rebuildNetworkTree();
@@ -4007,7 +4007,7 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
         return;
     case maxchat::irc::UserCommandType::Query:
         activateBufferTarget(parsed.targets.first());
-        setConnectionTopic(QStringLiteral("%1 - %2 as %3")
+        showConnectionStatus(QStringLiteral("%1 - %2 as %3")
                                .arg(m_connectionPlan.networkName, m_currentTarget, nick));
         rebuildNetworkTree();
         if (!parsed.text.isEmpty() && connection().privmsg(parsed.targets.first(), parsed.text) &&
@@ -4385,9 +4385,7 @@ void maxchat::ui::MainWindow::showNetworkTreeContextMenu(const QPoint& pos) {
             menu.addAction(QStringLiteral("Set Topic..."), this, [this, itemNetwork, target]() {
                 setActiveNetwork(itemNetwork);
                 const QString currentTopic =
-                    m_topicLabel == nullptr
-                        ? QString()
-                        : m_topicLabel->text().section(QStringLiteral(" - "), 2);
+                    m_chatBuffers.snapshot(bufferIdForNetworkTarget(itemNetwork, target)).topic;
                 bool ok = false;
                 const QString topic = QInputDialog::getText(this, QStringLiteral("Set Topic"),
                                                             QStringLiteral("Topic:"),
@@ -4583,7 +4581,7 @@ void maxchat::ui::MainWindow::openQueryForNick(const QString& nick) {
     activateBufferTarget(cleanNick);
     rebuildNetworkTree();
     updateChannelModeButton();
-    setConnectionTopic(
+    showConnectionStatus(
         QStringLiteral("%1 - private chat with %2").arg(m_connectionPlan.networkName, cleanNick));
 }
 
@@ -5456,10 +5454,10 @@ void maxchat::ui::MainWindow::handlePreviewFetchFailed(const QUrl& url, const QS
     m_pendingPreviewCandidates.remove(previewKey(url));
 }
 
-void maxchat::ui::MainWindow::setConnectionTopic(const QString& line) {
-    if (m_topicLabel != nullptr) {
-        m_topicLabel->setText(line); // topic shows in its label, not the status bar
-    }
+void maxchat::ui::MainWindow::showConnectionStatus(const QString& line) {
+    // Connection lifecycle / context goes to the bottom status bar. The topic bar
+    // is reserved for the channel topic (set in renderActiveBufferMetadata).
+    statusBar()->showMessage(line);
 }
 
 maxchat::core::ChatBufferId MainWindow::bufferIdForTarget(const QString& target) {
@@ -5630,28 +5628,17 @@ void maxchat::ui::MainWindow::renderActiveBufferMetadata() {
         }
     }
 
-    if (!m_hasConnectionPlan) {
-        setConnectionTopic(
-            QStringLiteral("Not connected - Server > Server List... or Quick Connect..."));
-        return;
+    // The topic bar shows ONLY the active channel's topic — empty on the server
+    // tab, in a PM, when not connected, or when the channel has no topic.
+    // Connection state and network/channel context belong to the status bar and
+    // the window title, not here.
+    if (m_topicLabel != nullptr) {
+        const QString topic =
+            (m_hasConnectionPlan && snapshot.id.kind == maxchat::core::ChatBufferKind::Channel)
+                ? snapshot.topic.trimmed()
+                : QString();
+        m_topicLabel->setText(topic);
     }
-
-    if (m_currentTarget.trimmed().isEmpty()) {
-        setConnectionTopic(QStringLiteral("%1 - Connected").arg(m_connectionPlan.networkName));
-        return;
-    }
-
-    if (snapshot.id.kind == maxchat::core::ChatBufferKind::Query) {
-        setConnectionTopic(QStringLiteral("%1 - private chat with %2")
-                               .arg(m_connectionPlan.networkName, snapshot.id.target));
-        return;
-    }
-
-    setConnectionTopic(
-        snapshot.topic.trimmed().isEmpty()
-            ? QStringLiteral("%1 - %2").arg(m_connectionPlan.networkName, snapshot.id.target)
-            : QStringLiteral("%1 - %2 - %3")
-                  .arg(m_connectionPlan.networkName, snapshot.id.target, snapshot.topic));
 }
 
 namespace {
