@@ -19,6 +19,8 @@ namespace {
 constexpr qint64 ChunkSize = 64 * 1024;
 constexpr qint64 ChatLineCap = 8192;
 constexpr qint64 ChatBufferCap = 65536;
+// Anti-flood: cap how many unaccepted incoming offers can pile up at once.
+constexpr int MaxPendingOffers = 32;
 
 QString quoteName(const QString& name) {
     return QStringLiteral("\"%1\"").arg(QString(name).remove(QLatin1Char('"')));
@@ -339,6 +341,22 @@ void DccManager::inSend(const QString& sender, const QStringList& toks) {
         return;
     }
     if (port == 0 && token.isEmpty()) {
+        return;
+    }
+
+    // Anti-flood: ignore new offers once too many are already waiting.
+    int pendingOffers = 0;
+    for (const DccTransfer& t : transfers_) {
+        if (t.direction == DccTransfer::Direction::Receive &&
+            (t.state == DccTransfer::State::Pending ||
+             t.state == DccTransfer::State::Offered ||
+             t.state == DccTransfer::State::Resuming)) {
+            ++pendingOffers;
+        }
+    }
+    if (pendingOffers >= MaxPendingOffers) {
+        emit status(
+            QStringLiteral("DCC: ignoring file offer from %1 (too many pending).").arg(sender));
         return;
     }
 
@@ -690,6 +708,18 @@ void DccManager::inChat(const QString& sender, const QStringList& toks) {
     }
 
     if (port == 0 && token.isEmpty()) {
+        return;
+    }
+    // Anti-flood: ignore new chat offers once too many are pending/connecting.
+    int pendingChats = 0;
+    for (const ChatRuntime* c : std::as_const(chats_)) {
+        if (c != nullptr && c->info.state == DccChat::State::Connecting) {
+            ++pendingChats;
+        }
+    }
+    if (pendingChats >= MaxPendingOffers && existing == nullptr) {
+        emit status(
+            QStringLiteral("DCC: ignoring chat offer from %1 (too many pending).").arg(sender));
         return;
     }
     auto* chat = new ChatRuntime();
