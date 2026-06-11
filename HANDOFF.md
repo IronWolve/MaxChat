@@ -1,6 +1,18 @@
 # MaxChat C++ Port Handoff
 
-Date: 2026-06-09
+Date: 2026-06-09 (audit closeout 2026-06-10)
+
+## Port audit complete (2026-06-10) — see AUDIT.md
+
+An 11-phase parity + security audit of the C++ port against the Python original is
+**complete**. It fixed **4 real C++-only security vulnerabilities** (DCC size-0 unbounded
+write, comic decoder OOM, two link-preview SSRF holes) plus assorted security hardening and
+parity fixes; 7 of the original seed concerns turned out stale/wrong. Full record, the
+26-item FIX BACKLOG, and the Python-side backports list are in **AUDIT.md** (and
+`../maxchat/DEVDOCS/BACKPORTS.md`). Tests: 42/42 green. **Release note:** before any public
+push, gitignore the internal docs (AUDIT.md, DEV_NOTES.md) per the audit's release-hygiene
+item.
+
 
 Status: simultaneous live multi-network plumbing is implemented and ready for
 two-network smoke testing. The UI parity pass keeps the Python-style toolbar,

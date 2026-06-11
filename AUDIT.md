@@ -47,7 +47,13 @@ flagged "medium+ — push past the checklist for extra attack angles."
 the recommended model/effort or change it — before reading any files.** Do not begin the
 phase work until the user confirms.
 
-**Last session:** 2026-06-10 — Phase 10 done (Opus 4.8 medium+, security sweep). Redaction
+**Last session:** 2026-06-10 — **AUDIT COMPLETE (Phase 11 closeout).** All 11 phases done.
+Test-coverage map vs Python below; 42 C++ test targets (broader than Python's 23) with known
+gaps in comic-logic / DCC-loopback / input-bar (backlogged #13/#19). FINAL SUMMARY added
+below the index. HANDOFF.md updated. Translations stay deferred (S14). Remaining work =
+the 26 FIX BACKLOG items + 10 Python backports; nothing blocking.
+
+Phase 10 done (Opus 4.8 medium+, security sweep). Redaction
 matches Python exactly; chat-view HTML escaping solid (all via formatChatLine/insertText);
 QSS colours safe (numeric rgb from QColor); settings robust; log/DCC paths safe; cppcheck
 clean. 2 fixes: CR/LF stripped in sendRaw (line-injection defense-in-depth) + topic QLabel
@@ -104,6 +110,34 @@ Phase 2 (2026-06-10, bumped): $me/$chan aliases, slap/fish defaults, /sound; scr
 DEFERRED; S9 debunked; 4 backports. Phase 1 (Opus 4.8 medium): 5 protocol fixes, S6
 resolved (no SCRAM).
 
+### FINAL SUMMARY (audit complete 2026-06-10)
+
+11/11 phases done. Headline: the port was in **better** shape than the inventory implied
+(7 seed findings were stale/wrong — S4, S5, S5a, S6, S8, S9, S11), but careful reading +
+adversarial security passes found **4 genuine, C++-only security vulnerabilities** plus a
+batch of parity fixes.
+
+**Real vulnerabilities fixed (all C++-only regressions; Python was safe):**
+1. DCC `size=0` offer bypassed the receive cap → unbounded disk write (P5-1).
+2. Comic `.avb/.bgb` decoder trusted a file-supplied inflate length → ~4GB OOM (P6-1).
+3. Link-preview SSRF via redirect — targets weren't re-validated (P9-1).
+4. Link-preview SSRF via DNS — only the hostname string was checked, not resolved IPs (P9-2).
+
+**Other security hardening:** CTCP reply rate-limit (P1-5), DCC token CSPRNG (P5-2), comic
+dim/UB caps (P6-2/3), CR/LF line-injection strip (P10-1), topic rich-text → PlainText (P10-2).
+
+**Parity/correctness fixes:** IRCv3 line caps (P1-10), numeric fallthrough + 005 (P1-2/3),
+CTCP VERSION string (P1-4), `$me`/`$chan` aliases (P2-2), slap/fish defaults (P2-6), `/sound`
+(P2-1), shortcuts/looks defaults (P3-1), Ctrl+O/R (P4-1), highlight formatting-strip (P7-1),
+replay_lines default (P8-1).
+
+**Verified clean (no fix needed):** redaction, chat-view HTML escaping, QSS color injection,
+log-path traversal, settings robustness, cppcheck.
+
+**Outstanding (non-blocking):** 26 FIX BACKLOG items (feature builds: sounds, update checker,
+comic extras, scripting; + low-pri hardening/tests), 10 Python backports (`../maxchat/DEVDOCS/
+BACKPORTS.md`), translations deferred (S14). Test suite 42/42 green throughout.
+
 ### Phase index
 
 - [x] Phase 1 — IRC protocol parity ✅ 2026-06-10
@@ -116,7 +150,7 @@ resolved (no SCRAM).
 - [x] Phase 8 — Logging, replay, buffers ✅ 2026-06-10
 - [x] Phase 9 — Link previews & SSRF ✅ 2026-06-10
 - [x] Phase 10 — Cross-cutting security sweep ✅ 2026-06-10
-- [ ] Phase 11 — Tests & docs closeout
+- [x] Phase 11 — Tests & docs closeout ✅ 2026-06-10  → **AUDIT COMPLETE**
 
 ---
 
@@ -747,12 +781,53 @@ Checklist:
 - [ ] Revisit S14 (translations) with user — schedule or keep deferred.
 - [ ] Reconcile the **Backports to Python** section here against the canonical
       `../maxchat/DEVDOCS/BACKPORTS.md` — confirm both list the same entries.
+      (Note: `BACKPORTS.md` lives in the Python repo's gitignored `/DEVDOCS/` —
+      intentionally local-only, "never pushed". It's durable on disk; that's the
+      to-do log for the Python build.)
+- [ ] **Release hygiene (before any public push of maxchat-c):** `AUDIT.md` and
+      `DEV_NOTES.md` are currently tracked. Per the internal-docs-stay-local rule,
+      add them to `.gitignore` and `git rm --cached` them (and confirm no AI
+      attribution ships) before the repo goes public.
+
+### Python→C++ test-coverage map
+
+C++ has **42** test targets vs Python's **23** — broader (dedicated dialog tests Python
+lacks). Mapping Python → C++ and the genuine gaps:
+
+| Python test | C++ coverage | Status |
+|---|---|---|
+| test_irc_parse | irc_message_test | ✓ |
+| test_irc_format | irc_format_test | ✓ |
+| test_client | irc_session_test + irc_connection_test | ✓ |
+| test_redact | irc_redaction_test | ✓ |
+| test_reconnect_failover | reconnect_planner_test | ✓ |
+| test_network_import | network_import_test | ✓ |
+| test_chat_view | chat_line_formatter_test | ✓ |
+| test_logmask | chat_log_store_test | ✓ |
+| test_media | open_graph_fetcher_test + link_preview_classifier_test (incl. SSRF) | ✓ |
+| test_theme_platform | theme_catalog_test | ✓ |
+| test_font_defaults | settings_store_test | ✓ |
+| test_main_window_routing / _startup / _smoke | main_window_link_preview_test + command_parser_test | ✓ (partial) |
+| test_dcc | dcc_manager_test (pure helper only) | GAP — loopback handshakes (backlog #13) |
+| test_comic_filter / test_comic_speech / test_character_cells | comic_art_test (decoder safety only) | GAP — filter/emotion/cell-layout (backlog #19) |
+| test_input_bar | (input lives in MainWindow; spellcheck_highlighter_test only) | GAP — history/completion (tie to backlog #9) |
+| test_proxy | (proxy inline in IrcConnection) | GAP — add with backlog #3 |
+| test_autoconnect | connection_plan_test (partial) | minor gap |
+| test_ctcp_sound | — | N/A (CTCP SOUND not implemented; backlog #22) |
+| test_scripting | — | N/A (scripting deferred, S1) |
 
 ### Findings — Phase 11
 
-| Sev | Where | Issue | Status |
-|-----|-------|-------|--------|
-| | | | |
+| ID | Sev | Where | Issue | Status |
+|----|-----|-------|-------|--------|
+| — | OK | tests/ | 42/42 green (Debug). Every security/logic fix has a regression test (irc_session, command_alias, command_parser, dcc_manager, comic_art, link_preview_classifier). UI-only/constant fixes (Ctrl+O/R, topic PlainText, replay_lines, highlight-strip) are untested by design — consistent with existing UI coverage; noted. | VERIFIED |
+| — | OK | DEV_NOTES.md | "THINGS I GOT WRONG" has all 4 wrong-port entries (IRC caps, DCC size-0, comic OOM, SSRF, CR/LF+topic). DECISIONS has the scripting-defer. | VERIFIED |
+| — | DONE | HANDOFF.md | Updated with an audit-complete summary + pointer to AUDIT.md/backlog. | VERIFIED |
+| S14 | DEFER | i18n | Translations remain deferred (user decision); loader + Localization page exist, no .qm/tr() yet. | DEFERRED |
+
+Closeout status: phase index all ☑; test map produced (gaps backlogged); fixed-findings
+have tests where feasible; DEV_NOTES + HANDOFF updated; backlog (26) + backports (10) triaged;
+release-hygiene reminder recorded (gitignore internal docs before public push).
 
 ---
 
