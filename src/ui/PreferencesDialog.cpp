@@ -15,6 +15,7 @@
 #include <QDir>
 #include <QDirIterator>
 #include <QFileDialog>
+#include <QInputDialog>
 #include <QFontComboBox>
 #include <QFontDatabase>
 #include <QFormLayout>
@@ -203,6 +204,8 @@ PreferencesDialog::PreferencesDialog(QVariantMap settings, QWidget* parent)
 
     addPage(QStringLiteral("Comic"), [this](QWidget* page) { buildComicTab(page); });
 
+    addPage(QStringLiteral("Scripts"), [this](QWidget* page) { buildScriptsTab(page); });
+
     addPage(QStringLiteral("Services"), [this](QWidget* page) { buildServicesTab(page); });
 
     addPage(QStringLiteral("Data"), [this](QWidget* page) { buildDataTab(page); });
@@ -232,6 +235,20 @@ PreferencesDialog::PreferencesDialog(QVariantMap settings, QWidget* parent)
 
 QVariantMap PreferencesDialog::settings() const {
     QVariantMap out = settings_;
+    if (scriptRead_ != nullptr) {
+        QVariantMap perms;
+        perms.insert(QStringLiteral("read"), scriptRead_->isChecked());
+        perms.insert(QStringLiteral("write"), scriptWrite_->isChecked());
+        perms.insert(QStringLiteral("exec"), scriptExec_->isChecked());
+        perms.insert(QStringLiteral("modules"), scriptModules_->isChecked());
+        perms.insert(QStringLiteral("network"), scriptNetwork_->isChecked());
+        out.insert(QStringLiteral("script_perms"), perms);
+        QVariantList dirs;
+        for (int i = 0; i < scriptDirs_->count(); ++i) {
+            dirs.append(scriptDirs_->item(i)->text());
+        }
+        out.insert(QStringLiteral("script_dirs"), dirs);
+    }
     out.insert(QStringLiteral("theme"), theme_->currentData().toString());
     out.insert(QStringLiteral("chat_theme"), chatTheme_->currentData().toString());
     out.insert(QStringLiteral("wallpaper"), wallpaper_->currentData().toString());
@@ -656,6 +673,89 @@ void PreferencesDialog::buildComicTab(QWidget* tab) {
             &PreferencesDialog::openComicSettingsRequested);
     connect(browseChars, &QPushButton::clicked, this,
             &PreferencesDialog::browseCharactersRequested);
+}
+
+void PreferencesDialog::buildScriptsTab(QWidget* tab) {
+    auto* root = new QVBoxLayout(tab);
+    auto* note = new QLabel(
+        QStringLiteral("Lua scripts run sandboxed by default — they can react to chat, add "
+                       "commands, and use their own private data folder. Grant extra abilities "
+                       "below only for scripts you trust; each one widens what a script can do "
+                       "to your computer. Changes reload your scripts."),
+        tab);
+    note->setWordWrap(true);
+    root->addWidget(note);
+
+    const QVariantMap perms = settings_.value(QStringLiteral("script_perms")).toMap();
+    const auto makeCheck = [&](const QString& label, const QString& key, const QString& tip) {
+        auto* box = new QCheckBox(label, tab);
+        box->setChecked(perms.value(key, false).toBool());
+        box->setToolTip(tip);
+        root->addWidget(box);
+        return box;
+    };
+    scriptRead_ = makeCheck(QStringLiteral("Read files"), QStringLiteral("read"),
+                            QStringLiteral("Allow io.open() to read files inside the allowed "
+                                           "folders below."));
+    scriptWrite_ = makeCheck(QStringLiteral("Write files"), QStringLiteral("write"),
+                             QStringLiteral("Allow io.open() to create/modify files inside the "
+                                            "allowed folders below."));
+    scriptExec_ = makeCheck(QStringLiteral("Run programs"), QStringLiteral("exec"),
+                            QStringLiteral("Allow os.execute / io.popen — scripts can launch "
+                                           "other programs. High risk."));
+    scriptModules_ = makeCheck(QStringLiteral("Load modules"), QStringLiteral("modules"),
+                               QStringLiteral("Allow require()/load() — scripts can pull in other "
+                                              "Lua or native libraries."));
+    scriptNetwork_ = makeCheck(QStringLiteral("Network access"), QStringLiteral("network"),
+                               QStringLiteral("Adds api.http_get(url) for fetching web content."));
+
+    auto* dirsLabel =
+        new QLabel(QStringLiteral("Folders scripts may read/write (the script's own data folder "
+                                  "is always allowed):"),
+                   tab);
+    dirsLabel->setWordWrap(true);
+    root->addWidget(dirsLabel);
+
+    scriptDirs_ = new QListWidget(tab);
+    for (const QVariant& dir : settings_.value(QStringLiteral("script_dirs")).toList()) {
+        const QString path = dir.toString().trimmed();
+        if (!path.isEmpty()) {
+            scriptDirs_->addItem(path);
+        }
+    }
+    root->addWidget(scriptDirs_, 1);
+
+    auto* dirButtons = new QHBoxLayout();
+    auto* addFolder = new QPushButton(QStringLiteral("Add folder..."), tab);
+    auto* addDrive = new QPushButton(QStringLiteral("Add drive/path..."), tab);
+    auto* removeDir = new QPushButton(QStringLiteral("Remove"), tab);
+    dirButtons->addWidget(addFolder);
+    dirButtons->addWidget(addDrive);
+    dirButtons->addWidget(removeDir);
+    dirButtons->addStretch(1);
+    root->addLayout(dirButtons);
+
+    connect(addFolder, &QPushButton::clicked, this, [this, tab]() {
+        const QString dir = QFileDialog::getExistingDirectory(tab, QStringLiteral("Allow folder"));
+        if (!dir.isEmpty() && scriptDirs_->findItems(dir, Qt::MatchExactly).isEmpty()) {
+            scriptDirs_->addItem(dir);
+        }
+    });
+    connect(addDrive, &QPushButton::clicked, this, [this, tab]() {
+        bool ok = false;
+        const QString path = QInputDialog::getText(
+            tab, QStringLiteral("Add drive or path"),
+            QStringLiteral("Drive or folder (e.g. D:\\ or /mnt/data):"), QLineEdit::Normal,
+            QString(), &ok);
+        const QString trimmed = path.trimmed();
+        if (ok && !trimmed.isEmpty() &&
+            scriptDirs_->findItems(trimmed, Qt::MatchExactly).isEmpty()) {
+            scriptDirs_->addItem(trimmed);
+        }
+    });
+    connect(removeDir, &QPushButton::clicked, this, [this]() {
+        delete scriptDirs_->takeItem(scriptDirs_->currentRow());
+    });
 }
 
 void PreferencesDialog::buildFontsTab(QWidget* tab) {

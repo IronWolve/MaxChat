@@ -28,6 +28,9 @@ class ScriptHost {
     [[nodiscard]] virtual QStringList scriptChannels(const QString& network) = 0;
     [[nodiscard]] virtual QStringList scriptNicks(const QString& network,
                                                   const QString& target) = 0;
+    // Synchronous HTTP GET for api.http_get (only reached when the network
+    // permission is granted). Returns the body, or an empty string on failure.
+    [[nodiscard]] virtual QString scriptHttpGet(const QString& url) = 0;
 };
 
 } // namespace maxchat::scripting
