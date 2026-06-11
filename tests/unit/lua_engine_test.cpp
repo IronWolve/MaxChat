@@ -14,12 +14,19 @@ namespace {
 class FakeHost final : public ScriptHost {
   public:
     QStringList echoes;
+    QStringList says;     // "target|text"
+    QStringList inserts;
+    QStringList notifies; // "title|text"
 
     void scriptEcho(const QString&, const QString& text) override { echoes.append(text); }
-    void scriptSay(const QString&, const QString&, const QString&) override {}
+    void scriptSay(const QString&, const QString& target, const QString& text) override {
+        says.append(target + QStringLiteral("|") + text);
+    }
     void scriptSendRaw(const QString&, const QString&) override {}
-    void scriptInsertInput(const QString&) override {}
-    void scriptNotify(const QString&, const QString&) override {}
+    void scriptInsertInput(const QString& text) override { inserts.append(text); }
+    void scriptNotify(const QString& title, const QString& text) override {
+        notifies.append(title + QStringLiteral("|") + text);
+    }
     QString scriptMe(const QString&) override { return QStringLiteral("me"); }
     QString scriptTarget() override { return QStringLiteral("#chan"); }
     QString scriptNetwork() override { return QStringLiteral("net"); }
@@ -116,6 +123,67 @@ class LuaEngineTest final : public QObject {
         LuaEngine engine(&host, dir.path(), dir.path());
         QVERIFY(engine.load(path));
         QCOMPARE(host.echoes, QStringList{QStringLiteral("locked")});
+    }
+
+    void apiCoreCalls() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString path =
+            writeScript(QDir(dir.path()), QStringLiteral("core.lua"),
+                        QStringLiteral("function on_load(api)\n"
+                                       "  api.say('#c', 'hi')\n"
+                                       "  api.insert_input('draft')\n"
+                                       "  api.notify('T', 'B')\n"
+                                       "  api.echo(api.me()..'/'..api.target()..'/'..api.network())\n"
+                                       "end\n"));
+        FakeHost host;
+        LuaEngine engine(&host, dir.path(), dir.path());
+        QVERIFY(engine.load(path));
+        QCOMPARE(host.says, QStringList{QStringLiteral("#c|hi")});
+        QCOMPARE(host.inserts, QStringList{QStringLiteral("draft")});
+        QCOMPARE(host.notifies, QStringList{QStringLiteral("T|B")});
+        QCOMPARE(host.echoes, QStringList{QStringLiteral("me/#chan/net")});
+    }
+
+    void apiFilesRoundTripInDataDir() {
+        QTemporaryDir scripts;
+        QTemporaryDir data;
+        QVERIFY(scripts.isValid() && data.isValid());
+        const QString path = writeScript(
+            QDir(scripts.path()), QStringLiteral("notes.lua"),
+            QStringLiteral("function on_load(api)\n"
+                           "  api.append_file('log.txt', 'line1\\n')\n"
+                           "  api.append_file('log.txt', 'line2\\n')\n"
+                           "  api.echo(api.read_file('log.txt'))\n"
+                           "  api.echo(api.read_file('missing.txt') == nil and 'NIL' or 'SET')\n"
+                           "end\n"));
+        FakeHost host;
+        LuaEngine engine(&host, scripts.path(), data.path());
+        QVERIFY(engine.load(path));
+        QCOMPARE(host.echoes.size(), 2);
+        QCOMPARE(host.echoes.at(0), QStringLiteral("line1\nline2\n"));
+        QCOMPARE(host.echoes.at(1), QStringLiteral("NIL"));
+        // The file landed in <data>/notes/, not anywhere else.
+        QVERIFY(QFile::exists(QDir(data.path()).filePath(QStringLiteral("notes/log.txt"))));
+    }
+
+    void apiFileTraversalIsJailed() {
+        QTemporaryDir scripts;
+        QTemporaryDir data;
+        QVERIFY(scripts.isValid() && data.isValid());
+        // Try to write outside the data dir; only the basename is honoured, so
+        // the byte lands in <data>/esc/evil.txt and nowhere up the tree.
+        const QString path =
+            writeScript(QDir(scripts.path()), QStringLiteral("esc.lua"),
+                        QStringLiteral("function on_load(api)\n"
+                                       "  api.append_file('../../evil.txt', 'x')\n"
+                                       "end\n"));
+        FakeHost host;
+        LuaEngine engine(&host, scripts.path(), data.path());
+        QVERIFY(engine.load(path));
+        QVERIFY(QFile::exists(QDir(data.path()).filePath(QStringLiteral("esc/evil.txt"))));
+        QVERIFY(!QFile::exists(QDir(data.path()).filePath(QStringLiteral("../evil.txt"))));
+        QVERIFY(!QFile::exists(QDir(data.path()).filePath(QStringLiteral("evil.txt"))));
     }
 
     void scriptErrorDoesNotCrash() {
