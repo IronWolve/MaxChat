@@ -6,10 +6,11 @@ switched to Lua — tiny, MIT-licensed, purpose-built for embedding. The trade-o
 is that Python plugins must be rewritten in Lua; the three bundled examples have
 been converted, below.)
 
-> **Status (2026-06-10):** **implemented.** Build with `-DMAXCHAT_LUA=ON` to
-> embed the interpreter (Lua 5.4, vendored). The engine, sandbox, all hooks, and
-> the full `api` table below are in place and unit-tested. Without the flag the
-> client builds normally and scripting is simply absent.
+> **Status:** **implemented and on by default.** The interpreter (Lua 5.4,
+> vendored) is built into normal builds — `build.bat` includes it; CMake users
+> get it unless they pass `-DMAXCHAT_LUA=OFF` (or `build.bat nolua`) for a lean
+> build. The engine, sandbox, all hooks, and the full `api` table below are in
+> place and unit-tested.
 
 ## Scripts
 

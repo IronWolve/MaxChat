@@ -10,9 +10,10 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Scripting engine (vendors Lua 5.4 under third_party/lua). OFF by default so the
-# normal build is untouched; turn ON once the Windows build has been verified.
-option(MAXCHAT_LUA "Build the Lua scripting engine" OFF)
+# Scripting engine (vendors Lua 5.4 under third_party/lua). ON by default now
+# that the MinGW/Windows compile is verified; disable with -DMAXCHAT_LUA=OFF for
+# a lean build without scripting.
+option(MAXCHAT_LUA "Build the Lua scripting engine" ON)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
