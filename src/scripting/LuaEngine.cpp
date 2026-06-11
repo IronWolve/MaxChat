@@ -12,8 +12,10 @@
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QMetaType>
+#include <QTimer>
 #include <QVariant>
 
+#include <algorithm>
 #include <utility>
 
 #ifdef MAXCHAT_LUA
@@ -31,6 +33,13 @@ struct ScriptState {
     lua_State* L = nullptr;
     int apiRef = LUA_NOREF;
     QString name;
+};
+
+struct ScriptTimer {
+    QTimer* timer = nullptr;
+    ScriptState* state = nullptr; // the script that owns the callback
+    int funcRef = LUA_NOREF;      // registry ref to the Lua callback
+    int id = 0;
 };
 
 namespace {
@@ -235,6 +244,23 @@ int l_set(lua_State* L) {
     return 0;
 }
 
+// api.timer(ms, fn) -> id
+int l_timer(lua_State* L) {
+    LuaEngine* engine = engineOf(L);
+    const int ms = static_cast<int>(luaL_checkinteger(L, 1));
+    luaL_checktype(L, 2, LUA_TFUNCTION);
+    lua_pushvalue(L, 2);
+    const int funcRef = luaL_ref(L, LUA_REGISTRYINDEX); // pops the function copy
+    lua_pushinteger(L, engine->createTimer(L, ms, funcRef));
+    return 1;
+}
+
+// api.cancel_timer(id)
+int l_cancel_timer(lua_State* L) {
+    engineOf(L)->cancelTimer(static_cast<int>(luaL_checkinteger(L, 1)));
+    return 0;
+}
+
 // Build a fresh, sandboxed state. Only known-safe libraries are opened, and the
 // base-library escape hatches (load/dofile/loadfile/…) are removed. There is no
 // `io`, `os`, `package`/`require`, or `debug`, so a script cannot reach the
@@ -333,6 +359,73 @@ QStringList LuaEngine::hostNicks(const QString& target) {
     return host_ != nullptr ? host_->scriptNicks(currentNetwork_, target) : QStringList();
 }
 
+int LuaEngine::createTimer(void* luaState, int intervalMs, int funcRef) {
+    auto* L = static_cast<lua_State*>(luaState);
+    ScriptState* owner = nullptr;
+    for (ScriptState* state : scripts_) {
+        if (state->L == L) {
+            owner = state;
+            break;
+        }
+    }
+    if (owner == nullptr) {
+        luaL_unref(L, LUA_REGISTRYINDEX, funcRef);
+        return 0;
+    }
+    auto* entry = new ScriptTimer{};
+    entry->timer = new QTimer(this);
+    entry->state = owner;
+    entry->funcRef = funcRef;
+    entry->id = nextTimerId_++;
+    entry->timer->setInterval(std::max(50, intervalMs)); // floor runaway 0ms timers
+    const int id = entry->id;
+    connect(entry->timer, &QTimer::timeout, this, [this, id]() { fireTimer(id); });
+    timers_.insert(id, entry);
+    entry->timer->start();
+    return id;
+}
+
+void LuaEngine::fireTimer(int id) {
+    ScriptTimer* entry = timers_.value(id, nullptr);
+    if (entry == nullptr || entry->state == nullptr) {
+        return;
+    }
+    lua_State* L = entry->state->L;
+    lua_rawgeti(L, LUA_REGISTRYINDEX, entry->funcRef);
+    if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
+        reportError(entry->state->name, QStringLiteral("timer"),
+                    QString::fromUtf8(lua_tostring(L, -1)));
+        lua_pop(L, 1);
+    }
+}
+
+void LuaEngine::cancelTimer(int id) {
+    ScriptTimer* entry = timers_.take(id);
+    if (entry == nullptr) {
+        return;
+    }
+    entry->timer->stop();
+    entry->timer->deleteLater();
+    if (entry->state != nullptr) {
+        luaL_unref(entry->state->L, LUA_REGISTRYINDEX, entry->funcRef);
+    }
+    delete entry;
+}
+
+void LuaEngine::cancelTimersFor(ScriptState* state) {
+    const QList<int> ids = timers_.keys();
+    for (int id : ids) {
+        ScriptTimer* entry = timers_.value(id, nullptr);
+        if (entry != nullptr && entry->state == state) {
+            entry->timer->stop();
+            entry->timer->deleteLater();
+            luaL_unref(state->L, LUA_REGISTRYINDEX, entry->funcRef); // before lua_close
+            timers_.remove(id);
+            delete entry;
+        }
+    }
+}
+
 QStringList LuaEngine::loaded() const {
     QStringList names = scripts_.keys();
     names.sort();
@@ -375,6 +468,8 @@ static int installApi(lua_State* L, LuaEngine* engine, const QString& dataDir) {
     reg("strip", l_strip);
     reg("get", l_get);
     reg("set", l_set);
+    reg("timer", l_timer);
+    reg("cancel_timer", l_cancel_timer);
     lua_pushvalue(L, -1);
     lua_setglobal(L, "api");
     return luaL_ref(L, LUA_REGISTRYINDEX); // pops the table
@@ -494,6 +589,7 @@ bool LuaEngine::unload(const QString& name) {
     }
     ScriptState* state = it.value();
     callHook(state, "on_unload");
+    cancelTimersFor(state); // stop + unref this script's timers before its state dies
     luaL_unref(state->L, LUA_REGISTRYINDEX, state->apiRef);
     lua_close(state->L);
     delete state;
@@ -567,6 +663,12 @@ QStringList LuaEngine::hostChannels() {
 QStringList LuaEngine::hostNicks(const QString&) {
     return {};
 }
+int LuaEngine::createTimer(void*, int, int) {
+    return 0;
+}
+void LuaEngine::cancelTimer(int) {}
+void LuaEngine::fireTimer(int) {}
+void LuaEngine::cancelTimersFor(ScriptState*) {}
 
 bool LuaEngine::callHook(ScriptState*, const char*, const QVariantList&) {
     return false;
