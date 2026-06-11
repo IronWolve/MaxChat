@@ -10,6 +10,10 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Scripting engine (vendors Lua 5.4 under third_party/lua). OFF by default so the
+# normal build is untouched; turn ON once the Windows build has been verified.
+option(MAXCHAT_LUA "Build the Lua scripting engine" OFF)
+
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
@@ -27,6 +31,20 @@ if(PkgConfig_FOUND)
 endif()
 
 qt_standard_project_setup()
+
+if(MAXCHAT_LUA)
+    # Lua is C; enable it only when scripting is requested so a C compiler isn't
+    # required for the default build.
+    enable_language(C)
+    file(GLOB MAXCHAT_LUA_SOURCES CONFIGURE_DEPENDS
+         "${CMAKE_CURRENT_SOURCE_DIR}/third_party/lua/*.c")
+    add_library(maxchat_lua STATIC ${MAXCHAT_LUA_SOURCES})
+    target_include_directories(maxchat_lua PUBLIC
+         "${CMAKE_CURRENT_SOURCE_DIR}/third_party/lua")
+    set_target_properties(maxchat_lua PROPERTIES C_STANDARD 99)
+    # No LUA_USE_POSIX/DLL: the dlopen-based `require`/loadlib stays inert, which
+    # suits the script sandbox. Build as portable ANSI C.
+endif()
 
 add_library(maxchat_core STATIC
     src/app/AppInfo.cpp
@@ -983,3 +1001,17 @@ target_link_libraries(irc_connection_test
 )
 
 add_test(NAME irc_connection COMMAND irc_connection_test)
+
+if(MAXCHAT_LUA)
+    qt_add_executable(lua_smoke_test
+        tests/unit/lua_smoke_test.cpp
+    )
+
+    target_link_libraries(lua_smoke_test
+        PRIVATE
+            maxchat_lua
+            Qt6::Test
+    )
+
+    add_test(NAME lua_smoke COMMAND lua_smoke_test)
+endif()

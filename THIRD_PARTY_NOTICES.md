@@ -33,6 +33,36 @@ The MinGW Windows build deploys runtime DLLs needed by the compiler toolchain:
 Relevant MinGW/GCC runtime license files are included under `licenses/mingw/`
 when `build.bat` prepares the Windows deployment folder.
 
+## Lua
+
+When built with scripting enabled (`-DMAXCHAT_LUA=ON`), MaxChat statically links
+the Lua 5.4.7 interpreter, whose source is vendored under `third_party/lua/`
+(the standalone `lua.c`/`luac.c` mains are excluded). Lua is distributed under
+the MIT License:
+
+> Copyright © 1994–2024 Lua.org, PUC-Rio.
+>
+> Permission is hereby granted, free of charge, to any person obtaining a copy
+> of this software and associated documentation files (the "Software"), to deal
+> in the Software without restriction, including without limitation the rights
+> to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+> copies of the Software, and to permit persons to whom the Software is
+> furnished to do so, subject to the following conditions:
+>
+> The above copyright notice and this permission notice shall be included in
+> all copies or substantial portions of the Software.
+>
+> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+> IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+> FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+> AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+> LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+> OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+> THE SOFTWARE.
+
+Vendored source: Lua 5.4.7, `lua-5.4.7.tar.gz`,
+sha256 `9fbf5e28ef86c69858f6d3d34eccc32e911c1a28b4120ff3e84aaa70cfbf1e30`.
+
 ## Fonts
 
 Bundled fonts:
