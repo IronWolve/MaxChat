@@ -117,6 +117,14 @@ public:
     return out;
   }
 
+  bool addWord(const QString &word) override {
+    if (checker_ == nullptr || word.trimmed().isEmpty()) {
+      return false;
+    }
+    const std::wstring wide = toWide(word.trimmed());
+    return SUCCEEDED(checker_->Add(wide.c_str()));
+  }
+
 private:
   ISpellChecker *checker_ = nullptr;
 };

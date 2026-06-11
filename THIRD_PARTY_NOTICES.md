@@ -74,12 +74,40 @@ upstream `license.hunspell` / `license.myspell`.
 
 ## Spelling dictionaries
 
-The bundled `en_US` Hunspell dictionary (`assets/dictionaries/en_US.aff` /
-`en_US.dic`) is derived from **SCOWL** (Spell Checker Oriented Word Lists) by
-Kevin Atkinson, distributed under a permissive BSD-style license. The full
-license and provenance are in `assets/dictionaries/README_en_US.txt`.
-Additional language dictionaries can be added at runtime (drop the `.aff`/`.dic`
-into the `dictionaries` folder) and are the property of their respective authors.
+MaxChat bundles Hunspell `.aff`/`.dic` dictionaries under `assets/dictionaries/`.
+These are **data files**, not linked into the binary, and each remains under its
+own upstream license (mere aggregation). The per-dictionary upstream license
+text ships alongside each pair (`assets/dictionaries/README_en_US.txt` for
+`en_US`; `assets/dictionaries/LICENSE_<code>.txt` for the rest). Most were
+sourced from the curated Hunspell dictionary collection at
+<https://github.com/wooorm/dictionaries>, which preserves each project's
+original license.
+
+| Code   | Language               | License (upstream)              |
+|--------|------------------------|---------------------------------|
+| en_US  | English (US)           | SCOWL, BSD-style (permissive)   |
+| en_GB  | English (UK)           | SCOWL, BSD-style (permissive)   |
+| nl_NL  | Dutch                  | BSD-style (permissive)          |
+| ru_RU  | Russian                | MIT (permissive)                |
+| uk_UA  | Ukrainian              | MIT (permissive)                |
+| tr_TR  | Turkish                | MIT (permissive)                |
+| es_ES  | Spanish                | MPL-2.0 / GPL / LGPL            |
+| fr_FR  | French                 | MPL-2.0                         |
+| de_DE  | German                 | MPL / GPL / LGPL                |
+| it_IT  | Italian                | GPL-3.0                         |
+| pl_PL  | Polish                 | GPL / LGPL / MPL / CC-BY-SA     |
+| pt_BR  | Portuguese (Brazil)    | LGPL                            |
+| pt_PT  | Portuguese (Portugal)  | GPL-2.0                         |
+| sv_SE  | Swedish                | LGPL                            |
+| nb_NO  | Norwegian Bokmål       | GPL-2.0                         |
+| da_DK  | Danish                 | GPL / LGPL / CC-BY-SA           |
+
+The GPL/LGPL/MPL dictionaries are aggregated with — not derived from or linked
+into — MaxChat; the MaxChat application itself stays under the Apache License
+2.0. Finnish is intentionally not bundled (Finnish spell-checking requires the
+Voikko engine rather than a plain Hunspell dictionary). Additional or updated
+language dictionaries can be added at runtime by dropping the `.aff`/`.dic` into
+the `dictionaries` folder.
 
 ## Fonts
 

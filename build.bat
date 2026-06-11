@@ -79,17 +79,25 @@ if defined USING_MINGW (
 set "DIST_DIR=%ROOT%\dist-win"
 set "GENERATOR=Ninja"
 set "CONFIG_ARGS=-DCMAKE_BUILD_TYPE=Release"
-rem Lua scripting is built by default; run "build.bat nolua" for a lean build.
+rem A bare "build.bat" builds EVERY optional feature (Lua scripting + the native
+rem OS speller). Opt out with one or more flags, in any order:
+rem   build.bat nolua            - skip the Lua scripting engine
+rem   build.bat noosspell        - skip the native OS speller (Hunspell only)
+rem   build.bat nolua noosspell  - leanest build (both off)
 set "MAXCHAT_LUA=ON"
-if /I "%~1"=="nolua" set "MAXCHAT_LUA=OFF"
+set "MAXCHAT_OS_SPELL=ON"
+:parse_args
+if "%~1"=="" goto args_done
+if /I "%~1"=="nolua"     set "MAXCHAT_LUA=OFF"
+if /I "%~1"=="noosspell" set "MAXCHAT_OS_SPELL=OFF"
+rem Back-compat: "osspell" used to be the opt-in; it is now the default, so
+rem accept it as a harmless no-op rather than erroring on old muscle memory.
+if /I "%~1"=="osspell"   set "MAXCHAT_OS_SPELL=ON"
+shift
+goto parse_args
+:args_done
 set "CONFIG_ARGS=%CONFIG_ARGS% -DMAXCHAT_LUA=%MAXCHAT_LUA%"
 echo Lua scripting: %MAXCHAT_LUA%
-rem Native OS speller (Windows ISpellChecker) is opt-in: "build.bat osspell".
-rem Alternative to the internal vendored Hunspell + bundled en_US (uses the OS's
-rem own dictionaries instead).
-set "MAXCHAT_OS_SPELL=OFF"
-if /I "%~1"=="osspell" set "MAXCHAT_OS_SPELL=ON"
-if /I "%~2"=="osspell" set "MAXCHAT_OS_SPELL=ON"
 set "CONFIG_ARGS=%CONFIG_ARGS% -DMAXCHAT_OS_SPELL=%MAXCHAT_OS_SPELL%"
 echo OS spell engine: %MAXCHAT_OS_SPELL%
 set "BUILD_ARGS="
