@@ -23,8 +23,10 @@
 namespace maxchat::ui {
 
 ComicSettingsDialog::ComicSettingsDialog(QVariantMap settings, const QStringList& characterStems,
-                                         const QStringList& backgroundFiles, QWidget* parent)
-    : QDialog(parent), settings_(std::move(settings)) {
+                                         const QStringList& backgroundFiles,
+                                         const QStringList& channelKeys, QWidget* parent)
+    : QDialog(parent), settings_(std::move(settings)), characterStems_(characterStems),
+      backgroundFiles_(backgroundFiles), channelKeys_(channelKeys) {
     setWindowTitle(QStringLiteral("Comic Settings"));
     resize(640, 560);
     captionColor_ = settings_.value(QStringLiteral("comic_caption_color"),
@@ -142,6 +144,9 @@ ComicSettingsDialog::ComicSettingsDialog(QVariantMap settings, const QStringList
     cv->addWidget(charMap_, 1);
     addPage(QStringLiteral("Characters"), charsPage);
 
+    // ---- Channels (per-channel bg / chars / ignore overrides) ----
+    addPage(QStringLiteral("Channels"), buildChannelsPage());
+
     // ---- Bots / filtering ----
     auto* bots = new QWidget(this);
     auto* bv = new QVBoxLayout(bots);
@@ -169,9 +174,146 @@ ComicSettingsDialog::ComicSettingsDialog(QVariantMap settings, const QStringList
     connect(nav, &QListWidget::currentRowChanged, pages, &QStackedWidget::setCurrentIndex);
 
     auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
-    connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::accepted, this, [this]() {
+        saveCurrentChannel(); // capture the visible channel editor before closing
+        accept();
+    });
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
     root->addWidget(buttons);
+}
+
+QWidget* ComicSettingsDialog::buildChannelsPage() {
+    // Working copy of every saved per-channel override, so channels you don't
+    // open in this session keep theirs.
+    chanWork_ = settings_.value(QStringLiteral("comic_channels")).toMap();
+
+    auto* page = new QWidget(this);
+    auto* v = new QVBoxLayout(page);
+    if (channelKeys_.isEmpty()) {
+        v->addWidget(new QLabel(
+            QStringLiteral("Join a channel to set its comic background / characters here."), page));
+        v->addStretch(1);
+        return page;
+    }
+
+    auto* sel = new QHBoxLayout();
+    sel->addWidget(new QLabel(QStringLiteral("Channel:"), page));
+    chanSelect_ = new QComboBox(page);
+    for (const QString& key : channelKeys_) {
+        chanSelect_->addItem(key, key);
+    }
+    sel->addWidget(chanSelect_, 1);
+    v->addLayout(sel);
+    v->addWidget(new QLabel(
+        QStringLiteral("Overrides for this channel — blank fields fall back to Global."), page));
+
+    chanHost_ = new QWidget(page);
+    auto* hostLayout = new QVBoxLayout(chanHost_);
+    hostLayout->setContentsMargins(0, 0, 0, 0);
+    v->addWidget(chanHost_, 1);
+
+    connect(chanSelect_, &QComboBox::currentIndexChanged, this, [this](int index) {
+        saveCurrentChannel(); // keep edits when switching channels
+        loadChannel(index);
+    });
+    loadChannel(0);
+    return page;
+}
+
+void ComicSettingsDialog::loadChannel(int index) {
+    if (chanHost_ == nullptr || index < 0 || index >= channelKeys_.size()) {
+        return;
+    }
+    chanCurrentIndex_ = index;
+    const QVariantMap cfg = chanWork_.value(channelKeys_.at(index)).toMap();
+
+    // Clear the previous channel's editor widgets.
+    QLayout* hostLayout = chanHost_->layout();
+    while (QLayoutItem* item = hostLayout->takeAt(0)) {
+        if (item->widget() != nullptr) {
+            item->widget()->deleteLater();
+        }
+        delete item;
+    }
+
+    auto* holder = new QWidget(chanHost_);
+    auto* form = new QFormLayout(holder);
+
+    chanBg_ = new QComboBox(holder);
+    chanBg_->addItem(QStringLiteral("(use global default)"), QString());
+    for (const QString& file : backgroundFiles_) {
+        chanBg_->addItem(QFileInfo(file).completeBaseName(), file);
+    }
+    const int bgIdx = chanBg_->findData(cfg.value(QStringLiteral("bg")).toString());
+    chanBg_->setCurrentIndex(bgIdx >= 0 ? bgIdx : 0);
+    form->addRow(QStringLiteral("Background"), chanBg_);
+
+    form->addRow(new QLabel(QStringLiteral("Assign characters (this channel), one per line as "
+                                           "nick=character:"),
+                            holder));
+    chanChars_ = new QPlainTextEdit(holder);
+    QStringList lines;
+    const QVariantMap chars = cfg.value(QStringLiteral("chars")).toMap();
+    for (auto it = chars.constBegin(); it != chars.constEnd(); ++it) {
+        lines.append(QStringLiteral("%1=%2").arg(it.key(), it.value().toString()));
+    }
+    chanChars_->setPlainText(lines.join(QLatin1Char('\n')));
+    form->addRow(chanChars_);
+
+    chanIgnore_ = new QLineEdit(holder);
+    QStringList ignore;
+    for (const QVariant& n : cfg.value(QStringLiteral("ignore")).toList()) {
+        ignore.append(n.toString());
+    }
+    chanIgnore_->setText(ignore.join(QLatin1Char(' ')));
+    chanIgnore_->setPlaceholderText(
+        QStringLiteral("nicks hidden from the comic in this channel — still shown in chat"));
+    form->addRow(QStringLiteral("Hide from comic"), chanIgnore_);
+
+    hostLayout->addWidget(holder);
+}
+
+void ComicSettingsDialog::saveCurrentChannel() {
+    if (chanCurrentIndex_ < 0 || chanCurrentIndex_ >= channelKeys_.size() || chanBg_ == nullptr) {
+        return;
+    }
+    QVariantMap cfg;
+    const QString bg = chanBg_->currentData().toString();
+    if (!bg.isEmpty()) {
+        cfg.insert(QStringLiteral("bg"), bg);
+    }
+
+    QVariantMap chars;
+    for (const QString& line : chanChars_->toPlainText().split(QLatin1Char('\n'))) {
+        const int eq = line.indexOf(QLatin1Char('='));
+        if (eq <= 0) {
+            continue;
+        }
+        const QString nick = line.left(eq).trimmed().toLower();
+        const QString stem = line.mid(eq + 1).trimmed();
+        if (!nick.isEmpty() && !stem.isEmpty()) {
+            chars.insert(nick, stem);
+        }
+    }
+    if (!chars.isEmpty()) {
+        cfg.insert(QStringLiteral("chars"), chars);
+    }
+
+    QStringList ignore;
+    for (const QString& n :
+         chanIgnore_->text().split(QRegularExpression(QStringLiteral("[,\\s]+")), Qt::SkipEmptyParts)) {
+        ignore.append(n.toLower());
+    }
+    if (!ignore.isEmpty()) {
+        cfg.insert(QStringLiteral("ignore"), QVariant(ignore).toList());
+    }
+
+    const QString key = channelKeys_.at(chanCurrentIndex_);
+    if (cfg.isEmpty()) {
+        chanWork_.remove(key); // all blank → no override stored
+    } else {
+        chanWork_.insert(key, cfg);
+    }
 }
 
 QVariantMap ComicSettingsDialog::settings() const {
@@ -219,6 +361,7 @@ QVariantMap ComicSettingsDialog::settings() const {
         }
     }
     out.insert(QStringLiteral("comic_chars"), chars);
+    out.insert(QStringLiteral("comic_channels"), chanWork_);
     return out;
 }
 
