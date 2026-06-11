@@ -5,7 +5,16 @@ DEV_NOTES.md). The *user-facing* contract is `SCRIPTING.md`. This file is the
 architecture + step-by-step build plan for the scripting engine, covering BOTH
 the C++ port (`maxchat-c`) and the Python original (`maxchat`).
 
-Status: PLANNING (2026-06-10). Tracked as AUDIT.md FIX BACKLOG #6.
+Status: IN PROGRESS (2026-06-10). Tracked as AUDIT.md FIX BACKLOG #6.
+
+### Progress log
+- **Step 1 DONE (commit b895ecd):** Lua 5.4.7 vendored under `third_party/lua/`
+  behind `option(MAXCHAT_LUA OFF)`; `maxchat_lua` static lib + gated
+  `lua_smoke_test`. Linux-verified: `build-lua` (ON) compiles + passes smoke;
+  default `build/` byte-unchanged (43/43, no Lua). **⚠ WINDOWS GATE:** before
+  relying on scripting, run `build.bat` once with `-DMAXCHAT_LUA=ON` to confirm
+  Lua compiles under the Windows toolchain (MinGW). Steps 2+ stay gated, so the
+  default Windows build is unaffected until then.
 
 ---
 
