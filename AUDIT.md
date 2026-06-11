@@ -47,7 +47,14 @@ flagged "medium+ — push past the checklist for extra attack angles."
 the recommended model/effort or change it — before reading any files.** Do not begin the
 phase work until the user confirms.
 
-**Last session:** 2026-06-10 — Phase 7 done (Opus 4.8 medium, audit + cheap wins).
+**Last session:** 2026-06-10 — Phase 8 done (Opus 4.8 low-med). **Log-path security is
+solid** (safePathPart neutralizes separators/reserved/control chars/`..` per component — no
+traversal via channel names). Flood guard exempts friends + self. Auto-replay on open
+exists. 1 cheap fix: replay_lines=0 now means 50 (was 100000 → dumped the whole log every
+open). Minor parity notes (strftime token subset, no replay dimming, logs keep mIRC codes)
+backlogged/noted. 42 green. Next: Phase 9 (link previews / SSRF).
+
+Phase 7 done (Opus 4.8 medium, audit + cheap wins).
 Big surprise: S2/S3/S4/S5 were **largely stale** — tray icon, tray menu, minimize-to-tray,
 taskbar flash, beep, OS notifications, DND, notify_pm/highlight, highlight_words, and Saved
 Looks are all implemented. Genuine remaining gaps: real .wav playback (notify_sound only
@@ -92,7 +99,7 @@ resolved (no SCRAM).
 - [x] Phase 5 — DCC (parity + security) ✅ 2026-06-10
 - [x] Phase 6 — Comic mode (parity + decoder robustness) ✅ 2026-06-10
 - [x] Phase 7 — Themes, fonts, notifications, tray, sounds ✅ 2026-06-10
-- [ ] Phase 8 — Logging, replay, buffers
+- [x] Phase 8 — Logging, replay, buffers ✅ 2026-06-10
 - [ ] Phase 9 — Link previews & SSRF
 - [ ] Phase 10 — Cross-cutting security sweep
 - [ ] Phase 11 — Tests & docs closeout
@@ -573,9 +580,21 @@ Checklist:
 
 ### Findings — Phase 8
 
-| Sev | Where | Issue | Status |
-|-----|-------|-------|--------|
-| | | | |
+| ID | Sev | Where | Issue | Status |
+|----|-----|-------|-------|--------|
+| P8-1 | DIFF (low-med) | MainWindow.cpp replayCurrentLog | `replay_lines == 0` replayed up to 100000 lines (effectively the whole log) on every buffer open; Python treats 0 as 50. | **FIXED** — 0 → 50 (DefaultReplayLines). |
+| P8-2 | DIFF (low) | ChatLogStore.cpp logFilePath | Only `%Y %m %d` date tokens are substituted; Python runs the mask through `strftime`, so any other code (`%H %b %A %j` …) works there but is left literal here. | Backlog #23 |
+| P8-3 | DIFF (low) | MainWindow.cpp replay | Replayed lines aren't dimmed (Python dims past messages); C++ uses `--- Log replay ---` header/footer instead of an "Ended <date>" divider. Cosmetic. | Backlog #24 |
+| P8-4 | DIFF (low) | logging | C++ logs raw text **with** mIRC codes (so replay re-renders colour); Python logs stripped plain text. Trade-off: colourful replay vs clean log files (control chars in logs). | NOTED |
+| SEC | OK | ChatLogStore.cpp safePathPart/logFilePath | **No log-path traversal**: separators, Windows-reserved chars, control chars (`\x00-\x1f`, incl. CR/LF/NUL) and leading dots are stripped, and each mask component skips `.`/`..`. A channel named `#../../x` can't escape the log dir. | VERIFIED |
+
+Checklist status: log mask %network/%channel + subfolders ✓ (date-token subset, P8-2);
+log files daily-per-target ✓; replay auto-on-open (gated on replay_log) + manual Tools action
+✓; replay_lines default fixed (P8-1); scrollback cap + keep-on-part in ChatBufferStore
+(ported, tasks done); muted buffers suppress notify but still log ✓; FloodGuard thresholds +
+window + friends/self exemption ✓; CR/LF log injection not reachable (IRC lines pre-split on
+\r\n; appendLine trims) ✓; **path traversal defended** ✓ (the security highlight — done right,
+unlike the DCC/comic length-trust bugs).
 
 ---
 
@@ -755,3 +774,5 @@ Big items deferred from phases. Each entry must be actionable cold: what, where,
 | 20 | 7 (S2) | MISS | Update checker | Help ▸ Check for Updates + optional quiet startup check (pref `update_check`). HTTPS GitHub releases API; **confirm the correct repo for the C++ port with the user before wiring the URL** (the Python one is IronWolve/MaxChat). No auto-download — link to the release page only. | OPEN |
 | 21 | 7 (S3a) | MISS | notify.wav playback | Replace the `QApplication::beep()` for `notify_sound` with a QSoundEffect player: play `<config>/sounds/notify.wav` (user's, else a bundled default if one ships) at low latency; fall back to beep if Multimedia/file absent. Port Python sounds.py SoundPlayer/notify_path. | OPEN |
 | 22 | 7 (S3b) | MISS | CTCP SOUND receive + play | Plumb a sound signal: IrcSession detect incoming CTCP `SOUND <file> [text]` → emit → IrcConnection → MainWindow; gate on the `ctcp_sound` pref; play only via an own-file-only resolver (basename, force `.wav`, must already exist in `<config>/sounds/` — never fetch). Mirror Python sounds.resolve(). | OPEN |
+| 23 | 8 (P8-2) | DIFF low | Full strftime tokens in log mask | ChatLogStore.logFilePath only maps %Y/%m/%d. Map the common strftime codes (%H %M %S %y %b %B %a %A %j %p) to QDateTime formats so masks match Python's `strftime`. | OPEN |
+| 24 | 8 (P8-3) | DIFF low | Dimmed replay + "Ended" divider | Render replayed log lines in a dimmed style and use an "Ended <date> <time>" divider (Python look) instead of the plain `--- Log replay ---` header/footer. | OPEN |

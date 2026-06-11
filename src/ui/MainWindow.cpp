@@ -1724,8 +1724,12 @@ void maxchat::ui::MainWindow::replayCurrentLog() {
 
     const QString network = currentLogNetwork();
     const QString target = currentLogTarget();
-    const QStringList lines =
-        m_chatLogStore.recentLines(network, target, m_replayLines > 0 ? m_replayLines : 100000);
+    // replay_lines == 0 means "a sensible default", not "everything" — Python
+    // uses 50. Dumping an entire multi-thousand-line log on every buffer open is
+    // both slow and unhelpful.
+    constexpr int DefaultReplayLines = 50;
+    const QStringList lines = m_chatLogStore.recentLines(
+        network, target, m_replayLines > 0 ? m_replayLines : DefaultReplayLines);
     if (lines.isEmpty()) {
         statusBar()->showMessage(
             QStringLiteral("No saved log lines for %1/%2.").arg(network, target));
