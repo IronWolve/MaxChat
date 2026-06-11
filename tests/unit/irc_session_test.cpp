@@ -337,21 +337,21 @@ private slots:
     QCOMPARE(changes.at(1).at(1).toString(), QStringLiteral("ally"));
   }
 
-  void awayNotifyEmitsReadableText() {
+  void awayNotifyEmitsSignalOnlyNotChatSpam() {
+    // away-notify drives the awayChanged signal (member dimming) but must NOT
+    // print a chat line per change — that spams busy channels (Python is silent).
     IrcSession session;
     QSignalSpy replies(&session, &IrcSession::replyText);
+    QSignalSpy away(&session, &IrcSession::awayChanged);
 
     session.handleLine(QStringLiteral(":alice!u@h AWAY :Out for lunch"));
     session.handleLine(QStringLiteral(":alice!u@h AWAY"));
 
-    QStringList lines;
-    for (const QList<QVariant> &reply : replies) {
-      lines.append(reply.at(0).toString());
-    }
-    QCOMPARE(lines, QStringList({
-                        QStringLiteral("[away] alice is away: Out for lunch"),
-                        QStringLiteral("[away] alice is back."),
-                    }));
+    QCOMPARE(replies.count(), 0);
+    QCOMPARE(away.count(), 2);
+    QCOMPARE(away.at(0).at(0).toString(), QStringLiteral("alice"));
+    QCOMPARE(away.at(0).at(1).toBool(), true);  // away
+    QCOMPARE(away.at(1).at(1).toBool(), false); // back
   }
 
   void privmsgNoticeAndActionsEmitMessageSignal() {
