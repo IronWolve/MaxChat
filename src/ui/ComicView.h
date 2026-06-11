@@ -19,8 +19,12 @@ class ComicView final : public QWidget {
     [[nodiscard]] QPixmap sheet() const; // all panels composited (for Save/Copy)
     [[nodiscard]] bool hasPanels() const { return !panels_.isEmpty(); }
 
+  signals:
+    void saveRequested(); // user picked "Save comic…" from the context menu
+
   protected:
     void paintEvent(QPaintEvent* event) override;
+    void contextMenuEvent(QContextMenuEvent* event) override;
 
   private:
     QVector<QPixmap> panels_;

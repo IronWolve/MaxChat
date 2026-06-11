@@ -1,5 +1,9 @@
 #include "ui/ComicView.h"
 
+#include <QApplication>
+#include <QClipboard>
+#include <QContextMenuEvent>
+#include <QMenu>
 #include <QPainter>
 
 #include <cmath>
@@ -94,6 +98,22 @@ QPixmap ComicView::sheet() const {
     }
     p.end();
     return QPixmap::fromImage(img);
+}
+
+void ComicView::contextMenuEvent(QContextMenuEvent* event) {
+    if (panels_.isEmpty()) {
+        return;
+    }
+    QMenu menu(this);
+    menu.addAction(QStringLiteral("Copy comic"), this, [this]() {
+        const QPixmap composed = sheet();
+        if (!composed.isNull()) {
+            QApplication::clipboard()->setPixmap(composed);
+        }
+    });
+    menu.addAction(QStringLiteral("Save comic as PNG..."), this,
+                   [this]() { emit saveRequested(); });
+    menu.exec(event->globalPos());
 }
 
 } // namespace maxchat::ui
