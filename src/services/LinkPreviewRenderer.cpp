@@ -63,8 +63,12 @@ QString renderOpenGraphPreviewHtml(const LinkPreviewCandidate &candidate,
     return {};
   }
 
+  // For X posts the fetch URL is the fxtwitter proxy; the click-through must be
+  // the original x.com link the user typed, not the proxy or its canonical.
   const QUrl targetUrl =
-      card.canonicalUrl.isValid() ? card.canonicalUrl : candidate.fetchUrl;
+      candidate.kind == LinkPreviewKind::XPost
+          ? candidate.originalUrl
+          : (card.canonicalUrl.isValid() ? card.canonicalUrl : candidate.fetchUrl);
   if (!targetUrl.isValid()) {
     return {};
   }

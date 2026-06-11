@@ -171,6 +171,29 @@ LinkPreviewCandidate makeCandidate(LinkPreviewKind kind, const QUrl &url,
   return candidate;
 }
 
+// x.com / twitter.com ship a JS shell with no OpenGraph tags, so fetching them
+// directly yields an empty card. FixTweet (fxtwitter.com) serves proper OG meta
+// for tweet embeds — rewrite the *fetch* URL to it. Display/click-through still
+// use the original x.com URL (candidate.originalUrl).
+QUrl xPostFetchUrl(const QUrl &url) {
+  const QString path = normalizedPath(url);
+  static const QRegularExpression iWebStatus(
+      QStringLiteral(R"(^/i/web/status/([0-9]+))"));
+  const QRegularExpressionMatch iWeb = iWebStatus.match(path);
+  if (iWeb.hasMatch()) {
+    return QUrl(
+        QStringLiteral("https://fxtwitter.com/i/status/%1").arg(iWeb.captured(1)));
+  }
+  static const QRegularExpression userStatus(
+      QStringLiteral(R"(^/([^/]+)/status(?:es)?/([0-9]+))"));
+  const QRegularExpressionMatch user = userStatus.match(path);
+  if (user.hasMatch()) {
+    return QUrl(QStringLiteral("https://fxtwitter.com/%1/status/%2")
+                   .arg(user.captured(1), user.captured(2)));
+  }
+  return url;
+}
+
 } // namespace
 
 bool LinkPreviewCandidate::isPreviewable() const {
