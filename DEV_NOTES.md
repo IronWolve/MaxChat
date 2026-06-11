@@ -4,6 +4,25 @@ Internal notes for this port. Not shipped.
 
 ## THINGS I GOT WRONG
 
+- **2026-06-10 — Scripting/SoundPlayer includes landed inside `#ifdef
+  MAXCHAT_WITH_HUNSPELL` in MainWindow.h.** Successive include edits anchored on
+  the spell include, which was already inside the hunspell guard, so
+  `scripting/LuaEngine.h`, `ScriptHost.h`, and `ui/SoundPlayer.h` only got
+  included when hunspell was found. The Linux dev box always has hunspell, so it
+  compiled there; the Windows/MinGW build (no hunspell) failed with
+  `'maxchat::scripting' has not been declared`. Fixed by moving those includes
+  out of the guard. **Lesson:** the dev box's hunspell hides `#ifdef
+  MAXCHAT_WITH_HUNSPELL` regressions — verify with
+  `-DCMAKE_DISABLE_FIND_PACKAGE_PkgConfig=ON` to mirror the no-hunspell (Windows)
+  config before declaring a build green.
+- **2026-06-10 — The Edit tool rewrote `build.bat` with LF endings.** cmd.exe
+  seeks batch labels by byte offset, so LF-only files make a later `call :label`
+  (here `copy_assets`, near EOF) fail with "cannot find the batch label
+  specified" while earlier labels still work. Fixed by restoring CRLF and having
+  `sync-to-win.sh` force CRLF on the synced `build.bat`. **Lesson:** never let a
+  `.bat` go out with LF; the sync now guarantees CRLF regardless of the repo
+  file's endings.
+
 - **2026-06-10 — Two injection gaps found in the cross-cutting sweep (audit
   phase 10).** (1) `sendRaw` appended `\r\n` but didn't strip embedded CR/LF, so
   a lone `\r` mid-message (CR-only paste survives `trimmed()`) could split a
