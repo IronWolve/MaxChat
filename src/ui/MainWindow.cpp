@@ -3622,6 +3622,7 @@ void maxchat::ui::MainWindow::handleDisconnected(const QString& reason) {
     const bool wasRegistered = m_registered;
     m_registered = false;
     m_registeredByNetwork.insert(activeNetworkName(), false);
+    rebuildNetworkTree(); // reflect the offline state in the tree right away
     m_connectionUptimeRunning = false;
     m_connectionUptimeStartMsByNetwork.remove(activeNetworkName());
     m_connectionPlansByNetwork.insert(activeNetworkName(), m_connectionPlan);
@@ -7043,12 +7044,23 @@ void maxchat::ui::MainWindow::rebuildNetworkTree() {
             continue;
         }
         const bool active = cleanNetwork.compare(activeNetworkName(), Qt::CaseInsensitive) == 0;
+        const maxchat::irc::IrcConnection* conn = connectionForNetwork(cleanNetwork);
+        const bool online =
+            networkRegistered(cleanNetwork) || (conn != nullptr && conn->isConnected());
         const QString status = networkRegistered(cleanNetwork) ? QStringLiteral("Connected")
-                               : active                        ? QStringLiteral("Connecting")
+                               : online                        ? QStringLiteral("Connecting")
                                                                : QStringLiteral("Disconnected");
-        auto* rootItem = newTreeItem(treeDisplayLabelForNetwork(cleanNetwork),
-                                     QStringLiteral("server"), cleanNetwork);
+        // A disconnected network STAYS in the tree (only "Close" removes it), but
+        // is marked offline + greyed so the state is visible — Python parity.
+        QString label = treeDisplayLabelForNetwork(cleanNetwork);
+        if (!online) {
+            label += QStringLiteral(" (offline)");
+        }
+        auto* rootItem = newTreeItem(label, QStringLiteral("server"), cleanNetwork);
         rootItem->setToolTip(0, status);
+        if (!online) {
+            rootItem->setForeground(0, QColor(0x9a, 0xa0, 0xa6));
+        }
         if (active && currentTargetForNetwork(cleanNetwork).trimmed().isEmpty()) {
             m_networkTree->setCurrentItem(rootItem);
         }
