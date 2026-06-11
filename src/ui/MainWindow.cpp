@@ -7334,19 +7334,20 @@ void maxchat::ui::MainWindow::configureSpellcheck(const QVariantMap& settings) {
     const QString backend =
         settings.value(QStringLiteral("spellcheck_backend"), QStringLiteral("internal")).toString();
 
+    const bool osRequested = (backend == QStringLiteral("os"));
+    bool osUnavailable = false;
+
     // OS engine — independent of the (Linux-only) Hunspell build option.
-    if (backend == QStringLiteral("os")) {
+    if (osRequested) {
         m_spellchecker = maxchat::spell::createOsSpeller(languageCode);
         if (m_spellchecker != nullptr && m_spellchecker->isLoaded()) {
             wireActiveSpeller();
             return;
         }
-        statusBar()->showMessage(
-            QStringLiteral("OS spell engine unavailable; using the internal dictionary."));
-        // fall through to the internal engine
+        osUnavailable = true; // not built in / unsupported — fall through; message below
     }
 
-    // Internal engine: bundled Hunspell dictionaries.
+    // Internal engine: Hunspell + an on-disk dictionary (dictionaries/ folder).
 #ifdef MAXCHAT_WITH_HUNSPELL
     const QList<maxchat::spell::SpellcheckLanguage> languages =
         maxchat::spell::spellcheckLanguages();
@@ -7364,23 +7365,34 @@ void maxchat::ui::MainWindow::configureSpellcheck(const QVariantMap& settings) {
     }
     if (languageIt == languages.cend() || !languageIt->dictionaryAvailable()) {
         disableSpell();
+        statusBar()->showMessage(
+            osRequested ? QStringLiteral("OS spell engine isn't in this build (rebuild with "
+                                         "build.bat osspell), and no internal dictionary was found.")
+                        : QStringLiteral("No spelling dictionary found — add a .aff/.dic to the "
+                                         "'dictionaries' folder."));
         return;
     }
     auto hunspell = std::make_unique<maxchat::spell::HunspellSpellchecker>();
     if (!hunspell->loadDictionary(languageIt->affPath, languageIt->dicPath)) {
         disableSpell();
+        statusBar()->showMessage(QStringLiteral("Failed to load the spelling dictionary."));
         return;
     }
     m_spellchecker = std::move(hunspell);
     wireActiveSpeller();
-#else
-    // No internal engine in this build (e.g. the Windows build without Hunspell).
-    disableSpell();
-    if (backend != QStringLiteral("os")) {
+    if (osUnavailable) {
         statusBar()->showMessage(QStringLiteral(
-            "Spellcheck has no internal dictionary in this build — choose the OS "
-            "engine in Preferences ▸ Localization."));
+            "OS spell engine isn't in this build; using the internal dictionary "
+            "(rebuild with build.bat osspell for the native engine)."));
     }
+#else
+    // No internal engine compiled in (e.g. the Windows build without Hunspell).
+    disableSpell();
+    statusBar()->showMessage(
+        osRequested
+            ? QStringLiteral("OS spell engine isn't in this build — rebuild with build.bat osspell.")
+            : QStringLiteral("Spellcheck has no internal engine in this build — use the OS engine "
+                             "(build.bat osspell)."));
 #endif
 }
 
