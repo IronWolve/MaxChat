@@ -2352,6 +2352,15 @@ void maxchat::ui::MainWindow::appendReplyLineForNetwork(const QString& network, 
     }
 
     QString target = replyTextTarget(line);
+    // CTCP replies (VERSION / TIME / PING / CLIENTINFO …) surface in the window
+    // you're looking at — like other clients, and matching Python's
+    // _on_ctcp_reply(_active_target). Otherwise they vanish into the server tab.
+    if (label == QStringLiteral("ctcp")) {
+        const QString active = currentTargetForNetwork(network).trimmed();
+        if (!active.isEmpty() && !isTreeStatusTarget(active)) {
+            target = active;
+        }
+    }
     if (target.trimmed().isEmpty()) {
         target = QStringLiteral("server");
     }
