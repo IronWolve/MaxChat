@@ -368,7 +368,10 @@ QVariantMap SettingsStore::defaultSettings() {
   settings.insert(QStringLiteral("shortcuts"), QVariantMap());
   settings.insert(QStringLiteral("looks"), QVariantMap());
   // Quietly check GitHub Releases for a newer build shortly after launch.
-  settings.insert(QStringLiteral("update_check"), true);
+  // TODO(release): flip this default to true when going live (it's off for now
+  // so pre-release builds don't poll GitHub). The Notifications pref + Help >
+  // Check for Updates already work; only the auto-on-startup default is gated.
+  settings.insert(QStringLiteral("update_check"), false);
   // Lua script capabilities — all off by default (scripts start fully sandboxed).
   QVariantMap scriptPerms;
   scriptPerms.insert(QStringLiteral("read"), false);

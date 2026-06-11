@@ -868,7 +868,7 @@ MainWindow::MainWindow(QWidget* parent)
     setWindowIcon(QIcon(QStringLiteral(":/icons/maxchat.ico")));
     resize(1100, 720);
 
-    if (m_settings.loadWithDefaults().value(QStringLiteral("update_check"), true).toBool()) {
+    if (m_settings.loadWithDefaults().value(QStringLiteral("update_check"), false).toBool()) {
         QTimer::singleShot(3500, this, [this]() { checkForUpdates(/*manual=*/false); });
     }
 

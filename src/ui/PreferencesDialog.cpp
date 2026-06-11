@@ -618,6 +618,15 @@ void PreferencesDialog::buildNotificationsTab(QWidget* tab) {
     minimizeToTray_ = new QCheckBox(tab);
     minimizeToTray_->setChecked(settings_.value(QStringLiteral("minimize_to_tray"), false).toBool());
 
+    // Check for updates on startup (off until the public release — see the
+    // update_check default in SettingsStore for the TODO to flip it on).
+    updateCheck_ = new QCheckBox(tab);
+    updateCheck_->setObjectName(QStringLiteral("updateCheck"));
+    updateCheck_->setChecked(settings_.value(QStringLiteral("update_check"), false).toBool());
+    updateCheck_->setToolTip(QStringLiteral(
+        "Quietly check GitHub Releases for a newer MaxChat shortly after launch. "
+        "Help > Check for Updates works regardless of this setting."));
+
     form->addRow(QStringLiteral("Do Not Disturb"), dnd_);
     form->addRow(QStringLiteral("Popup style"), notifyPopup_);
     form->addRow(QStringLiteral("Notify on PMs"), notifyPm_);
@@ -631,6 +640,7 @@ void PreferencesDialog::buildNotificationsTab(QWidget* tab) {
     form->addRow(QStringLiteral("Sound on notification"), notifySound_);
     form->addRow(QStringLiteral("Play CTCP sounds"), ctcpSound_);
     form->addRow(QStringLiteral("Minimize to tray"), minimizeToTray_);
+    form->addRow(QStringLiteral("Check for updates on startup"), updateCheck_);
 
     // Test notification button
     auto* testBtn = new QPushButton(QStringLiteral("Test notification"), tab);
@@ -1051,9 +1061,6 @@ void PreferencesDialog::buildMessagesTab(QWidget* tab) {
     confirmQuit_ = new QCheckBox(QString(), tab);
     confirmQuit_->setObjectName(QStringLiteral("confirmQuit"));
     confirmQuit_->setChecked(settings_.value(QStringLiteral("confirm_quit"), true).toBool());
-    updateCheck_ = new QCheckBox(QString(), tab);
-    updateCheck_->setObjectName(QStringLiteral("updateCheck"));
-    updateCheck_->setChecked(settings_.value(QStringLiteral("update_check"), true).toBool());
     scrollback_ = new QSpinBox(tab);
     scrollback_->setObjectName(QStringLiteral("scrollback"));
     scrollback_->setRange(100, 100000);
@@ -1072,7 +1079,6 @@ void PreferencesDialog::buildMessagesTab(QWidget* tab) {
     form->addRow(QStringLiteral("Hide CTCP VERSION replies"), hideVersion_);
     form->addRow(QStringLiteral("Custom CTCP VERSION"), ctcpVersion_);
     form->addRow(QStringLiteral("Confirm before quitting"), confirmQuit_);
-    form->addRow(QStringLiteral("Check for updates on startup"), updateCheck_);
     form->addRow(QStringLiteral("Scrollback (lines)"), scrollback_);
     root->addLayout(form);
     root->addStretch(1);
