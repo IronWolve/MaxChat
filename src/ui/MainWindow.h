@@ -10,11 +10,11 @@
 #include "irc/IrcConnection.h"
 #include "services/LinkPreviewPolicy.h"
 #include "services/OpenGraphFetcher.h"
-#ifdef MAXCHAT_WITH_HUNSPELL
 #include "scripting/LuaEngine.h"
 #include "scripting/ScriptHost.h"
-#include "spell/HunspellSpellchecker.h"
 #include "ui/SoundPlayer.h"
+#ifdef MAXCHAT_WITH_HUNSPELL
+#include "spell/HunspellSpellchecker.h"
 #endif
 
 #include <QElapsedTimer>

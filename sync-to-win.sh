@@ -52,6 +52,13 @@ for file in \
   copy_file "$file"
 done
 
+# build.bat must have CRLF endings on Windows: cmd.exe seeks labels by byte
+# offset, and LF-only files make later `call :label`s (e.g. copy_assets) fail.
+# Force it on the synced copy regardless of the repo file's endings.
+if [[ -f "$TARGET_DIR/build.bat" ]]; then
+  sed -i 's/\r\?$/\r/' "$TARGET_DIR/build.bat"
+fi
+
 # The packaged app reads themes/ and wallpapers/ from disk next to the exe
 # (fonts/sounds/icons are embedded). Refresh an existing dist-win so new or
 # edited assets show up without rerunning build.bat.
