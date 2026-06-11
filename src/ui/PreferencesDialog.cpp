@@ -49,13 +49,6 @@ QSpinBox* fontSizeSpinBox(QWidget* parent, int value) {
     return spin;
 }
 
-QCheckBox* plannedCheckBox(QWidget* parent, const QString& label) {
-    auto* box = new QCheckBox(QStringLiteral("%1 (planned)").arg(label), parent);
-    box->setEnabled(false);
-    box->setToolTip(QStringLiteral("Planned - not implemented in the C++ port yet."));
-    return box;
-}
-
 qint64 directorySizeBytes(const QString& path) {
     if (path.isEmpty() || !QDir(path).exists()) {
         return 0;

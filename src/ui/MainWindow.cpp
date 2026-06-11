@@ -2064,8 +2064,11 @@ void maxchat::ui::MainWindow::openScriptsManager() {
             QDir(scriptsDir).entryInfoList({QStringLiteral("*.lua")}, QDir::Files, QDir::Name);
         for (const QFileInfo& fi : files) {
             const QString name = fi.completeBaseName();
+            // Show the full filename (foo.lua) so it reads as a Lua script; the
+            // base name (used by load/unload) lives in UserRole.
+            const QString display = fi.fileName();
             auto* item = new QListWidgetItem(
-                loaded.contains(name) ? QStringLiteral("%1   [loaded]").arg(name) : name);
+                loaded.contains(name) ? QStringLiteral("%1   [loaded]").arg(display) : display);
             item->setData(Qt::UserRole, name);
             list->addItem(item);
         }
