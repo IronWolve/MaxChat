@@ -12,6 +12,7 @@ namespace maxchat::ui {
 
 // Pure formatters, exposed for unit testing.
 [[nodiscard]] QString formatUptime(qint64 seconds);
-[[nodiscard]] QString formatGiB(quint64 bytes);
+[[nodiscard]] QString formatGiB(quint64 bytes);   // always GB (used for RAM)
+[[nodiscard]] QString formatSize(quint64 bytes);  // GB, or TB for large drives
 
 } // namespace maxchat::ui

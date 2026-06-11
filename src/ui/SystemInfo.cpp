@@ -44,6 +44,14 @@ QString formatGiB(quint64 bytes) {
     return QStringLiteral("%1 GB").arg(gib, 0, 'f', 1);
 }
 
+QString formatSize(quint64 bytes) {
+    const double gib = static_cast<double>(bytes) / (1024.0 * 1024.0 * 1024.0);
+    if (gib >= 1024.0) {
+        return QStringLiteral("%1 TB").arg(gib / 1024.0, 0, 'f', 1);
+    }
+    return QStringLiteral("%1 GB").arg(gib, 0, 'f', 1);
+}
+
 namespace {
 
 QString osName() {
@@ -196,26 +204,60 @@ QString screenRes() {
     return QStringLiteral("%1x%2").arg(size.width()).arg(size.height());
 }
 
-QString networkDrives() {
+bool isNetworkVolume(const QStorageInfo& volume) {
+#if defined(Q_OS_WIN)
+    const QString winRoot =
+        QString(volume.rootPath()).replace(QLatin1Char('/'), QLatin1Char('\\'));
+    return GetDriveTypeW(reinterpret_cast<const wchar_t*>(winRoot.utf16())) == DRIVE_REMOTE;
+#else
+    static const QStringList netFs = {QStringLiteral("nfs"),    QStringLiteral("nfs4"),
+                                      QStringLiteral("cifs"),   QStringLiteral("smbfs"),
+                                      QStringLiteral("smb3"),   QStringLiteral("fuse.sshfs")};
+    return netFs.contains(QString::fromUtf8(volume.fileSystemType()));
+#endif
+}
+
+// A short label for a mounted volume: "C:" on Windows, the mount point elsewhere.
+QString volumeLabel(const QStorageInfo& volume) {
+    const QString root = volume.rootPath();
+#if defined(Q_OS_WIN)
+    if (root.size() >= 2 && root.at(1) == QLatin1Char(':')) {
+        return root.left(2); // "C:/" -> "C:"
+    }
+#endif
+    return root;
+}
+
+// Every mounted real drive with size + free; network drives tagged "(net)".
+QString drivesText() {
+#if !defined(Q_OS_WIN)
+    // Skip Linux pseudo-filesystems so the list shows actual disks, not the dozens
+    // of tmpfs/proc/snap mounts.
+    static const QStringList pseudoFs = {
+        QStringLiteral("tmpfs"),      QStringLiteral("devtmpfs"),  QStringLiteral("squashfs"),
+        QStringLiteral("overlay"),    QStringLiteral("proc"),      QStringLiteral("sysfs"),
+        QStringLiteral("cgroup"),     QStringLiteral("cgroup2"),   QStringLiteral("debugfs"),
+        QStringLiteral("tracefs"),    QStringLiteral("autofs"),    QStringLiteral("mqueue"),
+        QStringLiteral("hugetlbfs"),  QStringLiteral("ramfs"),     QStringLiteral("fusectl"),
+        QStringLiteral("configfs"),   QStringLiteral("pstore"),    QStringLiteral("securityfs"),
+        QStringLiteral("efivarfs"),   QStringLiteral("bpf"),       QStringLiteral("binfmt_misc"),
+        QStringLiteral("devpts")};
+#endif
     QStringList drives;
     for (const QStorageInfo& volume : QStorageInfo::mountedVolumes()) {
-        if (!volume.isValid() || !volume.isReady()) {
+        if (!volume.isValid() || !volume.isReady() || volume.bytesTotal() <= 0) {
             continue;
         }
-#if defined(Q_OS_WIN)
-        const QString root = volume.rootPath();
-        const QString winRoot = QString(root).replace(QLatin1Char('/'), QLatin1Char('\\'));
-        if (GetDriveTypeW(reinterpret_cast<const wchar_t*>(winRoot.utf16())) == DRIVE_REMOTE) {
-            drives << root;
-        }
-#else
-        static const QStringList netFs = {QStringLiteral("nfs"),    QStringLiteral("nfs4"),
-                                          QStringLiteral("cifs"),   QStringLiteral("smbfs"),
-                                          QStringLiteral("smb3"),   QStringLiteral("fuse.sshfs")};
-        if (netFs.contains(QString::fromUtf8(volume.fileSystemType()))) {
-            drives << volume.rootPath();
+#if !defined(Q_OS_WIN)
+        if (pseudoFs.contains(QString::fromUtf8(volume.fileSystemType())) ||
+            volume.rootPath().startsWith(QStringLiteral("/snap"))) {
+            continue;
         }
 #endif
+        const QString tag = isNetworkVolume(volume) ? QStringLiteral(", net") : QString();
+        drives << QStringLiteral("%1 %2 (%3 free%4)")
+                      .arg(volumeLabel(volume), formatSize(static_cast<quint64>(volume.bytesTotal())),
+                           formatSize(static_cast<quint64>(volume.bytesAvailable())), tag);
     }
     return drives.join(QStringLiteral(", "));
 }
@@ -240,8 +282,8 @@ QString systemInfoLine() {
     if (const QString res = screenRes(); !res.isEmpty()) {
         fields << QStringLiteral("Res: %1").arg(res);
     }
-    if (const QString net = networkDrives(); !net.isEmpty()) {
-        fields << QStringLiteral("Net: %1").arg(net);
+    if (const QString drives = drivesText(); !drives.isEmpty()) {
+        fields << QStringLiteral("Drives: %1").arg(drives);
     }
     return QStringLiteral("[SysInfo] %1").arg(fields.join(QStringLiteral(" | ")));
 }

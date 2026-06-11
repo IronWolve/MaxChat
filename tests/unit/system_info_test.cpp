@@ -3,6 +3,7 @@
 #include <QtTest/QtTest>
 
 using maxchat::ui::formatGiB;
+using maxchat::ui::formatSize;
 using maxchat::ui::formatUptime;
 
 class SystemInfoTest final : public QObject {
@@ -25,6 +26,13 @@ class SystemInfoTest final : public QObject {
         QCOMPARE(formatGiB(quint64(32) * 1024 * 1024 * 1024), QStringLiteral("32.0 GB"));
         // ~14.2 GB
         QCOMPARE(formatGiB(quint64(15246485914)), QStringLiteral("14.2 GB"));
+    }
+
+    void sizeScalesToTb() {
+        QCOMPARE(formatSize(0), QStringLiteral("0.0 GB"));
+        QCOMPARE(formatSize(quint64(500) * 1024 * 1024 * 1024), QStringLiteral("500.0 GB"));
+        // 1 TB and up switch to TB units.
+        QCOMPARE(formatSize(quint64(2) * 1024 * 1024 * 1024 * 1024), QStringLiteral("2.0 TB"));
     }
 };
 
