@@ -863,6 +863,20 @@ Priority: `P1` clear win · `P2` nice to have · `P3` minor/architectural.
 | BP-9 | 5 | P2 | Cap pending DCC offers (BOTH) | Neither client limits incoming DCC offers → offer-spam DoS. Add a per-peer + global cap. | OPEN |
 | BP-10 | 10 | P3 | Strip CR/LF in send_raw (BOTH) | Neither client strips embedded CR/LF before appending the terminator. The C++ multi-line input made it reachable (now fixed there); Python's QLineEdit limits exposure but the defense-in-depth still applies — strip `\r`/`\n` in `IRCClient.send_raw`. | OPEN |
 
+### Feature backports (C++ → Python) — bidirectional audit 2026-06-11
+
+Whole features added/expanded in the C++ port that Python lacks. Mirror of the
+canonical table in `maxchat/DEVDOCS/BACKPORTS.md`.
+
+| ID | Pri | Feature | What Python needs | Status |
+|----|-----|---------|-------------------|--------|
+| FB-1 | P2 | Scripting overhaul | Expand `scripting.py` to the C++ api/hook surface (on_notice/part/quit/nick; send_raw/network/channels/nicks/strip/read_file/get/set/timer); add permission model + Preferences ▸ Scripts page + Scripts manager. Python keeps Python lang (D5); CPython sandbox = decision needed. | OPEN |
+| FB-2 | P3 | Preferences "Layout" page | Add a dedicated Layout page (list visibility, button bar, buffer tabs, separator, nick-col width, splitter) — Python has none. | OPEN |
+| FB-3 | P3 | Rich `/sysinfo` | Port OS/uptime/CPU/RAM/GPU/res/drives line + `/sysinfo send [#chan\|nick]`; Python has no rich sysinfo. | OPEN |
+
+> Not backports (C++ catching up): comic per-channel editor, sounds, update
+> checker, DCC rate/ETA, dimmed replay, window-title/nick — all Python-first.
+
 ---
 
 ## FIX BACKLOG
