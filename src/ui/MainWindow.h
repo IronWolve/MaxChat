@@ -14,9 +14,7 @@
 #include "scripting/LuaEngine.h"
 #include "scripting/ScriptHost.h"
 #include "ui/SoundPlayer.h"
-#ifdef MAXCHAT_WITH_HUNSPELL
-#include "spell/Speller.h"
-#endif
+#include "spell/Speller.h" // backend-neutral; OS speller works without Hunspell
 
 #include <QElapsedTimer>
 #include <QHash>
@@ -483,9 +481,9 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     QLabel* m_topicLabel = nullptr;
     QTextEdit* m_input = nullptr;
     SpellcheckHighlighter* m_spellcheckHighlighter = nullptr;
-#ifdef MAXCHAT_WITH_HUNSPELL
-    std::unique_ptr<maxchat::spell::Speller> m_spellchecker; // internal (Hunspell) or OS engine
-#endif
+    // Active speller (internal Hunspell or native OS engine) — declared
+    // unconditionally so the OS backend works on builds without Hunspell.
+    std::unique_ptr<maxchat::spell::Speller> m_spellchecker;
     QPointer<ChatFindDialog> m_chatFindDialog;
     QPointer<BanListDialog> m_banListDialog;
     QPointer<ChannelListDialog> m_channelListDialog;
