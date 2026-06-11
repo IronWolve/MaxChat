@@ -144,6 +144,8 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
                          const QString& file, const QString& text);
     // /scripts (list) and /load /unload /reload <name>.
     void handleScriptsCommand(const QString& command, const QString& arg);
+    void openScriptsManager();
+    void seedBundledScripts(const QString& destDir); // copy examples on first run
     void leaveCurrentChannel();
     void replayCurrentLog();
     void markAllRead();
@@ -196,7 +198,6 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     void setAliasCommand(const QString& name, const QString& expansion);
     void removeAliasCommand(const QString& name);
     [[nodiscard]] QString systemInfoText() const;
-    void showScriptsPlaceholder(const QString& command);
     void showCommandHelp(const QString& topic = {});
     void appendReplyLineForNetwork(const QString& network, const QString& line);
     void appendReplyLine(const QString& line);
