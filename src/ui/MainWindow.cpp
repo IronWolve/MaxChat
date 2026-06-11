@@ -55,6 +55,7 @@
 #include <QDesktopServices>
 #include <QColor>
 #include <QDateTime>
+#include <QCoreApplication>
 #include <QDir>
 #include <QElapsedTimer>
 #include <QEvent>
@@ -1432,7 +1433,15 @@ void maxchat::ui::MainWindow::openPreferences() {
         if (testSettings.value(QStringLiteral("dnd"), false).toBool()) return;
 
         if (flash) QApplication::alert(this, 0);
-        if (sound) QApplication::beep();
+        if (sound) {
+            const QString soundsDir =
+                QDir(m_settings.paths().configDir).filePath(QStringLiteral("sounds"));
+            const QString bundled = QDir(QCoreApplication::applicationDirPath())
+                                        .filePath(QStringLiteral("assets/sounds"));
+            if (!m_soundPlayer.play(notifySoundPath(soundsDir, bundled))) {
+                QApplication::beep();
+            }
+        }
 
         if (style == QLatin1String("off")) return;
 
@@ -1787,6 +1796,34 @@ void maxchat::ui::MainWindow::checkForUpdates(bool manual) {
             QMessageBox::information(this, QStringLiteral("Check for Updates"), msg);
         }
     });
+}
+
+void maxchat::ui::MainWindow::handleCtcpSound(const QString& network, const QString& sender,
+                                              const QString& target, const QString& file,
+                                              const QString& text) {
+    // A PM SOUND lands under the sender's buffer; a channel SOUND under the
+    // channel (Python parity).
+    const bool isPm = !isChannelTarget(target);
+    const QString buffer = isPm ? sender : (target.isEmpty() ? QStringLiteral("server") : target);
+
+    // Always show the action line — even with playback off or the file missing.
+    const QString action =
+        !text.isEmpty()
+            ? text
+            : (file.isEmpty() ? QStringLiteral("plays a sound") : QStringLiteral("plays %1").arg(file));
+    appendSystemLineToNetworkTarget(network, buffer,
+                                    QStringLiteral("* %1 %2").arg(sender, action));
+
+    // Play only when the feature is on AND the named .wav already exists locally.
+    const QVariantMap settings = m_settings.loadWithDefaults();
+    if (file.isEmpty() || !settings.value(QStringLiteral("ctcp_sound"), false).toBool()) {
+        return;
+    }
+    const QString soundsDir = QDir(m_settings.paths().configDir).filePath(QStringLiteral("sounds"));
+    const QString path = resolveSoundPath(soundsDir, file);
+    if (!path.isEmpty()) {
+        m_soundPlayer.play(path);
+    }
 }
 
 void maxchat::ui::MainWindow::leaveCurrentChannel() {
@@ -2910,6 +2947,11 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
     connect(irc, &maxchat::irc::IrcConnection::dccRequest, this,
             [this, runInContext](const QString& sender, const QString& args) {
                 runInContext([&]() { m_dccManager->handleIncoming(sender, args); });
+            });
+    connect(irc, &maxchat::irc::IrcConnection::ctcpSound, this,
+            [this, signalNetwork](const QString& sender, const QString& target, const QString& file,
+                                  const QString& text) {
+                handleCtcpSound(signalNetwork, sender, target, file, text);
             });
     connect(irc, &maxchat::irc::IrcConnection::invited, this,
             [this, runInContext](const QString& sender, const QString& channel,
@@ -7096,9 +7138,16 @@ void maxchat::ui::MainWindow::notify(const QString& title, const QString& text,
         QApplication::alert(this, 0);
     }
 
-    // Sound
+    // Sound — the user's notify.wav (or a bundled default) via QSoundEffect,
+    // falling back to the system beep if no .wav is available.
     if (m_notifySound) {
-        QApplication::beep();
+        const QString soundsDir =
+            QDir(m_settings.paths().configDir).filePath(QStringLiteral("sounds"));
+        const QString bundled = QDir(QCoreApplication::applicationDirPath())
+                                    .filePath(QStringLiteral("assets/sounds"));
+        if (!m_soundPlayer.play(notifySoundPath(soundsDir, bundled))) {
+            QApplication::beep();
+        }
     }
 
     // Popup style

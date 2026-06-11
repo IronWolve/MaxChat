@@ -220,6 +220,8 @@ qt_add_executable(maxchat-c
     src/ui/ToastWidget.h
     src/ui/Notifier.cpp
     src/ui/Notifier.h
+    src/ui/SoundPlayer.cpp
+    src/ui/SoundPlayer.h
     resources/maxchat.qrc
 )
 
@@ -576,6 +578,25 @@ target_link_libraries(url_detector_test
 
 add_test(NAME url_detector COMMAND url_detector_test)
 
+qt_add_executable(sound_player_test
+    tests/unit/sound_player_test.cpp
+    src/ui/SoundPlayer.cpp
+    src/ui/SoundPlayer.h
+)
+
+target_include_directories(sound_player_test
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(sound_player_test
+    PRIVATE
+        Qt6::Test
+        Qt6::Multimedia
+)
+
+add_test(NAME sound_player COMMAND sound_player_test)
+
 qt_add_executable(chat_log_store_test
     tests/unit/chat_log_store_test.cpp
 )
@@ -864,6 +885,8 @@ qt_add_executable(main_window_link_preview_test
     src/ui/ToastWidget.h
     src/ui/Notifier.cpp
     src/ui/Notifier.h
+    src/ui/SoundPlayer.cpp
+    src/ui/SoundPlayer.h
     resources/maxchat.qrc
 )
 
