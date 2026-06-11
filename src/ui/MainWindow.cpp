@@ -1906,6 +1906,41 @@ QStringList maxchat::ui::MainWindow::scriptNicks(const QString& network, const Q
     return m_chatBuffers.snapshot(bufferIdForNetworkTarget(net, tgt)).members;
 }
 
+void maxchat::ui::MainWindow::handleScriptsCommand(const QString& command, const QString& arg) {
+    if (!maxchat::scripting::LuaEngine::available()) {
+        appendSystemLine(QStringLiteral("! This build has no scripting support."));
+        return;
+    }
+    const QString scriptsDir =
+        QDir(m_settings.paths().configDir).filePath(QStringLiteral("scripts"));
+
+    if (command == QStringLiteral("scripts")) {
+        const QStringList names = m_lua->loaded();
+        appendSystemLine(names.isEmpty()
+                             ? QStringLiteral("* No scripts loaded.")
+                             : QStringLiteral("* Loaded scripts: %1").arg(names.join(QStringLiteral(", "))));
+        appendSystemLine(QStringLiteral("* Scripts folder: %1").arg(scriptsDir));
+        return;
+    }
+
+    if (arg.isEmpty()) {
+        appendSystemLine(QStringLiteral("! Usage: /%1 <script>").arg(command));
+        return;
+    }
+    const QString name = QFileInfo(arg).completeBaseName(); // tolerate "foo" or "foo.lua"
+    if (command == QStringLiteral("load")) {
+        const QString path = QDir(scriptsDir).filePath(name + QStringLiteral(".lua"));
+        appendSystemLine(m_lua->load(path) ? QStringLiteral("* Loaded %1.").arg(name)
+                                           : QStringLiteral("! Could not load %1.").arg(name));
+    } else if (command == QStringLiteral("unload")) {
+        appendSystemLine(m_lua->unload(name) ? QStringLiteral("* Unloaded %1.").arg(name)
+                                             : QStringLiteral("! %1 is not loaded.").arg(name));
+    } else if (command == QStringLiteral("reload")) {
+        appendSystemLine(m_lua->reload(name) ? QStringLiteral("* Reloaded %1.").arg(name)
+                                             : QStringLiteral("! Could not reload %1.").arg(name));
+    }
+}
+
 void maxchat::ui::MainWindow::leaveCurrentChannel() {
     const QString channel = m_currentTarget.trimmed();
     if (!connection().isConnected()) {
@@ -3577,6 +3612,19 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
         return;
     }
 
+    // Give scripts first crack at any /command (after alias expansion). A
+    // script's on_command returning true consumes it.
+    if (aliasExpansion.commandLine.startsWith(QLatin1Char('/'))) {
+        const QString afterSlash = aliasExpansion.commandLine.mid(1);
+        const int space = afterSlash.indexOf(QLatin1Char(' '));
+        const QString cmd = space >= 0 ? afterSlash.left(space) : afterSlash;
+        const QString args = space >= 0 ? afterSlash.mid(space + 1) : QString();
+        if (!cmd.isEmpty() &&
+            m_lua->dispatch(QStringLiteral("on_command"), activeNetworkName(), {cmd, args})) {
+            return;
+        }
+    }
+
     const auto parsed = maxchat::irc::parseUserCommand(aliasExpansion.commandLine, m_currentTarget);
 
     if (parsed.type == maxchat::irc::UserCommandType::Clear) {
@@ -3668,7 +3716,7 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
         return;
     }
     if (parsed.type == maxchat::irc::UserCommandType::Scripts) {
-        showScriptsPlaceholder(parsed.command);
+        handleScriptsCommand(parsed.command, parsed.text.trimmed());
         return;
     }
     if (parsed.type == maxchat::irc::UserCommandType::Help) {
