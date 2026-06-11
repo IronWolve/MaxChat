@@ -647,6 +647,7 @@ class MainWindowLinkPreviewTest final : public QObject {
         };
 
         window.m_hasConnectionPlan = true;
+        window.m_registered = true; // a connected network — not "(offline)"
         window.m_connectionPlan.networkName = QStringLiteral("Libera.Chat");
         window.activateBufferTarget(QStringLiteral("#one"));
         window.rememberTarget(QStringLiteral("#two"));
@@ -931,6 +932,7 @@ class MainWindowLinkPreviewTest final : public QObject {
         QVERIFY(networkTree != nullptr);
 
         window.m_hasConnectionPlan = true;
+        window.m_registered = true; // a connected network — not "(offline)"
         window.m_connectionPlan.networkName = QStringLiteral("Libera.Chat");
         window.activateBufferTarget(QStringLiteral("#one"));
         window.rememberTarget(QStringLiteral("#two"));
@@ -959,6 +961,7 @@ class MainWindowLinkPreviewTest final : public QObject {
         QVERIFY(networkTree != nullptr);
 
         window.m_hasConnectionPlan = true;
+        window.m_registered = true; // a connected network — not "(offline)"
         window.m_connectionPlan.networkName = QStringLiteral("Libera.Chat");
         window.activateBufferTarget(QStringLiteral("#one"));
         window.rememberTarget(QStringLiteral("#two"));
