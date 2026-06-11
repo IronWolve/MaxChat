@@ -5669,7 +5669,15 @@ void maxchat::ui::MainWindow::openComicSettings() {
         bgs.append(it.key());
     }
     std::sort(bgs.begin(), bgs.end());
-    ComicSettingsDialog dialog(m_settings.loadWithDefaults(), stems, bgs, this);
+    // Per-channel overrides editor: offer every open channel as "net/target".
+    QStringList channelKeys;
+    for (const maxchat::core::ChatBufferId& id : m_chatBuffers.buffers()) {
+        if (id.kind == maxchat::core::ChatBufferKind::Channel) {
+            channelKeys.append(id.network + QStringLiteral("/") + id.target);
+        }
+    }
+    std::sort(channelKeys.begin(), channelKeys.end());
+    ComicSettingsDialog dialog(m_settings.loadWithDefaults(), stems, bgs, channelKeys, this);
     if (dialog.exec() != QDialog::Accepted) {
         return;
     }

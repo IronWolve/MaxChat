@@ -19,7 +19,8 @@ class ComicSettingsDialog final : public QDialog {
 
   public:
     ComicSettingsDialog(QVariantMap settings, const QStringList& characterStems,
-                        const QStringList& backgroundFiles, QWidget* parent = nullptr);
+                        const QStringList& backgroundFiles, const QStringList& channelKeys,
+                        QWidget* parent = nullptr);
 
     [[nodiscard]] QVariantMap settings() const;
 
@@ -27,7 +28,14 @@ class ComicSettingsDialog final : public QDialog {
     void artDirChanged(const QString& dir);
 
   private:
+    QWidget* buildChannelsPage();
+    void loadChannel(int index);
+    void saveCurrentChannel();
+
     QVariantMap settings_;
+    QStringList characterStems_;
+    QStringList backgroundFiles_;
+    QStringList channelKeys_;
     QLineEdit* artDir_ = nullptr;
     QComboBox* defaultBg_ = nullptr;
     QComboBox* selfChar_ = nullptr;
@@ -44,6 +52,15 @@ class ComicSettingsDialog final : public QDialog {
     QPlainTextEdit* botNicks_ = nullptr;
     QLineEdit* excludeRegex_ = nullptr;
     QPlainTextEdit* charMap_ = nullptr;
+
+    // Channels page (per-channel overrides keyed "net/target").
+    QComboBox* chanSelect_ = nullptr;
+    QWidget* chanHost_ = nullptr;       // editor widgets are rebuilt here on switch
+    QComboBox* chanBg_ = nullptr;       // current channel's background override
+    QPlainTextEdit* chanChars_ = nullptr;
+    QLineEdit* chanIgnore_ = nullptr;
+    QVariantMap chanWork_;              // working copy of comic_channels
+    int chanCurrentIndex_ = -1;
 };
 
 } // namespace maxchat::ui
