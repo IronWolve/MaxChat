@@ -6,6 +6,8 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QMetaType>
+#include <QVariant>
 
 #include <utility>
 
@@ -267,7 +269,35 @@ static int installApi(lua_State* L, LuaEngine* engine, const QString& dataDir) {
     return luaL_ref(L, LUA_REGISTRYINDEX); // pops the table
 }
 
-bool LuaEngine::callHook(ScriptState* state, const char* hook) {
+namespace {
+// Push a QVariant onto the Lua stack as the matching primitive (strings, numbers
+// and bools — the only types hooks pass). Anything else becomes nil.
+void pushVariant(lua_State* L, const QVariant& value) {
+    switch (value.typeId()) {
+    case QMetaType::Bool:
+        lua_pushboolean(L, value.toBool() ? 1 : 0);
+        break;
+    case QMetaType::Int:
+    case QMetaType::LongLong:
+        lua_pushinteger(L, static_cast<lua_Integer>(value.toLongLong()));
+        break;
+    case QMetaType::Double:
+    case QMetaType::Float:
+        lua_pushnumber(L, value.toDouble());
+        break;
+    default: {
+        if (value.isNull() || !value.isValid()) {
+            lua_pushnil(L);
+        } else {
+            const QByteArray s = value.toString().toUtf8();
+            lua_pushlstring(L, s.constData(), s.size());
+        }
+    }
+    }
+}
+} // namespace
+
+bool LuaEngine::callHook(ScriptState* state, const char* hook, const QVariantList& args) {
     lua_State* L = state->L;
     lua_getglobal(L, hook);
     if (lua_isfunction(L, -1) == 0) {
@@ -275,7 +305,10 @@ bool LuaEngine::callHook(ScriptState* state, const char* hook) {
         return false;
     }
     lua_rawgeti(L, LUA_REGISTRYINDEX, state->apiRef); // arg1 = api
-    if (lua_pcall(L, 1, 1, 0) != LUA_OK) {
+    for (const QVariant& arg : args) {
+        pushVariant(L, arg);
+    }
+    if (lua_pcall(L, 1 + static_cast<int>(args.size()), 1, 0) != LUA_OK) {
         reportError(state->name, QString::fromLatin1(hook),
                     QString::fromUtf8(lua_tostring(L, -1)));
         lua_pop(L, 1);
@@ -283,6 +316,20 @@ bool LuaEngine::callHook(ScriptState* state, const char* hook) {
     }
     const bool consumed = lua_toboolean(L, -1) != 0;
     lua_pop(L, 1);
+    return consumed;
+}
+
+bool LuaEngine::dispatch(const QString& hook, const QString& network, const QVariantList& args) {
+    setCurrentNetwork(network);
+    bool consumed = false;
+    const QByteArray hookName = hook.toUtf8();
+    // Copy the values: a hook could load/unload scripts and mutate the map.
+    const QList<ScriptState*> states = scripts_.values();
+    for (ScriptState* state : states) {
+        if (callHook(state, hookName.constData(), args)) {
+            consumed = true;
+        }
+    }
     return consumed;
 }
 
@@ -403,7 +450,11 @@ QString LuaEngine::hostNetwork() {
     return {};
 }
 
-bool LuaEngine::callHook(ScriptState*, const char*) {
+bool LuaEngine::callHook(ScriptState*, const char*, const QVariantList&) {
+    return false;
+}
+
+bool LuaEngine::dispatch(const QString&, const QString&, const QVariantList&) {
     return false;
 }
 

@@ -44,19 +44,21 @@ if(MAXCHAT_LUA)
     set_target_properties(maxchat_lua PROPERTIES C_STANDARD 99)
     # No LUA_USE_POSIX/DLL: the dlopen-based `require`/loadlib stays inert, which
     # suits the script sandbox. Build as portable ANSI C.
+endif()
 
-    # The scripting engine: GUI-free, so it can be unit-tested with a fake host.
-    add_library(maxchat_scripting STATIC
-        src/scripting/LuaEngine.cpp
-        src/scripting/LuaEngine.h
-        src/scripting/ScriptHost.h
-    )
-    target_include_directories(maxchat_scripting PUBLIC
-         "${CMAKE_CURRENT_SOURCE_DIR}/src")
+# The scripting engine is ALWAYS built so the app links one stable target; when
+# MAXCHAT_LUA is off, LuaEngine.cpp compiles to inert stubs (no Lua linked).
+add_library(maxchat_scripting STATIC
+    src/scripting/LuaEngine.cpp
+    src/scripting/LuaEngine.h
+    src/scripting/ScriptHost.h
+)
+target_include_directories(maxchat_scripting PUBLIC
+     "${CMAKE_CURRENT_SOURCE_DIR}/src")
+target_link_libraries(maxchat_scripting PUBLIC Qt6::Core)
+if(MAXCHAT_LUA)
     target_compile_definitions(maxchat_scripting PUBLIC MAXCHAT_LUA=1)
-    target_link_libraries(maxchat_scripting
-        PUBLIC Qt6::Core
-        PRIVATE maxchat_lua)
+    target_link_libraries(maxchat_scripting PRIVATE maxchat_lua)
 endif()
 
 add_library(maxchat_core STATIC
@@ -267,6 +269,7 @@ target_link_libraries(maxchat-c
         maxchat_network
         maxchat_services
         maxchat_spell
+        maxchat_scripting
         Qt6::Widgets
         Qt6::Multimedia
         Qt6::MultimediaWidgets
@@ -927,6 +930,7 @@ target_link_libraries(main_window_link_preview_test
         maxchat_network
         maxchat_services
         maxchat_spell
+        maxchat_scripting
         Qt6::Widgets
         Qt6::Multimedia
         Qt6::MultimediaWidgets
