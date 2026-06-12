@@ -4306,16 +4306,20 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
         return;
     }
 
-    // Give scripts first crack at any /command (after alias expansion). A
-    // script's on_command returning true consumes it.
-    if (aliasExpansion.commandLine.startsWith(QLatin1Char('/'))) {
-        const QString afterSlash = aliasExpansion.commandLine.mid(1);
-        const int space = afterSlash.indexOf(QLatin1Char(' '));
-        const QString cmd = space >= 0 ? afterSlash.left(space) : afterSlash;
-        const QString args = space >= 0 ? afterSlash.mid(space + 1) : QString();
-        if (!cmd.isEmpty() &&
-            m_lua->dispatch(QStringLiteral("on_command"), activeNetworkName(), {cmd, args})) {
-            return;
+    // Give scripts first crack at any /command or !trigger (after alias expansion).
+    // A script's on_command returning true consumes the input — it is not sent.
+    {
+        const bool isSlash = aliasExpansion.commandLine.startsWith(QLatin1Char('/'));
+        const bool isBang  = !isSlash && aliasExpansion.commandLine.startsWith(QLatin1Char('!'));
+        if (isSlash || isBang) {
+            const QString rest = aliasExpansion.commandLine.mid(1);
+            const int space = rest.indexOf(QLatin1Char(' '));
+            const QString cmd  = space >= 0 ? rest.left(space) : rest;
+            const QString args = space >= 0 ? rest.mid(space + 1) : QString();
+            if (!cmd.isEmpty() &&
+                m_lua->dispatch(QStringLiteral("on_command"), activeNetworkName(), {cmd, args})) {
+                return;
+            }
         }
     }
 
