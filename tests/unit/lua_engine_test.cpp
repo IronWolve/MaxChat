@@ -604,7 +604,7 @@ class LuaEngineTest final : public QObject {
                                 {QStringLiteral("synIRC"), QStringLiteral("bob"),
                                  QStringLiteral("alice"), QStringLiteral("bbs"),
                                  QStringLiteral("INPUT"), QStringLiteral("1"), false}));
-        QVERIFY(containsMcDataPrefix(QStringLiteral("synIRC|alice|bbs|B|earth 80 50 ")));
+        QVERIFY(containsMcDataPrefix(QStringLiteral("synIRC|alice|bbs|B|earth 160 50 ")));
         QVERIFY(containsMcDataPrefix(QStringLiteral("synIRC|alice|bbs|I|earth ")));
         QVERIFY(engine.dispatch(QStringLiteral("on_mc_data"), QStringLiteral("synIRC"),
                                 {QStringLiteral("synIRC"), QStringLiteral("bob"),
