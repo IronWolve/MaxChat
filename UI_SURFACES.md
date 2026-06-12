@@ -92,7 +92,12 @@ is the plain-language lists below.
 ## 9. Comic panels (when Comic Mode is on)
 **Job:** render recent chat as comic panels.
 **Shows:** a fixed grid of `comic_panels` panels (blanks until filled).
-**Does:** right-click → copy / save comic.
+**Does:** right-click → copy/save the panel under the cursor, copy/save the
+whole comic, or "Save all panels..." (numbered PNGs into a folder). Panel
+hit-testing shares `panelRects()` with painting.
+**Emotion picker (2026-06-11):** Comic ▸ Emotion shows YOUR character's actual
+face per emotion (`faceCell`) in an icon grid — Auto + the 9 emotions;
+double-click applies. Plain text list when no art is loaded.
 **Scope (2026-06-11):** Comic Mode is **per channel** — the toggle opts the
 *active* buffer in or out (key = network+target); other channels are unaffected.
 The toggle is **greyed out on the server buffer**. The comic backend runs while

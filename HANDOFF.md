@@ -2,7 +2,20 @@
 
 Date: 2026-06-09 (audit closeout 2026-06-10; UI polish 2026-06-11)
 
-## Latest Completed Slice (gap cleanup + comic emotion upgrade, 2026-06-11 late)
+## Latest Completed Slice (comic chat polish, 2026-06-11 late)
+
+- **Visual emotion picker**: Comic ▸ Emotion now shows your character's real
+  faces (`Character::faceCell`) in an icon grid — Auto + 9 emotions,
+  double-click to apply, geometry persisted (`geom_emotion_picker`). Plain
+  list fallback when no art is loaded.
+- **Per-panel actions**: ComicView right-click now offers "Copy this panel" /
+  "Save this panel as PNG..." for the panel under the cursor (new
+  `panelRects()` shared by painting + hit-testing) and "Save all panels..."
+  (numbered PNGs into a chosen folder).
+- Already-existing gems confirmed while reading: `(parenthesised text)` makes
+  THOUGHT bubbles; poses vary per message via deterministic hash.
+
+## Previous Slice (gap cleanup + comic emotion upgrade, 2026-06-11 late)
 
 - **Stale stubs gone**: Comic ▸ Character Names now confirms + live-refreshes
   (was printing "planned" despite working); Scripts/Browse Characters fallbacks

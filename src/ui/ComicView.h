@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QPixmap>
+#include <QRect>
 #include <QVector>
 #include <QWidget>
 
@@ -18,6 +19,7 @@ class ComicView final : public QWidget {
     void setPanels(const QVector<QPixmap>& panels);
     [[nodiscard]] QPixmap sheet() const; // all panels composited (for Save/Copy)
     [[nodiscard]] bool hasPanels() const { return !panels_.isEmpty(); }
+    [[nodiscard]] const QVector<QPixmap>& panels() const { return panels_; }
 
   signals:
     void saveRequested(); // user picked "Save comic…" from the context menu
@@ -27,6 +29,10 @@ class ComicView final : public QWidget {
     void contextMenuEvent(QContextMenuEvent* event) override;
 
   private:
+    // On-screen rect of each panel (shared by painting and hit-testing).
+    [[nodiscard]] QVector<QRect> panelRects() const;
+    [[nodiscard]] int panelAt(const QPoint& pos) const;
+
     QVector<QPixmap> panels_;
 };
 

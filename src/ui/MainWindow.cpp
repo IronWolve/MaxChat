@@ -7194,30 +7194,101 @@ void maxchat::ui::MainWindow::openCharacterGallery() {
 
 void maxchat::ui::MainWindow::openEmotionPicker() {
     // Set the expression used for YOUR comic panels (overrides the text guess);
-    // "Auto" returns to guessing from your message text. Mirrors the Python
-    // emotion wheel without the live-preview popup.
-    const QStringList options = {QStringLiteral("Auto"),    QStringLiteral("neutral"),
-                                 QStringLiteral("happy"),   QStringLiteral("laughing"),
-                                 QStringLiteral("coy"),     QStringLiteral("scared"),
-                                 QStringLiteral("bored"),   QStringLiteral("angry"),
-                                 QStringLiteral("shouting"), QStringLiteral("sad")};
-    const QString currentLabel =
-        m_comicSelfEmotion == QStringLiteral("auto") ? QStringLiteral("Auto") : m_comicSelfEmotion;
-    const int current = std::max(0, static_cast<int>(options.indexOf(currentLabel)));
-    bool ok = false;
-    const QString choice = QInputDialog::getItem(
-        this, QStringLiteral("Comic emotion"),
-        QStringLiteral("Expression for your comic panels (Auto = guess from your text):"), options,
-        current, false, &ok);
-    if (!ok) {
+    // "Auto" returns to guessing from your message text. Shows your character's
+    // actual face per emotion when comic art is loaded (the emotion wheel look);
+    // falls back to a plain list without art.
+    const QStringList emotions = {QStringLiteral("neutral"),  QStringLiteral("happy"),
+                                  QStringLiteral("laughing"), QStringLiteral("coy"),
+                                  QStringLiteral("scared"),   QStringLiteral("bored"),
+                                  QStringLiteral("angry"),    QStringLiteral("shouting"),
+                                  QStringLiteral("sad")};
+    const auto applyChoice = [this](const QString& choice) {
+        m_comicSelfEmotion = choice.compare(QStringLiteral("Auto"), Qt::CaseInsensitive) == 0
+                                 ? QStringLiteral("auto")
+                                 : choice.toLower();
+        appendSystemLine(m_comicSelfEmotion == QStringLiteral("auto")
+                             ? QStringLiteral("! Comic emotion: auto (guess from text).")
+                             : QStringLiteral("! Comic emotion set to %1.").arg(m_comicSelfEmotion));
+        refreshComic();
+    };
+
+    ensureComicArt();
+    maxchat::comic::Character* character =
+        comicCharacterForNick(currentNickForNetwork(activeNetworkName()));
+
+    if (character == nullptr) {
+        // No art loaded — plain text list.
+        QStringList options = emotions;
+        options.prepend(QStringLiteral("Auto"));
+        const QString currentLabel = m_comicSelfEmotion == QStringLiteral("auto")
+                                         ? QStringLiteral("Auto")
+                                         : m_comicSelfEmotion;
+        const int current = std::max(0, static_cast<int>(options.indexOf(currentLabel)));
+        bool ok = false;
+        const QString choice = QInputDialog::getItem(
+            this, QStringLiteral("Comic emotion"),
+            QStringLiteral("Expression for your comic panels (Auto = guess from your text):"),
+            options, current, false, &ok);
+        if (ok) {
+            applyChoice(choice);
+        }
         return;
     }
-    m_comicSelfEmotion =
-        choice == QStringLiteral("Auto") ? QStringLiteral("auto") : choice.toLower();
-    appendSystemLine(m_comicSelfEmotion == QStringLiteral("auto")
-                         ? QStringLiteral("! Comic emotion: auto (guess from text).")
-                         : QStringLiteral("! Comic emotion set to %1.").arg(m_comicSelfEmotion));
-    refreshComic();
+
+    auto* dialog = new QDialog(this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->setWindowTitle(QStringLiteral("Comic emotion"));
+    dialog->resize(420, 340);
+    attachGeometryPersist(dialog, m_settings, QStringLiteral("geom_emotion_picker"));
+    auto* layout = new QVBoxLayout(dialog);
+    layout->addWidget(new QLabel(
+        QStringLiteral("Expression for your comic panels (Auto = guess from your text):"),
+        dialog));
+    auto* list = new QListWidget(dialog);
+    list->setViewMode(QListView::IconMode);
+    list->setIconSize(QSize(72, 84));
+    list->setResizeMode(QListView::Adjust);
+    list->setMovement(QListView::Static);
+    list->setSpacing(8);
+    list->setWordWrap(true);
+
+    auto* autoItem = new QListWidgetItem(QStringLiteral("Auto"), list);
+    {
+        const QImage neutral = character->faceCell(QStringLiteral("neutral"));
+        if (!neutral.isNull()) {
+            autoItem->setIcon(QIcon(QPixmap::fromImage(neutral)));
+        }
+    }
+    autoItem->setToolTip(QStringLiteral("Guess the expression from your message text"));
+    for (const QString& emotion : emotions) {
+        auto* item = new QListWidgetItem(emotion, list);
+        const QImage face = character->faceCell(emotion);
+        if (!face.isNull()) {
+            item->setIcon(QIcon(QPixmap::fromImage(face)));
+        }
+    }
+    const QString currentLabel =
+        m_comicSelfEmotion == QStringLiteral("auto") ? QStringLiteral("Auto") : m_comicSelfEmotion;
+    for (int row = 0; row < list->count(); ++row) {
+        if (list->item(row)->text().compare(currentLabel, Qt::CaseInsensitive) == 0) {
+            list->setCurrentRow(row);
+            break;
+        }
+    }
+    layout->addWidget(list, 1);
+
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, dialog);
+    connect(buttons, &QDialogButtonBox::accepted, dialog, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, dialog, &QDialog::reject);
+    layout->addWidget(buttons);
+    connect(list, &QListWidget::itemDoubleClicked, dialog,
+            [dialog](QListWidgetItem*) { dialog->accept(); });
+    connect(dialog, &QDialog::accepted, this, [list, applyChoice]() {
+        if (const QListWidgetItem* item = list->currentItem()) {
+            applyChoice(item->text());
+        }
+    });
+    dialog->show();
 }
 
 

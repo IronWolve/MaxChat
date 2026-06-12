@@ -3,6 +3,8 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QContextMenuEvent>
+#include <QDir>
+#include <QFileDialog>
 #include <QMenu>
 #include <QPainter>
 
@@ -42,6 +44,41 @@ void ComicView::setPanels(const QVector<QPixmap>& panels) {
     update();
 }
 
+QVector<QRect> ComicView::panelRects() const {
+    QVector<QRect> rects;
+    if (panels_.isEmpty()) {
+        return rects;
+    }
+    const int gap = 6;
+    int rows;
+    int cols;
+    int edge;
+    gridFor(panels_.size(), width(), height(), gap, rows, cols, edge);
+    edge = std::max(16, edge);
+    const int blockH = rows * edge + gap * (rows - 1);
+    const int top = std::max(gap, (height() - blockH) / 2);
+    rects.reserve(panels_.size());
+    for (int i = 0; i < panels_.size(); ++i) {
+        const int r = i / cols;
+        const int c = i % cols;
+        const int rowCount = std::min<int>(cols, static_cast<int>(panels_.size()) - r * cols);
+        const int blockW = rowCount * edge + gap * (rowCount - 1);
+        const int left = std::max(gap, (width() - blockW) / 2);
+        rects.append(QRect(left + c * (edge + gap), top + r * (edge + gap), edge, edge));
+    }
+    return rects;
+}
+
+int ComicView::panelAt(const QPoint& pos) const {
+    const QVector<QRect> rects = panelRects();
+    for (int i = 0; i < rects.size(); ++i) {
+        if (rects.at(i).contains(pos)) {
+            return i;
+        }
+    }
+    return -1;
+}
+
 void ComicView::paintEvent(QPaintEvent* /*event*/) {
     QPainter painter(this);
     if (panels_.isEmpty()) {
@@ -51,23 +88,11 @@ void ComicView::paintEvent(QPaintEvent* /*event*/) {
                                         "Set a comic art folder in Comic Settings."));
         return;
     }
-    const int gap = 6;
-    int rows;
-    int cols;
-    int edge;
-    gridFor(panels_.size(), width(), height(), gap, rows, cols, edge);
-    edge = std::max(16, edge);
-    const int blockH = rows * edge + gap * (rows - 1);
-    int top = std::max(gap, (height() - blockH) / 2);
+    const QVector<QRect> rects = panelRects();
     for (int i = 0; i < panels_.size(); ++i) {
-        const int r = i / cols;
-        const int c = i % cols;
-        const int rowCount = std::min<int>(cols, static_cast<int>(panels_.size()) - r * cols);
-        const int blockW = rowCount * edge + gap * (rowCount - 1);
-        const int left = std::max(gap, (width() - blockW) / 2);
-        const QRect cell(left + c * (edge + gap), top + r * (edge + gap), edge, edge);
-        painter.drawPixmap(cell, panels_[i].scaled(edge, edge, Qt::KeepAspectRatio,
-                                                   Qt::SmoothTransformation));
+        painter.drawPixmap(rects.at(i),
+                           panels_[i].scaled(rects.at(i).width(), rects.at(i).height(),
+                                             Qt::KeepAspectRatio, Qt::SmoothTransformation));
     }
 }
 
@@ -105,6 +130,22 @@ void ComicView::contextMenuEvent(QContextMenuEvent* event) {
         return;
     }
     QMenu menu(this);
+    const int index = panelAt(event->pos());
+    if (index >= 0) {
+        menu.addAction(QStringLiteral("Copy this panel"), this, [this, index]() {
+            QApplication::clipboard()->setPixmap(panels_.at(index));
+        });
+        menu.addAction(QStringLiteral("Save this panel as PNG..."), this, [this, index]() {
+            const QString path = QFileDialog::getSaveFileName(
+                this, QStringLiteral("Save panel image"),
+                QStringLiteral("comic-panel-%1.png").arg(index + 1),
+                QStringLiteral("PNG image (*.png)"));
+            if (!path.isEmpty()) {
+                panels_.at(index).save(path, "PNG");
+            }
+        });
+        menu.addSeparator();
+    }
     menu.addAction(QStringLiteral("Copy comic"), this, [this]() {
         const QPixmap composed = sheet();
         if (!composed.isNull()) {
@@ -113,6 +154,21 @@ void ComicView::contextMenuEvent(QContextMenuEvent* event) {
     });
     menu.addAction(QStringLiteral("Save comic as PNG..."), this,
                    [this]() { emit saveRequested(); });
+    if (panels_.size() > 1) {
+        menu.addAction(QStringLiteral("Save all panels..."), this, [this]() {
+            const QString dir = QFileDialog::getExistingDirectory(
+                this, QStringLiteral("Save every panel into folder"));
+            if (dir.isEmpty()) {
+                return;
+            }
+            for (int i = 0; i < panels_.size(); ++i) {
+                panels_.at(i).save(
+                    QDir(dir).filePath(QStringLiteral("comic-panel-%1.png")
+                                           .arg(i + 1, 2, 10, QLatin1Char('0'))),
+                    "PNG");
+            }
+        });
+    }
     menu.exec(event->globalPos());
 }
 
