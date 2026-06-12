@@ -2,7 +2,21 @@
 
 Date: 2026-06-09 (audit closeout 2026-06-10; UI polish 2026-06-11)
 
-## Latest Completed Slice (bundled-script seeding upgrade, 2026-06-11 late)
+## Latest Completed Slice (per-channel Comic Mode, 2026-06-11 late)
+
+- Comic Mode is now **opt-in per channel**: toggling it (button/menu/Ctrl+M)
+  affects only the active buffer. Previously the first enable turned panels on
+  for *every* buffer and you could only hide per channel afterwards.
+- Implementation: `m_comicHiddenBuffers` (hide-set, default visible) replaced
+  with `m_comicEnabledBuffers` (opt-in set, default off). `m_comicMode` is now
+  derived — backend runs iff any buffer opted in. `refreshComic` skips buffers
+  not in the set; `activateBufferTarget` shows/hides the panel per buffer.
+- The Comic Mode toggle is **disabled (greyed) on the server buffer** — set at
+  action creation and re-synced on every buffer switch; the old confusing
+  "toggle on server = global kill" behavior is gone.
+- Docs: UI_SURFACES §9 scope note.
+
+## Previous Slice (bundled-script seeding upgrade, 2026-06-11 late)
 
 - **Root-caused the "6-second `!run calc.exe`" report**: the launch backend was
   already fixed (`api.launch` → ShellExecuteW, commits 593a872 + 41b48e4), but

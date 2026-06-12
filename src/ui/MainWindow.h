@@ -509,8 +509,8 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     QAction* m_comicCaptionsAction = nullptr;
     QAction* m_comicModeAction = nullptr;
     ComicView* m_comicView = nullptr;
-    bool m_comicMode = false;
-    QSet<QString> m_comicHiddenBuffers; // per-buffer view suppression (key = network\x1ftarget)
+    bool m_comicMode = false;            // backend running — true iff any buffer opted in
+    QSet<QString> m_comicEnabledBuffers; // per-buffer opt-in (key = network\x1ftarget)
     QString m_comicSelfEmotion = QStringLiteral("auto"); // override for your panels; "auto" = guess
     QString m_comicArtDirLoaded;
     QHash<QString, QString> m_comicCharacterPaths;  // stem -> .avb path

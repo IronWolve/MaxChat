@@ -1481,6 +1481,7 @@ void maxchat::ui::MainWindow::buildMenus() {
     auto* comicMenu = menuBar()->addMenu(QStringLiteral("&Comic"));
     m_comicModeAction = comicMenu->addAction(QStringLiteral("Comic Mode"));
     m_comicModeAction->setCheckable(true);
+    m_comicModeAction->setEnabled(false); // per channel — enabled on buffer switch
     connect(m_comicModeAction, &QAction::toggled, this, &MainWindow::setComicMode);
     QAction* comicModeAction = m_comicModeAction;
     comicModeAction->setShortcut(QKeySequence(QStringLiteral("Ctrl+M")));
@@ -6497,13 +6498,17 @@ void maxchat::ui::MainWindow::activateBufferTarget(const QString& target) {
     updateNetworkTreeLabels();
     syncBufferTabs();
 
-    // Apply per-buffer comic view state: comic backend keeps running globally
-    // but the view panel is shown/hidden per channel.
+    // Apply per-buffer comic view state: comic is opted in per channel; the
+    // toggle is greyed out on the server buffer (panels make no sense there).
+    const bool serverBuffer = m_currentTarget.trimmed().isEmpty();
+    const QString key = comicKey(activeNetworkName(), m_currentTarget);
+    const bool viewVisible = !serverBuffer && m_comicEnabledBuffers.contains(key);
     if (m_comicView != nullptr) {
-        const QString key = comicKey(activeNetworkName(), m_currentTarget);
-        const bool viewVisible = m_comicMode && !m_comicHiddenBuffers.contains(key);
         m_comicView->setVisible(viewVisible);
-        if (m_comicModeAction != nullptr && m_comicModeAction->isChecked() != viewVisible) {
+    }
+    if (m_comicModeAction != nullptr) {
+        m_comicModeAction->setEnabled(!serverBuffer);
+        if (m_comicModeAction->isChecked() != viewVisible) {
             const QSignalBlocker blocker(m_comicModeAction);
             m_comicModeAction->setChecked(viewVisible);
         }
@@ -7152,41 +7157,34 @@ void maxchat::ui::MainWindow::saveComic() {
 }
 
 void maxchat::ui::MainWindow::setComicMode(bool enabled) {
-    // Comic panels only make sense in channel/query buffers, not the server window.
+    // Comic Mode is per channel: the toggle affects only the active buffer.
+    // The action is disabled on the server buffer (activateBufferTarget syncs
+    // that), but guard anyway — Ctrl+M can fire before the first sync.
     if (m_currentTarget.trimmed().isEmpty()) {
-        if (m_comicMode && !enabled) {
-            // Server buffer: treat as global off — kills the backend entirely.
-            // This is the only way to fully disable comic after first enable.
-            m_comicMode = false;
-            m_comicHiddenBuffers.clear();
-            if (m_comicView != nullptr) m_comicView->setVisible(false);
-            if (m_comicModeAction != nullptr && m_comicModeAction->isChecked()) {
-                const QSignalBlocker blocker(m_comicModeAction);
-                m_comicModeAction->setChecked(false);
-            }
-            statusBar()->showMessage(QStringLiteral("Comic Mode: off."));
-        } else {
-            // Can't enable comic from the server buffer; revert action state.
-            const QString key = comicKey(activeNetworkName(), m_currentTarget);
-            const bool viewVisible = m_comicMode && !m_comicHiddenBuffers.contains(key);
-            if (m_comicModeAction != nullptr && m_comicModeAction->isChecked() != viewVisible) {
-                const QSignalBlocker blocker(m_comicModeAction);
-                m_comicModeAction->setChecked(viewVisible);
-            }
-            statusBar()->showMessage(QStringLiteral("Comic Mode: not available on the server buffer."));
+        if (m_comicModeAction != nullptr && m_comicModeAction->isChecked()) {
+            const QSignalBlocker blocker(m_comicModeAction);
+            m_comicModeAction->setChecked(false);
         }
+        statusBar()->showMessage(
+            QStringLiteral("Comic Mode is per channel — switch to a channel to toggle it."));
         return;
     }
 
     const QString key = comicKey(activeNetworkName(), m_currentTarget);
+    const bool backendWasOn = m_comicMode;
+    if (enabled) {
+        m_comicEnabledBuffers.insert(key);
+    } else {
+        m_comicEnabledBuffers.remove(key);
+    }
+    // The backend runs while any buffer has comic enabled; panel rendering for
+    // non-opted-in buffers is skipped in refreshComic.
+    m_comicMode = !m_comicEnabledBuffers.isEmpty();
 
-    if (!m_comicMode && enabled) {
-        // First global enable: turn on the backend and show for every buffer.
-        m_comicMode = true;
-        m_comicHiddenBuffers.clear();
-        if (m_comicView != nullptr) {
-            m_comicView->setVisible(true);
-        }
+    if (m_comicView != nullptr) {
+        m_comicView->setVisible(enabled);
+    }
+    if (enabled) {
         if (m_chatSplitter != nullptr) {
             const QList<int> sizes = m_chatSplitter->sizes();
             const int total = sizes.value(0) + sizes.value(1);
@@ -7196,34 +7194,19 @@ void maxchat::ui::MainWindow::setComicMode(bool enabled) {
         }
         ensureComicArt();
         refreshComic();
-        if (m_comicCharacterPaths.isEmpty()) {
+        if (!backendWasOn && m_comicCharacterPaths.isEmpty()) {
             appendSystemLine(QStringLiteral(
                 "! Comic Mode: no art loaded. Set your Comic Chat art folder in "
                 "Comic > Comic Settings (the folder with the .avb/.bgb files)."));
         }
-    } else if (m_comicMode) {
-        // Global backend stays on — just toggle the view for this buffer.
-        // This lets the user hide comic panels on one channel without
-        // affecting other channels or stopping panel computation.
-        if (enabled) {
-            m_comicHiddenBuffers.remove(key);
-        } else {
-            m_comicHiddenBuffers.insert(key);
-        }
-        if (m_comicView != nullptr) {
-            m_comicView->setVisible(enabled);
-        }
     }
 
-    // Keep the action checkmark in sync with the effective view state for
-    // this buffer (not the global flag) so the button reflects what the user sees.
-    const bool viewVisible = m_comicMode && !m_comicHiddenBuffers.contains(key);
-    if (m_comicModeAction != nullptr && m_comicModeAction->isChecked() != viewVisible) {
+    if (m_comicModeAction != nullptr && m_comicModeAction->isChecked() != enabled) {
         const QSignalBlocker blocker(m_comicModeAction);
-        m_comicModeAction->setChecked(viewVisible);
+        m_comicModeAction->setChecked(enabled);
     }
-    statusBar()->showMessage(viewVisible ? QStringLiteral("Comic Mode on.")
-                                         : QStringLiteral("Comic Mode off."));
+    statusBar()->showMessage(enabled ? QStringLiteral("Comic Mode on for this channel.")
+                                     : QStringLiteral("Comic Mode off for this channel."));
 }
 
 namespace {
@@ -7418,8 +7401,8 @@ void maxchat::ui::MainWindow::refreshComic() {
     if (m_comicView == nullptr || !m_comicMode) {
         return;
     }
-    if (m_comicHiddenBuffers.contains(comicKey(activeNetworkName(), m_currentTarget))) {
-        return; // view hidden for this buffer — skip render, backend still tracks state
+    if (!m_comicEnabledBuffers.contains(comicKey(activeNetworkName(), m_currentTarget))) {
+        return; // this buffer hasn't opted in — skip render, backend still tracks state
     }
     ensureComicArt();
     const QVariantMap settings = m_settings.loadWithDefaults();

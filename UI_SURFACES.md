@@ -93,6 +93,10 @@ is the plain-language lists below.
 **Job:** render recent chat as comic panels.
 **Shows:** a fixed grid of `comic_panels` panels (blanks until filled).
 **Does:** right-click → copy / save comic.
+**Scope (2026-06-11):** Comic Mode is **per channel** — the toggle opts the
+*active* buffer in or out (key = network+target); other channels are unaffected.
+The toggle is **greyed out on the server buffer**. The comic backend runs while
+at least one buffer has it on; non-opted-in buffers skip panel rendering.
 
 ## 10. Notifications — toasts & tray (not a window area)
 **Job:** alert you when a PM/highlight arrives **while MaxChat isn't focused**.
