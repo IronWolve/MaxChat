@@ -81,6 +81,8 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     void scriptSendRaw(const QString& network, const QString& line) override;
     void scriptInsertInput(const QString& text) override;
     void scriptNotify(const QString& title, const QString& text) override;
+    bool scriptMcData(const QString& network, const QString& target, const QString& service,
+                      const QString& verb, const QString& payload, bool notice) override;
     QString scriptMe(const QString& network) override;
     QString scriptTarget() override;
     QString scriptNetwork() override;
