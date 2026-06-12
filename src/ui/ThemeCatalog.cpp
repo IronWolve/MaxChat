@@ -253,6 +253,16 @@ AppThemeDefinition parseAppTheme(const QJsonObject& object) {
     theme.chatFg = colorFromJson(object.value(QStringLiteral("chat_fg")));
     theme.wallpaper = object.value(QStringLiteral("wallpaper")).toString();
     theme.bgGradient = gradientFromJson(object.value(QStringLiteral("bg_gradient")));
+    // Whitelist the bundled font keys: theme files are shareable, and parsing
+    // arbitrary keys here would let an imported theme inject other settings.
+    const QJsonObject fonts = object.value(QStringLiteral("fonts")).toObject();
+    if (!fonts.isEmpty()) {
+        for (const QString& key : themeFontKeys()) {
+            if (fonts.contains(key)) {
+                theme.fonts.insert(key, fonts.value(key).toVariant());
+            }
+        }
+    }
 
     if (!theme.bg.isValid() || !theme.panel.isValid() || !theme.panel2.isValid() ||
         !theme.text.isValid() || !theme.on.isValid() || !theme.accent.isValid() ||
@@ -887,13 +897,8 @@ void reloadThemes() {
     mutableChatThemes() = buildChatThemes();
 }
 
-QString saveUserAppTheme(const QString& name, const AppThemeDefinition& theme) {
-    const QString dir = userThemeDirectory();
-    if (dir.isEmpty()) {
-        return {};
-    }
-    const QString id = QStringLiteral("u-%1").arg(slugify(name));
-
+namespace {
+QJsonObject appThemeJson(const QString& name, const AppThemeDefinition& theme) {
     QJsonObject object;
     object.insert(QStringLiteral("name"), name);
     object.insert(QStringLiteral("dark"), theme.dark);
@@ -914,33 +919,22 @@ QString saveUserAppTheme(const QString& name, const AppThemeDefinition& theme) {
     if (theme.chatFg.isValid()) {
         object.insert(QStringLiteral("chat_fg"), colorArray(theme.chatFg));
     }
-
-    if (!writeJsonFile(QDir(dir).filePath(id + QStringLiteral(".json")), object)) {
-        return {};
+    if (!theme.wallpaper.isEmpty()) {
+        object.insert(QStringLiteral("wallpaper"), theme.wallpaper);
     }
-    reloadThemes();
-    return id;
+    if (!theme.fonts.isEmpty()) {
+        QJsonObject fonts;
+        for (const QString& key : themeFontKeys()) {
+            if (theme.fonts.contains(key)) {
+                fonts.insert(key, QJsonValue::fromVariant(theme.fonts.value(key)));
+            }
+        }
+        object.insert(QStringLiteral("fonts"), fonts);
+    }
+    return object;
 }
 
-QString saveUserChatTheme(const QString& name, const ChatThemeDefinition& theme) {
-    const QString config = userConfigDirectory();
-    if (config.isEmpty()) {
-        return {};
-    }
-    const QString id = QStringLiteral("u-%1").arg(slugify(name));
-    const QString path = QDir(config).filePath(QStringLiteral("chat_themes.json"));
-
-    // Merge into the existing id -> theme map.
-    QJsonObject root;
-    QFile readFile(path);
-    if (readFile.open(QIODevice::ReadOnly)) {
-        const QJsonDocument doc = QJsonDocument::fromJson(readFile.readAll());
-        if (doc.isObject()) {
-            root = doc.object();
-        }
-        readFile.close();
-    }
-
+QJsonObject chatThemeJson(const QString& name, const ChatThemeDefinition& theme) {
     QJsonObject entry;
     entry.insert(QStringLiteral("label"), name);
     entry.insert(QStringLiteral("bg"), colorArray(theme.bg));
@@ -964,7 +958,156 @@ QString saveUserChatTheme(const QString& name, const ChatThemeDefinition& theme)
         }
         entry.insert(QStringLiteral("nicks"), palette);
     }
-    root.insert(id, entry);
+    return entry;
+}
+} // namespace
+
+QStringList themeFontKeys() {
+    QStringList keys;
+    for (const char* area : {"app", "chat", "list", "nick", "status", "topic"}) {
+        const QString prefix = QString::fromLatin1(area);
+        keys << prefix + QStringLiteral("_font_family") << prefix + QStringLiteral("_font_size")
+             << prefix + QStringLiteral("_font_bold");
+    }
+    return keys;
+}
+
+QString saveUserAppTheme(const QString& name, const AppThemeDefinition& theme) {
+    const QString dir = userThemeDirectory();
+    if (dir.isEmpty()) {
+        return {};
+    }
+    const QString id = QStringLiteral("u-%1").arg(slugify(name));
+    if (!writeJsonFile(QDir(dir).filePath(id + QStringLiteral(".json")),
+                       appThemeJson(name, theme))) {
+        return {};
+    }
+    reloadThemes();
+    return id;
+}
+
+bool exportThemePack(const QString& path, const ThemePack& pack) {
+    QJsonObject root;
+    root.insert(QStringLiteral("kind"), QStringLiteral("maxchat-theme-pack"));
+    root.insert(QStringLiteral("version"), 1);
+    root.insert(QStringLiteral("name"), pack.name);
+    if (!pack.app.id.isEmpty()) {
+        AppThemeDefinition app = pack.app;
+        app.fonts = pack.fonts; // fonts ride inside the app theme
+        root.insert(QStringLiteral("app"), appThemeJson(pack.name, app));
+    }
+    if (!pack.chat.id.isEmpty()) {
+        root.insert(QStringLiteral("chat"), chatThemeJson(pack.name, pack.chat));
+    }
+    if (!pack.wallpaper.isEmpty()) {
+        root.insert(QStringLiteral("wallpaper"), pack.wallpaper);
+    }
+    return writeJsonFile(path, root);
+}
+
+ThemePack importThemePack(const QString& path) {
+    ThemePack result;
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        result.error = QStringLiteral("could not open the file");
+        return result;
+    }
+    const QJsonDocument document = QJsonDocument::fromJson(file.readAll());
+    if (!document.isObject()) {
+        result.error = QStringLiteral("not a theme JSON file");
+        return result;
+    }
+    const QJsonObject root = document.object();
+    const QString stem = QFileInfo(path).completeBaseName();
+    result.name = root.value(QStringLiteral("name"))
+                      .toString(root.value(QStringLiteral("label")).toString(stem));
+    const QString kind = root.value(QStringLiteral("kind")).toString().trimmed().toLower();
+
+    const auto installApp = [&result](QJsonObject object, const QString& name) {
+        object.insert(QStringLiteral("id"), QStringLiteral("import"));
+        object.insert(QStringLiteral("label"), name);
+        AppThemeDefinition parsed = parseAppTheme(object);
+        if (parsed.id.isEmpty()) {
+            return false;
+        }
+        const QString id = saveUserAppTheme(name, parsed);
+        if (id.isEmpty()) {
+            return false;
+        }
+        parsed.id = id;
+        result.app = parsed;
+        result.fonts = parsed.fonts;
+        return true;
+    };
+    const auto installChat = [&result](QJsonObject object, const QString& name) {
+        object.insert(QStringLiteral("id"), QStringLiteral("import"));
+        object.insert(QStringLiteral("label"), name);
+        ChatThemeDefinition parsed = parseChatTheme(object);
+        if (parsed.id.isEmpty()) {
+            return false;
+        }
+        const QString id = saveUserChatTheme(name, parsed);
+        if (id.isEmpty()) {
+            return false;
+        }
+        parsed.id = id;
+        result.chat = parsed;
+        return true;
+    };
+
+    if (kind == QLatin1String("maxchat-theme-pack")) {
+        bool any = false;
+        if (root.value(QStringLiteral("app")).isObject()) {
+            any = installApp(root.value(QStringLiteral("app")).toObject(), result.name) || any;
+        }
+        if (root.value(QStringLiteral("chat")).isObject()) {
+            any = installChat(root.value(QStringLiteral("chat")).toObject(), result.name) || any;
+        }
+        result.wallpaper = root.value(QStringLiteral("wallpaper")).toString();
+        if (!any) {
+            result.error = QStringLiteral("the pack contains no usable theme");
+        }
+        return result;
+    }
+
+    // Bare single-theme files: chat themes have fg but no panel; app themes
+    // have panel/accent. Try app first, fall back to chat.
+    if (root.contains(QStringLiteral("panel")) || kind == QLatin1String("app")) {
+        if (!installApp(root, result.name)) {
+            result.error = QStringLiteral("invalid app theme file");
+        }
+        return result;
+    }
+    if (installChat(root, result.name)) {
+        return result;
+    }
+    if (installApp(root, result.name)) {
+        return result;
+    }
+    result.error = QStringLiteral("invalid theme file");
+    return result;
+}
+
+QString saveUserChatTheme(const QString& name, const ChatThemeDefinition& theme) {
+    const QString config = userConfigDirectory();
+    if (config.isEmpty()) {
+        return {};
+    }
+    const QString id = QStringLiteral("u-%1").arg(slugify(name));
+    const QString path = QDir(config).filePath(QStringLiteral("chat_themes.json"));
+
+    // Merge into the existing id -> theme map.
+    QJsonObject root;
+    QFile readFile(path);
+    if (readFile.open(QIODevice::ReadOnly)) {
+        const QJsonDocument doc = QJsonDocument::fromJson(readFile.readAll());
+        if (doc.isObject()) {
+            root = doc.object();
+        }
+        readFile.close();
+    }
+
+    root.insert(id, chatThemeJson(name, theme));
 
     if (!writeJsonFile(path, root)) {
         return {};

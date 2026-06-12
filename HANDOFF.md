@@ -2,7 +2,27 @@
 
 Date: 2026-06-09 (audit closeout 2026-06-10; UI polish 2026-06-11)
 
-## Latest Completed Slice (per-channel Comic Mode, 2026-06-11 late)
+## Latest Completed Slice (themes revamp, 2026-06-11 late)
+
+- **Theme packs**: Preferences ▸ Themes gained a "Theme files" group —
+  `Save Theme...` (current app theme + current fonts → named user theme),
+  `Export...` / `Import...` (single JSON bundling app theme, chat theme, fonts,
+  wallpaper; `kind: maxchat-theme-pack`). Bare single-theme JSONs import too.
+- **Themes carry fonts**: `AppThemeDefinition.fonts` (whitelisted
+  `*_font_family/size/bold` keys only — a shared theme file must not inject
+  other settings). Applied on selection from the Preferences combo
+  (`applyFontSelections`) and from Settings ▸ Themes (`setTheme` merges fonts
+  into settings + `applyCurrentSettings`).
+- **New built-in app themes**: `Normal` (system-like light), `Normal Dark`
+  (neutral dark) — for "Themes Off is too light/bare" — and `Console`
+  (black/cyan classic terminal-IRC look; pair with chat themes `irssi`/`bitchx`
+  which already existed).
+- New ThemeCatalog API: `ThemePack`, `exportThemePack`, `importThemePack`,
+  `themeFontKeys`; `saveUserAppTheme` now persists bundled fonts.
+- NOT yet done: no unit tests for pack import/export round-trip (offered, not
+  run per ask-before-tests).
+
+## Previous Slice (per-channel Comic Mode, 2026-06-11 late)
 
 - Comic Mode is now **opt-in per channel**: toggling it (button/menu/Ctrl+M)
   affects only the active buffer. Previously the first enable turned panels on

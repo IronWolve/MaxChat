@@ -1,285 +1,1155 @@
 {
-  "kind": "app",
-  "version": 1,
-  "themes": [
+ "kind": "app",
+ "version": 1,
+ "themes": [
+  {
+   "id": "dark",
+   "label": "Default",
+   "dark": true,
+   "bg": [
+    28,
+    30,
+    33
+   ],
+   "panel": [
+    37,
+    40,
+    44
+   ],
+   "panel2": [
+    44,
+    48,
+    53
+   ],
+   "text": [
+    224,
+    226,
+    229
+   ],
+   "on": [
+    40,
+    95,
+    60
+   ],
+   "on_text": "white",
+   "accent": [
+    80,
+    230,
+    150
+   ],
+   "groove": [
+    18,
+    20,
+    23
+   ],
+   "scroll": [
+    70,
+    75,
+    82
+   ],
+   "scroll_hi": [
+    98,
+    104,
+    112
+   ]
+  },
+  {
+   "id": "system",
+   "label": "Themes Off",
+   "system": true
+  },
+  {
+   "id": "light",
+   "label": "Light",
+   "dark": false,
+   "bg": [
+    236,
+    238,
+    241
+   ],
+   "panel": [
+    251,
+    251,
+    252
+   ],
+   "panel2": [
+    225,
+    228,
+    233
+   ],
+   "text": [
+    28,
+    30,
+    33
+   ],
+   "on": [
+    70,
+    200,
+    130
+   ],
+   "on_text": "black",
+   "accent": [
+    80,
+    230,
+    150
+   ],
+   "groove": [
+    148,
+    154,
+    162
+   ],
+   "scroll": [
+    178,
+    183,
+    190
+   ],
+   "scroll_hi": [
+    150,
+    155,
+    163
+   ]
+  },
+  {
+   "id": "normal",
+   "label": "Normal",
+   "dark": false,
+   "bg": [
+    240,
+    240,
+    240
+   ],
+   "panel": [
+    255,
+    255,
+    255
+   ],
+   "panel2": [
+    229,
+    229,
+    229
+   ],
+   "text": [
+    26,
+    26,
+    26
+   ],
+   "on": [
+    0,
+    103,
+    192
+   ],
+   "on_text": "white",
+   "accent": [
+    0,
+    103,
+    192
+   ],
+   "groove": [
+    214,
+    214,
+    214
+   ],
+   "scroll": [
+    193,
+    193,
+    193
+   ],
+   "scroll_hi": [
+    160,
+    160,
+    160
+   ],
+   "chat_bg": [
+    255,
+    255,
+    255
+   ],
+   "chat_fg": [
+    26,
+    26,
+    26
+   ]
+  },
+  {
+   "id": "normal-dark",
+   "label": "Normal Dark",
+   "dark": true,
+   "bg": [
+    32,
+    32,
+    32
+   ],
+   "panel": [
+    43,
+    43,
+    43
+   ],
+   "panel2": [
+    56,
+    56,
+    56
+   ],
+   "text": [
+    224,
+    224,
+    224
+   ],
+   "on": [
+    0,
+    103,
+    192
+   ],
+   "on_text": "white",
+   "accent": [
+    76,
+    194,
+    255
+   ],
+   "groove": [
+    24,
+    24,
+    24
+   ],
+   "scroll": [
+    77,
+    77,
+    77
+   ],
+   "scroll_hi": [
+    105,
+    105,
+    105
+   ],
+   "chat_bg": [
+    25,
+    25,
+    25
+   ],
+   "chat_fg": [
+    224,
+    224,
+    224
+   ]
+  },
+  {
+   "id": "console",
+   "label": "Console",
+   "dark": true,
+   "bg": [
+    0,
+    0,
+    0
+   ],
+   "panel": [
+    10,
+    12,
+    18
+   ],
+   "panel2": [
+    18,
+    22,
+    32
+   ],
+   "text": [
+    200,
+    200,
+    200
+   ],
+   "on": [
+    0,
+    0,
+    128
+   ],
+   "on_text": "white",
+   "accent": [
+    0,
+    200,
+    200
+   ],
+   "groove": [
+    0,
+    0,
+    0
+   ],
+   "scroll": [
+    40,
+    44,
+    52
+   ],
+   "scroll_hi": [
+    0,
+    128,
+    128
+   ],
+   "chat_bg": [
+    0,
+    0,
+    0
+   ],
+   "chat_fg": [
+    208,
+    208,
+    208
+   ]
+  },
+  {
+   "id": "dracula",
+   "label": "Dracula",
+   "dark": true,
+   "bg": [
+    40,
+    42,
+    54
+   ],
+   "panel": [
+    52,
+    55,
+    70
+   ],
+   "panel2": [
+    68,
+    71,
+    90
+   ],
+   "text": [
+    248,
+    248,
+    242
+   ],
+   "on": [
+    98,
+    114,
+    164
+   ],
+   "on_text": "white",
+   "accent": [
+    80,
+    250,
+    123
+   ],
+   "groove": [
+    33,
+    34,
+    44
+   ],
+   "scroll": [
+    68,
+    71,
+    90
+   ],
+   "scroll_hi": [
+    98,
+    114,
+    164
+   ]
+  },
+  {
+   "id": "nord",
+   "label": "Nord",
+   "dark": true,
+   "bg": [
+    46,
+    52,
+    64
+   ],
+   "panel": [
+    59,
+    66,
+    82
+   ],
+   "panel2": [
+    67,
+    76,
+    94
+   ],
+   "text": [
+    216,
+    222,
+    233
+   ],
+   "on": [
+    94,
+    129,
+    172
+   ],
+   "on_text": "white",
+   "accent": [
+    163,
+    190,
+    140
+   ],
+   "groove": [
+    39,
+    44,
+    53
+   ],
+   "scroll": [
+    76,
+    86,
+    106
+   ],
+   "scroll_hi": [
+    94,
+    129,
+    172
+   ]
+  },
+  {
+   "id": "solarized-dark",
+   "label": "Solarized Dark",
+   "dark": true,
+   "bg": [
+    0,
+    43,
+    54
+   ],
+   "panel": [
+    7,
+    54,
+    66
+   ],
+   "panel2": [
+    0,
+    33,
+    43
+   ],
+   "text": [
+    147,
+    161,
+    161
+   ],
+   "on": [
+    38,
+    139,
+    210
+   ],
+   "on_text": "white",
+   "accent": [
+    133,
+    153,
+    0
+   ],
+   "groove": [
+    0,
+    25,
+    33
+   ],
+   "scroll": [
+    88,
+    110,
+    117
+   ],
+   "scroll_hi": [
+    101,
+    123,
+    131
+   ]
+  },
+  {
+   "id": "solarized-light",
+   "label": "Solarized Light",
+   "dark": false,
+   "bg": [
+    238,
+    232,
+    213
+   ],
+   "panel": [
+    253,
+    246,
+    227
+   ],
+   "panel2": [
+    221,
+    214,
+    193
+   ],
+   "text": [
+    88,
+    110,
+    117
+   ],
+   "on": [
+    38,
+    139,
+    210
+   ],
+   "on_text": "white",
+   "accent": [
+    133,
+    153,
+    0
+   ],
+   "groove": [
+    213,
+    206,
+    185
+   ],
+   "scroll": [
+    204,
+    196,
+    172
+   ],
+   "scroll_hi": [
+    184,
+    176,
+    149
+   ]
+  },
+  {
+   "id": "gruvbox-dark",
+   "label": "Gruvbox Dark",
+   "dark": true,
+   "bg": [
+    40,
+    40,
+    40
+   ],
+   "panel": [
+    60,
+    56,
+    54
+   ],
+   "panel2": [
+    80,
+    73,
+    69
+   ],
+   "text": [
+    235,
+    219,
+    178
+   ],
+   "on": [
+    69,
+    133,
+    136
+   ],
+   "on_text": "white",
+   "accent": [
+    184,
+    187,
+    38
+   ],
+   "groove": [
+    29,
+    32,
+    33
+   ],
+   "scroll": [
+    80,
+    73,
+    69
+   ],
+   "scroll_hi": [
+    102,
+    92,
+    84
+   ]
+  },
+  {
+   "id": "cyberpunk",
+   "label": "Cyberpunk",
+   "dark": true,
+   "bg": [
+    0,
+    11,
+    30
+   ],
+   "panel": [
+    1,
+    23,
+    42
+   ],
+   "panel2": [
+    1,
+    34,
+    52
+   ],
+   "text": [
+    10,
+    189,
+    198
+   ],
+   "on": [
+    28,
+    97,
+    194
+   ],
+   "on_text": "white",
+   "accent": [
+    211,
+    0,
+    196
+   ],
+   "groove": [
+    0,
+    7,
+    18
+   ],
+   "scroll": [
+    2,
+    50,
+    67
+   ],
+   "scroll_hi": [
+    4,
+    75,
+    90
+   ]
+  },
+  {
+   "id": "monokai-pro",
+   "label": "Monokai Pro",
+   "dark": true,
+   "bg": [
+    45,
+    42,
+    46
+   ],
+   "panel": [
+    60,
+    56,
+    61
+   ],
+   "panel2": [
+    72,
+    68,
+    73
+   ],
+   "text": [
+    255,
+    241,
+    243
+   ],
+   "on": [
+    168,
+    169,
+    235
+   ],
+   "on_text": "black",
+   "accent": [
+    173,
+    218,
+    120
+   ],
+   "groove": [
+    27,
+    25,
+    28
+   ],
+   "scroll": [
+    91,
+    86,
+    89
+   ],
+   "scroll_hi": [
+    121,
+    114,
+    117
+   ]
+  },
+  {
+   "id": "tokyo-night",
+   "label": "Tokyo Night",
+   "dark": true,
+   "bg": [
+    26,
+    27,
+    38
+   ],
+   "panel": [
+    36,
+    38,
+    50
+   ],
+   "panel2": [
+    45,
+    47,
+    61
+   ],
+   "text": [
+    169,
+    177,
+    214
+   ],
+   "on": [
+    122,
+    162,
+    247
+   ],
+   "on_text": "black",
+   "accent": [
+    158,
+    206,
+    106
+   ],
+   "groove": [
+    16,
+    16,
+    23
+   ],
+   "scroll": [
+    57,
+    60,
+    77
+   ],
+   "scroll_hi": [
+    77,
+    81,
+    101
+   ]
+  },
+  {
+   "id": "ubuntu",
+   "label": "Ubuntu",
+   "dark": true,
+   "bg": [
+    48,
+    10,
+    36
+   ],
+   "panel": [
+    61,
+    26,
+    50
+   ],
+   "panel2": [
+    73,
+    40,
+    62
+   ],
+   "text": [
+    238,
+    238,
+    236
+   ],
+   "on": [
+    52,
+    101,
+    164
+   ],
+   "on_text": "white",
+   "accent": [
+    78,
+    154,
+    6
+   ],
+   "groove": [
+    29,
+    6,
+    22
+   ],
+   "scroll": [
+    90,
+    60,
+    80
+   ],
+   "scroll_hi": [
+    116,
+    92,
+    108
+   ]
+  },
+  {
+   "id": "gruvbox-material",
+   "label": "Gruvbox Material",
+   "dark": true,
+   "bg": [
+    40,
+    40,
+    40
+   ],
+   "panel": [
+    53,
+    51,
+    47
+   ],
+   "panel2": [
+    64,
+    60,
+    53
+   ],
+   "text": [
+    223,
+    191,
+    142
+   ],
+   "on": [
+    125,
+    174,
+    163
+   ],
+   "on_text": "black",
+   "accent": [
+    169,
+    182,
+    101
+   ],
+   "groove": [
+    24,
+    24,
+    24
+   ],
+   "scroll": [
+    80,
+    73,
+    62
+   ],
+   "scroll_hi": [
+    106,
+    94,
+    77
+   ]
+  },
+  {
+   "id": "synthwave",
+   "label": "Synthwave",
+   "dark": true,
+   "bg": [
+    13,
+    11,
+    30
+   ],
+   "panel": [
+    29,
+    28,
+    46
+   ],
+   "panel2": [
+    44,
+    42,
+    59
+   ],
+   "text": [
+    248,
+    248,
+    255
+   ],
+   "on": [
+    255,
+    42,
+    109
+   ],
+   "on_text": "white",
+   "accent": [
+    5,
+    217,
+    232
+   ],
+   "groove": [
+    8,
+    7,
+    18
+   ],
+   "scroll": [
+    65,
+    63,
+    80
+   ],
+   "scroll_hi": [
+    98,
+    96,
+    111
+   ],
+   "chat_bg": [
+    16,
+    12,
+    30
+   ],
+   "chat_fg": [
+    245,
+    245,
+    255
+   ],
+   "wallpaper": "synthwave.png",
+   "bg_gradient": [
     {
-      "id": "dark",
-      "label": "Default",
-      "dark": true,
-      "bg": [28, 30, 33],
-      "panel": [37, 40, 44],
-      "panel2": [44, 48, 53],
-      "text": [224, 226, 229],
-      "on": [40, 95, 60],
-      "on_text": "white",
-      "accent": [80, 230, 150],
-      "groove": [18, 20, 23],
-      "scroll": [70, 75, 82],
-      "scroll_hi": [98, 104, 112]
+     "stop": 0.0,
+     "color": [
+      13,
+      11,
+      30
+     ]
     },
     {
-      "id": "system",
-      "label": "Themes Off",
-      "system": true
+     "stop": 0.36,
+     "color": [
+      95,
+      10,
+      135
+     ]
     },
     {
-      "id": "light",
-      "label": "Light",
-      "dark": false,
-      "bg": [236, 238, 241],
-      "panel": [251, 251, 252],
-      "panel2": [225, 228, 233],
-      "text": [28, 30, 33],
-      "on": [70, 200, 130],
-      "on_text": "black",
-      "accent": [80, 230, 150],
-      "groove": [148, 154, 162],
-      "scroll": [178, 183, 190],
-      "scroll_hi": [150, 155, 163]
+     "stop": 0.52,
+     "color": [
+      255,
+      42,
+      109
+     ]
     },
     {
-      "id": "dracula",
-      "label": "Dracula",
-      "dark": true,
-      "bg": [40, 42, 54],
-      "panel": [52, 55, 70],
-      "panel2": [68, 71, 90],
-      "text": [248, 248, 242],
-      "on": [98, 114, 164],
-      "on_text": "white",
-      "accent": [80, 250, 123],
-      "groove": [33, 34, 44],
-      "scroll": [68, 71, 90],
-      "scroll_hi": [98, 114, 164]
+     "stop": 0.57,
+     "color": [
+      10,
+      6,
+      20
+     ]
     },
     {
-      "id": "nord",
-      "label": "Nord",
-      "dark": true,
-      "bg": [46, 52, 64],
-      "panel": [59, 66, 82],
-      "panel2": [67, 76, 94],
-      "text": [216, 222, 233],
-      "on": [94, 129, 172],
-      "on_text": "white",
-      "accent": [163, 190, 140],
-      "groove": [39, 44, 53],
-      "scroll": [76, 86, 106],
-      "scroll_hi": [94, 129, 172]
-    },
-    {
-      "id": "solarized-dark",
-      "label": "Solarized Dark",
-      "dark": true,
-      "bg": [0, 43, 54],
-      "panel": [7, 54, 66],
-      "panel2": [0, 33, 43],
-      "text": [147, 161, 161],
-      "on": [38, 139, 210],
-      "on_text": "white",
-      "accent": [133, 153, 0],
-      "groove": [0, 25, 33],
-      "scroll": [88, 110, 117],
-      "scroll_hi": [101, 123, 131]
-    },
-    {
-      "id": "solarized-light",
-      "label": "Solarized Light",
-      "dark": false,
-      "bg": [238, 232, 213],
-      "panel": [253, 246, 227],
-      "panel2": [221, 214, 193],
-      "text": [88, 110, 117],
-      "on": [38, 139, 210],
-      "on_text": "white",
-      "accent": [133, 153, 0],
-      "groove": [213, 206, 185],
-      "scroll": [204, 196, 172],
-      "scroll_hi": [184, 176, 149]
-    },
-    {
-      "id": "gruvbox-dark",
-      "label": "Gruvbox Dark",
-      "dark": true,
-      "bg": [40, 40, 40],
-      "panel": [60, 56, 54],
-      "panel2": [80, 73, 69],
-      "text": [235, 219, 178],
-      "on": [69, 133, 136],
-      "on_text": "white",
-      "accent": [184, 187, 38],
-      "groove": [29, 32, 33],
-      "scroll": [80, 73, 69],
-      "scroll_hi": [102, 92, 84]
-    },
-    {
-      "id": "cyberpunk",
-      "label": "Cyberpunk",
-      "dark": true,
-      "bg": [0, 11, 30],
-      "panel": [1, 23, 42],
-      "panel2": [1, 34, 52],
-      "text": [10, 189, 198],
-      "on": [28, 97, 194],
-      "on_text": "white",
-      "accent": [211, 0, 196],
-      "groove": [0, 7, 18],
-      "scroll": [2, 50, 67],
-      "scroll_hi": [4, 75, 90]
-    },
-    {
-      "id": "monokai-pro",
-      "label": "Monokai Pro",
-      "dark": true,
-      "bg": [45, 42, 46],
-      "panel": [60, 56, 61],
-      "panel2": [72, 68, 73],
-      "text": [255, 241, 243],
-      "on": [168, 169, 235],
-      "on_text": "black",
-      "accent": [173, 218, 120],
-      "groove": [27, 25, 28],
-      "scroll": [91, 86, 89],
-      "scroll_hi": [121, 114, 117]
-    },
-    {
-      "id": "tokyo-night",
-      "label": "Tokyo Night",
-      "dark": true,
-      "bg": [26, 27, 38],
-      "panel": [36, 38, 50],
-      "panel2": [45, 47, 61],
-      "text": [169, 177, 214],
-      "on": [122, 162, 247],
-      "on_text": "black",
-      "accent": [158, 206, 106],
-      "groove": [16, 16, 23],
-      "scroll": [57, 60, 77],
-      "scroll_hi": [77, 81, 101]
-    },
-    {
-      "id": "ubuntu",
-      "label": "Ubuntu",
-      "dark": true,
-      "bg": [48, 10, 36],
-      "panel": [61, 26, 50],
-      "panel2": [73, 40, 62],
-      "text": [238, 238, 236],
-      "on": [52, 101, 164],
-      "on_text": "white",
-      "accent": [78, 154, 6],
-      "groove": [29, 6, 22],
-      "scroll": [90, 60, 80],
-      "scroll_hi": [116, 92, 108]
-    },
-    {
-      "id": "gruvbox-material",
-      "label": "Gruvbox Material",
-      "dark": true,
-      "bg": [40, 40, 40],
-      "panel": [53, 51, 47],
-      "panel2": [64, 60, 53],
-      "text": [223, 191, 142],
-      "on": [125, 174, 163],
-      "on_text": "black",
-      "accent": [169, 182, 101],
-      "groove": [24, 24, 24],
-      "scroll": [80, 73, 62],
-      "scroll_hi": [106, 94, 77]
-    },
-    {
-      "id": "synthwave",
-      "label": "Synthwave",
-      "dark": true,
-      "bg": [13, 11, 30],
-      "panel": [29, 28, 46],
-      "panel2": [44, 42, 59],
-      "text": [248, 248, 255],
-      "on": [255, 42, 109],
-      "on_text": "white",
-      "accent": [5, 217, 232],
-      "groove": [8, 7, 18],
-      "scroll": [65, 63, 80],
-      "scroll_hi": [98, 96, 111],
-      "chat_bg": [16, 12, 30],
-      "chat_fg": [245, 245, 255],
-      "wallpaper": "synthwave.png",
-      "bg_gradient": [
-        {"stop": 0.0, "color": [13, 11, 30]},
-        {"stop": 0.36, "color": [95, 10, 135]},
-        {"stop": 0.52, "color": [255, 42, 109]},
-        {"stop": 0.57, "color": [10, 6, 20]},
-        {"stop": 1.0, "color": [5, 3, 10]}
-      ]
-    },
-    {
-      "id": "vaporwave",
-      "label": "Vaporwave",
-      "dark": true,
-      "bg": [8, 6, 16],
-      "panel": [24, 22, 33],
-      "panel2": [38, 36, 47],
-      "text": [240, 240, 255],
-      "on": [255, 60, 150],
-      "on_text": "white",
-      "accent": [0, 229, 232],
-      "groove": [5, 4, 10],
-      "scroll": [59, 57, 69],
-      "scroll_hi": [92, 90, 102],
-      "chat_bg": [12, 9, 22],
-      "chat_fg": [240, 240, 255],
-      "wallpaper": "vaporwave-2.jpg"
-    },
-    {
-      "id": "classic",
-      "label": "Classic (terminal)",
-      "dark": true,
-      "bg": [24, 24, 24],
-      "panel": [32, 32, 32],
-      "panel2": [40, 40, 40],
-      "text": [208, 208, 208],
-      "on": [48, 86, 64],
-      "on_text": "white",
-      "accent": [80, 230, 150],
-      "groove": [14, 14, 14],
-      "scroll": [70, 70, 70],
-      "scroll_hi": [100, 100, 100],
-      "chat_bg": [10, 10, 10],
-      "chat_fg": [204, 204, 204]
-    },
-    {
-      "id": "classic-green",
-      "label": "Classic Green",
-      "dark": true,
-      "bg": [24, 24, 24],
-      "panel": [32, 32, 32],
-      "panel2": [40, 40, 40],
-      "text": [208, 208, 208],
-      "on": [40, 90, 50],
-      "on_text": "white",
-      "accent": [0, 210, 0],
-      "groove": [14, 14, 14],
-      "scroll": [70, 70, 70],
-      "scroll_hi": [100, 100, 100],
-      "chat_bg": [8, 12, 8],
-      "chat_fg": [0, 210, 0]
-    },
-    {
-      "id": "amber",
-      "label": "Amber",
-      "dark": true,
-      "bg": [24, 22, 18],
-      "panel": [32, 29, 24],
-      "panel2": [40, 36, 30],
-      "text": [220, 200, 160],
-      "on": [90, 70, 30],
-      "on_text": "black",
-      "accent": [255, 176, 0],
-      "groove": [14, 12, 8],
-      "scroll": [70, 62, 48],
-      "scroll_hi": [100, 88, 64],
-      "chat_bg": [12, 10, 6],
-      "chat_fg": [255, 176, 0]
+     "stop": 1.0,
+     "color": [
+      5,
+      3,
+      10
+     ]
     }
-  ]
+   ]
+  },
+  {
+   "id": "vaporwave",
+   "label": "Vaporwave",
+   "dark": true,
+   "bg": [
+    8,
+    6,
+    16
+   ],
+   "panel": [
+    24,
+    22,
+    33
+   ],
+   "panel2": [
+    38,
+    36,
+    47
+   ],
+   "text": [
+    240,
+    240,
+    255
+   ],
+   "on": [
+    255,
+    60,
+    150
+   ],
+   "on_text": "white",
+   "accent": [
+    0,
+    229,
+    232
+   ],
+   "groove": [
+    5,
+    4,
+    10
+   ],
+   "scroll": [
+    59,
+    57,
+    69
+   ],
+   "scroll_hi": [
+    92,
+    90,
+    102
+   ],
+   "chat_bg": [
+    12,
+    9,
+    22
+   ],
+   "chat_fg": [
+    240,
+    240,
+    255
+   ],
+   "wallpaper": "vaporwave-2.jpg"
+  },
+  {
+   "id": "classic",
+   "label": "Classic (terminal)",
+   "dark": true,
+   "bg": [
+    24,
+    24,
+    24
+   ],
+   "panel": [
+    32,
+    32,
+    32
+   ],
+   "panel2": [
+    40,
+    40,
+    40
+   ],
+   "text": [
+    208,
+    208,
+    208
+   ],
+   "on": [
+    48,
+    86,
+    64
+   ],
+   "on_text": "white",
+   "accent": [
+    80,
+    230,
+    150
+   ],
+   "groove": [
+    14,
+    14,
+    14
+   ],
+   "scroll": [
+    70,
+    70,
+    70
+   ],
+   "scroll_hi": [
+    100,
+    100,
+    100
+   ],
+   "chat_bg": [
+    10,
+    10,
+    10
+   ],
+   "chat_fg": [
+    204,
+    204,
+    204
+   ]
+  },
+  {
+   "id": "classic-green",
+   "label": "Classic Green",
+   "dark": true,
+   "bg": [
+    24,
+    24,
+    24
+   ],
+   "panel": [
+    32,
+    32,
+    32
+   ],
+   "panel2": [
+    40,
+    40,
+    40
+   ],
+   "text": [
+    208,
+    208,
+    208
+   ],
+   "on": [
+    40,
+    90,
+    50
+   ],
+   "on_text": "white",
+   "accent": [
+    0,
+    210,
+    0
+   ],
+   "groove": [
+    14,
+    14,
+    14
+   ],
+   "scroll": [
+    70,
+    70,
+    70
+   ],
+   "scroll_hi": [
+    100,
+    100,
+    100
+   ],
+   "chat_bg": [
+    8,
+    12,
+    8
+   ],
+   "chat_fg": [
+    0,
+    210,
+    0
+   ]
+  },
+  {
+   "id": "amber",
+   "label": "Amber",
+   "dark": true,
+   "bg": [
+    24,
+    22,
+    18
+   ],
+   "panel": [
+    32,
+    29,
+    24
+   ],
+   "panel2": [
+    40,
+    36,
+    30
+   ],
+   "text": [
+    220,
+    200,
+    160
+   ],
+   "on": [
+    90,
+    70,
+    30
+   ],
+   "on_text": "black",
+   "accent": [
+    255,
+    176,
+    0
+   ],
+   "groove": [
+    14,
+    12,
+    8
+   ],
+   "scroll": [
+    70,
+    62,
+    48
+   ],
+   "scroll_hi": [
+    100,
+    88,
+    64
+   ],
+   "chat_bg": [
+    12,
+    10,
+    6
+   ],
+   "chat_fg": [
+    255,
+    176,
+    0
+   ]
+  }
+ ]
 }

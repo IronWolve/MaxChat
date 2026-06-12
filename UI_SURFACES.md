@@ -147,6 +147,22 @@ at least one buffer has it on; non-opted-in buffers skip panel rendering.
 - Consumed via `m_ogRenderOptions` (`LinkPreviewRenderOptions`) populated in
   `applyCurrentSettings()`; passed to `renderOpenGraphPreviewHtml`.
 
+### Themes tab (`buildThemesTab`)
+- App theme combo + Default / Turn themes off + Customize (ThemeEditorDialog);
+  chat theme combo + Customize; wallpaper combo.
+- **Theme files group (2026-06-11)**: `Save Theme...` (current app theme +
+  current font settings → named user theme), `Import...` / `Export...`
+  (single-JSON **theme pack**: `kind: maxchat-theme-pack` bundling app theme,
+  chat theme, fonts, wallpaper). Import installs as user themes (`u-<slug>`)
+  and selects them; bare single-theme JSONs are also accepted.
+- App themes may bundle a `fonts` object (whitelisted `*_font_family/size/bold`
+  keys only — imports must not inject arbitrary settings). Selecting such a
+  theme re-applies its fonts (combo handler here; Settings ▸ Themes menu path
+  via `MainWindow::setTheme`).
+- Built-ins include system-like `Normal` / `Normal Dark` (neutral palettes for
+  users who find "Themes Off" too bare) and `Console` (black/cyan terminal-IRC
+  look; pairs with the terminal-style chat themes).
+
 ### Scripts tab (`buildScriptsTab`)
 - "Currently loaded" group box at top, populated from `m_lua->loaded()` at
   dialog-open time (passed as `loadedScripts` constructor arg — snapshot, not live).

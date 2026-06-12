@@ -26,6 +26,7 @@
 #include <QHBoxLayout>
 #include <QLineEdit>
 #include <QListWidget>
+#include <QMessageBox>
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QSpinBox>
@@ -1224,12 +1225,168 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
                                    settings_.value(QStringLiteral("wallpaper")).toString()));
     wallpaperForm->addRow(QStringLiteral("Image"), wallpaper_);
     root->addWidget(wallpaperBox);
+
+    // Theme files: save the whole current look (app + chat colors, fonts,
+    // wallpaper) as a named user theme, or move it between machines as a
+    // single JSON "theme pack".
+    auto* fileBox = new QGroupBox(QStringLiteral("Theme files - colors + fonts together"), tab);
+    auto* fileRow = new QHBoxLayout(fileBox);
+    auto* saveTheme = new QPushButton(QStringLiteral("Save Theme..."), fileBox);
+    saveTheme->setObjectName(QStringLiteral("saveTheme"));
+    saveTheme->setToolTip(
+        QStringLiteral("Save the current app theme + font settings as a new user theme"));
+    auto* importTheme = new QPushButton(QStringLiteral("Import..."), fileBox);
+    importTheme->setObjectName(QStringLiteral("importTheme"));
+    auto* exportTheme = new QPushButton(QStringLiteral("Export..."), fileBox);
+    exportTheme->setObjectName(QStringLiteral("exportTheme"));
+    fileRow->addWidget(saveTheme);
+    fileRow->addWidget(importTheme);
+    fileRow->addWidget(exportTheme);
+    fileRow->addStretch(1);
+    root->addWidget(fileBox);
     root->addStretch(1);
 
     connect(appDefault, &QPushButton::clicked, this,
             [this]() { setComboByData(theme_, defaultThemeId()); });
     connect(appOff, &QPushButton::clicked, this,
             [this]() { setComboByData(theme_, systemThemeId()); });
+
+    // A theme that bundles fonts re-applies them when selected (saved/imported
+    // themes carry the fonts that were active when they were saved).
+    connect(theme_, &QComboBox::currentIndexChanged, this, [this](int) {
+        const AppThemeDefinition def = appThemeById(theme_->currentData().toString());
+        if (!def.fonts.isEmpty()) {
+            applyFontSelections(def.fonts);
+        }
+    });
+
+    connect(saveTheme, &QPushButton::clicked, this, [this]() {
+        const QString currentId = theme_->currentData().toString();
+        if (currentId == systemThemeId()) {
+            QMessageBox::information(this, QStringLiteral("Save Theme"),
+                                     QStringLiteral("Pick a theme first - \"Themes Off\" has no "
+                                                    "colors to save."));
+            return;
+        }
+        const QString name =
+            QInputDialog::getText(this, QStringLiteral("Save Theme"),
+                                  QStringLiteral("Theme name (saved with current fonts):"));
+        if (name.trimmed().isEmpty()) {
+            return;
+        }
+        AppThemeDefinition def = appThemeById(currentId);
+        def.fonts = currentFontSelections();
+        const QString id = saveUserAppTheme(name.trimmed(), def);
+        if (id.isEmpty()) {
+            QMessageBox::warning(this, QStringLiteral("Save Theme"),
+                                 QStringLiteral("Could not write the theme file."));
+            return;
+        }
+        refillThemeCombo(theme_, false, id);
+    });
+
+    connect(exportTheme, &QPushButton::clicked, this, [this]() {
+        const AppThemeDefinition app = appThemeById(theme_->currentData().toString());
+        const ChatThemeDefinition chat = chatThemeById(chatTheme_->currentData().toString());
+        ThemePack pack;
+        pack.name = app.id == systemThemeId() ? QStringLiteral("MaxChat Theme") : app.label;
+        if (app.id != systemThemeId()) {
+            pack.app = app;
+        }
+        if (chat.id != QLatin1String("follow") && chat.bg.isValid()) {
+            pack.chat = chat;
+        }
+        pack.fonts = currentFontSelections();
+        pack.wallpaper = wallpaper_->currentData().toString();
+        const QString suggested =
+            QDir::home().filePath(QStringLiteral("%1.maxtheme.json")
+                                      .arg(pack.name.toLower().replace(QLatin1Char(' '),
+                                                                       QLatin1Char('-'))));
+        const QString path = QFileDialog::getSaveFileName(
+            this, QStringLiteral("Export Theme"), suggested,
+            QStringLiteral("MaxChat theme (*.json)"));
+        if (path.isEmpty()) {
+            return;
+        }
+        if (!exportThemePack(path, pack)) {
+            QMessageBox::warning(this, QStringLiteral("Export Theme"),
+                                 QStringLiteral("Could not write the theme file."));
+        }
+    });
+
+    connect(importTheme, &QPushButton::clicked, this, [this]() {
+        const QString path = QFileDialog::getOpenFileName(
+            this, QStringLiteral("Import Theme"), QDir::homePath(),
+            QStringLiteral("MaxChat theme (*.json)"));
+        if (path.isEmpty()) {
+            return;
+        }
+        const ThemePack pack = importThemePack(path);
+        if (!pack.error.isEmpty()) {
+            QMessageBox::warning(this, QStringLiteral("Import Theme"),
+                                 QStringLiteral("Import failed: %1.").arg(pack.error));
+            return;
+        }
+        if (!pack.app.id.isEmpty()) {
+            refillThemeCombo(theme_, false, pack.app.id);
+        }
+        if (!pack.chat.id.isEmpty()) {
+            refillThemeCombo(chatTheme_, true, pack.chat.id);
+        }
+        if (!pack.fonts.isEmpty()) {
+            applyFontSelections(pack.fonts);
+        }
+        if (!pack.wallpaper.isEmpty()) {
+            setComboByData(wallpaper_, normalizeWallpaperValue(pack.wallpaper));
+        }
+    });
+}
+
+QVariantMap PreferencesDialog::currentFontSelections() const {
+    QVariantMap fonts;
+    const auto add = [&fonts](const QString& prefix, const QFontComboBox* family,
+                              const QSpinBox* size, const QCheckBox* bold) {
+        if (family == nullptr || size == nullptr || bold == nullptr) {
+            return; // fonts tab not built yet
+        }
+        fonts.insert(prefix + QStringLiteral("_font_family"), family->currentFont().family());
+        fonts.insert(prefix + QStringLiteral("_font_size"), size->value());
+        fonts.insert(prefix + QStringLiteral("_font_bold"), bold->isChecked());
+    };
+    add(QStringLiteral("app"), appFontFamily_, appFontSize_, appFontBold_);
+    add(QStringLiteral("chat"), chatFontFamily_, chatFontSize_, chatFontBold_);
+    add(QStringLiteral("list"), listFontFamily_, listFontSize_, listFontBold_);
+    add(QStringLiteral("nick"), nickFontFamily_, nickFontSize_, nickFontBold_);
+    add(QStringLiteral("status"), statusFontFamily_, statusFontSize_, statusFontBold_);
+    add(QStringLiteral("topic"), topicFontFamily_, topicFontSize_, topicFontBold_);
+    return fonts;
+}
+
+void PreferencesDialog::applyFontSelections(const QVariantMap& fonts) {
+    const auto apply = [&fonts](const QString& prefix, QFontComboBox* family, QSpinBox* size,
+                                QCheckBox* bold) {
+        if (family == nullptr || size == nullptr || bold == nullptr) {
+            return;
+        }
+        const QVariant fam = fonts.value(prefix + QStringLiteral("_font_family"));
+        const QVariant sz = fonts.value(prefix + QStringLiteral("_font_size"));
+        const QVariant bd = fonts.value(prefix + QStringLiteral("_font_bold"));
+        if (fam.isValid() && !fam.toString().isEmpty()) {
+            family->setCurrentFont(QFont(fam.toString()));
+        }
+        if (sz.isValid() && sz.toInt() > 0) {
+            size->setValue(sz.toInt());
+        }
+        if (bd.isValid()) {
+            bold->setChecked(bd.toBool());
+        }
+    };
+    apply(QStringLiteral("app"), appFontFamily_, appFontSize_, appFontBold_);
+    apply(QStringLiteral("chat"), chatFontFamily_, chatFontSize_, chatFontBold_);
+    apply(QStringLiteral("list"), listFontFamily_, listFontSize_, listFontBold_);
+    apply(QStringLiteral("nick"), nickFontFamily_, nickFontSize_, nickFontBold_);
+    apply(QStringLiteral("status"), statusFontFamily_, statusFontSize_, statusFontBold_);
+    apply(QStringLiteral("topic"), topicFontFamily_, topicFontSize_, topicFontBold_);
 }
 
 void PreferencesDialog::buildMessagesTab(QWidget* tab) {
