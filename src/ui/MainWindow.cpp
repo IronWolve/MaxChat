@@ -2447,11 +2447,47 @@ QString maxchat::ui::MainWindow::scriptHttpGet(const QString& url) {
                               parsed.scheme() != QLatin1String("https"))) {
         return {};
     }
+
+    // SSRF gate (same one the link-preview fetcher uses): a script must not be
+    // able to reach loopback/link-local/private hosts — that's localhost
+    // services and cloud metadata endpoints. Checked up front and on every
+    // redirect hop below.
+    bool allowed = false;
+    {
+        QEventLoop gateLoop;
+        maxchat::services::resolvePreviewUrlPublicAsync(
+            parsed, /*allowPrivateNetwork=*/false, this, [&](bool ok) {
+                allowed = ok;
+                gateLoop.quit();
+            });
+        gateLoop.exec();
+    }
+    if (!allowed) {
+        return {};
+    }
+
     QNetworkRequest request(parsed);
     request.setRawHeader("User-Agent", "MaxChat-script");
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::NoLessSafeRedirectPolicy);
     QNetworkReply* reply = m_updateNetworkManager.get(request);
+
+    constexpr qint64 kMaxBodyBytes = 2 * 1024 * 1024; // scripts get text, not blobs
+    connect(reply, &QNetworkReply::redirected, this,
+            [reply](const QUrl& target) {
+                maxchat::services::resolvePreviewUrlPublicAsync(
+                    target, /*allowPrivateNetwork=*/false, reply, [reply](bool ok) {
+                        if (!ok) {
+                            reply->abort();
+                        }
+                    });
+            });
+    connect(reply, &QNetworkReply::downloadProgress, this,
+            [reply](qint64 received, qint64 /*total*/) {
+                if (received > kMaxBodyBytes) {
+                    reply->abort(); // unbounded body = memory DoS
+                }
+            });
 
     // Block (with a timeout) until the request finishes — scripts opt into this
     // by enabling the network permission, and accept the synchronous wait.
@@ -2465,7 +2501,7 @@ QString maxchat::ui::MainWindow::scriptHttpGet(const QString& url) {
 
     QString body;
     if (reply->isFinished() && reply->error() == QNetworkReply::NoError) {
-        body = QString::fromUtf8(reply->readAll());
+        body = QString::fromUtf8(reply->read(kMaxBodyBytes));
     } else if (!reply->isFinished()) {
         reply->abort();
     }
@@ -2568,13 +2604,17 @@ void maxchat::ui::MainWindow::seedBundledScripts(const QString& destDir) {
     // run.lua stayed deployed long after api.launch replaced it in assets).
     const QString recordDir = QDir(destDir).filePath(QStringLiteral(".bundled"));
     QDir().mkpath(recordDir);
-    const auto readAll = [](const QString& path) -> QByteArray {
+    // A failed read must never feed an overwrite decision: an unreadable
+    // (locked) file would compare equal to another unreadable file as "" == ""
+    // and a user edit could be clobbered as "unmodified".
+    const auto readAll = [](const QString& path, bool* ok) -> QByteArray {
         QFile f(path);
-        return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray();
+        *ok = f.open(QIODevice::ReadOnly);
+        return *ok ? f.readAll() : QByteArray();
     };
-    const auto copyOver = [](const QString& from, const QString& to) {
+    const auto copyOver = [](const QString& from, const QString& to) -> bool {
         QFile::remove(to);
-        QFile::copy(from, to);
+        return QFile::copy(from, to);
     };
     const QFileInfoList examples =
         QDir(src).entryInfoList({QStringLiteral("*.lua")}, QDir::Files, QDir::Name);
@@ -2582,21 +2622,34 @@ void maxchat::ui::MainWindow::seedBundledScripts(const QString& destDir) {
         const QString dest = QDir(destDir).filePath(fi.fileName());
         const QString record = QDir(recordDir).filePath(fi.fileName());
         if (!QFile::exists(dest)) {
-            copyOver(fi.absoluteFilePath(), dest);
-            copyOver(fi.absoluteFilePath(), record);
+            // The record only updates when the deployed copy actually landed,
+            // otherwise the file would look user-edited forever (deployed
+            // matching neither bundled nor record) and never upgrade again.
+            if (copyOver(fi.absoluteFilePath(), dest)) {
+                copyOver(fi.absoluteFilePath(), record);
+            }
             continue;
         }
-        const QByteArray bundled = readAll(fi.absoluteFilePath());
-        const QByteArray deployed = readAll(dest);
+        bool bundledOk = false;
+        bool deployedOk = false;
+        const QByteArray bundled = readAll(fi.absoluteFilePath(), &bundledOk);
+        const QByteArray deployed = readAll(dest, &deployedOk);
+        if (!bundledOk || !deployedOk) {
+            continue; // can't tell what's deployed — try again next startup
+        }
         if (deployed == bundled) {
             if (!QFile::exists(record)) {
                 copyOver(fi.absoluteFilePath(), record); // adopt pre-record installs
             }
             continue;
         }
-        if (QFile::exists(record) && deployed == readAll(record)) {
-            copyOver(fi.absoluteFilePath(), dest); // unmodified — take the upgrade
-            copyOver(fi.absoluteFilePath(), record);
+        bool recordOk = false;
+        const QByteArray recorded = readAll(record, &recordOk);
+        if (recordOk && deployed == recorded) {
+            // unmodified — take the upgrade (record after dest, see above)
+            if (copyOver(fi.absoluteFilePath(), dest)) {
+                copyOver(fi.absoluteFilePath(), record);
+            }
         }
         // deployed differs from both bundled and record: user edit — never touch.
     }
@@ -3016,6 +3069,22 @@ void maxchat::ui::MainWindow::closeTarget(const QString& target) {
 }
 
 void maxchat::ui::MainWindow::setServerListVisible(const bool visible, const bool save) {
+    // Buttons-as-tabs replaces the server-list tree — never show both
+    // navigators at once. While tabs are on, only persist the preference; the
+    // tree is restored from it when tabs go off (setBufferTabsVisible).
+    const bool tabsOn = m_bufferTabBar != nullptr && m_bufferTabBar->isVisible();
+    if (visible && tabsOn) {
+        if (save) {
+            saveViewVisibilitySetting(QStringLiteral("server_list_visible"), true);
+            statusBar()->showMessage(QStringLiteral(
+                "Server list saved — it will show when Buttons as Tabs is turned off."));
+        }
+        if (m_serverListVisibleAction != nullptr && m_serverListVisibleAction->isChecked()) {
+            const QSignalBlocker blocker(m_serverListVisibleAction);
+            m_serverListVisibleAction->setChecked(false);
+        }
+        return;
+    }
     setSplitterPanelVisible(0, visible, save);
     if (save) {
         statusBar()->showMessage(visible ? QStringLiteral("Server list shown.")
