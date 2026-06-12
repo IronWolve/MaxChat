@@ -91,7 +91,7 @@ class PreferencesDialog final : public QDialog {
     QCheckBox* separatorLine_ = nullptr;
     QSpinBox* nickWidth_ = nullptr;
     QCheckBox* hideJoinPart_ = nullptr;
-    QCheckBox* coloredNicks_ = nullptr;
+    QComboBox* nickColorMode_ = nullptr;
     QCheckBox* showFormatting_ = nullptr;
     QCheckBox* indentWrap_ = nullptr;
     QCheckBox* markerLine_ = nullptr;

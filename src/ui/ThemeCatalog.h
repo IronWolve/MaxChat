@@ -88,6 +88,11 @@ struct ThemePack {
 [[nodiscard]] ThemePack importThemePack(const QString &path);
 // The font settings keys a theme may bundle (used for whitelisting).
 [[nodiscard]] QStringList themeFontKeys();
+
+// User-created themes ("u-" ids) can be deleted; built-ins cannot.
+[[nodiscard]] bool isUserThemeId(const QString &id);
+bool deleteUserAppTheme(const QString &id);
+bool deleteUserChatTheme(const QString &id);
 [[nodiscard]] QString effectiveWallpaperPath(const QString &theme,
                                              const QString &wallpaper);
 // QPalette matching a theme, so the OS palette can't bleed into unstyled

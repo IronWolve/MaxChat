@@ -2,7 +2,20 @@
 
 Date: 2026-06-09 (audit closeout 2026-06-10; UI polish 2026-06-11)
 
-## Latest Completed Slice (themes revamp, 2026-06-11 late)
+## Latest Completed Slice (themes tab polish + nick color modes, 2026-06-11 late)
+
+- Themes tab: "Active now: <name>" labels + live color-chip previews in both
+  the app and chat boxes; **Delete** button for user themes only
+  (`isUserThemeId` / `deleteUserAppTheme` / `deleteUserChatTheme` in
+  ThemeCatalog). Built-ins protected.
+- Nick colors: "Color nicknames" checkbox → 3-way combo (`nick_color_mode`:
+  off / palette / irc). "Classic IRC colors" uses the traditional client
+  palette and overrides theme mono-nick styling; chat view and member list
+  share the exact same mode+palette so a nick is one color everywhere.
+  Legacy `colored_nicks` bool still written/read as fallback.
+- preferences_dialog_test updated for the combo (not run — ask-before-tests).
+
+## Previous Slice (themes revamp, 2026-06-11 late)
 
 - **Theme packs**: Preferences ▸ Themes gained a "Theme files" group —
   `Save Theme...` (current app theme + current fonts → named user theme),

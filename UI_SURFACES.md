@@ -147,6 +147,15 @@ at least one buffer has it on; non-opted-in buffers skip panel rendering.
 - Consumed via `m_ogRenderOptions` (`LinkPreviewRenderOptions`) populated in
   `applyCurrentSettings()`; passed to `renderOpenGraphPreviewHtml`.
 
+### Appearance tab — nick colors
+- "Color nicknames" is a 3-way combo (`nickColorMode`, key `nick_color_mode`):
+  **Off** / **Theme palette** (chat theme's `nicks` palette, else the default
+  16-color modern palette) / **Classic IRC colors** (traditional client
+  palette; overrides a theme's mono-nick styling). Legacy `colored_nicks` bool
+  is still written for compat and used as the fallback when the mode key is
+  absent. The member list and chat view MUST use the same mode+palette
+  (`recolorMemberList` mirrors `chatLineFormatOptions`).
+
 ### Themes tab (`buildThemesTab`)
 - App theme combo + Default / Turn themes off + Customize (ThemeEditorDialog);
   chat theme combo + Customize; wallpaper combo.
@@ -162,6 +171,15 @@ at least one buffer has it on; non-opted-in buffers skip panel rendering.
 - Built-ins include system-like `Normal` / `Normal Dark` (neutral palettes for
   users who find "Themes Off" too bare) and `Console` (black/cyan terminal-IRC
   look; pairs with the terminal-style chat themes).
+- **Current-theme visibility (2026-06-11)**: both group boxes show
+  "Active now: <name>" plus a live color-chip Preview row that follows the
+  combo selection (window/panel/selected/accent/chat chips for app; message/
+  timestamp/system chips for chat).
+- **Delete (2026-06-11)**: Delete button beside Customize in both boxes,
+  enabled only for user themes (`u-` ids, `isUserThemeId`); built-ins are not
+  deletable. App: removes `<config>/themes/u-*.json`; chat: removes the entry
+  from `<config>/chat_themes.json`. Confirm dialog first; combo falls back to
+  Default / Follow.
 
 ### Scripts tab (`buildScriptsTab`)
 - "Currently loaded" group box at top, populated from `m_lua->loaded()` at

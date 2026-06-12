@@ -972,6 +972,59 @@ QStringList themeFontKeys() {
     return keys;
 }
 
+bool isUserThemeId(const QString& id) {
+    return id.startsWith(QStringLiteral("u-"));
+}
+
+bool deleteUserAppTheme(const QString& id) {
+    if (!isUserThemeId(id)) {
+        return false; // built-ins are not deletable
+    }
+    const QString dir = userThemeDirectory();
+    if (dir.isEmpty()) {
+        return false;
+    }
+    // id == file stem by construction (saveUserAppTheme); a plain "u-*" stem
+    // contains no separators, so no traversal is possible.
+    if (!QFile::remove(QDir(dir).filePath(id + QStringLiteral(".json")))) {
+        return false;
+    }
+    reloadThemes();
+    return true;
+}
+
+bool deleteUserChatTheme(const QString& id) {
+    if (!isUserThemeId(id)) {
+        return false;
+    }
+    const QString config = userConfigDirectory();
+    if (config.isEmpty()) {
+        return false;
+    }
+    const QString path = QDir(config).filePath(QStringLiteral("chat_themes.json"));
+    QJsonObject root;
+    {
+        QFile file(path);
+        if (!file.open(QIODevice::ReadOnly)) {
+            return false;
+        }
+        const QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+        if (!doc.isObject()) {
+            return false;
+        }
+        root = doc.object();
+    }
+    if (!root.contains(id)) {
+        return false;
+    }
+    root.remove(id);
+    if (!writeJsonFile(path, root)) {
+        return false;
+    }
+    reloadThemes();
+    return true;
+}
+
 QString saveUserAppTheme(const QString& name, const AppThemeDefinition& theme) {
     const QString dir = userThemeDirectory();
     if (dir.isEmpty()) {
