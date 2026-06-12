@@ -9,6 +9,8 @@
 class QLabel;
 class QLineEdit;
 class QTextBrowser;
+class QMenuBar;
+class QActionGroup;
 
 namespace maxchat::ui {
 
@@ -33,19 +35,39 @@ class ScriptTerminalDialog final : public QDialog {
     // User font override from the Fonts preferences. An empty family or a
     // pointSize <= 0 falls back to the active profile's own font/size.
     void setFontPreferences(const QString& family, int pointSize, bool bold);
+    // Change the fixed grid (cols always 80; rows 25 or 40). Re-zooms the window
+    // to the base font and re-fits.
+    void setGridSize(int cols, int rows);
+    [[nodiscard]] int gridCols() const { return profile_.cols; }
+    [[nodiscard]] int gridRows() const { return profile_.rows; }
 
   signals:
     void inputSubmitted(const QString& id, const QString& text);
     void linkActivated(const QString& id, const QString& actionId);
     void terminalClosed(const QString& id);
+    // Master close requested (File > Kill Terminal). Unlike closing the window
+    // (which only hides it), this asks the owner to destroy the session.
+    void killRequested(const QString& id);
+    // The user changed font family/size via the Settings menu. The owner
+    // persists this as the global terminal font preference.
+    void fontPreferenceChanged(const QString& family, int pointSize, bool bold);
+    // The user changed the grid size via the Settings menu (cols always 80).
+    void gridSizeChanged(const QString& id, int cols, int rows);
 
   protected:
     void closeEvent(QCloseEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
 
   private:
+    void buildMenuBar();
+    [[nodiscard]] QString activeFamily() const;
     void applyProfile();
-    void updateFixedGridSize();
+    // Largest point size for the active family that fits cols x rows into the
+    // display viewport, so a fixed-grid terminal's text stretches on resize.
+    [[nodiscard]] int fitFontPointForViewport() const;
+    void applyFitFont();
+    void resizeWindowForFont(int pointSize);
+    void syncSettingsMenuChecks();
     void ensureFrameGrid();
     void renderFrameGrid();
 
@@ -60,6 +82,9 @@ class ScriptTerminalDialog final : public QDialog {
     QString fontFamilyOverride_;
     int fontPointSizeOverride_ = 0;
     bool fontBoldOverride_ = false;
+    QMenuBar* menuBar_ = nullptr;
+    QActionGroup* fontSizeGroup_ = nullptr;
+    QActionGroup* gridSizeGroup_ = nullptr;
     QLabel* status_ = nullptr;
     QTextBrowser* display_ = nullptr;
     QLabel* prompt_ = nullptr;

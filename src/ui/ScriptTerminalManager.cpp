@@ -22,8 +22,11 @@ QSize ScriptTerminalManager::terminalSize(const QString& id) const {
 
 ScriptTerminalDialog* ScriptTerminalManager::openTerminal(const QString& id,
                                                           const QString& title,
-                                                          const TerminalProfile& profile) {
+                                                          const TerminalProfile& profile,
+                                                          const QString& network,
+                                                          const QString& scriptName) {
     if (ScriptTerminalDialog* existing = terminal(id); existing != nullptr) {
+        existing->show();
         existing->raise();
         existing->activateWindow();
         return existing;
@@ -32,28 +35,73 @@ ScriptTerminalDialog* ScriptTerminalManager::openTerminal(const QString& id,
     auto* dlg = new ScriptTerminalDialog(id, title, profile, parentWidget_);
     dlg->setFontPreferences(fontFamily_, fontPointSize_, fontBold_);
     terminals_.insert(id, dlg);
+    order_.append(id);
+    TerminalInfo info;
+    info.id = id;
+    info.network = network.trimmed();
+    info.scriptName = scriptName.trimmed();
+    info.label = QStringLiteral("Term %1").arg(nextOrdinal_++);
+    meta_.insert(id, info);
     connect(dlg, &ScriptTerminalDialog::inputSubmitted, this,
             &ScriptTerminalManager::inputSubmitted);
     connect(dlg, &ScriptTerminalDialog::linkActivated, this,
             &ScriptTerminalManager::linkActivated);
-    connect(dlg, &ScriptTerminalDialog::terminalClosed, this, [this](const QString& closedId) {
-        terminals_.remove(closedId);
-        emit terminalClosed(closedId);
-    });
+    connect(dlg, &ScriptTerminalDialog::killRequested, this,
+            [this](const QString& killId) { killTerminal(killId); });
+    connect(dlg, &ScriptTerminalDialog::fontPreferenceChanged, this,
+            &ScriptTerminalManager::fontPreferenceChanged);
+    connect(dlg, &ScriptTerminalDialog::gridSizeChanged, this,
+            &ScriptTerminalManager::gridSizeChanged);
     dlg->show();
+    emit terminalsChanged();
     return dlg;
 }
 
-void ScriptTerminalManager::closeTerminal(const QString& id) {
+void ScriptTerminalManager::showTerminal(const QString& id) {
     if (ScriptTerminalDialog* dlg = terminal(id); dlg != nullptr) {
-        dlg->close();
+        dlg->show();
+        dlg->raise();
+        dlg->activateWindow();
     }
 }
 
+void ScriptTerminalManager::closeTerminal(const QString& id) {
+    // Hide only — the session lives until killed.
+    if (ScriptTerminalDialog* dlg = terminal(id); dlg != nullptr) {
+        dlg->hide();
+    }
+}
+
+void ScriptTerminalManager::killTerminal(const QString& id) {
+    ScriptTerminalDialog* dlg = terminal(id);
+    const bool known = terminals_.contains(id) || meta_.contains(id);
+    terminals_.remove(id);
+    meta_.remove(id);
+    order_.removeAll(id);
+    if (dlg != nullptr) {
+        dlg->deleteLater();
+    }
+    if (known) {
+        emit terminalClosed(id);
+        emit terminalsChanged();
+    }
+}
+
+QList<TerminalInfo> ScriptTerminalManager::terminals() const {
+    QList<TerminalInfo> out;
+    out.reserve(order_.size());
+    for (const QString& id : order_) {
+        if (meta_.contains(id)) {
+            out.append(meta_.value(id));
+        }
+    }
+    return out;
+}
+
 void ScriptTerminalManager::closeAll() {
-    const QList<QString> ids = terminals_.keys();
+    const QList<QString> ids = order_;
     for (const QString& id : ids) {
-        closeTerminal(id);
+        killTerminal(id);
     }
 }
 

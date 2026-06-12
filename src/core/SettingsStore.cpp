@@ -344,6 +344,8 @@ QVariantMap SettingsStore::defaultSettings() {
                   QStringLiteral("JetBrains Mono"));
   settings.insert(QStringLiteral("terminal_font_size"), 0);
   settings.insert(QStringLiteral("terminal_font_bold"), false);
+  // Default fixed grid rows for new script/BBS terminals (80x25 or 80x40).
+  settings.insert(QStringLiteral("terminal_rows"), 25);
   settings.insert(QStringLiteral("auto_reconnect"), true);
   settings.insert(QStringLiteral("command_aliases"), defaultCommandAliases());
   settings.insert(QStringLiteral("ignores"), QStringList());

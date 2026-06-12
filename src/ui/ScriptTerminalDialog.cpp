@@ -3,15 +3,18 @@
 #include "ui/AnsiRenderer.h"
 #include "ui/TerminalFrame.h"
 
+#include <QActionGroup>
 #include <QApplication>
 #include <QClipboard>
 #include <QCloseEvent>
 #include <QContextMenuEvent>
 #include <QFontDatabase>
+#include <QFontDialog>
 #include <QFontMetrics>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMenuBar>
 #include <QMessageBox>
 #include <QMenu>
 #include <QKeyEvent>
@@ -105,12 +108,18 @@ ScriptTerminalDialog::ScriptTerminalDialog(QString id, QString title, TerminalPr
                    Qt::WindowMinimizeButtonHint | Qt::WindowMaximizeButtonHint |
                    Qt::WindowCloseButtonHint);
     setWindowTitle(title.isEmpty() ? id_ : title);
-    setAttribute(Qt::WA_DeleteOnClose);
-    resize(900, 600);
+    // Closing the window only HIDES the terminal; the session stays alive and is
+    // re-shown from its tree node. Only File > Kill Terminal destroys it, so no
+    // WA_DeleteOnClose here.
 
     auto* root = new QVBoxLayout(this);
     root->setContentsMargins(8, 8, 8, 8);
     root->setSpacing(4);
+
+    buildMenuBar();
+    if (menuBar_ != nullptr) {
+        root->setMenuBar(menuBar_);
+    }
 
     status_ = new QLabel(this);
     status_->setObjectName(QStringLiteral("terminalStatus"));
@@ -153,7 +162,12 @@ ScriptTerminalDialog::ScriptTerminalDialog(QString id, QString title, TerminalPr
         emit inputSubmitted(id_, text);
     });
 
+    // Let a fixed grid shrink so the fit-font can scale down; a hard grid-sized
+    // minimum would block stretching the window smaller.
+    display_->setMinimumSize(120, 80);
     applyProfile();
+    resizeWindowForFont(fontPointSizeOverride_ > 0 ? fontPointSizeOverride_
+                                                   : profile_.fontPointSize);
 }
 
 QSize ScriptTerminalDialog::terminalSize() const {
@@ -276,7 +290,21 @@ void ScriptTerminalDialog::setProfile(const TerminalProfile& profile) {
 
 void ScriptTerminalDialog::setFitMode(const QString& mode) {
     profile_.fitMode = mode;
-    updateFixedGridSize();
+    applyFitFont();
+}
+
+void ScriptTerminalDialog::setGridSize(const int cols, const int rows) {
+    profile_.cols = std::max(1, cols);
+    profile_.rows = std::max(1, rows);
+    profile_.fixedGrid = true;
+    syncSettingsMenuChecks();
+    resizeWindowForFont(fontPointSizeOverride_ > 0 ? fontPointSizeOverride_
+                                                   : profile_.fontPointSize);
+    applyFitFont();
+    if (frameMode_) {
+        ensureFrameGrid();
+        renderFrameGrid();
+    }
 }
 
 void ScriptTerminalDialog::setFontPreferences(const QString& family, const int pointSize,
@@ -288,24 +316,29 @@ void ScriptTerminalDialog::setFontPreferences(const QString& family, const int p
 }
 
 void ScriptTerminalDialog::closeEvent(QCloseEvent* event) {
-    emit terminalClosed(id_);
-    QDialog::closeEvent(event);
+    // Hide, don't destroy: the terminal is re-shown from its tree node. The
+    // owner only tears down the session on an explicit Kill (killRequested).
+    hide();
+    event->ignore();
 }
 
 void ScriptTerminalDialog::resizeEvent(QResizeEvent* event) {
     QDialog::resizeEvent(event);
-    updateFixedGridSize();
+    applyFitFont();
+}
+
+QString ScriptTerminalDialog::activeFamily() const {
+    const QString family =
+        fontFamilyOverride_.isEmpty() ? profile_.fontFamily : fontFamilyOverride_;
+    return QFontDatabase::families().contains(family)
+               ? family
+               : QFontDatabase::systemFont(QFontDatabase::FixedFont).family();
 }
 
 void ScriptTerminalDialog::applyProfile() {
-    const QString family =
-        fontFamilyOverride_.isEmpty() ? profile_.fontFamily : fontFamilyOverride_;
     const int pointSize =
         fontPointSizeOverride_ > 0 ? fontPointSizeOverride_ : profile_.fontPointSize;
-    QFont font(family);
-    if (!QFontDatabase::families().contains(family)) {
-        font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-    }
+    QFont font(activeFamily());
     font.setStyleHint(QFont::Monospace);
     font.setFixedPitch(true);
     font.setBold(fontBoldOverride_);
@@ -324,17 +357,78 @@ void ScriptTerminalDialog::applyProfile() {
     input_->setStyleSheet(css);
     prompt_->setStyleSheet(css);
     status_->setStyleSheet(css);
-    updateFixedGridSize();
+    syncSettingsMenuChecks();
+    applyFitFont();
 }
 
-void ScriptTerminalDialog::updateFixedGridSize() {
+int ScriptTerminalDialog::fitFontPointForViewport() const {
+    const int availW = std::max(1, display_->viewport()->width());
+    const int availH = std::max(1, display_->viewport()->height());
+    const int cols = std::max(1, profile_.cols);
+    const int rows = std::max(1, profile_.rows);
+    QFont probe(activeFamily());
+    probe.setStyleHint(QFont::Monospace);
+    probe.setFixedPitch(true);
+    probe.setBold(fontBoldOverride_);
+    int lo = 4;
+    int hi = 200;
+    int best = lo;
+    while (lo <= hi) {
+        const int mid = (lo + hi) / 2;
+        probe.setPointSize(mid);
+        const QFontMetrics metrics(probe);
+        const int w = std::max(1, metrics.horizontalAdvance(QLatin1Char('M'))) * cols;
+        const int h = std::max(1, metrics.lineSpacing()) * rows;
+        if (w <= availW && h <= availH) {
+            best = mid;
+            lo = mid + 1;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    return best;
+}
+
+void ScriptTerminalDialog::applyFitFont() {
     if (!profile_.fixedGrid || profile_.fitMode == QLatin1String("none")) {
+        return; // free profiles keep the configured point size
+    }
+    const int point = fitFontPointForViewport();
+    QFont font = display_->font();
+    if (font.pointSize() == point) {
         return;
     }
-    const QFontMetrics metrics(display_->font());
-    const int charWidth = std::max(1, metrics.horizontalAdvance(QLatin1Char('M')));
-    const int lineHeight = std::max(1, metrics.lineSpacing());
-    display_->setMinimumSize(profile_.cols * charWidth + 24, profile_.rows * lineHeight + 24);
+    font.setPointSize(point);
+    display_->setFont(font);
+    input_->setFont(font);
+    prompt_->setFont(font);
+    status_->setFont(font);
+    if (frameMode_) {
+        renderFrameGrid();
+    }
+}
+
+void ScriptTerminalDialog::resizeWindowForFont(const int pointSize) {
+    if (!profile_.fixedGrid) {
+        return;
+    }
+    QFont probe(activeFamily());
+    probe.setStyleHint(QFont::Monospace);
+    probe.setFixedPitch(true);
+    probe.setBold(fontBoldOverride_);
+    probe.setPointSize(std::max(4, pointSize));
+    const QFontMetrics metrics(probe);
+    const int cellW = std::max(1, metrics.horizontalAdvance(QLatin1Char('M')));
+    const int cellH = std::max(1, metrics.lineSpacing());
+    // Grow the window so the display viewport holds the whole grid at this size;
+    // the resize then re-fits the font to whatever the user drags it to.
+    const int wantViewportW = profile_.cols * cellW;
+    const int wantViewportH = profile_.rows * cellH;
+    const int chromeW = width() - display_->viewport()->width();
+    const int chromeH = height() - display_->viewport()->height();
+    const int newW = wantViewportW + std::max(chromeW, 32);
+    const int newH = wantViewportH + std::max(chromeH, 120);
+    resize(newW, newH);
 }
 
 void ScriptTerminalDialog::ensureFrameGrid() {
@@ -385,6 +479,93 @@ void ScriptTerminalDialog::renderFrameGrid() {
     html += QStringLiteral("</pre>");
     display_->setHtml(html);
     display_->verticalScrollBar()->setValue(0);
+}
+
+void ScriptTerminalDialog::buildMenuBar() {
+    menuBar_ = new QMenuBar(this);
+
+    QMenu* fileMenu = menuBar_->addMenu(QStringLiteral("File"));
+    fileMenu->addAction(QStringLiteral("Close"), this, [this]() { hide(); });
+    fileMenu->addSeparator();
+    QAction* kill = fileMenu->addAction(QStringLiteral("Kill Terminal"));
+    connect(kill, &QAction::triggered, this, [this]() { emit killRequested(id_); });
+
+    QMenu* settingsMenu = menuBar_->addMenu(QStringLiteral("Settings"));
+
+    // Font family — a short curated monospace list plus a full chooser.
+    QMenu* fontMenu = settingsMenu->addMenu(QStringLiteral("Font"));
+    const QStringList families = {QStringLiteral("JetBrains Mono"), QStringLiteral("Cascadia Mono"),
+                                  QStringLiteral("Consolas"), QStringLiteral("Courier New"),
+                                  QStringLiteral("DejaVu Sans Mono")};
+    for (const QString& family : families) {
+        QAction* act = fontMenu->addAction(family);
+        connect(act, &QAction::triggered, this, [this, family]() {
+            fontFamilyOverride_ = family;
+            applyProfile();
+            emit fontPreferenceChanged(family, fontPointSizeOverride_, fontBoldOverride_);
+        });
+    }
+    fontMenu->addSeparator();
+    QAction* chooseFont = fontMenu->addAction(QStringLiteral("Choose..."));
+    connect(chooseFont, &QAction::triggered, this, [this]() {
+        bool ok = false;
+        const QFont chosen = QFontDialog::getFont(&ok, display_->font(), this,
+                                                  QStringLiteral("Terminal Font"));
+        if (ok) {
+            fontFamilyOverride_ = chosen.family();
+            fontBoldOverride_ = chosen.bold();
+            applyProfile();
+            emit fontPreferenceChanged(chosen.family(), fontPointSizeOverride_, fontBoldOverride_);
+        }
+    });
+
+    // Font size — sets the base size (window re-zooms; resizing then re-fits).
+    QMenu* sizeMenu = settingsMenu->addMenu(QStringLiteral("Font Size"));
+    fontSizeGroup_ = new QActionGroup(this);
+    fontSizeGroup_->setExclusive(true);
+    for (const int pt : {8, 10, 12, 14, 16, 18, 20, 24}) {
+        QAction* act = sizeMenu->addAction(QStringLiteral("%1 pt").arg(pt));
+        act->setCheckable(true);
+        act->setData(pt);
+        fontSizeGroup_->addAction(act);
+        connect(act, &QAction::triggered, this, [this, pt]() {
+            fontPointSizeOverride_ = pt;
+            applyProfile();
+            resizeWindowForFont(pt);
+            emit fontPreferenceChanged(activeFamily(), pt, fontBoldOverride_);
+        });
+    }
+
+    // Terminal grid size — columns stay 80.
+    QMenu* gridMenu = settingsMenu->addMenu(QStringLiteral("Terminal Size"));
+    gridSizeGroup_ = new QActionGroup(this);
+    gridSizeGroup_->setExclusive(true);
+    const QVector<QPair<int, int>> grids = {{80, 25}, {80, 40}};
+    for (const auto& grid : grids) {
+        QAction* act = gridMenu->addAction(QStringLiteral("%1 x %2").arg(grid.first).arg(grid.second));
+        act->setCheckable(true);
+        act->setData(grid.second);
+        gridSizeGroup_->addAction(act);
+        connect(act, &QAction::triggered, this, [this, grid]() {
+            setGridSize(grid.first, grid.second);
+            emit gridSizeChanged(id_, grid.first, grid.second);
+        });
+    }
+}
+
+void ScriptTerminalDialog::syncSettingsMenuChecks() {
+    if (fontSizeGroup_ != nullptr) {
+        const int point =
+            fontPointSizeOverride_ > 0 ? fontPointSizeOverride_ : profile_.fontPointSize;
+        for (QAction* act : fontSizeGroup_->actions()) {
+            act->setChecked(act->data().toInt() == point);
+        }
+    }
+    if (gridSizeGroup_ != nullptr) {
+        for (QAction* act : gridSizeGroup_->actions()) {
+            act->setChecked(act->data().toInt() == profile_.rows);
+        }
+    }
 }
 
 } // namespace maxchat::ui
