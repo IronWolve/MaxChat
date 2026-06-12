@@ -212,6 +212,13 @@ Exit criteria:
   CTCP payload size. Parser and Lua terminal API support are implemented;
   continue treating the op set as a working protocol until manual BBS testing
   settles the final shape.
+- Static frame cache draft is documented in `DEVDOCS/MC_DATA.md`. Recommended
+  next implementation: negotiate `caps=T,S`, then add `S` store/apply, `R`
+  replay, `Q` request missing, and `D` dynamic overlay. This should come before
+  bitmap assets because both need IDs, hashes, and replay/resend behavior.
+- Bitmap cell art draft is documented in `DEVDOCS/MC_DATA.md` as future work.
+  Proposed verbs are `B` for cached 1-bit bitmap chunks and `I` for insert,
+  negotiated with `caps=B1`.
 - Phase 10 full offscreen CTest is `51/51` passing.
 - Initial full CTest without `QT_QPA_PLATFORM=offscreen` also aborts GUI/media
   tests in this headless environment due missing display/plugin setup; offscreen

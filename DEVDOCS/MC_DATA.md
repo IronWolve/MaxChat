@@ -427,6 +427,145 @@ Encoding notes:
 - Colors are logical terminal attributes; the renderer decides the final theme
   palette.
 
+## Static Frame Cache Draft
+
+Static frame caching is the next planned optimization after compact `T` frames.
+The idea is that menus, login art, help pages, and board chrome often do not
+change between visits. The server can send a static frame once, and later tell
+the client to replay it locally with a tiny command.
+
+Capability negotiation:
+
+```text
+HELLO payload includes caps=T,S
+```
+
+Rules:
+
+- If the peer does not advertise `S`, send normal `T` frames.
+- Cache keys include `service + bbs_id + page_id + hash`.
+- `page_id` names the static page, such as `login`, `main`, `about`, or
+  `hangman`.
+- `hash` changes when the static frame content changes.
+- The hash prevents stale cached menus after script updates.
+- Static frames must never contain secrets or user-specific private data.
+- Dynamic overlays carry the user-specific parts after a cached page is shown.
+
+Verbs:
+
+```text
+T <ops>                 apply transient frame immediately
+S <id> <hash> <ops>     store static frame and apply it
+R <id> <hash>           replay cached static frame if present
+Q <id> <hash>           request static frame resend because cache is missing
+D <ops>                 apply dynamic overlay after static/replayed frame
+```
+
+Example first visit:
+
+```text
+MC DATA bbs S main A94F2C CP0101W09Retro-BBS...
+MC DATA bbs D P1801W06login>
+```
+
+Example later visit:
+
+```text
+MC DATA bbs R main A94F2C
+MC DATA bbs D P1801W06login>
+```
+
+Missing cache:
+
+```text
+MC DATA bbs Q main A94F2C
+```
+
+Server response:
+
+```text
+MC DATA bbs S main A94F2C <ops>
+```
+
+Implementation notes:
+
+- Start with in-memory cache per app session.
+- Later, persistent cache may live under the script data directory.
+- Keep the resend path simple: if the server cannot find the requested static
+  frame, send a normal `T` frame instead.
+- Static frame cache should be implemented before bitmap assets because bitmap
+  transfer also needs asset identity, hash validation, and replay semantics.
+
+## Bitmap Cell Art Draft
+
+Bitmap cell art is a future extension for old-school BBS graphics over MC DATA.
+It should ride on the same cache idea as static frames, because bitmap assets
+are usually reused rather than sent every time.
+
+Target:
+
+```text
+80x25 terminal cells
+```
+
+Useful sizes:
+
+```text
+80x25 cell pixels = 2000 bits = 250 raw bytes = 500 hex chars
+80x50 half-block pixels = 4000 bits = 500 raw bytes = 1000 hex chars
+```
+
+Encoding:
+
+- `raw1`: packed 1-bit pixels, hexadecimal text.
+- `rle1`: simple 1-bit run-length encoding, hexadecimal text.
+- Use `raw1` when RLE would grow the payload.
+- Use `rle1` for sparse logos, borders, and large flat areas.
+- Avoid color bitmap transfer in v1; use terminal attributes and overlays for
+  color first.
+
+Verbs:
+
+```text
+B <id> <w> <h> <hash> <enc> <chunk>/<total> <data>
+I <id> <hash> Prrcc
+```
+
+Meaning:
+
+- `B` stores one bitmap asset chunk.
+- `I` inserts/renders a cached bitmap asset at a terminal position.
+- `id` names the bitmap asset, such as `logo`.
+- `hash` validates that the cached image is the expected version.
+- `enc` is `raw1` or `rle1`.
+
+Example:
+
+```text
+MC DATA bbs B logo 80 25 A94F raw1 1/2 FFEEDD...
+MC DATA bbs B logo 80 25 A94F raw1 2/2 A0B1C2...
+MC DATA bbs I logo A94F P0101
+```
+
+Rendering options:
+
+- One terminal cell per pixel: map `0` to space and `1` to `█`.
+- Half-block mode: map two vertical pixels into ` `, `▀`, `▄`, or `█`.
+- Verify font coverage before using quadrant/legacy block characters.
+
+Capability negotiation:
+
+```text
+HELLO payload includes caps=T,S,B1
+```
+
+Rules:
+
+- If the peer does not advertise `B1`, do not send bitmap assets.
+- Bitmap transfers should respect the same flood limits as terminal frames.
+- Missing bitmap cache should use a request/resend flow like static frames.
+- Bitmap support is optional; text/ANSI BBS screens must still work without it.
+
 ## Future Services
 
 Possible Comic Chat service:
