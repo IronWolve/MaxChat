@@ -30,6 +30,7 @@ ScriptTerminalDialog* ScriptTerminalManager::openTerminal(const QString& id,
     }
 
     auto* dlg = new ScriptTerminalDialog(id, title, profile, parentWidget_);
+    dlg->setFontPreferences(fontFamily_, fontPointSize_, fontBold_);
     terminals_.insert(id, dlg);
     connect(dlg, &ScriptTerminalDialog::inputSubmitted, this,
             &ScriptTerminalManager::inputSubmitted);
@@ -99,6 +100,18 @@ void ScriptTerminalManager::setProfile(const QString& id, const TerminalProfile&
 void ScriptTerminalManager::setFitMode(const QString& id, const QString& mode) {
     if (ScriptTerminalDialog* dlg = terminal(id); dlg != nullptr) {
         dlg->setFitMode(mode);
+    }
+}
+
+void ScriptTerminalManager::setTerminalFont(const QString& family, const int pointSize,
+                                            const bool bold) {
+    fontFamily_ = family.trimmed();
+    fontPointSize_ = pointSize;
+    fontBold_ = bold;
+    for (const QPointer<ScriptTerminalDialog>& dlg : terminals_) {
+        if (!dlg.isNull()) {
+            dlg->setFontPreferences(fontFamily_, fontPointSize_, fontBold_);
+        }
     }
 }
 

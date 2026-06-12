@@ -126,6 +126,9 @@ class PreferencesDialog final : public QDialog {
     QFontComboBox* topicFontFamily_ = nullptr;
     QSpinBox* topicFontSize_ = nullptr;
     QCheckBox* topicFontBold_ = nullptr;
+    QFontComboBox* terminalFontFamily_ = nullptr;
+    QSpinBox* terminalFontSize_ = nullptr;
+    QCheckBox* terminalFontBold_ = nullptr;
     ColorPick* chatTextColor_ = nullptr;
     ColorPick* eventColor_ = nullptr;
     ColorPick* treeColor_ = nullptr;

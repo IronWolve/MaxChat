@@ -31,6 +31,9 @@ class ScriptTerminalManager final : public QObject {
     void setPromptText(const QString& id, const QString& text);
     void setProfile(const QString& id, const TerminalProfile& profile);
     void setFitMode(const QString& id, const QString& mode);
+    // Apply the user's terminal font preference to all current and future
+    // terminals. pointSize <= 0 keeps each profile's own size.
+    void setTerminalFont(const QString& family, int pointSize, bool bold);
 
   signals:
     void inputSubmitted(const QString& id, const QString& text);
@@ -42,6 +45,9 @@ class ScriptTerminalManager final : public QObject {
 
     QWidget* parentWidget_ = nullptr;
     QHash<QString, QPointer<ScriptTerminalDialog>> terminals_;
+    QString fontFamily_ = QStringLiteral("JetBrains Mono");
+    int fontPointSize_ = 0;
+    bool fontBold_ = false;
 };
 
 } // namespace maxchat::ui
