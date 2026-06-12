@@ -111,6 +111,8 @@ add_library(maxchat_core STATIC
     src/irc/IrcFormat.h
     src/irc/IrcMessage.cpp
     src/irc/IrcMessage.h
+    src/irc/McDataCodec.cpp
+    src/irc/McDataCodec.h
     src/irc/IrcRedaction.cpp
     src/irc/IrcRedaction.h
     src/irc/ReconnectPlanner.cpp

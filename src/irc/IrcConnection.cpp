@@ -52,6 +52,8 @@ IrcConnection::IrcConnection(QObject *parent) : QObject(parent) {
   connect(&session_, &IrcSession::invited, this, &IrcConnection::invited);
   connect(&session_, &IrcSession::dccRequest, this, &IrcConnection::dccRequest);
   connect(&session_, &IrcSession::ctcpSound, this, &IrcConnection::ctcpSound);
+  connect(&session_, &IrcSession::mcDataReceived, this,
+          &IrcConnection::mcDataReceived);
   connect(&session_, &IrcSession::userJoined, this, &IrcConnection::userJoined);
   connect(&session_, &IrcSession::userParted, this, &IrcConnection::userParted);
   connect(&session_, &IrcSession::userQuit, this, &IrcConnection::userQuit);

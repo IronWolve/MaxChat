@@ -71,6 +71,9 @@ signals:
   // and the named .wav is already in the user's sounds folder.
   void ctcpSound(const QString &sender, const QString &target, const QString &file,
                  const QString &text);
+  void mcDataReceived(const QString &sender, const QString &target,
+                      const QString &service, const QString &verb,
+                      const QString &payload, bool notice);
   void userJoined(const QString &channel, const QString &nick);
   void userParted(const QString &channel, const QString &nick,
                   const QString &reason);

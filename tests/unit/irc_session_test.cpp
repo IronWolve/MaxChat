@@ -481,6 +481,64 @@ private slots:
              QStringLiteral("[ctcp] VERSION reply from alice: client 1.2"));
   }
 
+  void mcDataPrivmsgRoutesToDedicatedSignalOnly() {
+    IrcSession session;
+    QSignalSpy mcData(&session, &IrcSession::mcDataReceived);
+    QSignalSpy messages(&session, &IrcSession::messageReceived);
+    QSignalSpy replies(&session, &IrcSession::replyText);
+
+    session.handleLine(QStringLiteral(":alice!u@h PRIVMSG bob :") +
+                       ctcpPayload(QStringLiteral(
+                           "MC DATA BBS hello cols=80 rows=25 profile=ibm-vga")));
+
+    QCOMPARE(mcData.count(), 1);
+    QCOMPARE(messages.count(), 0);
+    QCOMPARE(replies.count(), 0);
+    QCOMPARE(mcData.at(0).at(0).toString(), QStringLiteral("alice"));
+    QCOMPARE(mcData.at(0).at(1).toString(), QStringLiteral("bob"));
+    QCOMPARE(mcData.at(0).at(2).toString(), QStringLiteral("bbs"));
+    QCOMPARE(mcData.at(0).at(3).toString(), QStringLiteral("HELLO"));
+    QCOMPARE(mcData.at(0).at(4).toString(),
+             QStringLiteral("cols=80 rows=25 profile=ibm-vga"));
+    QCOMPARE(mcData.at(0).at(5).toBool(), false);
+  }
+
+  void mcDataNoticeRoutesToDedicatedSignalOnly() {
+    IrcSession session;
+    QSignalSpy mcData(&session, &IrcSession::mcDataReceived);
+    QSignalSpy messages(&session, &IrcSession::messageReceived);
+    QSignalSpy replies(&session, &IrcSession::replyText);
+
+    session.handleLine(QStringLiteral(":alice!u@h NOTICE bob :") +
+                       ctcpPayload(QStringLiteral(
+                           "MC DATA bbs STATUS CONNECT: Retro-BBS")));
+
+    QCOMPARE(mcData.count(), 1);
+    QCOMPARE(messages.count(), 0);
+    QCOMPARE(replies.count(), 0);
+    QCOMPARE(mcData.at(0).at(0).toString(), QStringLiteral("alice"));
+    QCOMPARE(mcData.at(0).at(1).toString(), QStringLiteral("bob"));
+    QCOMPARE(mcData.at(0).at(2).toString(), QStringLiteral("bbs"));
+    QCOMPARE(mcData.at(0).at(3).toString(), QStringLiteral("STATUS"));
+    QCOMPARE(mcData.at(0).at(4).toString(),
+             QStringLiteral("CONNECT: Retro-BBS"));
+    QCOMPARE(mcData.at(0).at(5).toBool(), true);
+  }
+
+  void malformedMcDataFallsBackToGenericCtcpSummary() {
+    IrcSession session;
+    QSignalSpy mcData(&session, &IrcSession::mcDataReceived);
+    QSignalSpy replies(&session, &IrcSession::replyText);
+
+    session.handleLine(QStringLiteral(":alice!u@h PRIVMSG bob :") +
+                       ctcpPayload(QStringLiteral("MC DATA bbs")));
+
+    QCOMPARE(mcData.count(), 0);
+    QCOMPARE(replies.count(), 1);
+    QCOMPARE(replies.at(0).at(0).toString(),
+             QStringLiteral("[ctcp] MC request from alice: DATA bbs"));
+  }
+
   void ctcpPingReplyShowsRoundTripTime() {
     IrcSession session;
     QSignalSpy replies(&session, &IrcSession::replyText);
