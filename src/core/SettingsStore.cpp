@@ -139,12 +139,28 @@ bool SettingsStore::saveRaw(const QVariantMap &settings) const {
   }
   QDir().mkpath(QFileInfo(paths_.settingsPath).absolutePath());
 
+  // Preserve geom_* keys from the existing file: window geometry is saved
+  // independently (via attachGeometryPersist on QDialog::finished) and must
+  // survive saveRaw calls that carry only a subset of settings (e.g. a
+  // dialog's own settings() map).  Keys already present in `settings` win.
+  QVariantMap merged = loadRaw();
+  for (auto it = merged.begin(); it != merged.end(); ) {
+    if (it.key().startsWith(QLatin1String("geom_")) && !settings.contains(it.key())) {
+      ++it; // keep this geometry key
+    } else {
+      it = merged.erase(it); // will be replaced by `settings` below
+    }
+  }
+  for (auto it = settings.constBegin(); it != settings.constEnd(); ++it) {
+    merged.insert(it.key(), it.value());
+  }
+
   QSaveFile file(paths_.settingsPath);
   if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
     return false;
   }
 
-  const QJsonDocument document = QJsonDocument::fromVariant(settings);
+  const QJsonDocument document = QJsonDocument::fromVariant(merged);
   file.write(document.toJson(QJsonDocument::Indented));
   return file.commit();
 }
