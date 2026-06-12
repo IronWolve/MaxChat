@@ -291,6 +291,7 @@ QVariantMap SettingsStore::defaultSettings() {
   settings.insert(QStringLiteral("imgbox_username"), QString());
   settings.insert(QStringLiteral("imgbox_password"), QString());
   settings.insert(QStringLiteral("wallpaper"), QString());
+  settings.insert(QStringLiteral("chat_opacity"), 100);
   settings.insert(QStringLiteral("show_timestamps"), true);
   settings.insert(QStringLiteral("timestamp_format"),
                   QStringLiteral("%I:%M %p"));

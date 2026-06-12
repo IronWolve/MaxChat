@@ -102,8 +102,12 @@ bool deleteUserChatTheme(const QString &id);
 // widgets. For "Themes Off" returns a default QPalette() - the caller should
 // restore the platform standard palette instead.
 [[nodiscard]] QPalette paletteForAppearance(const QString &theme);
+// chatOpacityPercent: 100 = "auto" (follow+wallpaper gets the classic 80%,
+// explicit chat themes stay opaque); anything below 100 is an explicit
+// translucency applied to EVERY chat theme so the wallpaper/gradient shows.
 [[nodiscard]] QString styleSheetForAppearance(const QString &theme,
                                               const QString &chatTheme,
-                                              const QString &wallpaper);
+                                              const QString &wallpaper,
+                                              int chatOpacityPercent = 100);
 
 } // namespace maxchat::ui

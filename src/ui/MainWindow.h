@@ -442,6 +442,7 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     bool m_showFormatting = true;
     bool m_coloredNicks = true;
     QString m_nickColorMode = QStringLiteral("palette"); // off / palette / irc
+    int m_chatOpacity = 100; // chat bg opacity %, 100 = auto (theme decides)
     bool m_showMode = true;
     bool m_pmEcho = true;
     bool m_indentWrap = true;

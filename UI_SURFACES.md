@@ -204,6 +204,11 @@ at least one buffer has it on; non-opted-in buffers skip panel rendering.
   app combo changes.
 - "Open themes folder..." button beside Save/Import/Export
   (`userThemeDirectoryPath`).
+- **Background opacity slider (2026-06-12, key `chat_opacity`, 20–100)**:
+  100 = "Auto" (Follow+wallpaper → classic 80%, explicit chat themes opaque);
+  below 100 the exact alpha applies to EVERY chat theme so the wallpaper or
+  gradient shows through (irssi/terminal looks included). Live-applies via
+  `themePreviewRequested` (now carries the opacity).
 - **Delete (2026-06-11)**: Delete button beside Customize in both boxes,
   enabled only for user themes (`u-` ids, `isUserThemeId`); built-ins are not
   deletable. App: removes `<config>/themes/u-*.json`; chat: removes the entry
