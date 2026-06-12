@@ -6634,7 +6634,11 @@ void maxchat::ui::MainWindow::renderActiveBuffer() {
     dimOptions.defaultForeground = dim;
     dimOptions.systemColor = dim;
     dimOptions.bracketColor = dim;
-    dimOptions.colorNicks = false;
+    // Nick colors stay ON in replayed history (inherited from baseOptions):
+    // the user reads nick identity by color, and history nicks must match the
+    // member list / live lines. The dim text + dividers still mark it as
+    // replay. (This used to force colorNicks=false — after a restart the
+    // whole scrollback looked like chat and the users bar disagreed.)
     dimOptions.renderFormatting = false;
     // Structural replay→live boundary: "new" always appears right after the
     // "Chat ended" divider, even when an explicit unread marker exists further
