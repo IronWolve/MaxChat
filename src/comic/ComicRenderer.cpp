@@ -48,7 +48,27 @@ struct Row {
     bool think;
     bool isTail;
     int tailStop; // -1 = none (runs to the head)
+    bool shout = false;
 };
+
+// A line is "shouting" if it's all-caps (3+ letters) or piles on "!" — it gets
+// a jagged burst balloon. Speech lines only; thoughts/actions never shout.
+bool looksLikeShout(const QString& body) {
+    if (body.contains(QStringLiteral("!!"))) {
+        return true;
+    }
+    int letters = 0;
+    bool allUpper = true;
+    for (const QChar c : body) {
+        if (c.isLetter()) {
+            ++letters;
+            if (!c.isUpper()) {
+                allUpper = false;
+            }
+        }
+    }
+    return letters >= 3 && allUpper;
+}
 
 QVector<int> placeCharsWidths(int size, const QVector<ComicActor>& actors, int& targetH,
                               QVector<int>& xs) {
@@ -124,7 +144,7 @@ QVector<Row> layout(QPainter& p, const QFont& font, int size, const QVector<Comi
                     const QVector<int>& cx, const QVector<ComicActor>& actors, int maxw,
                     int& overflow) {
     const int n = std::max<int>(1, static_cast<int>(cx.size()));
-    const int gap = std::max(6, size / 32);
+    const int gap = std::max(10, size / 24); // room for cloud/burst overhang
     const int top = std::max(6, size / 26);
     QVector<int> colY(n, top);
     QVector<Placed> placed;
@@ -199,8 +219,9 @@ QVector<Row> layout(QPainter& p, const QFont& font, int size, const QVector<Comi
         const QPair<int, int> pos = place(center, bw, bh, colY[col]);
         placed.append({pos.first, pos.second, bw, bh});
         colY[col] = pos.second + bh + gap;
+        const bool shout = !line.action && !line.think && looksLikeShout(body);
         rows.append({line.action, body, pos.first, pos.second, bw, bh, col, line.think,
-                     !line.action, -1});
+                     !line.action, -1, shout});
     }
     for (Row& r : rows) {
         int below = -1;
@@ -238,11 +259,13 @@ QFont fitBalloons(QPainter& p, int size, const QVector<ComicLineItem>& lines,
     return font;
 }
 
+constexpr double kPi = 3.14159265358979323846;
+
 // Tail wedge with gently curved sides (the hand-drawn look). Both edges bow
 // by the same horizontal offset — back toward the balloon, away from the tip —
 // so the tail keeps its width and sweeps toward the speaker like a comma.
 // A perfectly vertical tail stays straight (bow is proportional to the lean).
-void drawTri(QPainter& p, QPointF b0, QPointF b1, QPointF apex) {
+void drawTri(QPainter& p, QPointF b0, QPointF b1, QPointF apex, double penW) {
     const QPointF baseMid((b0.x() + b1.x()) / 2.0, (b0.y() + b1.y()) / 2.0);
     const double bowX = 0.35 * (baseMid.x() - apex.x());
     const auto control = [bowX](const QPointF& from, const QPointF& to) {
@@ -263,10 +286,74 @@ void drawTri(QPainter& p, QPointF b0, QPointF b1, QPointF apex) {
     QPainterPath edge1;
     edge1.moveTo(apex);
     edge1.quadTo(control(apex, b1), b1);
-    p.setPen(QPen(QColor(0, 0, 0), 2));
+    QPen pen(QColor(0, 0, 0), penW);
+    pen.setJoinStyle(Qt::RoundJoin);
+    pen.setCapStyle(Qt::RoundCap);
+    p.setPen(pen);
     p.setBrush(Qt::NoBrush);
     p.drawPath(edge0);
     p.drawPath(edge1);
+}
+
+// A thought-bubble cloud: a ring of overlapping bumps around the text rect,
+// unioned via QPainterPath::simplified() so the silhouette is one fluffy
+// outline with no internal seams. (The old "think" balloon was just a
+// rounded rect with a bigger corner radius — not a cloud at all.)
+QPainterPath cloudPath(const QRectF& r) {
+    const double bump = std::clamp(r.height() * 0.55, 14.0, 30.0);
+    const int nx = std::max(3, static_cast<int>(std::lround(r.width() / bump)));
+    const int ny = std::max(1, static_cast<int>(std::lround(r.height() / bump)));
+    const double rx = (r.width() / nx) * 0.82;
+    const double ry = (r.height() / ny) * 0.82;
+    // Boolean-union the bumps with the centre rect (simplified() only removes
+    // self-intersections, it does NOT merge subpaths — the seams stayed visible).
+    QPainterPath path;
+    path.addRoundedRect(r.adjusted(rx * 0.45, ry * 0.45, -rx * 0.45, -ry * 0.45), 6, 6);
+    const auto addBump = [&](double cx, double cy) {
+        QPainterPath e;
+        e.addEllipse(QPointF(cx, cy), rx, ry);
+        path = path.united(e);
+    };
+    // Centre the bumps slightly inside each edge so the cloud only bulges
+    // ~0.6×radius beyond the text box (keeps it from eating neighbours).
+    const double iy = ry * 0.4, ix = rx * 0.4;
+    for (int i = 0; i < nx; ++i) {
+        const double cx = r.left() + (i + 0.5) * r.width() / nx;
+        addBump(cx, r.top() + iy);
+        addBump(cx, r.bottom() - iy);
+    }
+    for (int j = 0; j < ny; ++j) {
+        const double cy = r.top() + (j + 0.5) * r.height() / ny;
+        addBump(r.left() + ix, cy);
+        addBump(r.right() - ix, cy);
+    }
+    return path.simplified();
+}
+
+// A jagged "burst" balloon for shouting — alternating outer/inner radius
+// spikes around the text rect (the classic comic exclamation/impact balloon).
+QPainterPath burstPath(const QRectF& r, int spikes) {
+    const QPointF c = r.center();
+    const double orx = r.width() / 2.0 * 1.20;
+    const double ory = r.height() / 2.0 * 1.26;
+    const double irx = r.width() / 2.0 * 0.99;
+    const double iry = r.height() / 2.0 * 1.02;
+    QPainterPath path;
+    const int n = spikes * 2;
+    for (int i = 0; i <= n; ++i) {
+        const double ang = kPi * 2.0 * i / n - kPi / 2.0;
+        const bool outer = (i % 2 == 0);
+        const double pr = outer ? orx : irx;
+        const double pyr = outer ? ory : iry;
+        const QPointF pt(c.x() + std::cos(ang) * pr, c.y() + std::sin(ang) * pyr);
+        if (i == 0) {
+            path.moveTo(pt);
+        } else {
+            path.lineTo(pt);
+        }
+    }
+    path.closeSubpath();
+    return path;
 }
 
 // Tail geometry. One set of rules so every tail in a strip looks like family
@@ -334,9 +421,11 @@ void drawTail(QPainter& p, int size, int bx, int by, int bw, int bh, double head
     const double tipX = std::clamp(rootX + ux * len, 3.0, size - 3.0);
     const double tipY = baseY + uy * len;
 
-    const double half = std::min(std::clamp(size * 0.022, 5.0, 12.0), bw / 4.0);
+    // Thinner than before (narrower base + lighter stroke) for a daintier tail.
+    const double half = std::min(std::clamp(size * 0.016, 4.0, 9.0), bw / 4.0);
+    const double penW = std::clamp(size / 230.0, 1.2, 1.8);
     drawTri(p, QPointF(std::max<double>(bx + 2, rootX - half), baseY),
-            QPointF(std::min<double>(bx + bw - 2, rootX + half), baseY), QPointF(tipX, tipY));
+            QPointF(std::min<double>(bx + bw - 2, rootX + half), baseY), QPointF(tipX, tipY), penW);
 }
 
 void drawBalloons(QPainter& p, const QVector<Row>& rows, const QFont& font, int size, int charTop,
@@ -355,19 +444,45 @@ void drawBalloons(QPainter& p, const QVector<Row>& rows, const QFont& font, int 
     }
     for (const Row& r : rows) {
         if (r.action) {
+            // /me actions are narration captions (MS Comic Chat style): a
+            // tailless cream box, italic text — deliberately NOT a speech or
+            // thought balloon.
             QFont ital(font);
             ital.setItalic(true);
-            p.setPen(QPen(QColor(0, 0, 0), 1));
+            p.setPen(QPen(QColor(120, 100, 40), 1));
             p.setBrush(QColor(255, 251, 224));
-            p.drawRect(r.bx, r.by, r.bw, r.bh);
+            p.drawRoundedRect(QRectF(r.bx, r.by, r.bw, r.bh), 3, 3);
             p.setFont(ital);
             p.setPen(QColor(40, 40, 40));
             p.drawText(QRect(r.bx + 8, r.by + 4, r.bw - 16, r.bh - 8), WrapCentre, r.body);
             continue;
         }
-        p.setPen(QPen(QColor(0, 0, 0), 2));
-        p.setBrush(QColor(255, 255, 255));
-        p.drawRoundedRect(r.bx, r.by, r.bw, r.bh, r.think ? 18 : 6, r.think ? 18 : 6);
+        const double bodyPen = std::clamp(size / 200.0, 1.4, 2.2);
+        QPen outline(QColor(0, 0, 0), bodyPen);
+        outline.setJoinStyle(Qt::RoundJoin);
+        const QRectF box(r.bx, r.by, r.bw, r.bh);
+        if (r.think) {
+            // Proper thought cloud (scalloped silhouette), not a round rect.
+            const QPainterPath cloud = cloudPath(box.adjusted(2, 2, -2, -2));
+            p.setPen(Qt::NoPen);
+            p.fillPath(cloud, QColor(255, 255, 255));
+            p.setPen(outline);
+            p.setBrush(Qt::NoBrush);
+            p.drawPath(cloud);
+        } else if (r.shout) {
+            // Jagged exclamation/impact balloon.
+            const int spikes = std::clamp(static_cast<int>(std::lround(r.bw / 14.0)), 9, 22);
+            const QPainterPath burst = burstPath(box, spikes);
+            p.setPen(Qt::NoPen);
+            p.fillPath(burst, QColor(255, 255, 255));
+            p.setPen(outline);
+            p.setBrush(Qt::NoBrush);
+            p.drawPath(burst);
+        } else {
+            p.setPen(outline);
+            p.setBrush(QColor(255, 255, 255));
+            p.drawRoundedRect(box, 7, 7);
+        }
         p.setPen(QColor(0, 0, 0));
         p.setFont(font);
         p.drawText(QRect(r.bx + 9, r.by + 5, r.bw - 18, r.bh - 10), WrapCentre, r.body);
