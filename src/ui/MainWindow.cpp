@@ -4524,6 +4524,110 @@ void maxchat::ui::MainWindow::disconnectFromCurrentServer() {
     disconnectNetwork(activeNetworkName());
 }
 
+void maxchat::ui::MainWindow::closeNetwork(const QString& network) {
+    const QString net = network.trimmed();
+    if (net.isEmpty()) {
+        return;
+    }
+    maxchat::irc::IrcConnection* irc = connectionForNetwork(net);
+    const bool isActive = net.compare(activeNetworkName(), Qt::CaseInsensitive) == 0;
+    maxchat::irc::IrcConnection* effective =
+        irc != nullptr ? irc : (isActive ? &m_connection : nullptr);
+    if (effective != nullptr && effective->isConnected()) {
+        if (QMessageBox::question(
+                this, QStringLiteral("Close Server"),
+                QStringLiteral("Disconnect from %1 and close all of its chats?").arg(net)) !=
+            QMessageBox::Yes) {
+            return;
+        }
+    }
+
+    // Kill any reconnect machinery FIRST, then drop the link. abort() emits
+    // disconnected synchronously, so all "Disconnected" fallout (which may
+    // touch buffers/tree) lands before the cleanup below removes them.
+    m_manualDisconnectByNetwork.insert(net, true);
+    m_reconnectRequestedByNetwork.insert(net, false);
+    if (isActive) {
+        m_manualDisconnect = true;
+        m_reconnectRequested = false;
+    }
+    if (effective != nullptr) {
+        effective->disconnectFromServer();
+        if (effective != &m_connection) {
+            m_connectionsByNetwork.remove(net);
+            effective->deleteLater();
+        }
+    }
+
+    // Free every buffer (and per-buffer keys) belonging to the network.
+    for (const maxchat::core::ChatBufferId& id : m_chatBuffers.buffersForNetwork(net)) {
+        const QString key = id.network + QChar(0x1f) + id.target;
+        m_bufferMarkerCount.remove(key);
+        m_replayedBuffers.remove(key);
+        m_comicEnabledBuffers.remove(key);
+        m_chatBuffers.removeBuffer(id);
+    }
+
+    // Drop the per-network bookkeeping (keep the manual-disconnect tombstone:
+    // a late disconnected signal must not look like a crash and auto-reconnect).
+    const auto removeKeyCI = [&net](auto& map) {
+        for (auto it = map.begin(); it != map.end();) {
+            if (it.key().compare(net, Qt::CaseInsensitive) == 0) {
+                it = map.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    };
+    removeKeyCI(m_connectionPlansByNetwork);
+    removeKeyCI(m_currentTargetByNetwork);
+    removeKeyCI(m_openTargetsByNetwork);
+    removeKeyCI(m_registeredByNetwork);
+    removeKeyCI(m_initialConnectAttemptsByNetwork);
+    removeKeyCI(m_connectionUptimeStartMsByNetwork);
+    removeKeyCI(m_onlineFriendsByNetwork);
+    removeKeyCI(m_haveFriendSnapshotByNetwork);
+    removeKeyCI(m_awayNicksByNetwork);
+    for (int i = m_knownNetworks.size() - 1; i >= 0; --i) {
+        if (m_knownNetworks.at(i).compare(net, Qt::CaseInsensitive) == 0) {
+            m_knownNetworks.removeAt(i);
+        }
+    }
+
+    // If the active network was closed, hop to another known one (or the bare
+    // not-connected view). Done by hand: setActiveNetwork would re-remember
+    // the just-closed name while saving "current" state.
+    if (isActive) {
+        const QString fallback =
+            m_knownNetworks.isEmpty() ? QString() : m_knownNetworks.first();
+        if (fallback.isEmpty()) {
+            m_hasConnectionPlan = false;
+            m_connectionPlan = {};
+            m_currentTarget.clear();
+            m_openTargets.clear();
+            m_registered = false;
+        } else {
+            m_hasConnectionPlan = true;
+            m_connectionPlan = m_connectionPlansByNetwork.value(fallback);
+            if (m_connectionPlan.networkName.trimmed().isEmpty()) {
+                m_connectionPlan.networkName = fallback;
+            }
+            m_currentTarget = m_currentTargetByNetwork.value(fallback);
+            m_openTargets = m_openTargetsByNetwork.value(fallback);
+            m_registered = m_registeredByNetwork.value(fallback, false);
+            m_initialConnectAttempts = m_initialConnectAttemptsByNetwork.value(fallback, 0);
+            m_manualDisconnect = m_manualDisconnectByNetwork.value(fallback, false);
+            m_reconnectRequested = m_reconnectRequestedByNetwork.value(fallback, false);
+        }
+        activateBufferTarget(m_currentTarget);
+        updateChannelModeButton();
+        updateWindowTitle();
+        updateNickLabel();
+    }
+    rebuildNetworkTree();
+    statusBar()->showMessage(QStringLiteral("Closed %1.").arg(net));
+}
+
 void maxchat::ui::MainWindow::handleDisconnected(const QString& network, const QString& reason) {
     withNetworkContext(network, [this, reason]() { handleDisconnected(reason); });
 }
@@ -5343,6 +5447,9 @@ void maxchat::ui::MainWindow::showNetworkTreeContextMenu(const QPoint& pos) {
                        [this, itemNetwork]() { disconnectNetwork(itemNetwork); });
         menu.addAction(QStringLiteral("Reconnect Now"), this,
                        [this, itemNetwork]() { reconnectNetwork(itemNetwork); });
+        menu.addAction(QStringLiteral("Close Server"), this,
+                       [this, itemNetwork]() { closeNetwork(itemNetwork); });
+        menu.addSeparator();
         menu.addAction(QStringLiteral("Server List..."), this, &MainWindow::openServerList);
         menu.addAction(QStringLiteral("Quick Connect..."), this, &MainWindow::openQuickConnect);
     } else {
