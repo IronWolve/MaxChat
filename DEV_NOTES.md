@@ -32,12 +32,78 @@ When adding anything that should survive a buffer switch, store it in the model.
 
 ## THINGS I GOT WRONG
 
+- **2026-06-11 — Input focus grab never ported from Python.** The Python original
+  installs `app.installEventFilter(self)` (a GLOBAL filter) so keystrokes typed
+  anywhere jump to the message box. The C++ port only had per-widget filters on
+  `m_input` and its viewport — clicking the chat view and typing did nothing.
+  Fix: `qApp->installEventFilter(this)` + `redirectKeyToInput` in eventFilter.
+  Six guards are required (menu/modal, activeWindow, text-entry widget,
+  interactive-nav widget, Ctrl/Alt/Meta, non-printable). Removing ANY one breaks
+  something. Full design in `INPUT_FOCUS_DESIGN.md`.
+
+- **2026-06-11 — `refreshScriptList` inside `scriptPermissionChanged` destroyed
+  checkbox state.** After changing a permission checkbox, the handler called
+  `dialog.refreshScriptList()` to update the loaded/unloaded status column. That
+  clears and rebuilds the QListWidget → `currentItemChanged(nullptr)` fires →
+  all permission checkboxes are disabled. Result: clicking a second checkbox
+  had no effect. Fix: don't call `refreshScriptList` from the permission handler
+  (permission changes don't affect loaded status; only reload the script).
+
+- **2026-06-11 — `SettingsStore::saveRaw` silently stomped window geometry.**
+  `attachGeometryPersist` saves via `store.setValue(key, geom)` when
+  `QDialog::finished` fires (before `exec()` returns). Any caller that then did
+  `m_settings.saveRaw(dialog.settings())` replaced the entire file, losing the
+  `geom_*` key just written. Fix: `saveRaw` now reads the existing file first and
+  preserves any `geom_*` keys not present in the incoming map. See
+  `INPUT_FOCUS_DESIGN.md` for the complete dialog geometry inventory.
+
+- **2026-06-11 — `api.data_dir()` returned a path but didn't create the
+  directory.** `memo.lua` called `api.data_dir()` to construct a file path then
+  passed it to `io.open(path, "w")`. If the directory didn't exist, `io.open`
+  returned `nil` silently; `save_memos` bailed on the nil check; the user saw
+  "Memo saved for nick." but nothing was written. Fix: `l_data_dir` in
+  `LuaEngine.cpp` now calls `QDir().mkpath(dir)` before returning the path.
+
+- **2026-06-11 — `os.execute` blocks Qt's main thread.** `run.lua` used
+  `os.execute('start "" prog')` which calls the C `system()` function → blocks
+  the event loop until cmd.exe exits (≈200–500ms on Windows → visible UI freeze).
+  Fix: added `api.launch(cmdline)` backed by `QProcess::startDetached` (non-
+  blocking, returns immediately after spawning). `os.execute` stays in the sandbox
+  for scripts that genuinely need it; `api.launch` is the right tool for "open
+  something detached."
+
 - **2026-06-11 — OG card text rendered at the left edge instead of aligned with
   chat text.** `appendPreviewHtmlLine` computed a `leftMargin` from the chat
   prefix width and applied it via `QTextBlockFormat` before calling
   `cursor.insertHtml(html)`. The format set on the initial block was correct, but
   `insertHtml` with block-level HTML elements (`<div>`) creates additional
   `QTextBlock`s; those new blocks get default formatting (leftMargin=0) regardless
+
+- **2026-06-11 — `QMenu::Hide` focus restore fired for every context menu, not
+  just menu-bar dropdowns.** The `eventFilter` handler hooked `QEvent::Hide` on
+  any `QMenu` and deferred `m_input->setFocus()`. Right-clicking the network tree,
+  member list, or tab bar → close menu → focus stolen from the tree. Fix: guard
+  with `qobject_cast<QMenuBar*>(menu->parentWidget()) != nullptr` (menu-bar
+  menus have the QMenuBar as their direct parent; context menus don't). Also added
+  `QApplication::activePopupWidget() != nullptr` guard in the deferred lambda so a
+  sub-menu closing while the parent menu is still open doesn't trigger the restore.
+
+- **2026-06-11 — `setComicMode` could never turn off the global comic backend.**
+  First-enable set `m_comicMode = true`; the per-channel branch toggled only the
+  view (show/hide for this channel). Nothing ever set `m_comicMode = false`. Once
+  on, the backend ran for the whole session. Fix: pressing Ctrl+M on the server
+  buffer (where per-channel toggle makes no sense) now acts as the global off —
+  `m_comicMode = false`, hidden-set cleared, view hidden. Channel-buffer Ctrl+M
+  still means per-channel toggle. This gives a natural "global on → per-channel
+  overrides → return to server buffer to globally off" flow.
+
+- **2026-06-11 — Tab "Close" context menu closed the wrong tab after IRC events.**
+  The lambda captured `int index` at menu-open time. `QMenu::exec()` spins a
+  nested event loop, so a JOIN or PART during the open triggered `syncBufferTabs`,
+  which rebuilds the entire tab bar and shifts all indices. The captured index now
+  pointed at the wrong tab. Pattern: lambdas passed to `QMenu::exec()` must never
+  capture positional indices — capture item identity (network + target strings)
+  and re-derive the index at invocation time.
   of the cursor's block format. Result: only the first (empty/initial) block had
   the margin; every card `<div>` appeared at column 0. Fix: after `insertHtml`,
   iterate over every block from `insertStart` to `insertEnd` and call
