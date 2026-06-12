@@ -105,17 +105,17 @@ struct FormatState {
 
 } // namespace
 
+QStringList defaultNickPalette() {
+    return {QStringLiteral("#e06c75"), QStringLiteral("#e59572"), QStringLiteral("#e5c07b"),
+            QStringLiteral("#98c379"), QStringLiteral("#56b6c2"), QStringLiteral("#61afef"),
+            QStringLiteral("#c678dd"), QStringLiteral("#d19a66"), QStringLiteral("#5fb3a1"),
+            QStringLiteral("#7aa2f7"), QStringLiteral("#bb9af7"), QStringLiteral("#f7768e"),
+            QStringLiteral("#e0af68"), QStringLiteral("#9ece6a"), QStringLiteral("#7dcfff"),
+            QStringLiteral("#ff9e64")};
+}
+
 QString nickColor(const QString& nick, const QStringList& palette) {
-    const QStringList colors =
-        palette.isEmpty() ? QStringList{QStringLiteral("#e06c75"), QStringLiteral("#e59572"),
-                                        QStringLiteral("#e5c07b"), QStringLiteral("#98c379"),
-                                        QStringLiteral("#56b6c2"), QStringLiteral("#61afef"),
-                                        QStringLiteral("#c678dd"), QStringLiteral("#d19a66"),
-                                        QStringLiteral("#5fb3a1"), QStringLiteral("#7aa2f7"),
-                                        QStringLiteral("#bb9af7"), QStringLiteral("#f7768e"),
-                                        QStringLiteral("#e0af68"), QStringLiteral("#9ece6a"),
-                                        QStringLiteral("#7dcfff"), QStringLiteral("#ff9e64")}
-                          : palette;
+    const QStringList colors = palette.isEmpty() ? defaultNickPalette() : palette;
 
     QString key = nick;
     while (!key.isEmpty() && QStringLiteral("~&@%+").contains(key.front())) {

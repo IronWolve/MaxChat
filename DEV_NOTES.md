@@ -31,6 +31,36 @@ When adding anything that should survive a buffer switch, store it in the model.
 
 ## THINGS I GOT WRONG
 
+- **2026-06-12 — Deep chat-text review found 8 silent rendering bugs + the real
+  cause of the "lost" nick-color setting.** Highlights (commit-day fixes):
+  1. **Timestamps shifted to UTC on every re-render** — stored UTC, formatted
+     without toLocalTime(); live lines showed local, any theme change shifted
+     the whole gutter by the UTC offset. *Format stored UTC times in local.*
+  2. **"Dim replay" never dimmed the body** — defaultForeground only feeds
+     reverse-video; the message text rendered full-bright. New bodyColor option.
+  3. **mIRC codes inside `<nick>` rendered as garbage AND broke the colour
+     hash** (chat hashed "\x0304nick", member list hashed "nick" → different
+     colours — one source of the recurring mismatch reports). Strip before use.
+  4. **Reverse-video used hardcoded dark-theme colours** on every theme.
+  5. **No contrast guard** — yellow/cyan nicks invisible on light themes.
+  6. **Copied text contained U+00A0** padding (breaks paste into terminals).
+  7. **Separator guide assumed monospace** (space-width × columns) — now
+     measured in pixels from the real prefix.
+  8. **Preferences OK clobbered concurrent settings writes** — the dialog
+     saved its open-time snapshot wholesale, reverting window geometry (saved
+     on `finished`, which fires BEFORE exec() returns!), Comic Settings changes
+     made from inside Preferences, and IRC-driven keys. Now only CHANGED keys
+     merge over a fresh load (`PreferencesDialog::changedSettings`).
+  **Root cause of the user's lost "Classic IRC colors" choice: the C++ port
+  and the Python MaxChat share `<config>/maxchat/settings.json`; Python
+  doesn't know `nick_color_mode`, and saves from a stale in-memory dict drop
+  it — then every C++ defaults-expanded save rematerialises `palette`.
+  Mitigated by diff-saving; the real fix is a port-specific settings file
+  (decision pending with user).** Meta-lesson: a settings file shared between
+  two writers needs last-writer-wins discipline NOBODY has — never save a
+  defaults-expanded snapshot, only diffs.
+
+
 - **2026-06-11 — Replayed log lines lose their metadata flags, and every
   consumer of the buffer must cope.** Live join/part/quit lines carry
   `systemLine = true`, so the comic collector's `!line.systemLine` check

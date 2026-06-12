@@ -2,7 +2,26 @@
 
 Date: 2026-06-09 (audit closeout 2026-06-10; UI polish 2026-06-11)
 
-## Latest Completed Slice (IRC stability hardening, 2026-06-12)
+## Latest Completed Slice (chat-text deep clean, 2026-06-12)
+
+Two-agent review of the chat text pipeline (after repeated colour/sizing bugs).
+Fixed: UTC timestamp shift on re-render; dim replay now dims bodies (new
+ChatLineFormatOptions.bodyColor); mIRC codes stripped from nick labels (also
+fixed colour-hash mismatch vs member list); reverse-video uses real theme
+colours; contrast guard on nick palettes (effectiveNickPalette — ONE shared
+source for chat + member list); U+00A0 stripped from copied text; separator
+guide pixel-accurate via measured prefix; linkify longest-URL-first; prefs OK
+now diff-saves (changedSettings) — stops clobbering geometry/comic/IRC-driven
+keys written while the dialog was open; member-list recolour no longer runs
+with a stale chat theme. ALSO: Leave All Channels (Server menu + tree context),
+/list perf (no per-reply UI thrash, single end sort, batched filter), pruned
+connections for removed networks, manual reconnect keeps the same server.
+KNOWN REMAINING: settings.json is SHARED with the Python app (root cause of
+the "lost nick_color_mode") — splitting to a port-specific file is the real
+fix, awaiting user decision. Aligned-nick right-alignment still assumes a
+monospace chat font (default is). Tests still not run (ask user).
+
+## Previous Slice (IRC stability hardening, 2026-06-12)
 
 Two-agent review of src/irc/ + buffer/memory growth; verdict: protocol layer
 fundamentally solid (no socket races, injection handled, parser fuzz-clean,
