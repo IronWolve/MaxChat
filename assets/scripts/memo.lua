@@ -54,11 +54,12 @@ function on_command(api, command, args)
 
     local target, msg = args:match("^%s*(%S+)%s+(.+)%s*$")
     if not target then
-        -- List caller's pending memos.
+        -- List caller's pending memos and remove them (read-once delivery).
         local me = api.me():lower()
-        local mine = {}
+        local mine, rest = {}, {}
         for _, m in ipairs(memos) do
-            if m.nick == me then mine[#mine + 1] = m end
+            if m.nick == me then mine[#mine + 1] = m
+            else rest[#rest + 1] = m end
         end
         if #mine == 0 then
             api.echo("No pending memos.")
@@ -66,6 +67,7 @@ function on_command(api, command, args)
             for _, m in ipairs(mine) do
                 api.echo("[memo] from " .. m.from .. " @ " .. m.ts .. ": " .. m.msg)
             end
+            save_memos(path, rest)
         end
         return true
     end
