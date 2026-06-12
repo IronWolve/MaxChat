@@ -202,6 +202,10 @@ Exit criteria:
 - Phase 2 targeted MC DATA tests passed.
 - Phase 5 profile IDs/sizing are implemented with existing fonts. Real IBM/C64
   font assets remain open until redistribution licenses are checked.
+- Compact terminal frame draft is documented in `DEVDOCS/MC_DATA.md`. It uses
+  single-letter ops, fixed-width hex fields, and byte-length writes to reduce
+  CTCP payload size. Treat it as a working protocol until implementation proves
+  the final op set.
 - Phase 10 full offscreen CTest is `51/51` passing.
 - Initial full CTest without `QT_QPA_PLATFORM=offscreen` also aborts GUI/media
   tests in this headless environment due missing display/plugin setup; offscreen

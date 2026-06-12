@@ -264,6 +264,84 @@ book:<label> = nick|bbs_id|profile
 - Unicode box/block characters.
 - Future CP437/PETSCII helpers TBD.
 
+## Compact Terminal Frame Draft
+
+This is the current working protocol for efficient BBS/script terminal updates.
+It is a draft, not a frozen compatibility promise. The goal is to keep CTCP
+payloads small, avoid flooding, support cursor-positioned screens, and leave
+room for later CP437/C64 rendering.
+
+Frame wrapper:
+
+```text
+MC DATA bbs T <ops>
+```
+
+For Lua/BBS shorthand, this may be described as:
+
+```text
+bbs T <ops>
+```
+
+Rules:
+
+- No commas or text separators inside the op stream.
+- Single-letter opcodes.
+- Fixed-width hex arguments.
+- Length-prefixed text writes.
+- Parser walks left to right by opcode, consuming the exact argument width for
+  each op.
+- Normal text payloads should still stay under the current app payload guard.
+- Full-screen redraws should be avoided when a smaller positioned update works.
+
+Opcodes:
+
+```text
+C             clear screen
+H             home cursor
+Prrcc         position cursor; row and column are two-digit hex
+Afb           set color attribute; foreground/background are one hex digit each
+Wll<data>     write text; ll is two-digit hex byte length
+N             newline
+Xllll<data>   extended write; llll is four-digit hex byte length, TBD for v1
+```
+
+Example:
+
+```text
+CP0101A0FW08Retro-BBSP1801A07W06login>
+```
+
+Meaning:
+
+```text
+C             clear
+P0101         cursor row 1, column 1
+A0F           fg 0, bg 15
+W08Retro-BBS  write "Retro-BBS"
+P1801         cursor row 24, column 1
+A07           fg 0, bg 7
+W06login>     write "login>"
+```
+
+Screen-size notes:
+
+- `ibm-vga`: default `80x25`.
+- `c64`: default `40x25`.
+- `free`: arbitrary rows/columns for script-controlled terminals.
+- Scripts should ask the terminal size and generate output for that size.
+- For slow links or strict flood limits, send diffs/regions instead of whole
+  screens.
+
+Encoding notes:
+
+- `W` length is byte length, not character count.
+- Plain ASCII is cheapest.
+- Unicode box/block characters work but cost more bytes.
+- Future CP437/PETSCII helpers may map compact byte values to display glyphs.
+- Colors are logical terminal attributes; the renderer decides the final theme
+  palette.
+
 ## Future Services
 
 Possible Comic Chat service:
