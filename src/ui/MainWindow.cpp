@@ -1575,6 +1575,10 @@ void maxchat::ui::MainWindow::buildLayout() {
     // The topic is attacker-controlled (anyone can set a channel TOPIC); force
     // plain text so a topic like "<img src=...>" can't render as rich text.
     m_topicLabel->setTextFormat(Qt::PlainText);
+    // A long topic must NEVER drive the window width: Ignored horizontal policy
+    // means the label takes whatever width the window has; the text is elided
+    // to fit (updateTopicElide) and the full topic lives in the tooltip.
+    m_topicLabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
 
     m_bufferTabBar = new QTabBar(root);
     m_bufferTabBar->setObjectName(QStringLiteral("bufferTabBar"));
@@ -6771,14 +6775,31 @@ void maxchat::ui::MainWindow::renderActiveBufferMetadata() {
     // Connection state and network/channel context belong to the status bar and
     // the window title, not here.
     if (m_topicLabel != nullptr) {
-        const QString topic =
+        m_topicFullText =
             (m_hasConnectionPlan && snapshot.id.kind == maxchat::core::ChatBufferKind::Channel)
                 ? snapshot.topic.trimmed()
                 : QString();
-        m_topicLabel->setText(topic);
+        updateTopicElide();
     }
     updateWindowTitle();
     updateNickLabel();
+}
+
+void maxchat::ui::MainWindow::updateTopicElide() {
+    if (m_topicLabel == nullptr) {
+        return;
+    }
+    const int avail = std::max(40, m_topicLabel->width() - 12);
+    m_topicLabel->setText(
+        QFontMetrics(m_topicLabel->font()).elidedText(m_topicFullText, Qt::ElideRight, avail));
+    // The bar shows what fits; the full topic is in the tooltip (and via
+    // double-click edit / the raw TOPIC line in chat).
+    m_topicLabel->setToolTip(m_topicFullText);
+}
+
+void maxchat::ui::MainWindow::resizeEvent(QResizeEvent* event) {
+    QMainWindow::resizeEvent(event);
+    updateTopicElide(); // re-fit the elided topic to the new width
 }
 
 namespace {

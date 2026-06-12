@@ -94,6 +94,7 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     void dragEnterEvent(QDragEnterEvent* event) override;
     void dropEvent(QDropEvent* event) override;
     void showEvent(QShowEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
 
     // HexChat-style key redirect: typing anywhere in the main window jumps to
     // the message box. Returns true if the key was consumed (caller should too).
@@ -534,6 +535,8 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     QListWidget* m_memberList = nullptr;
     QPushButton* m_channelModesButton = nullptr;
     QLabel* m_topicLabel = nullptr;
+    QString m_topicFullText; // unelided topic; label shows an elided version
+    void updateTopicElide();
     SpellTextEdit* m_input = nullptr;
     // Active speller (internal Hunspell or native OS engine) — declared
     // unconditionally so the OS backend works on builds without Hunspell.
