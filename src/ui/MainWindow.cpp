@@ -1777,6 +1777,7 @@ void maxchat::ui::MainWindow::openServerList() {
 
     ServerListDialog dialog(networks, settings.value(QStringLiteral("connect_on_start")).toBool(),
                             this);
+    attachGeometryPersist(&dialog, m_settings, QStringLiteral("geom_server_list"));
     if (dialog.exec() != QDialog::Accepted) {
         return;
     }
@@ -1945,16 +1946,7 @@ void maxchat::ui::MainWindow::openPreferences() {
         return;
     }
 
-    // Merge geometry keys that attachGeometryPersist just wrote via setValue —
-    // saveRaw replaces the whole file, so reload and preserve any geom_* keys.
-    QVariantMap toSave = dialog.settings();
-    const QVariantMap existing = m_settings.loadRaw();
-    for (auto it = existing.constBegin(); it != existing.constEnd(); ++it) {
-        if (it.key().startsWith(QLatin1String("geom_"))) {
-            toSave.insert(it.key(), it.value());
-        }
-    }
-    if (!m_settings.saveRaw(toSave)) {
+    if (!m_settings.saveRaw(dialog.settings())) {
         appendSystemLine(QStringLiteral("! Could not save preferences."));
         return;
     }
@@ -6702,6 +6694,7 @@ void maxchat::ui::MainWindow::jumpToNextActivity() {
 void maxchat::ui::MainWindow::openShortcutEditor() {
     ShortcutEditorDialog dialog(
         m_settings.loadWithDefaults().value(QStringLiteral("shortcuts")).toMap(), this);
+    attachGeometryPersist(&dialog, m_settings, QStringLiteral("geom_shortcut_editor"));
     if (dialog.exec() != QDialog::Accepted) {
         return;
     }
@@ -6940,6 +6933,7 @@ void maxchat::ui::MainWindow::openComicSettings() {
     }
     std::sort(channelKeys.begin(), channelKeys.end());
     ComicSettingsDialog dialog(m_settings.loadWithDefaults(), stems, bgs, channelKeys, this);
+    attachGeometryPersist(&dialog, m_settings, QStringLiteral("geom_comic_settings"));
     if (dialog.exec() != QDialog::Accepted) {
         return;
     }
