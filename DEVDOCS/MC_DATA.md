@@ -270,7 +270,7 @@ Possible Comic Chat service:
 
 ```text
 service=comic
-verbs=HELLO, PROFILE, AVATAR, EMOTE, POSE, ROOMSTATE
+verbs=HELLO, CAPS, PROFILE, AVATAR, EMOTE, POSE, ROOMSTATE, BYE
 ```
 
 Rules:
@@ -279,6 +279,32 @@ Rules:
 - Versioned capability negotiation.
 - Normal IRC works without it.
 - No binary blobs in v1.
+
+Possible v1 verb meaning:
+
+```text
+HELLO       announce Comic service support and protocol version
+CAPS        list optional capabilities
+PROFILE     share display/avatar metadata references
+AVATAR      share a small avatar/art reference, not a raw binary blob
+EMOTE       announce current emotion/expression
+POSE        announce current pose/stance
+ROOMSTATE   share per-channel comic scene hints
+BYE         clear transient comic state for the sender
+```
+
+Core API audit:
+
+```text
+MC DATA core: service + verb + payload only
+Lua API: api.mc_send/api.mc_reply stay service-neutral
+Terminal API: script-owned terminal windows only, no BBS assumptions
+Retro-BBS: lives in assets/scripts/bbs.lua as one script/service
+```
+
+Do not add Comic Chat or BBS-specific branches to `IrcSession`, `IrcConnection`,
+`ScriptTerminalDialog`, or `ScriptTerminalManager`. Service behavior belongs in
+Lua scripts or future service-specific modules layered on top of MC DATA.
 
 ## Versioning / Security
 

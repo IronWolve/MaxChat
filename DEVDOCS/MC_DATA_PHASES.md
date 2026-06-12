@@ -1,6 +1,6 @@
 # MC DATA + Script Terminal Phases
 
-Current phase: Phase 9 - Future-Service Hooks
+Current phase: Phase 10 - Audit + Polish
 
 Status key:
 
@@ -165,10 +165,10 @@ Exit criteria:
 
 ## Phase 9 - Future-Service Hooks
 
-- [ ] Document possible `comic` service verbs.
-- [ ] Keep MC DATA generic and service-neutral.
-- [ ] Confirm no Retro-BBS assumptions leak into the core terminal or MC DATA APIs.
-- [ ] Leave `MC SEC` encryption/chunking as documented TBD only.
+- [x] Document possible `comic` service verbs.
+- [x] Keep MC DATA generic and service-neutral.
+- [x] Confirm no Retro-BBS assumptions leak into the core terminal or MC DATA APIs.
+- [x] Leave `MC SEC` encryption/chunking as documented TBD only.
 
 Exit criteria:
 
