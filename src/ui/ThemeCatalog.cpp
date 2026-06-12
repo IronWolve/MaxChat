@@ -818,22 +818,10 @@ QString styleSheetForAppearance(const QString& theme, const QString& chatTheme,
       QSpinBox::up-button:hover, QSpinBox::down-button:hover {
           background:%5;
       }
-      QSpinBox::up-arrow {
-          image: none;
-          width: 0;
-          height: 0;
-          border-left: 4px solid transparent;
-          border-right: 4px solid transparent;
-          border-bottom: 6px solid %2;
-      }
-      QSpinBox::down-arrow {
-          image: none;
-          width: 0;
-          height: 0;
-          border-left: 4px solid transparent;
-          border-right: 4px solid transparent;
-          border-top: 6px solid %2;
-      }
+      /* No ::up-arrow/::down-arrow override: the CSS border-triangle trick
+         renders as a filled square under Qt's Windows style. Giving the
+         buttons geometry above is enough to fix the click areas; Qt then
+         draws its native arrow glyphs inside them. */
       QTextBrowser#chatView, QTextEdit#messageInput {
           background:%8;
           color:%9;

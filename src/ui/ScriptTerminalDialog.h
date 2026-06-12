@@ -66,6 +66,11 @@ class ScriptTerminalDialog final : public QDialog {
     // display viewport, so a fixed-grid terminal's text stretches on resize.
     [[nodiscard]] int fitFontPointForViewport() const;
     [[nodiscard]] int baseFontPoint() const;
+    // Set both QFont (for metrics) and a per-widget stylesheet (font + colors).
+    // The stylesheet makes the terminal authoritative over the global theme QSS,
+    // which also matches QTextBrowser/QLineEdit/QLabel and would otherwise
+    // override the terminal font on every theme re-polish.
+    void applyWidgetStyles(int pointSize);
     void applyFitFont();
     void syncSettingsMenuChecks();
 
