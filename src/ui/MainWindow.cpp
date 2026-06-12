@@ -35,6 +35,7 @@
 #include "ui/MediaPlayerDialog.h"
 #include "ui/ShortcutEditorDialog.h"
 #include "ui/FriendsNotifyDialog.h"
+#include "ui/GeometryPersist.h"
 #include "ui/IgnoreListDialog.h"
 #include "ui/PreferencesDialog.h"
 #include "ui/QuickConnectDialog.h"
@@ -1690,6 +1691,7 @@ void maxchat::ui::MainWindow::openServerList() {
 
 void maxchat::ui::MainWindow::openQuickConnect() {
     QuickConnectDialog dialog(this);
+    attachGeometryPersist(&dialog, m_settings, QStringLiteral("geom_quick_connect"));
     if (dialog.exec() != QDialog::Accepted) {
         return;
     }
@@ -1715,6 +1717,7 @@ void maxchat::ui::MainWindow::openPreferences() {
     const QString soundsDir =
         QDir(m_settings.paths().configDir).filePath(QStringLiteral("sounds"));
     PreferencesDialog dialog(m_settings.loadWithDefaults(), loadedScripts, scriptsDir, soundsDir, this);
+    attachGeometryPersist(&dialog, m_settings, QStringLiteral("geom_preferences"));
     connect(&dialog, &PreferencesDialog::exportSettingsRequested, this,
             &MainWindow::exportSettings);
     connect(&dialog, &PreferencesDialog::importSettingsRequested, this, [this, &dialog]() {
@@ -1802,6 +1805,7 @@ void maxchat::ui::MainWindow::openPreferences() {
 
 void maxchat::ui::MainWindow::openAliases() {
     AliasEditorDialog dialog(m_commandAliases, {}, this);
+    attachGeometryPersist(&dialog, m_settings, QStringLiteral("geom_aliases"));
     if (dialog.exec() != QDialog::Accepted) {
         return;
     }
@@ -1845,6 +1849,7 @@ void maxchat::ui::MainWindow::openIgnoreList() {
                 QStringLiteral("! Ignore list saved (%1 masks).").arg(m_ignoreMasks.size()));
         },
         this);
+    attachGeometryPersist(&dialog, m_settings, QStringLiteral("geom_ignore_list"));
     dialog.exec();
 }
 
@@ -1880,6 +1885,7 @@ void maxchat::ui::MainWindow::openFriendsNotify() {
                 QStringLiteral("! Notify list saved (%1 nicks).").arg(m_friendNicks.size()));
         },
         this);
+    attachGeometryPersist(&dialog, m_settings, QStringLiteral("geom_friends_notify"));
     dialog.exec();
 }
 
@@ -1896,6 +1902,7 @@ void maxchat::ui::MainWindow::openChannelModes() {
         m_channelModeLines.value(QStringLiteral("%1/%2").arg(activeNetworkName().toCaseFolded(),
                                                              channel.toCaseFolded())),
         [this, channel](const QString& change) { sendModeChange(channel, change); }, this);
+    attachGeometryPersist(&dialog, m_settings, QStringLiteral("geom_channel_modes"));
     dialog.exec();
 }
 
@@ -1926,6 +1933,7 @@ void maxchat::ui::MainWindow::openBanList(const QString& channel) {
         },
         this);
     m_banListDialog->setAttribute(Qt::WA_DeleteOnClose);
+    attachGeometryPersist(m_banListDialog, m_settings, QStringLiteral("geom_ban_list"));
     m_banListDialog->show();
     m_banListDialog->clearBans();
     m_banListDialog->setStatusText(QStringLiteral("Requesting ban list..."));
@@ -1936,6 +1944,7 @@ void maxchat::ui::MainWindow::openChannelList(bool reset) {
     if (m_channelListDialog == nullptr) {
         m_channelListDialog = new ChannelListDialog(this);
         m_channelListDialog->setAttribute(Qt::WA_DeleteOnClose);
+        attachGeometryPersist(m_channelListDialog, m_settings, QStringLiteral("geom_channel_list"));
         connect(m_channelListDialog, &ChannelListDialog::joinRequested, this,
                 [this](const QString& channel) {
                     sendCommandOrMessage(QStringLiteral("/join %1").arg(channel));
@@ -1971,6 +1980,7 @@ void maxchat::ui::MainWindow::openChatFind() {
 
     m_chatFindDialog = new ChatFindDialog(this);
     m_chatFindDialog->setAttribute(Qt::WA_DeleteOnClose);
+    attachGeometryPersist(m_chatFindDialog, m_settings, QStringLiteral("geom_chat_find"));
     if (m_chatView != nullptr) {
         const QString selectedText = m_chatView->textCursor().selectedText();
         if (!selectedText.trimmed().isEmpty()) {
@@ -1997,6 +2007,7 @@ void maxchat::ui::MainWindow::openRawLog() {
 
     m_rawLogDialog = new RawLogDialog(this);
     m_rawLogDialog->setAttribute(Qt::WA_DeleteOnClose);
+    attachGeometryPersist(m_rawLogDialog, m_settings, QStringLiteral("geom_raw_log"));
     m_rawLogDialog->setLines(m_rawLogLines);
     connect(m_rawLogDialog, &RawLogDialog::clearRequested, this, [this]() {
         m_rawLogLines.clear();
@@ -2014,6 +2025,7 @@ void maxchat::ui::MainWindow::openUrlList() {
 
     m_urlListDialog = new UrlListDialog(this);
     m_urlListDialog->setAttribute(Qt::WA_DeleteOnClose);
+    attachGeometryPersist(m_urlListDialog, m_settings, QStringLiteral("geom_url_list"));
     m_urlListDialog->setUrls(m_urlList);
     connect(m_urlListDialog, &UrlListDialog::clearRequested, this, [this]() {
         m_urlList.clear();
