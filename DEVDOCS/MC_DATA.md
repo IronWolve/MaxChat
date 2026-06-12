@@ -548,6 +548,19 @@ for a 7-bit chat transport, fixed small chunks that respect flood throttling,
 and content-addressed caching. Use the `.mcb` extension if assets are ever
 exported as files.
 
+.mcb file format (text) and converter:
+
+```text
+MCB1 <id> <w> <h> <hash> <enc>
+<data, wrapped at 76 chars>
+```
+
+`tools/mcb1_convert.py` converts any image (.jpg/.png/...) to MCB1: fits and
+contrast-stretches, thresholds (`--threshold`, rle-friendly) or Floyd dithers,
+auto-picks rle vs raw, Z85 armor by default (`--hex` for legacy), prints a
+half-block terminal preview, and writes a `.mcb` file or a paste-ready
+bbs.lua PICS entry (`--lua --id <id> --title <title>`).
+
 Target:
 
 ```text
