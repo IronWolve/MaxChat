@@ -57,6 +57,23 @@ MediaPlayerDialog::MediaPlayerDialog(const QUrl& mediaUrl, QWidget* parent) : QD
         seeking_ = false;
         player_->setPosition(seek_->value());
     });
+    // A 404 / unsupported codec / dropped stream used to leave a silent black
+    // dialog claiming it was playing.
+    connect(player_, &QMediaPlayer::errorOccurred, this,
+            [this](QMediaPlayer::Error, const QString& errorString) {
+                setWindowTitle(QStringLiteral("Playback error: %1").arg(errorString));
+                const QSignalBlocker blocker(playPause_);
+                playPause_->setChecked(false);
+                playPause_->setText(QStringLiteral("Play"));
+            });
+    connect(player_, &QMediaPlayer::playbackStateChanged, this,
+            [this](QMediaPlayer::PlaybackState state) {
+                const bool playing = state == QMediaPlayer::PlayingState;
+                const QSignalBlocker blocker(playPause_);
+                playPause_->setChecked(playing);
+                playPause_->setText(playing ? QStringLiteral("Pause")
+                                            : QStringLiteral("Play"));
+            });
 
     auto* closeShortcut = new QShortcut(QKeySequence(Qt::Key_Escape), this);
     connect(closeShortcut, &QShortcut::activated, this, &QDialog::close);

@@ -846,18 +846,28 @@ MainWindow::MainWindow(QWidget* parent)
     // Wayland/WSLg reports supportsMessages()=true but often has no notification
     // daemon; confirm one actually owns the D-Bus name, else fall back to toast.
     if (m_osNotifyAvailable) {
-        QProcess probe;
-        probe.start(QStringLiteral("dbus-send"),
-                    {QStringLiteral("--session"),
-                     QStringLiteral("--dest=org.freedesktop.DBus"),
-                     QStringLiteral("--type=method_call"),
-                     QStringLiteral("--print-reply"),
-                     QStringLiteral("/org/freedesktop/DBus"),
-                     QStringLiteral("org.freedesktop.DBus.GetNameOwner"),
-                     QStringLiteral("string:org.freedesktop.Notifications")});
-        const bool finished = probe.waitForFinished(3000);
-        m_osNotifyAvailable = finished && probe.exitStatus() == QProcess::NormalExit &&
-                              probe.exitCode() == 0;
+        // Async: the old waitForFinished(3000) stalled first paint by up to
+        // 3 s when no session bus answered. Assume unavailable (toast
+        // fallback) until the probe confirms a daemon.
+        m_osNotifyAvailable = false;
+        auto* probe = new QProcess(this);
+        connect(probe, &QProcess::finished, this,
+                [this, probe](int exitCode, QProcess::ExitStatus exitStatus) {
+                    m_osNotifyAvailable =
+                        exitStatus == QProcess::NormalExit && exitCode == 0 &&
+                        m_tray != nullptr;
+                    probe->deleteLater();
+                });
+        connect(probe, &QProcess::errorOccurred, this,
+                [probe](QProcess::ProcessError) { probe->deleteLater(); });
+        probe->start(QStringLiteral("dbus-send"),
+                     {QStringLiteral("--session"),
+                      QStringLiteral("--dest=org.freedesktop.DBus"),
+                      QStringLiteral("--type=method_call"),
+                      QStringLiteral("--print-reply"),
+                      QStringLiteral("/org/freedesktop/DBus"),
+                      QStringLiteral("org.freedesktop.DBus.GetNameOwner"),
+                      QStringLiteral("string:org.freedesktop.Notifications")});
     }
 #endif
     connect(&m_openGraphFetcher, &maxchat::services::OpenGraphFetcher::cardFetched, this,
@@ -917,20 +927,26 @@ MainWindow::MainWindow(QWidget* parent)
             });
 
     setupNavShortcuts();
-    applyCurrentSettings();
-    if (m_settings.loadWithDefaults().value(QStringLiteral("connect_on_start"), false).toBool()) {
-        QTimer::singleShot(0, this, [this]() { startConfiguredStartupConnection(); });
-    }
-
+    // Ordering matters here (review 2026-06-12):
+    //  - fallback icon/title BEFORE applyCurrentSettings, or the static .ico
+    //    would overwrite the user's themed tray/window icon;
+    //  - geometry restore BEFORE applyCurrentSettings, or the saved splitter
+    //    sizes get applied to the default 1100x720 window and then drift when
+    //    restoreGeometry resizes it.
     setWindowTitle(QStringLiteral("%1 %2").arg(app::displayName(), app::version()));
     setWindowIcon(QIcon(QStringLiteral(":/icons/maxchat.ico")));
+    const QVariantMap startupSettings = m_settings.loadWithDefaults();
     const QString savedGeom =
-        m_settings.loadRaw().value(QStringLiteral("window_geometry")).toString();
+        startupSettings.value(QStringLiteral("window_geometry")).toString();
     if (savedGeom.isEmpty() || !restoreGeometry(QByteArray::fromBase64(savedGeom.toLatin1()))) {
         resize(1100, 720);
     }
+    applyCurrentSettings();
+    if (startupSettings.value(QStringLiteral("connect_on_start"), false).toBool()) {
+        QTimer::singleShot(0, this, [this]() { startConfiguredStartupConnection(); });
+    }
 
-    if (m_settings.loadWithDefaults().value(QStringLiteral("update_check"), false).toBool()) {
+    if (startupSettings.value(QStringLiteral("update_check"), false).toBool()) {
         QTimer::singleShot(3500, this, [this]() { checkForUpdates(/*manual=*/false); });
     }
 
@@ -940,9 +956,13 @@ MainWindow::MainWindow(QWidget* parent)
     m_lua = new maxchat::scripting::LuaEngine(
         this, scriptsDir, QDir(scriptsDir).filePath(QStringLiteral("data")), this);
     if (maxchat::scripting::LuaEngine::available()) {
-        QDir().mkpath(scriptsDir);
-        seedBundledScripts(scriptsDir);
-        m_lua->loadAll(buildAllScriptPermsMap());
+        // Deferred so the window paints before any script's top-level code
+        // runs (a slow or dialog-popping script must not block first paint).
+        QTimer::singleShot(0, this, [this, scriptsDir]() {
+            QDir().mkpath(scriptsDir);
+            seedBundledScripts(scriptsDir);
+            m_lua->loadAll(buildAllScriptPermsMap());
+        });
     }
 }
 
@@ -1065,22 +1085,30 @@ bool MainWindow::redirectKeyToInput(QKeyEvent* e) {
         qobject_cast<QTabBar*>(focus) != nullptr) {
         return false;
     }
-    // Guard 4: Ctrl/Alt/Meta shortcuts pass through unchanged.
-    if (e->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier)) {
+    // Guard 4: Ctrl/Alt/Meta shortcuts pass through unchanged — EXCEPT AltGr:
+    // on Windows AltGr arrives as Ctrl+Alt, and international layouts type
+    // printable chars with it (é @ € [ ]). A printable Ctrl+Alt key is AltGr,
+    // not a shortcut.
+    const QString text = e->text();
+    const bool printable = !text.isEmpty() && text.at(0).isPrint();
+    const Qt::KeyboardModifiers mods = e->modifiers();
+    const bool altGr = (mods & Qt::ControlModifier) && (mods & Qt::AltModifier) && printable;
+    if (!altGr && (mods & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier))) {
         return false;
     }
     // Guard 5: only printable characters (not arrows, Tab, F-keys, etc.).
-    const QString text = e->text();
-    if (text.isEmpty() || !text.at(0).isPrint()) {
+    if (!printable) {
         return false;
     }
-    // Redirect: focus the message box and pre-fill the typed character.
+    // Redirect: focus the message box and append the typed character at the
+    // END (insert at the saved mid-string cursor would garble a draft the
+    // user can't see happening).
     if (m_input != nullptr) {
         m_input->setFocus();
-        m_input->insertPlainText(text);
         QTextCursor c = m_input->textCursor();
         c.movePosition(QTextCursor::End);
         m_input->setTextCursor(c);
+        m_input->insertPlainText(text);
         return true;
     }
     return false;
@@ -1106,6 +1134,9 @@ bool MainWindow::eventFilter(QObject* watched, QEvent* event) {
     if (watched == m_input && event->type() == QEvent::KeyPress) {
         auto* keyEvent = static_cast<QKeyEvent*>(event);
         if (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter) {
+            if (keyEvent->modifiers() & Qt::ShiftModifier) {
+                return false; // Shift+Enter = newline (multiline compose)
+            }
             handleInputSubmitted();
             return true;
         }
@@ -1761,6 +1792,8 @@ void maxchat::ui::MainWindow::buildLayout() {
     m_input->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     m_input->document()->setDocumentMargin(4);
     resizeMessageInput();
+    connect(m_input->document(), &QTextDocument::blockCountChanged, this,
+            [this](int) { resizeMessageInput(); });
     m_input->installEventFilter(this);
     // QTextEdit is a scroll area: mouse-driven context-menu events go to the
     // viewport, not the widget, so the viewport must be filtered too or
@@ -1778,8 +1811,16 @@ void maxchat::ui::MainWindow::buildLayout() {
     const auto addFormattingShortcut = [this](const QString& key, const ushort code) {
         auto* shortcut = new QShortcut(QKeySequence(key), m_input);
         shortcut->setContext(Qt::WidgetShortcut);
-        connect(shortcut, &QShortcut::activated, this,
-                [this, code]() { m_input->textCursor().insertText(QString(QChar(code))); });
+        connect(shortcut, &QShortcut::activated, this, [this, code]() {
+            QTextCursor cursor = m_input->textCursor();
+            if (cursor.hasSelection()) {
+                // Wrap the selection — inserting over it would DELETE the text.
+                const QString selected = cursor.selectedText();
+                cursor.insertText(QString(QChar(code)) + selected + QString(QChar(code)));
+            } else {
+                cursor.insertText(QString(QChar(code)));
+            }
+        });
     };
     addFormattingShortcut(QStringLiteral("Ctrl+B"), 0x02);
     addFormattingShortcut(QStringLiteral("Ctrl+I"), 0x1D);
@@ -1791,7 +1832,14 @@ void maxchat::ui::MainWindow::buildLayout() {
     connect(colorShortcut, &QShortcut::activated, this, [this]() {
         ColorPickerDialog dialog(this);
         if (dialog.exec() == QDialog::Accepted && !dialog.selectedCode().isEmpty()) {
-            m_input->textCursor().insertText(QString(QChar(0x03)) + dialog.selectedCode());
+            QTextCursor cursor = m_input->textCursor();
+            if (cursor.hasSelection()) {
+                const QString selected = cursor.selectedText();
+                cursor.insertText(QString(QChar(0x03)) + dialog.selectedCode() + selected +
+                                  QString(QChar(0x03)));
+            } else {
+                cursor.insertText(QString(QChar(0x03)) + dialog.selectedCode());
+            }
             m_input->setFocus();
         }
     });
@@ -5342,6 +5390,10 @@ bool MainWindow::showHistoryEntry(int delta) {
         m_inputHistoryIndex = std::max(0, m_inputHistoryIndex - 1);
         setInputText(m_input, m_inputHistory.at(m_inputHistoryIndex));
     } else {
+        if (m_inputHistoryIndex >= m_inputHistory.size()) {
+            // Not browsing history — Down must NOT clear an in-progress draft.
+            return false;
+        }
         if (m_inputHistoryIndex >= m_inputHistory.size() - 1) {
             m_inputHistoryIndex = m_inputHistory.size();
             m_input->clear();
@@ -5387,8 +5439,9 @@ bool MainWindow::completeInput(const bool forward) {
     const QStringList candidates = completionCandidates(commandCompletion);
     QStringList matches;
     for (const QString& candidate : candidates) {
-        if (candidate.startsWith(prefix, Qt::CaseInsensitive) &&
-            candidate.compare(prefix, Qt::CaseInsensitive) != 0) {
+        if (candidate.startsWith(prefix, Qt::CaseInsensitive)) {
+            // An exact match stays in: Tab on a fully-typed nick should still
+            // append the ": " suffix (cycle-state handles re-Tab correctly).
             matches.append(candidate);
         }
     }
@@ -7105,16 +7158,41 @@ void maxchat::ui::MainWindow::handleChatAnchorClicked(const QUrl& url) {
         viewer->show();
         return;
     }
-    case LinkPreviewKind::DirectAudio:
-        if (m_audioBar != nullptr) {
-            m_audioBar->playUrl(candidate.fetchUrl.isValid() ? candidate.fetchUrl : url);
-            return;
+    case LinkPreviewKind::DirectAudio: {
+        if (m_audioBar == nullptr) {
+            break;
         }
-        break;
+        // Same SSRF gate as previews: the static check can't catch a public
+        // hostname that resolves to a LAN/metadata address, and the media
+        // backend follows redirects we can't intercept.
+        const QUrl mediaUrl = candidate.fetchUrl.isValid() ? candidate.fetchUrl : url;
+        maxchat::services::resolvePreviewUrlPublicAsync(
+            mediaUrl, /*allowPrivateNetwork=*/false, this, [this, mediaUrl](bool allowed) {
+                if (allowed && m_audioBar != nullptr) {
+                    m_audioBar->playUrl(mediaUrl);
+                } else if (!allowed) {
+                    appendSystemLine(QStringLiteral("! Blocked audio URL (private address)."));
+                }
+            });
+        return;
+    }
     case LinkPreviewKind::DirectVideo: {
-        auto* player =
-            new MediaPlayerDialog(candidate.fetchUrl.isValid() ? candidate.fetchUrl : url, this);
-        player->show();
+        const QUrl mediaUrl = candidate.fetchUrl.isValid() ? candidate.fetchUrl : url;
+        maxchat::services::resolvePreviewUrlPublicAsync(
+            mediaUrl, /*allowPrivateNetwork=*/false, this, [this, mediaUrl](bool allowed) {
+                if (!allowed) {
+                    appendSystemLine(QStringLiteral("! Blocked video URL (private address)."));
+                    return;
+                }
+                // One player at a time: clicking links repeatedly used to
+                // stack dialogs all playing audio simultaneously.
+                if (m_mediaPlayerDialog != nullptr) {
+                    m_mediaPlayerDialog->close();
+                }
+                auto* player = new MediaPlayerDialog(mediaUrl, this);
+                m_mediaPlayerDialog = player;
+                player->show();
+            });
         return;
     }
     default:
@@ -8794,7 +8872,13 @@ void maxchat::ui::MainWindow::configureImageUploader(const QVariantMap& settings
 }
 
 void maxchat::ui::MainWindow::startImageUpload(const QImage& image) {
-    if (m_imageUploader == nullptr || image.isNull()) {
+    if (m_imageUploader == nullptr) {
+        appendSystemLine(QStringLiteral(
+            "! Image paste ignored: no image hosting service is configured "
+            "(Preferences > Image Hosting)."));
+        return;
+    }
+    if (image.isNull()) {
         return;
     }
     statusBar()->showMessage(QStringLiteral("Uploading image…"));
@@ -8824,9 +8908,16 @@ void maxchat::ui::MainWindow::resizeMessageInput() {
     if (m_input == nullptr) {
         return;
     }
-    const int height = QFontMetrics(m_input->font()).lineSpacing() + 16;
+    // Grow with content up to 5 lines so multiline drafts (Shift+Enter or a
+    // small paste) are actually VISIBLE — the box used to stay one line tall
+    // with the scrollbar off, letting users send text they couldn't see.
+    const int lines = std::clamp(m_input->document()->blockCount(), 1, 5);
+    const int height = QFontMetrics(m_input->font()).lineSpacing() * lines + 16;
     m_input->setMinimumHeight(height);
     m_input->setMaximumHeight(height);
+    m_input->setVerticalScrollBarPolicy(m_input->document()->blockCount() > 5
+                                            ? Qt::ScrollBarAsNeeded
+                                            : Qt::ScrollBarAlwaysOff);
 }
 
 void maxchat::ui::MainWindow::applyTheme(const QString& theme) {

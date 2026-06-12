@@ -110,8 +110,17 @@ SettingsStore::SettingsStore(SettingsPaths paths) : paths_(std::move(paths)) {
 const SettingsPaths &SettingsStore::paths() const { return paths_; }
 
 QVariantMap SettingsStore::loadRaw() const {
+  // Stat-validated cache: re-parse only when the file changed on disk (the
+  // Python app can write the same file, so the mtime/size check stays).
+  const QFileInfo info(paths_.settingsPath);
+  if (cacheValid_ && info.exists() && info.lastModified() == cachedMtime_ &&
+      info.size() == cachedSize_) {
+    return cachedRaw_;
+  }
+
   QFile file(paths_.settingsPath);
   if (!file.open(QIODevice::ReadOnly)) {
+    cacheValid_ = false;
     return {};
   }
 
@@ -119,9 +128,14 @@ QVariantMap SettingsStore::loadRaw() const {
   const QJsonDocument document =
       QJsonDocument::fromJson(file.readAll(), &error);
   if (error.error != QJsonParseError::NoError || !document.isObject()) {
+    cacheValid_ = false;
     return {};
   }
-  return document.object().toVariantMap();
+  cachedRaw_ = document.object().toVariantMap();
+  cachedMtime_ = info.lastModified();
+  cachedSize_ = info.size();
+  cacheValid_ = true;
+  return cachedRaw_;
 }
 
 QVariantMap SettingsStore::loadWithDefaults() const {
@@ -156,6 +170,7 @@ bool SettingsStore::saveRaw(const QVariantMap &settings, const bool preserveGeom
     merged.insert(it.key(), it.value());
   }
 
+  cacheValid_ = false; // commit below changes the file; re-stat next load
   QSaveFile file(paths_.settingsPath);
   if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
     return false;

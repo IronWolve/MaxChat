@@ -4,6 +4,7 @@
 
 #include <QString>
 #include <QVariantList>
+#include <QDateTime>
 #include <QVariantMap>
 
 namespace maxchat::core {
@@ -38,6 +39,13 @@ class SettingsStore final {
 
   private:
     SettingsPaths paths_;
+    // mtime+size cache for loadRaw: startup alone used to parse settings.json
+    // 11 times; an external writer (the Python app shares this file) is still
+    // detected through the stat check. mutable: the load methods stay const.
+    mutable QVariantMap cachedRaw_;
+    mutable QDateTime cachedMtime_;
+    mutable qint64 cachedSize_ = -1;
+    mutable bool cacheValid_ = false;
 };
 
 } // namespace maxchat::core

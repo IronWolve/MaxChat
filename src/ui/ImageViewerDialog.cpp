@@ -1,6 +1,9 @@
 #include "ui/ImageViewerDialog.h"
 
+#include "services/ImageFetcher.h"
 #include "services/LinkPreviewClassifier.h"
+
+#include <QImage>
 
 #include <QGuiApplication>
 #include <QLabel>
@@ -47,37 +50,37 @@ void ImageViewerDialog::startFetch(const QUrl& imageUrl) {
         return;
     }
 
-    QNetworkRequest request(imageUrl);
-    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
-                         QNetworkRequest::NoLessSafeRedirectPolicy);
-    request.setMaximumRedirectsAllowed(4);
-    QNetworkReply* reply = network_->get(request);
-    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-        reply->deleteLater();
-        if (reply->error() != QNetworkReply::NoError) {
-            imageLabel_->setText(
-                QStringLiteral("Could not load image: %1").arg(reply->errorString()));
-            return;
-        }
-        const QByteArray payload = reply->read(MaxImageBytes);
-        QPixmap pixmap;
-        if (!pixmap.loadFromData(payload)) {
-            imageLabel_->setText(QStringLiteral("The downloaded data is not a usable image."));
-            return;
-        }
-
-        QSize available(900, 700);
-        if (QScreen* screen = QGuiApplication::primaryScreen()) {
-            available = screen->availableSize() * 0.85;
-        }
-        if (pixmap.width() > available.width() || pixmap.height() > available.height()) {
-            pixmap = pixmap.scaled(available, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-        }
-        imageLabel_->setPixmap(pixmap);
-        imageLabel_->adjustSize();
-        resize(qMin(pixmap.width() + 24, available.width()),
-               qMin(pixmap.height() + 24, available.height()));
-    });
+    // ImageFetcher brings the DNS-resolution SSRF gate, per-redirect
+    // re-vetting, the 15s timeout, and an in-flight download cap — the old
+    // bespoke fetch here had none of those.
+    fetcher_ = new maxchat::services::ImageFetcher(network_, this);
+    connect(fetcher_, &maxchat::services::ImageFetcher::imageFetched, this,
+            [this](const QUrl&, const QImage& image) {
+                QSize available(900, 700);
+                if (QScreen* screen = QGuiApplication::primaryScreen()) {
+                    available = screen->availableSize() * 0.85;
+                }
+                QPixmap pixmap = QPixmap::fromImage(image);
+                if (pixmap.width() > available.width() ||
+                    pixmap.height() > available.height()) {
+                    pixmap = pixmap.scaled(available, Qt::KeepAspectRatio,
+                                           Qt::SmoothTransformation);
+                }
+                imageLabel_->setPixmap(pixmap);
+                imageLabel_->adjustSize();
+                resize(qMin(pixmap.width() + 24, available.width()),
+                       qMin(pixmap.height() + 24, available.height()));
+            });
+    connect(fetcher_, &maxchat::services::ImageFetcher::imageFetchFailed, this,
+            [this](const QUrl&, const QString& reason) {
+                imageLabel_->setText(QStringLiteral("Could not load image: %1").arg(reason));
+            });
+    maxchat::services::ImageFetchOptions options;
+    options.maxBytes = MaxImageBytes;
+    options.timeoutMs = 15000;
+    options.maxWidth = 8192; // full-size viewer: don't pre-shrink
+    options.maxHeight = 8192;
+    fetcher_->fetch(imageUrl, options);
 }
 
 } // namespace maxchat::ui

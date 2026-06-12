@@ -63,6 +63,18 @@ void ImageFetcher::issueRequest(const QUrl &url, ImageFetchOptions options) {
     }
   });
 
+  // Abort as soon as the body exceeds the cap — reading only at finished()
+  // would let QNAM buffer an arbitrarily large response in RAM first.
+  const qsizetype maxBytes = options.maxBytes;
+  connect(reply, &QNetworkReply::downloadProgress, this,
+          [guardedReply, maxBytes](qint64 received, qint64 /*total*/) {
+            if (received > maxBytes && guardedReply != nullptr &&
+                !guardedReply->isFinished()) {
+              guardedReply->setProperty("maxchat_too_big", true);
+              guardedReply->abort();
+            }
+          });
+
   // Re-run the SSRF guard on every redirect — a public host can 30x to a
   // private address, which NoLessSafeRedirectPolicy alone does not block.
   const bool allowPrivate = options.allowPrivateNetwork;
@@ -88,6 +100,8 @@ void ImageFetcher::issueRequest(const QUrl &url, ImageFetchOptions options) {
         reason = QStringLiteral("blocked redirect to a private address");
       } else if (reply->property("maxchat_timeout").toBool()) {
         reason = QStringLiteral("image fetch timed out");
+      } else if (reply->property("maxchat_too_big").toBool()) {
+        reason = QStringLiteral("image exceeded size cap");
       }
       emit imageFetchFailed(url, reason);
       return;

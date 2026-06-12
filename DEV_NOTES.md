@@ -31,6 +31,32 @@ When adding anything that should survive a buffer switch, store it in the model.
 
 ## THINGS I GOT WRONG
 
+- **2026-06-12 — Media/input/startup sweep: 20+ findings, the recurring themes:**
+  1. **Every fetch path must use the shared hardened fetcher.** ImageViewerDialog
+     rolled its own QNAM fetch — no DNS SSRF gate, no redirect re-vetting, no
+     timeout, and the 25 MB "cap" only truncated AFTER QNAM buffered the whole
+     body. Now consumes services::ImageFetcher (which also gained an in-flight
+     downloadProgress abort). Audio/video URLs likewise gated through
+     resolvePreviewUrlPublicAsync before reaching QMediaPlayer. Same lesson as
+     api.http_get on 06-11: new fetch path = same treatment, no exceptions.
+  2. **Insert-over-selection destroys text.** Ctrl+B/I/U/K replaced the
+     selection with the control code (selected word deleted). Wrap, don't
+     insert. Likewise Down-arrow cleared an in-progress draft.
+  3. **AltGr arrives as Ctrl+Alt** — the redirect filter's modifier guard ate
+     international characters typed after clicking chat. Printable + Ctrl+Alt
+     = AltGr, must fall through.
+  4. **One-line input + multiline submit = invisible messages.** Pastes/Shift+
+     Enter produced lines the user could never see. The box now grows to 5
+     lines (blockCountChanged → resizeMessageInput).
+  5. **Startup ordering**: static window icon overwrote the themed one; saved
+     splitter sizes applied before geometry restore (drift every run); a
+     synchronous 3 s D-Bus probe could stall first paint; scripts ran their
+     top-level before the window painted. And settings.json was parsed 11
+     times before first paint — SettingsStore now has a stat-validated cache
+     (still detects the Python app's external writes via mtime+size).
+  Full findings list in the 2026-06-12 HANDOFF slice.
+
+
 - **2026-06-12 — Deep chat-text review found 8 silent rendering bugs + the real
   cause of the "lost" nick-color setting.** Highlights (commit-day fixes):
   1. **Timestamps shifted to UTC on every re-render** — stored UTC, formatted

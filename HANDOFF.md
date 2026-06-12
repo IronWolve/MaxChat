@@ -2,7 +2,33 @@
 
 Date: 2026-06-09 (audit closeout 2026-06-10; UI polish 2026-06-11)
 
-## Latest Completed Slice (close server + chat opacity, 2026-06-12)
+## Latest Completed Slice (media/input/startup sweep, 2026-06-12)
+
+Three-agent review of inline media players, the input box, and startup order.
+**Media:** ImageViewerDialog now fetches through services::ImageFetcher (DNS
+SSRF gate, per-redirect re-vetting, 15 s timeout, real download cap — the old
+bespoke fetch had none); ImageFetcher aborts oversized bodies in-flight;
+audio/video URLs DNS-gated before QMediaPlayer; audio-bar label PlainText
+(HTML-in-filename spoof); play/pause buttons track playbackStateChanged
+(no more lying "Pause" after end/error); video dialog reuses ONE instance
+(stacking players all played audio at once); video dialog gained error
+handling. Known gaps (noted, not fixed): GIFs show first frame only; no
+volume control on either player.
+**Input:** Down no longer wipes a draft; Ctrl+B/I/U/K wrap the selection
+instead of deleting it; AltGr (Ctrl+Alt + printable) falls through the
+redirect filter; redirect appends at END (stale mid-string cursor garbled
+drafts); Shift+Enter = newline; input grows to 5 lines (multiline finally
+visible); Tab completes an exactly-typed nick; image paste says when no
+uploader is configured. Deferred (noted): IME composition redirect, context-
+menu coordinate mapping for keyboard-triggered menus, Esc-before-guard order.
+**Startup:** SettingsStore stat-validated cache (11 parses → ~1); themed
+window icon no longer overwritten; geometry restored BEFORE splitter sizes;
+D-Bus notification probe async (was 3 s sync stall); Lua script load deferred
+past first paint. Noted: no single-instance guard (last-writer-wins on
+settings.json); closeEvent doesn't persist current network/buffer (no session
+restore); main-window strings aren't tr()-wrapped.
+
+## Previous Slice (close server + chat opacity, 2026-06-12)
 
 - **Close Server** (tree network-row context menu): confirm-if-connected →
   disconnect (abort emits synchronously, so fallout lands first) → free all
