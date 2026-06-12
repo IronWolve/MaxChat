@@ -32,6 +32,32 @@ When adding anything that should survive a buffer switch, store it in the model.
 
 ## THINGS I GOT WRONG
 
+- **2026-06-11 — Comic Mode toggle semantics: a "global on + per-buffer hide-set"
+  design is the wrong model for a per-channel feature.** The original toggle
+  turned comic on for EVERY buffer on first enable, then later toggles maintained
+  a `m_comicHiddenBuffers` hide-set — so the user had it "on everywhere or off
+  everywhere" and had to hide channel-by-channel. Worse, toggling it off while on
+  the **server buffer** was overloaded as the secret "global kill" — invisible,
+  undiscoverable behavior. Redesign (commit e142ebb): invert the set —
+  `m_comicEnabledBuffers` is **opt-in per buffer** (key = network\x1ftarget),
+  `m_comicMode` is *derived* (backend on iff the set is non-empty), and the
+  action is `setEnabled(false)` on the server buffer instead of overloading it.
+  The tricky parts to not re-break:
+  - The QAction is shared between the menu and the toolbar button. Its
+    **checked** state must be re-synced (under `QSignalBlocker`, or `toggled`
+    re-fires `setComicMode`) on every buffer switch to show the ACTIVE buffer's
+    state, and its **enabled** state must be re-synced in the same place
+    (`activateBufferTarget`) — one without the other leaves a stale button.
+  - The action must start **disabled at creation**: the startup buffer is the
+    server tab, and the buffer-switch sync that would disable it may sit behind
+    a `m_comicView != nullptr` guard or simply not have run yet. (Hidden default
+    breaks Ctrl+M too — keep a server-buffer guard inside `setComicMode` itself.)
+  - `refreshComic` must check the opt-in set, not just the backend flag —
+    it renders the *active* buffer, which may not have opted in.
+  General rule: per-channel state = per-channel **opt-in keyed by
+  network+target**, never "global flag + exception set"; and a control that's
+  meaningless in a context gets **disabled** there, never repurposed.
+
 - **2026-06-11 — Shipped a script fix that never reached the user's machine
   (the "6-second `!run calc.exe`" report).** `run.lua` was rewritten to use the
   non-blocking `api.launch` (ShellExecuteW backend, commits 593a872 + 41b48e4),
