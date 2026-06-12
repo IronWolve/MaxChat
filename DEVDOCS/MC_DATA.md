@@ -533,11 +533,20 @@ Implementation notes:
 - Static frame cache should be implemented before bitmap assets because bitmap
   transfer also needs asset identity, hash validation, and replay semantics.
 
-## Bitmap Cell Art Draft
+## MCB1 Bitmap Cell Art (MaxChat Bitmap, 1-bit)
 
-Bitmap cell art is a future extension for old-school BBS graphics over MC DATA.
-It should ride on the same cache idea as static frames, because bitmap assets
-are usually reused rather than sent every time.
+MCB1 ("MaxChat Bitmap, 1-bit" — the B1 capability token) is the named image
+format for old-school BBS graphics over MC DATA. Implemented in Retro-BBS
+(pic gallery). It rides the same cache idea as static frames because bitmap
+assets are reused rather than re-sent: assets are content-addressed by
+id + hash, so a revisit renders from cache with zero transfer.
+
+Lineage / design notes: 1-bit + run-length over a narrow channel is the same
+engineering answer as 1980s online-service terminal images and fax coding;
+raw1 is essentially a hex-text 1-bit bitmap. What MCB1 adds is text-armoring
+for a 7-bit chat transport, fixed small chunks that respect flood throttling,
+and content-addressed caching. Use the `.mcb` extension if assets are ever
+exported as files.
 
 Target:
 
