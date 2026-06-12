@@ -1,0 +1,46 @@
+#pragma once
+
+#include "ui/TerminalProfile.h"
+
+#include <QHash>
+#include <QObject>
+#include <QPointer>
+#include <QSize>
+
+namespace maxchat::ui {
+
+class ScriptTerminalDialog;
+
+class ScriptTerminalManager final : public QObject {
+    Q_OBJECT
+
+  public:
+    explicit ScriptTerminalManager(QWidget* parent = nullptr);
+
+    [[nodiscard]] bool hasTerminal(const QString& id) const;
+    [[nodiscard]] QSize terminalSize(const QString& id) const;
+
+    ScriptTerminalDialog* openTerminal(const QString& id, const QString& title,
+                                       const TerminalProfile& profile);
+    void closeTerminal(const QString& id);
+    void closeAll();
+    void writeText(const QString& id, const QString& text);
+    void clear(const QString& id);
+    void setStatusText(const QString& id, const QString& text);
+    void setPromptText(const QString& id, const QString& text);
+    void setProfile(const QString& id, const TerminalProfile& profile);
+    void setFitMode(const QString& id, const QString& mode);
+
+  signals:
+    void inputSubmitted(const QString& id, const QString& text);
+    void linkActivated(const QString& id, const QString& actionId);
+    void terminalClosed(const QString& id);
+
+  private:
+    [[nodiscard]] ScriptTerminalDialog* terminal(const QString& id) const;
+
+    QWidget* parentWidget_ = nullptr;
+    QHash<QString, QPointer<ScriptTerminalDialog>> terminals_;
+};
+
+} // namespace maxchat::ui

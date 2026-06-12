@@ -252,6 +252,8 @@ qt_add_executable(maxchat-c
     src/main.cpp
     src/ui/AliasEditorDialog.cpp
     src/ui/AliasEditorDialog.h
+    src/ui/AnsiRenderer.cpp
+    src/ui/AnsiRenderer.h
     src/ui/BanListDialog.cpp
     src/ui/BanListDialog.h
     src/ui/ChannelListDialog.cpp
@@ -302,6 +304,10 @@ qt_add_executable(maxchat-c
     src/ui/RawLogDialog.h
     src/ui/ServerListDialog.cpp
     src/ui/ServerListDialog.h
+    src/ui/ScriptTerminalDialog.cpp
+    src/ui/ScriptTerminalDialog.h
+    src/ui/ScriptTerminalManager.cpp
+    src/ui/ScriptTerminalManager.h
     src/ui/ShortcutEditorDialog.cpp
     src/ui/ShortcutEditorDialog.h
     src/ui/SpellcheckHighlighter.cpp
@@ -322,6 +328,8 @@ qt_add_executable(maxchat-c
     src/ui/SoundPlayer.h
     src/ui/SystemInfo.cpp
     src/ui/SystemInfo.h
+    src/ui/TerminalProfile.cpp
+    src/ui/TerminalProfile.h
     resources/maxchat.qrc
 )
 
@@ -367,6 +375,45 @@ target_link_libraries(app_info_test
 )
 
 add_test(NAME app_info COMMAND app_info_test)
+
+qt_add_executable(ansi_renderer_test
+    tests/unit/ansi_renderer_test.cpp
+    src/ui/AnsiRenderer.cpp
+    src/ui/AnsiRenderer.h
+)
+
+target_include_directories(ansi_renderer_test
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(ansi_renderer_test
+    PRIVATE
+        Qt6::Core
+        Qt6::Test
+)
+
+add_test(NAME ansi_renderer COMMAND ansi_renderer_test)
+
+qt_add_executable(terminal_profile_test
+    tests/unit/terminal_profile_test.cpp
+    src/ui/TerminalProfile.cpp
+    src/ui/TerminalProfile.h
+)
+
+target_include_directories(terminal_profile_test
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(terminal_profile_test
+    PRIVATE
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Test
+)
+
+add_test(NAME terminal_profile COMMAND terminal_profile_test)
 
 qt_add_executable(irc_message_test
     tests/unit/irc_message_test.cpp

@@ -1,6 +1,6 @@
 # MC DATA + Script Terminal Phases
 
-Current phase: Phase 4 - Terminal Core UI
+Current phase: Phase 5 - Terminal Profiles
 
 Status key:
 
@@ -67,19 +67,19 @@ Exit criteria:
 
 ## Phase 4 - Terminal Core UI
 
-- [~] Add `ScriptTerminalDialog`.
-- [ ] Add `ScriptTerminalManager`.
-- [ ] Add `AnsiRenderer`.
-- [ ] Add `TerminalProfile`.
-- [ ] Support multiple script-owned terminal windows.
-- [ ] Scope terminal IDs by script name.
-- [ ] Implement pop-out dialog presentation.
-- [ ] Implement top status line.
-- [ ] Implement terminal display area.
-- [ ] Implement bottom prompt/input line.
-- [ ] Implement paste guard over `2 KB` or `20 lines`.
-- [ ] Support ANSI SGR colors/styles.
-- [ ] Support Unicode box/block characters.
+- [x] Add `ScriptTerminalDialog`.
+- [x] Add `ScriptTerminalManager`.
+- [x] Add `AnsiRenderer`.
+- [x] Add `TerminalProfile`.
+- [x] Support multiple script-owned terminal windows.
+- [x] Scope terminal IDs by script name.
+- [x] Implement pop-out dialog presentation.
+- [x] Implement top status line.
+- [x] Implement terminal display area.
+- [x] Implement bottom prompt/input line.
+- [x] Implement paste guard over `2 KB` or `20 lines`.
+- [x] Support ANSI SGR colors/styles.
+- [x] Support Unicode box/block characters.
 
 Exit criteria:
 
@@ -88,14 +88,14 @@ Exit criteria:
 
 ## Phase 5 - Terminal Profiles
 
-- [ ] Add `ibm-vga` profile: fixed `80x25`, ANSI/DOS BBS style.
-- [ ] Add `c64` profile: fixed `40x25`, C64 style.
-- [ ] Add `free` profile: flexible rows/columns.
-- [ ] Add fit scaling for `ibm-vga`.
-- [ ] Add integer scaling for `c64`.
-- [ ] Add resize behavior for `free`.
+- [x] Add `ibm-vga` profile: fixed `80x25`, ANSI/DOS BBS style.
+- [x] Add `c64` profile: fixed `40x25`, C64 style.
+- [x] Add `free` profile: flexible rows/columns.
+- [x] Add fit scaling for `ibm-vga`.
+- [x] Add integer scaling for `c64`.
+- [x] Add resize behavior for `free`.
 - [ ] Add redistributable font assets only after license check.
-- [ ] Add tests for profile selection and sizing.
+- [x] Add tests for profile selection and sizing.
 
 Exit criteria:
 
