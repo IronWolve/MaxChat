@@ -238,17 +238,35 @@ QFont fitBalloons(QPainter& p, int size, const QVector<ComicLineItem>& lines,
     return font;
 }
 
+// Tail wedge with gently curved sides (the hand-drawn look). Both edges bow
+// by the same horizontal offset — back toward the balloon, away from the tip —
+// so the tail keeps its width and sweeps toward the speaker like a comma.
+// A perfectly vertical tail stays straight (bow is proportional to the lean).
 void drawTri(QPainter& p, QPointF b0, QPointF b1, QPointF apex) {
+    const QPointF baseMid((b0.x() + b1.x()) / 2.0, (b0.y() + b1.y()) / 2.0);
+    const double bowX = 0.35 * (baseMid.x() - apex.x());
+    const auto control = [bowX](const QPointF& from, const QPointF& to) {
+        return QPointF((from.x() + to.x()) / 2.0 + bowX, (from.y() + to.y()) / 2.0);
+    };
+
     QPainterPath path;
     path.moveTo(b0);
-    path.lineTo(apex);
-    path.lineTo(b1);
+    path.quadTo(control(b0, apex), apex);
+    path.quadTo(control(apex, b1), b1);
     path.closeSubpath();
     p.setPen(Qt::NoPen);
     p.fillPath(path, QColor(255, 255, 255));
+
+    QPainterPath edge0;
+    edge0.moveTo(b0);
+    edge0.quadTo(control(b0, apex), apex);
+    QPainterPath edge1;
+    edge1.moveTo(apex);
+    edge1.quadTo(control(apex, b1), b1);
     p.setPen(QPen(QColor(0, 0, 0), 2));
-    p.drawLine(b0, apex);
-    p.drawLine(apex, b1);
+    p.setBrush(Qt::NoBrush);
+    p.drawPath(edge0);
+    p.drawPath(edge1);
 }
 
 // Tail geometry. One set of rules so every tail in a strip looks like family
@@ -295,10 +313,15 @@ void drawTail(QPainter& p, int size, int bx, int by, int bw, int bh, double head
         const int steps = std::clamp(static_cast<int>(span / (big * 2.2)) + 1, 2, 5);
         p.setPen(QPen(QColor(0, 0, 0), std::max(1, size / 260)));
         p.setBrush(QColor(255, 255, 255));
+        // Puffs ride the same quadratic bow a speech tail's edges use, so
+        // think- and speech-tails sweep identically.
+        const double bowX = -0.35 * ux * span;
         for (int s = 1; s <= steps; ++s) {
             const double t = static_cast<double>(s) / steps;
             const double r = big * (1.0 - 0.4 * t);
-            p.drawEllipse(QPointF(rootX + ux * span * t, baseY + uy * span * t), r, r * 0.85);
+            p.drawEllipse(QPointF(rootX + ux * span * t + 2.0 * t * (1.0 - t) * bowX,
+                                  baseY + uy * span * t),
+                          r, r * 0.85);
         }
         return;
     }

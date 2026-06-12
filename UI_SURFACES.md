@@ -107,7 +107,8 @@ Only changed panels re-render; cleared on art reload; flushed past 96 entries.
 nearest the speaker (inset past corners); base width PANEL-relative (2.2%,
 5–12 px, ≤ bw/4); tip travels along base→head direction, 5–16% of panel,
 stopping short of head/balloon-below/panel edge; lean clamped ~50° from
-vertical. Think-puffs follow the same direction, panel-scaled.
+vertical. Tail edges are quadratic curves (bow = 0.35 × horizontal lean, back
+toward the balloon) — straight when vertical; think-puffs ride the same bow.
 **Scope (2026-06-11):** Comic Mode is **per channel** — the toggle opts the
 *active* buffer in or out (key = network+target); other channels are unaffected.
 The toggle is **greyed out on the server buffer**. The comic backend runs while
