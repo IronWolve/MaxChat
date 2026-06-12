@@ -339,10 +339,11 @@ QVariantMap SettingsStore::defaultSettings() {
   settings.insert(QStringLiteral("topic_font_size"), 14);
   settings.insert(QStringLiteral("topic_font_bold"), true);
   // Script/BBS terminals. Size 0 means "use the terminal profile's own size"
-  // (ibm-vga 11, c64 13); a non-zero size overrides every profile.
+  // (ibm-vga 11, c64 13); a non-zero size overrides every profile. Default 12
+  // so terminals open at a comfortable size without per-window tweaking.
   settings.insert(QStringLiteral("terminal_font_family"),
                   QStringLiteral("JetBrains Mono"));
-  settings.insert(QStringLiteral("terminal_font_size"), 0);
+  settings.insert(QStringLiteral("terminal_font_size"), 12);
   settings.insert(QStringLiteral("terminal_font_bold"), false);
   // Default fixed grid rows for new script/BBS terminals (80x25 or 80x40).
   settings.insert(QStringLiteral("terminal_rows"), 25);

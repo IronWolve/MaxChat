@@ -1188,7 +1188,7 @@ void PreferencesDialog::buildFontsTab(QWidget* tab) {
     terminalFontSize_->setObjectName(QStringLiteral("terminalFontSize"));
     terminalFontSize_->setRange(0, 48);
     terminalFontSize_->setSpecialValueText(QStringLiteral("Profile default"));
-    terminalFontSize_->setValue(settings_.value(QStringLiteral("terminal_font_size"), 0).toInt());
+    terminalFontSize_->setValue(settings_.value(QStringLiteral("terminal_font_size"), 12).toInt());
     terminalFontBold_ = new QCheckBox(QStringLiteral("Bold"), terminalBox);
     terminalFontBold_->setObjectName(QStringLiteral("terminalFontBold"));
     terminalFontBold_->setChecked(

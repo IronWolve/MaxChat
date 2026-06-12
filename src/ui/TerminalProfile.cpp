@@ -35,6 +35,8 @@ TerminalProfile terminalProfile(const QString& id, const int cols, const int row
     profile.id = QStringLiteral("free");
     profile.cols = cols > 0 ? cols : 80;
     profile.rows = rows > 0 ? rows : 25;
+    profile.fontFamily = QStringLiteral("JetBrains Mono");
+    profile.fontPointSize = 12;
     profile.fitMode = QStringLiteral("none");
     profile.fixedGrid = false;
     return profile;
