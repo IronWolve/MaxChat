@@ -1089,8 +1089,14 @@ qt_add_executable(main_window_link_preview_test
     src/ui/QuickConnectDialog.h
     src/ui/RawLogDialog.cpp
     src/ui/RawLogDialog.h
+    src/ui/AnsiRenderer.cpp
+    src/ui/AnsiRenderer.h
     src/ui/ServerListDialog.cpp
     src/ui/ServerListDialog.h
+    src/ui/ScriptTerminalDialog.cpp
+    src/ui/ScriptTerminalDialog.h
+    src/ui/ScriptTerminalManager.cpp
+    src/ui/ScriptTerminalManager.h
     src/ui/ShortcutEditorDialog.cpp
     src/ui/ShortcutEditorDialog.h
     src/ui/SpellcheckHighlighter.cpp
@@ -1099,6 +1105,8 @@ qt_add_executable(main_window_link_preview_test
     src/ui/SpellTextEdit.h
     src/ui/ThemeCatalog.cpp
     src/ui/ThemeCatalog.h
+    src/ui/TerminalProfile.cpp
+    src/ui/TerminalProfile.h
     src/ui/UrlListDialog.cpp
     src/ui/UrlListDialog.h
     src/ui/AppIcon.cpp

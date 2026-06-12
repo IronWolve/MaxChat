@@ -439,12 +439,14 @@ void IrcSession::handleLine(const QString &line) {
       nick_ = alternateNick(nickTry_);
       sendRaw(QStringLiteral("NICK %1").arg(nick_));
       emit systemText(QStringLiteral("Nick in use - trying %1").arg(nick_));
-    } else if (command == QStringLiteral("432")) {
-      emit systemText(QStringLiteral("That nickname is not allowed here."));
-    } else {
-      emit systemText(QStringLiteral("That nickname is already in use."));
+      return;
     }
-    return;
+    if (command != QStringLiteral("432")) {
+      emit systemText(QStringLiteral("That nickname is already in use."));
+      return;
+    }
+    // After registration, 432 is a normal command error. Let the detailed
+    // readable-error handler below include the bad nick and server reason.
   }
 
   if (command == QStringLiteral("NICK")) {

@@ -743,6 +743,8 @@ private slots:
 
   void commandStatusAndErrorsEmitReadableText() {
     IrcSession session;
+    configureNick(session, QStringLiteral("me"));
+    session.handleLine(QStringLiteral(":srv 001 me :Welcome"));
     QSignalSpy replies(&session, &IrcSession::replyText);
 
     session.handleLine(QStringLiteral(":srv 305 me :You are no longer away"));

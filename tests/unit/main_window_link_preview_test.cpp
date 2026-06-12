@@ -253,6 +253,9 @@ class MainWindowLinkPreviewTest final : public QObject {
     void menuExposesPlannedFeatureStubs() {
         MainWindow window;
         window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
+        window.m_hasConnectionPlan = true;
+        window.m_connectionPlan.networkName = QStringLiteral("Libera.Chat");
+        window.activateBufferTarget(QStringLiteral("#chat"));
 
         QAction* buttonsAsTabs =
             findMenuAction(window.menuBar(), QStringLiteral("Buttons as Tabs"));
@@ -505,8 +508,8 @@ class MainWindowLinkPreviewTest final : public QObject {
         chatView->resize(800, 300);
         const double spaceWidth =
             std::max(1.0, QFontMetricsF(chatView->font()).horizontalAdvance(QLatin1Char(' ')));
-        const int startX = static_cast<int>(
-            std::lround(chatView->document()->documentMargin() + spaceWidth * 9.0));
+        const int startX = static_cast<int>(std::lround(
+            chatView->document()->documentMargin() + spaceWidth * (8.0 + 0.5)));
         const int endX = startX + static_cast<int>(spaceWidth * 6.0);
         const QPoint start(startX, 12);
         const QPoint end(endX, 12);
@@ -569,7 +572,7 @@ class MainWindowLinkPreviewTest final : public QObject {
             oneBuffer, {QStringLiteral("@alice"), QStringLiteral("+bob")}));
         window.renderActiveBufferMetadata();
 
-        QCOMPARE(topicLabel->text(), QStringLiteral("First topic"));
+        QCOMPARE(topicLabel->toolTip(), QStringLiteral("First topic"));
         QCOMPARE(memberList->count(), 2);
         QCOMPARE(memberList->findItems(QStringLiteral("@alice"), Qt::MatchExactly).size(), 1);
         QCOMPARE(memberList->findItems(QStringLiteral("+bob"), Qt::MatchExactly).size(), 1);
@@ -579,12 +582,12 @@ class MainWindowLinkPreviewTest final : public QObject {
         QVERIFY(window.m_chatBuffers.setTopic(twoBuffer, QStringLiteral("Second topic")));
         QVERIFY(window.m_chatBuffers.setMembers(twoBuffer, {QStringLiteral("carol")}));
         window.renderActiveBufferMetadata();
-        QCOMPARE(topicLabel->text(), QStringLiteral("Second topic"));
+        QCOMPARE(topicLabel->toolTip(), QStringLiteral("Second topic"));
         QCOMPARE(memberList->count(), 1);
         QCOMPARE(memberList->item(0)->text(), QStringLiteral("carol"));
 
         window.activateBufferTarget(QStringLiteral("#one"));
-        QCOMPARE(topicLabel->text(), QStringLiteral("First topic"));
+        QCOMPARE(topicLabel->toolTip(), QStringLiteral("First topic"));
         QCOMPARE(memberList->count(), 2);
         QCOMPARE(memberList->findItems(QStringLiteral("@alice"), Qt::MatchExactly).size(), 1);
         QCOMPARE(memberList->findItems(QStringLiteral("+bob"), Qt::MatchExactly).size(), 1);
@@ -1108,7 +1111,7 @@ class MainWindowLinkPreviewTest final : public QObject {
         QVERIFY(!chatView->toPlainText().contains(QStringLiteral("! Not connected.")));
     }
 
-    void closeCommandRemovesCurrentTargetButKeepsStoredHistory() {
+    void closeCommandRemovesCurrentTargetAndStoredHistory() {
         MainWindow window;
         window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
 
@@ -1130,7 +1133,7 @@ class MainWindowLinkPreviewTest final : public QObject {
         QVERIFY(!window.visibleTreeTargets().contains(QStringLiteral("#chat")));
         QCOMPARE(window.m_chatBuffers.snapshot(window.bufferIdForTarget(QStringLiteral("#chat")))
                      .lines.size(),
-                 1);
+                 0);
     }
 
     void replayedLogLinesUseInlineAlignment() {
