@@ -101,6 +101,8 @@ When adding anything that should survive a buffer switch, store it in the model.
   terminated early by the `)"` inside the pattern. Use a custom delimiter
   (`R"RX(...)RX"`) whenever the pattern can contain `)"`.
 
+- **2026-06-11 — DCC enable flag stale after Preferences close.** `DccManager::enabled_` was only refreshed inside `configureDcc()`, but `openPreferences()` calls `applyCurrentSettings()` (which updates `m_dccEnabled`) and does NOT call `configureDcc()`. Result: after the user unchecked "Enable File Transfers" and closed Preferences, `enabled_` stayed `true` until the next DCC-related action. Fix: call `m_dccManager->setEnabled(m_dccEnabled)` directly inside `applyCurrentSettings()`. Lesson: whenever two state caches must track the same setting (a MainWindow flag + a subsystem flag), sync both in `applyCurrentSettings` — never rely on a lazy-refresh call site to pick it up.
+
 - **2026-06-10 — Scripting/SoundPlayer includes landed inside `#ifdef
   MAXCHAT_WITH_HUNSPELL` in MainWindow.h.** Successive include edits anchored on
   the spell include, which was already inside the hunspell guard, so
