@@ -56,22 +56,31 @@ local board = {
 -- half-blocks in 80x25 cells. Public-domain space-agency photos, reduced to
 -- 1-bit: thresholded images compress well with rle1, dithered ones ship raw1.
 local PICS = {
-  { id = "earth", title = "Earth from space", w = 80, h = 50, enc = "rle1z",
+  { id = "earth", title = "Earth from space", w = 160, h = 50, enc = "rle1z",
     data = {
-      "5hkjY9X[-)8-wMs0vX6M83p6<0%GFy2pxPT6:1Z?0TxCx2QYVV69FKx0uzvL69FHZ2[4vG1@!3W5E5yR2)gqs5c@ss0S@Do0rSDc0S-ug5dnQ:0rJrg4?eT!0sPCF10^)Q4H@N}4g@T}4j.C}4j.F}4i+/U0U#kj4gSy}4gJyA0X1P*0%n-R4H-Bw1$yb@1s<#@11K(}1qy>L4IG0U0U(mV1Ry?K5e29V0U(mU0$Cwp2O4B?5!2x{6atG}3<cRv6cdtW0TnYl6=WzW0Tw/m6=^wW",
-      "0T]bl7CM0{8889}87#0{95wV<ats]>a$U5z1r[DU"
+      "5Ew<H0r-GK69wKSa{!U+1saM-2]s=)3iZCm10!A-0%ePwapwFV0%F/L0%n&o0%nSwaqa.T1{CbN0Tw]o0%nVx9UXRR2)ptY0$bhl0#A0{3iHwY0sP8l1qS3}2)gn<0TeYx9u2g^0Y{z^1q-3%20J4]1q-3%2rJ1{0#z)%2rI${0#q*%2oA{I0u?KX8Y]n90TePi0U$?M8Zbwa0S-r50TO@Y8ZCE&0#7+t0sw]W94.mb0sw&h11UAA0tLRx0T5Su0t=Uy0sw(g1}}1N8BBSq1$HPV",
+      "1p>O^8BKV)85-Pz0#RdE85-Sz0WvZD8xe!-0%!#W0WmWD8xe?+0s5:20%eJ88x5!+0rSu71XF}10rB8S1{Leg2}=k$0S&x79t]4+4kd-70rTqS2N7Yl0rBkS2l+Mn9V1$+3SFe:0sP8k0Ayf/0%wT89WQ%&0rAiJ0Xbiq2QY:20TfL<3m2^20TfL<3l]:20T6L<3l/W10TfR>3lxrJ1sa6M9WRdm1oFYJ0To.)2oT3K11CAs2oi^L1P!=Jar}dg0$kUXaS{%>0t>}B0r&@Ma%v7f",
+      "1oOYb0%xbNa%E4e4*9yZbrVXv6bR#TcM19(cL)A@"
     } },
-  { id = "moon", title = "The Moon", w = 80, h = 50, enc = "rle1z",
+
+  { id = "moon", title = "The Moon", w = 160, h = 50, enc = "raw1z",
     data = {
-      "5i7Hn0v[#<2Rl.{3m([}3O8}]4>nm{5gO$SbRgh)bNBL}bNsOQ0uro&3l6uO6Btc^3JZ$F4h{k/0sxqP9TSw/0%Y}P4H@TCa{XU*1{udQ4H&TC69FWF4?n:F5dFWD5cz$t1QCRP76+0G3JZwz1oOVc4g04y2)gks0r-Md0r-(B0rJJe0U2Lx5Fa%z2)pnr4G^sO0S-Pg0sYel1{tIH4fuLt1o[@j5F2rK0TO]e1p#dD0$2UC2m}^T5^FWM8u{rB4f)dI2)7Ov1ow@q1qz7C3i{Ul",
-      "5GI5X2)QOm5fI2W2NyLm3JZzW2mgLo2M>eV1{>Cn2)7kj0vm)Q1{+Ls0WN%Q1{>Rs0X%#^3iQw:2NyRo0S@GU2)HOo2quF*1Qbe:3<l.r2qcz*1Qke.4H01t1$Qq?0%O@X5c-gu2pZ2W"
+      "0d.8HS&A80Te-h1Tn&k1%nSb.000P%00001rAf210AYs3/vx]F00640S&A80Te-h1S>XPl%nSb]002%#00005rA5@009xj2!M(JU2M?3aS&A80UD1R5S>XPl%e#y%00000000fqrA5}#02LVT?bNJQ00640S&A81S}@-}S&#E5@&l1d00000000fqr8-?$02LW=t(!jB00og2S&A81S&A80S>XPl}L}rg000005c8XBrA5}#02tK:rrc2:00640S&A80S}@-}S&#E5(z?R000000",
+      "pZ3?5rA5}#02nNn!bQHOaonBwS&A80%n5:}S&$)>(z?N#000000t2khs5n(d02nO)=&t7KaonBwS&A80ZV)qGS&$)>(zRE$000321PXP6rzSU}02nH-=&vuJaonBwS&A80%eJ90S&&x4}L%OXkMy/=rtwvirzSU}02l8M[bMD/aonBw}L{M@}L{M}S&A90}L%2HkMy/*rAi40rA8]$00bw==&v6Caoi)>(-c#0(z*>:F#U<J}L%O(kMy%NrAi40r73:^00010]z}@(Q5VWy}#jgb",
+      "S&A8:Sh=/@}M6I&kMy%NrAi35kMKeJ00010]-Xt{R#OrE%nRw:S&LA+0h{gb%f7.:pYIk0rDRqb00c7@00005En@ZjR#T33%nPWeS&A8.0h])P%nG7]kMzJ+rRouS000f/00005E]O{lPA8f}ZY7miS?MI(F$JgBZYgv#kMy%MrRot(6Aw>k0000krAi3}?#CpcUL$M4S?MU{0d>iJUM9)^kMy%5rAi0grrc2:00005rAi3}c&+-%S&A80UbYmn3j3{qS@xf3pYHIhrA8{3rAi3:",
+      "00005kVH/Xc&+-%X#I+X%lvw0STsS-Sh=>$5c8XArA6IkrAis300004009*hc&:QOTe-fI[bJA/SevQPPBdZ:5c8XkrzVG}rRMe.0000400c7@dJ!!)Te-h1ZYjtlS&A80STuIv6AwalrA6IgrAGb#0000g00c7@iTvdlS>bjgTn&jhS&A80PEPlb6AwakrA5@}rE+3F00c7@0031#iTR*=S>bjgTn&j@S&Mf1Qn>k(6Awal5FXqC6[unl00h:T00c7@4UfwnS&A8#UMaU1S&Mf+",
+      "S&AXv6-Xjl02nHlrSA9HrrVx001&jc4X:rgS&Ac1%nSc0@&=v!S&Mf-1POJ6k#*]<rE+5G@rlg$02FTi52$I!S>kFm%nSc0@&=v4S&#A21RpUGk#?1x!QNS0]&k0*02FTi"
     } },
-  { id = "astro", title = "Moonwalker", w = 80, h = 50, enc = "raw1z",
+
+  { id = "astro", title = "Moonwalker", w = 160, h = 50, enc = "raw1z",
     data = {
-      "5#}$^Z5Ocj%nBpzT8dHs%mVi06&?V@Yz.^f?U*uF/6-Gr@R==}eMm86Wjzpm%lo=/?$}P8%nQ&!rC?D%}D9T}zs]x!UM4Qq%nSb#WoJJP}HwLB%nN3pZYdOD[bJB/Y4uuH]$QLb)F?b8ZY7$E%k9IHZRfWA@Leyj^7:@c%nK5r%nJ5-Uj87)ULXw1fmwhV%6zn@%nR&!UwS7#fAq7L%nEhh{JoNq%nSc0d?hHiUKzI>%nJ(m}[Jgh%nSc0myN^zCx:1n%nKqy%k0.z{Gdy{2&1/-",
-      "Z4kxB%nKzA})MKX}Oi7guSWp8/7X>q%nNjB%ki>MYmf!WT/ypU!U[w.%nM0EFb/xrso5qG33S(S^o?I9*Y7lzE/Dx:olZ74d+ACPq9cDf*n(P3%i#+LZXvzBr&-mg3px2Au!)iZyq.Ox@P&!Hrv7/>PBm/7ZwR57TBMzlSf..pdfiPM0E18oZ5FCnr009Pru#H2dn&zh1I:s&jo2BO000!>{wJ>Faw&WI2}K+h*Ri-!000cL%nSb/axOQz7zRm#/1SSa004<R/z2s5dXD+wa$uzf",
-      "te7vz2MK&807gXJ1on#l00ahx6!Z9#01.%bFb/Oo0000GF<MHr00Ju5098n@rBt!b"
+      "ZYjul%nSc0%nSc0%nSb}@&l1#6&!ol?}!tj0O7oK%ki>Ht#/CNYz?<g%nSc0Tm32/%nSc0%nP<FrAiyO@DhF$0O7oe%nSc0m%v%jY8R*g%nSb#Tmc8*%nSc0S>XPkrAAg4%6lv?5.hx*%nSc0!pmA%ZYgHv%nG4jTn&k1%nSc0%nSb}rAAm4@APz60AGg1%nSc0%nSb>ZYjul%g:D5S@Jb0%nSc0%nSb}rAhFgruk6O1Y+Q5%nSc0%nz#@Zu#75%e@@kS@Jb0%nSc0%nSc06+*TF",
+      "uSN$xr8@[%%nSc0%nSaG55i.[%nPp>(I{[:%nSc0%nSc01YXM5E]PGGrAo1P%nSc0%nSb$0(a^n%nRA+%nSbl%nSc0%nSc002nHt%nSbHuSWi-%5BNG%nSc0dZesv%nSc0%nSc0%nRM/%nSc0r8[uDEsI1wrABr)%5Acc%nSc0SSJk2%nSb+%nR#1%nG80%nSc01oqC4uSQlcuSV[9/hSL)%nSc000o}n%nRw!%nR@0UD1/a%nSc001<UfrAi40u!6o?/9bgO%nSc00k5ph%nR@:",
+      "%nSb+ZPdtl%nSc06&!mn{W}J^!M49y?=i:c/z>)HUFoM6%nSc0}U{J{%lxT:%nSc06&+AqrSu6arAjDE!M2W[%nSb$ZY7ql%nSbl}#uX@}%jpZ%nSc0rAi40u&P3T{TKV(rAi4a%nvDCZu./0ZYjul%g!PlS&Ao5%nSc0p^[v+rAGiI@$T6IkVIg>%nSb$S&A!l%nSc0%e$XMQa=MD%nSc06AIilrBt!8]-bd}kO[}I?t^JNS&A&h%nSc0%a4rM&>Jnd%nSc01Yno1rAGk2-r1H?",
+      "kOWVa%5G9HS&Ac0[bJB/@Sx^E&6dgQ%eMa01WMc*rBt!aBPAj:kVN+.ryx?!S&Jf1%l{0/&Tq*^I#S?S%eJch6JFajrAEZJ00Mw07K{}+t#:)8S>LHF%nSb:Fc#sbZYjul%g^<@5ewhBrAi3}098#0rABrArAi48dYPILZRu&k0@[]DZRxWC%g!Ql6&!lGrAi3:1YLFes5&m2rB5S6S&A8gS&ASg3Aa4a%nR@g@@r2#6&!iFrA8={6-XnmrAi40rAisMS&A84UbE#[S^>fEX#L/0",
+      "%nSb#6&!iFrA5@0pYI4wrz=g+s5&tTS&A1$Ukeb2>M0/HS&z![ULXw06&+kG1YLE5kMDplrzSV}rAiyFdYO92Tm#V4Fckbq%em4&ZYjuk1Qa(aqbvk}00Mw5ryu/&7U8KU"
     } },
+
 }
 
 
@@ -196,10 +205,23 @@ end
 -- Screen rows are plain strings (fg 7 on bg 0) or { text=..., fg=..., bg=... }
 -- tables using the 16-color VGA palette indices.
 local function row_parts(row)
+  if type(row) == "table" and row.segs then
+    local parts = {}
+    for _, sg in ipairs(row.segs) do parts[#parts + 1] = tostring(sg.text or "") end
+    return table.concat(parts), 7, 0
+  end
   if type(row) == "table" then
     return tostring(row.text or ""), tonumber(row.fg) or 7, tonumber(row.bg) or 0
   end
   return tostring(row or ""), 7, 0
+end
+
+-- Like clean_frame_line but keeps TRAILING spaces too: inside a multi-segment
+-- row every segment's width positions the next one.
+local function clean_seg_line(s)
+  s = tostring(s or ""):gsub("[\r\n\t]", " ")
+  if #s > MAX_LINE then s = cut_utf8(s, MAX_LINE - 3) .. "..." end
+  return s
 end
 
 local function static_cache_key(bbs_id, page_id, hash)
@@ -225,10 +247,22 @@ local function terminal_frame_chunks(lines)
   local chunks = {}
   local current = "C"
   for row, value in ipairs(lines or {}) do
-    local text, fg, bg = row_parts(value)
     -- The A op is emitted per row (not only on change) so chunks stay
     -- self-contained — static cache parts replay independently.
-    local op = frame_pos(row, 1) .. "A" .. hex1(fg) .. hex1(bg) .. frame_write(text)
+    local op
+    if type(value) == "table" and value.segs then
+      -- multi-color row: one position op, then A+W per segment
+      op = frame_pos(row, 1)
+      for _, sg in ipairs(value.segs) do
+        local t = clean_seg_line(sg.text)
+        local w = (#t <= 255) and ("W" .. hex2(#t) .. t)
+                  or ("X" .. string.format("%04X", #t) .. t)
+        op = op .. "A" .. hex1(sg.fg or 7) .. hex1(sg.bg or 0) .. w
+      end
+    else
+      local text, fg, bg = row_parts(value)
+      op = frame_pos(row, 1) .. "A" .. hex1(fg) .. hex1(bg) .. frame_write(text)
+    end
     -- 300, not the 350 transport cap: static sends prepend "<page#N> <hash> "
     -- (~20 bytes) and the whole payload must stay under the MC DATA limit.
     if #current + #op > 300 and #current > 0 then
@@ -389,16 +423,37 @@ local function frame_write_full(text)
   return "X" .. string.format("%04X", #text) .. text
 end
 
+-- Quadrant glyph for each TL*8+TR*4+BL*2+BR combination (Block Elements).
+local QUAD_GLYPHS = {
+  [0] = " ", "\u{2597}", "\u{2596}", "\u{2584}", "\u{259D}", "\u{2590}", "\u{259E}", "\u{259F}",
+  "\u{2598}", "\u{259A}", "\u{258C}", "\u{2599}", "\u{2580}", "\u{259C}", "\u{259B}", "\u{2588}",
+}
+
 local function render_bitmap(api, term, bm)
   local bits = decode_bits(bm.enc, bm.data, bm.w * bm.h)
   if not bits then return false end
+  -- 1 or 2 pixels per cell column: wide images use quadrant glyphs (2x2
+  -- px/cell, e.g. 160x50 in 80x25), narrow ones half-blocks (1x2 px/cell).
+  local pxc = bm.w > 80 and 2 or 1
+  local cols = math.floor(bm.w / pxc)
   local ops = "C"
   for r = 1, math.floor(bm.h / 2) do
     local row = {}
-    for c = 1, bm.w do
-      local top = bits[(2 * r - 2) * bm.w + c] == 1
-      local bot = bits[(2 * r - 1) * bm.w + c] == 1
-      row[c] = (top and bot) and "\u{2588}" or (top and "\u{2580}") or (bot and "\u{2584}") or " "
+    local top_base = (2 * r - 2) * bm.w
+    local bot_base = (2 * r - 1) * bm.w
+    for c = 1, cols do
+      if pxc == 2 then
+        local x = (c - 1) * 2 + 1
+        local idx = (bits[top_base + x] == 1 and 8 or 0) +
+                    (bits[top_base + x + 1] == 1 and 4 or 0) +
+                    (bits[bot_base + x] == 1 and 2 or 0) +
+                    (bits[bot_base + x + 1] == 1 and 1 or 0)
+        row[c] = QUAD_GLYPHS[idx]
+      else
+        local top = bits[top_base + c] == 1
+        local bot = bits[bot_base + c] == 1
+        row[c] = (top and bot) and "\u{2588}" or (top and "\u{2580}") or (bot and "\u{2584}") or " "
+      end
     end
     ops = ops .. frame_pos(r, 1) .. "AF0" .. frame_write_full(table.concat(row))
   end
@@ -486,12 +541,20 @@ local function screen(api, s, status_text, prompt_text, lines, page_id)
   lines = lines or {}
   s.last = { status = clean_line(status_text or ""), prompt = clean_line(prompt_text or ""), lines = {} }
   for _, value in ipairs(lines) do
-    local text, fg, bg = row_parts(value)
-    text = clean_frame_line(text)
-    if fg == 7 and bg == 0 then
-      s.last.lines[#s.last.lines + 1] = text
+    if type(value) == "table" and value.segs then
+      local segs = {}
+      for _, sg in ipairs(value.segs) do
+        segs[#segs + 1] = { text = clean_seg_line(sg.text), fg = sg.fg or 7, bg = sg.bg or 0 }
+      end
+      s.last.lines[#s.last.lines + 1] = { segs = segs }
     else
-      s.last.lines[#s.last.lines + 1] = { text = text, fg = fg, bg = bg }
+      local text, fg, bg = row_parts(value)
+      text = clean_frame_line(text)
+      if fg == 7 and bg == 0 then
+        s.last.lines[#s.last.lines + 1] = text
+      else
+        s.last.lines[#s.last.lines + 1] = { text = text, fg = fg, bg = bg }
+      end
     end
   end
   if s.sent_status ~= s.last.status then
@@ -567,25 +630,51 @@ local function colored(text, fg, bg)
   return { text = text, fg = fg, bg = bg or 0 }
 end
 
+local function star_field(row, width)
+  -- Deterministic sparse starfield (no math.random: static pages must hash
+  -- identically every render for the frame cache to hit).
+  local out = {}
+  for c = 1, width do
+    local v = (row * 37 + c * 17) % 59
+    if v == 0 then out[c] = "+"
+    elseif v == 7 or v == 23 then out[c] = "."
+    elseif v == 41 then out[c] = "*"
+    else out[c] = " " end
+  end
+  return table.concat(out)
+end
+
+local function seg(text, fg, bg) return { text = text, fg = fg or 7, bg = bg or 0 } end
+local function seg_row(...) return { segs = { ... } } end
+
 local function welcome_lines(api, s)
-  local RETRO_FADE = { 11, 11, 15, 15, 11, 11 }
-  local BBS_FADE = { 13, 13, 15, 15, 13, 13 }
+  local RETRO_FADE = { 11, 11, 15, 15, 11, 3 }
+  local BBS_FADE = { 13, 13, 15, 15, 13, 5 }
   local L = {}
+  L[#L + 1] = colored(star_field(1, 80), 1)
+  local retro = fig("RETRO")
+  local rw = dwidth(retro[1])
+  local lm = math.floor((80 - rw) / 2)
+  for i, rrow in ipairs(retro) do
+    L[#L + 1] = seg_row(seg(star_field(i + 1, lm), 1), seg(rrow, RETRO_FADE[i]),
+                        seg(star_field(i + 30, 80 - lm - rw), 1))
+  end
+  L[#L + 1] = colored(star_field(9, 80), 9)
+  local bbs = fig("BBS")
+  local bw = dwidth(bbs[1])
+  local bmargin = math.floor((80 - bw) / 2)
+  for i, brow in ipairs(bbs) do
+    L[#L + 1] = seg_row(seg(star_field(i + 10, bmargin), 1), seg(brow, BBS_FADE[i]),
+                        seg(star_field(i + 40, 80 - bmargin - bw), 1))
+  end
+  L[#L + 1] = colored(star_field(17, 80), 1)
+  L[#L + 1] = colored(center_in("*  M A X C H A T   *   M C - D A T A   B O A R D  *", 80), 15)
   L[#L + 1] = ""
-  L[#L + 1] = colored(box_top(), 13)
-  L[#L + 1] = colored(box_row(""), 13)
-  for i, r in ipairs(fig("RETRO")) do L[#L + 1] = colored(box_centered(r), RETRO_FADE[i]) end
-  L[#L + 1] = colored(box_row(""), 13)
-  for i, r in ipairs(fig("BBS")) do L[#L + 1] = colored(box_centered(r), BBS_FADE[i]) end
-  L[#L + 1] = colored(box_row(""), 13)
-  L[#L + 1] = colored(box_centered("M A X C H A T   ·   M C - D A T A   B O A R D"), 15)
-  L[#L + 1] = colored(box_row(""), 13)
-  L[#L + 1] = colored(box_row("  SYSOP . . . . " ..
-                              (server.sysop ~= "" and server.sysop or "AVAILABLE")), 7)
-  L[#L + 1] = colored(box_row("  LAST CALL . . " .. s.nick), 7)
-  L[#L + 1] = colored(box_bot(), 13)
+  L[#L + 1] = colored(center_in("SYSOP: " .. (server.sysop ~= "" and server.sysop or "AVAILABLE")
+                                .. "   |   LAST CALL: " .. s.nick, 80), 3)
+  L[#L + 1] = colored(star_field(21, 80), 9)
   L[#L + 1] = ""
-  L[#L + 1] = "  Enter your handle to log in (demo user: " .. DEMO_USER .. ")."
+  L[#L + 1] = colored(center_in("Enter your handle to log in (demo user: " .. DEMO_USER .. ")", 80), 7)
   return L
 end
 

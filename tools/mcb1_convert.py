@@ -54,7 +54,33 @@ def frame_hash(text: str) -> str:
     return "%08X" % h
 
 
-def prepare(path, width, height, contrast, blur, threshold):
+BAYER8 = [
+    [0, 32, 8, 40, 2, 34, 10, 42],
+    [48, 16, 56, 24, 50, 18, 58, 26],
+    [12, 44, 4, 36, 14, 46, 6, 38],
+    [60, 28, 52, 20, 62, 30, 54, 22],
+    [3, 35, 11, 43, 1, 33, 9, 41],
+    [51, 19, 59, 27, 49, 17, 57, 25],
+    [15, 47, 7, 39, 13, 45, 5, 37],
+    [63, 31, 55, 23, 61, 29, 53, 21],
+]
+
+
+def bayer_dither(im):
+    # Classic 8x8 ordered dithering — the patterned 1-bit look of old
+    # Mac/DOS art, much cleaner than error diffusion at terminal resolutions.
+    px = im.load()
+    w, h = im.size
+    out = Image.new("1", (w, h))
+    op = out.load()
+    for r in range(h):
+        row = BAYER8[r % 8]
+        for c in range(w):
+            op[c, r] = 255 if px[c, r] > (row[c % 8] * 4 + 2) else 0
+    return out
+
+
+def prepare(path, width, height, contrast, blur, threshold, dither, levels):
     im = Image.open(path).convert("L")
     im = ImageOps.autocontrast(im, cutoff=2)
     im = ImageEnhance.Contrast(im).enhance(contrast)
@@ -64,6 +90,13 @@ def prepare(path, width, height, contrast, blur, threshold):
     if threshold is not None:
         return im.point(lambda p: 255 if p > threshold else 0).convert(
             "1", dither=Image.NONE)
+    if levels > 0:
+        # Posterize before dithering: flat regions get uniform pattern fills
+        # (the classic 1-bit art look) instead of per-pixel noise.
+        step = 255.0 / (levels - 1)
+        im = im.point(lambda p: int(round(p / step) * step))
+    if dither == "bayer":
+        return bayer_dither(im)
     return im.convert("1", dither=Image.FLOYDSTEINBERG)
 
 
@@ -107,10 +140,26 @@ def encode(bits, hex_armor):
     return base + "z", z85_encode(payload)
 
 
-def preview(img):
+def preview(img, quad=False):
     px = img.load()
     w, h = img.size
     lines = []
+    if quad:
+        # 2x2 px per cell via quadrant glyphs (Block Elements, index bit
+        # order TL=8 TR=4 BL=2 BR=1 against the table string below)
+        table = [" ", "▗", "▖", "▄", "▝", "▐", "▞", "▟",
+                 "▘", "▚", "▌", "▙", "▀", "▜", "▛", "█"]
+        for r in range(0, h, 2):
+            line = []
+            for c in range(0, w, 2):
+                tl = px[c, r] != 0
+                tr = px[c + 1, r] != 0 if c + 1 < w else False
+                bl = px[c, r + 1] != 0 if r + 1 < h else False
+                br = (px[c + 1, r + 1] != 0
+                      if c + 1 < w and r + 1 < h else False)
+                line.append(table[tl * 8 + tr * 4 + bl * 2 + br])
+            lines.append("".join(line))
+        return "\n".join(lines)
     for r in range(0, h, 2):
         line = []
         for c in range(w):
@@ -138,10 +187,19 @@ def main():
     ap.add_argument("-o", "--output", help="output .mcb path (default: <input>.mcb)")
     ap.add_argument("--id", help="asset id (default: input basename)")
     ap.add_argument("--title", help="display title (default: id)")
-    ap.add_argument("--size", default="80x50",
-                    help="pixel grid WxH; H should be 2x terminal rows (default 80x50)")
+    ap.add_argument("--size", default=None,
+                    help="pixel grid WxH (default 80x50, or 160x50 with --quad)")
+    ap.add_argument("--quad", action="store_true",
+                    help="quadrant glyphs: 2x2 px per cell, doubles horizontal "
+                         "resolution (160x50 in an 80x25 terminal)")
+    ap.add_argument("--dither", choices=["bayer", "fs"], default="bayer",
+                    help="ordered Bayer (clean retro patterns, default) or "
+                         "Floyd-Steinberg error diffusion")
     ap.add_argument("--threshold", type=int, default=None, metavar="0-255",
                     help="hard threshold instead of dithering (flat areas, rle-friendly)")
+    ap.add_argument("--levels", type=int, default=5, metavar="N",
+                    help="posterize to N gray levels before dithering for the "
+                         "flat-pattern retro look (0 = off, default 5)")
     ap.add_argument("--contrast", type=float, default=1.6)
     ap.add_argument("--blur", type=float, default=0.8)
     ap.add_argument("--hex", action="store_true",
@@ -151,15 +209,16 @@ def main():
     ap.add_argument("--no-preview", action="store_true")
     args = ap.parse_args()
 
+    size = args.size or ("160x50" if args.quad else "80x50")
     try:
-        width, height = (int(v) for v in args.size.lower().split("x"))
+        width, height = (int(v) for v in size.lower().split("x"))
     except ValueError:
         sys.exit("error: --size must look like 80x50")
-    if width < 2 or height < 2 or width > 255 or height > 510:
-        sys.exit("error: size out of range (max 255 wide; height 2x rows)")
+    if width < 2 or height < 2 or width > 320 or height > 510:
+        sys.exit("error: size out of range")
 
     img = prepare(args.input, width, height, args.contrast, args.blur,
-                  args.threshold)
+                  args.threshold, args.dither, args.levels)
     bits = image_bits(img)
     enc, data = encode(bits, args.hex)
     digest = frame_hash(data)
@@ -170,7 +229,7 @@ def main():
     title = args.title or pic_id
 
     if not args.no_preview:
-        print(preview(img))
+        print(preview(img, quad=args.quad))
     print(f"# {pic_id}: {width}x{height} {enc}  {len(data)} chars on the wire  "
           f"hash {digest}", file=sys.stderr)
 

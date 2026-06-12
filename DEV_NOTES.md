@@ -749,3 +749,20 @@ Implemented in one pass (all compiled debug+release, selftest OK):
   Z85 default, --hex legacy). .mcb header: "MCB1 <id> <w> <h> <hash> <enc>".
 - MC_DATA.md gained the compression benchmark table + "state of the art"
   blurb; HANDOFF updated with the whole BBS slice.
+
+## Hi-res pics + splash rework (2026-06-12, user feedback round)
+
+- User: "no real dithering, pics look bad" + showed classic 1-bit city art.
+  That look = ORDERED (Bayer) dithering over posterized flat regions, not
+  Floyd noise. Converter now defaults to Bayer + posterize (--levels 5,
+  --dither fs|bayer, --threshold still available) and gained --quad:
+  quadrant glyphs (2x2 px/cell, full Block Elements coverage in JetBrains
+  Mono) = 160x50 px in an 80x25 terminal. Gallery regenerated at 160x50.
+- render_bitmap picks glyph mode by width (>80 px = quadrant, else
+  half-block). QUAD_GLYPHS indexed TL*8+TR*4+BL*2+BR.
+- Welcome screen rebuilt as a splash: no box; deterministic starfield
+  (NO math.random — static page must hash identically for the cache),
+  floating RETRO/BBS logo over the stars via multi-SEGMENT rows
+  ({segs={{text,fg,bg},...}} -> P + A/W pairs per row in the chunker;
+  clean_seg_line keeps trailing spaces because segment widths position
+  the following segment).
