@@ -196,7 +196,7 @@ Exit criteria:
 
 ## Phase 11 - Retro-BBS Visual Pass
 
-Status: planned / not implemented yet.
+Status: DONE 2026-06-12 (colored rows via per-row A ops; welcome logo cyan/magenta fade, framed pages cyan chrome + yellow titles).
 
 - [ ] Add colored frame row support in `assets/scripts/bbs.lua`.
 - [ ] Allow screen rows to be plain strings or `{ text=..., fg=..., bg=... }`
@@ -255,20 +255,20 @@ Ordered roughly by bang-for-buck. Phase 11 (color visual pass) stays first —
 the frame protocol already supports `Afb` attributes; bbs.lua just needs to
 emit them.
 
-### Phase 12 - Clickable menus (hotspots)
+### Phase 12 - Clickable menus (hotspots) — PARTIAL: on_terminal_link now forwards clicks as INPUT; frame-mode hotspot EMISSION still todo (grid renderer has no anchor support)
 
 - AnsiRenderer hotspots are fully wired end to end, but `on_terminal_link` in
   bbs.lua is a dead-end stub.
 - Emit `[1] About` etc. as hotspots in the framed menu; on_terminal_link sends
   the choice as INPUT. Mouse-driven BBS with zero protocol changes.
 
-### Phase 13 - Board persistence + mailbox
+### Phase 13 - Board persistence + mailbox — board persistence DONE (api.set rows, cap 50); mailbox still open
 
 - Message board is in-memory only; a restart wipes it. Persist via api.set
   (cap entries, e.g. last 50).
 - Optional: per-user mailbox (the doc's planned mailbox feature).
 
-### Phase 14 - Protocol hygiene
+### Phase 14 - Protocol hygiene — DONE except >255 grid guard: WELCOME caps echo, BYE on server shutdown, INPUT carries bbs_id (fallback for bare payloads), 32-bit frame hash. Also: MC DATA lines now use a 750 ms flood penalty (chat stays 2 s) — the 2 s/line penalty was why the BBS crawled
 
 - WELCOME reply with server caps (client HELLO advertises caps; server never
   echoes its own — needed before bitmap/B1 work).

@@ -697,3 +697,22 @@ Implemented in one pass (all compiled debug+release, selftest OK):
   same S/R/Q verbs); chunk budget lowered 330→300 so "S <part> <hash> " fits
   the 350-byte MC DATA cap. **Lesson: re-run lua_engine (bundled-script test)
   after ANY bbs.lua change — terminal tests alone don't cover the protocol.**
+
+## BBS speed + Phase 11-14 batch (2026-06-12)
+
+- SLOWNESS ROOT CAUSE: every IRC line pays a 2 s flood penalty (ircII model);
+  a BBS screen is ~8-15 MC DATA frames, so after the 24 s burst window each
+  screen crawled at 1 line/2 s. MC DATA frames now carry a 750 ms penalty
+  (spec throttle target) via PendingLine.penaltyMs / enqueueLine; chat lines
+  keep 2 s. PING/PONG still free.
+- Colored frames: rows can be {text,fg,bg} (VGA indices); chunker emits a
+  per-row A op (always, so static-cache parts stay self-contained). Welcome
+  logo: magenta box, RETRO cyan->white fade, BBS magenta fade; framed pages:
+  cyan chrome, yellow title (red for ACCESS DENIED).
+- WELCOME caps echo on HELLO; BYE broadcast to sessions when the sysop kills
+  the server console (client shows "Carrier dropped"); INPUT payload is now
+  "<bbs_id> <text>" with bare-payload fallback; frame hash widened to 32-bit;
+  board persists via api.set (cap 50); client static cache capped at 128;
+  on_terminal_link forwards hotspot clicks as INPUT (frame-mode hotspot
+  emission still unsupported in the grid renderer); login screen is now a
+  cacheable static page; server console help line split (was wrapping 80 cols).

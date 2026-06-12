@@ -134,6 +134,10 @@ bool IrcSession::isRegistered() const { return registered_; }
 QHash<QString, QString> IrcSession::isupport() const { return isupport_; }
 
 bool IrcSession::sendRaw(const QString &line) {
+  return enqueueLine(line, 2000);
+}
+
+bool IrcSession::enqueueLine(const QString &line, const int penaltyMs) {
   if (!socketConnected_ || !writer_) {
     return false;
   }
@@ -194,6 +198,7 @@ bool IrcSession::sendRaw(const QString &line) {
   PendingLine item;
   item.payload = std::move(payload);
   item.log = redactLine(clean);
+  item.penaltyMs = penaltyMs;
   // Keepalives must not wait behind a flood-throttled queue: zero penalty and
   // jump ahead of everything except a half-written line (stream sync).
   item.free = clean.startsWith(QStringLiteral("PONG")) ||
@@ -219,7 +224,6 @@ void IrcSession::pumpSendQueue() {
   // the future; while the deadline is less than 24 s ahead we may send
   // immediately (a 12-line burst covers registration + autojoin), beyond that
   // the rest waits for the timer. Sustained floods settle at 1 line / 2 s.
-  constexpr qint64 kPenaltyPerLineMs = 2000;
   constexpr qint64 kBurstWindowMs = 24000;
   const qint64 now = sendClock_.elapsed();
   if (sendPenaltyUntilMs_ < now) {
@@ -254,7 +258,7 @@ void IrcSession::pumpSendQueue() {
       emit rawLine(QStringLiteral(">>"), item.log);
     }
     if (!item.free) {
-      sendPenaltyUntilMs_ += kPenaltyPerLineMs;
+      sendPenaltyUntilMs_ += item.penaltyMs;
     }
   }
 }
@@ -296,7 +300,10 @@ bool IrcSession::mcData(const QString &target, const QString &service,
   }
   const QString body = mcDataCtcpBody(service, verb, payload);
   const QString command = notice ? QStringLiteral("NOTICE") : QStringLiteral("PRIVMSG");
-  return sendRaw(QStringLiteral("%1 %2 :%3").arg(command, trimmedTarget, ctcpWrap(body)));
+  // 750 ms penalty (spec throttle target): screen updates are several small
+  // bounded frames; the chat-grade 2 s/line made BBS navigation crawl.
+  return enqueueLine(QStringLiteral("%1 %2 :%3").arg(command, trimmedTarget, ctcpWrap(body)),
+                     750);
 }
 
 bool IrcSession::join(const QString &channel) {

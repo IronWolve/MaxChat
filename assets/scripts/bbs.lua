@@ -96,6 +96,8 @@ local function clean_frame_line(s)
   return s
 end
 
+local MAX_BOARD = 50
+
 local function save_config(api)
   api.set("server:name", server.name)
   api.set("server:sysop", server.sysop)
@@ -164,6 +166,19 @@ local function frame_pos(row, col)
   return "P" .. hex2(row) .. hex2(col)
 end
 
+local function hex1(n)
+  return string.format("%X", math.max(0, math.min(15, tonumber(n) or 7)))
+end
+
+-- Screen rows are plain strings (fg 7 on bg 0) or { text=..., fg=..., bg=... }
+-- tables using the 16-color VGA palette indices.
+local function row_parts(row)
+  if type(row) == "table" then
+    return tostring(row.text or ""), tonumber(row.fg) or 7, tonumber(row.bg) or 0
+  end
+  return tostring(row or ""), 7, 0
+end
+
 local function static_cache_key(bbs_id, page_id, hash)
   return tostring(bbs_id or DEFAULT_BBS_ID):lower() .. "|" .. tostring(page_id or "") .. "|" .. tostring(hash or "")
 end
@@ -178,16 +193,19 @@ local function frame_hash(text)
   local h = 0
   text = tostring(text or "")
   for i = 1, #text do
-    h = (h * 33 + string.byte(text, i)) % 16777216
+    h = (h * 33 + string.byte(text, i)) % 4294967296
   end
-  return string.format("%06X", h)
+  return string.format("%08X", h)
 end
 
 local function terminal_frame_chunks(lines)
   local chunks = {}
   local current = "C"
-  for row, text in ipairs(lines or {}) do
-    local op = frame_pos(row, 1) .. frame_write(text)
+  for row, value in ipairs(lines or {}) do
+    local text, fg, bg = row_parts(value)
+    -- The A op is emitted per row (not only on change) so chunks stay
+    -- self-contained — static cache parts replay independently.
+    local op = frame_pos(row, 1) .. "A" .. hex1(fg) .. hex1(bg) .. frame_write(text)
     -- 300, not the 350 transport cap: static sends prepend "<page#N> <hash> "
     -- (~20 bytes) and the whole payload must stay under the MC DATA limit.
     if #current + #op > 300 and #current > 0 then
@@ -261,8 +279,34 @@ local function frame_parts(payload)
   return parts
 end
 
+-- Message board persists via the script preference store: "from|text" rows
+-- (| and % escaped with the frame codec), capped at MAX_BOARD entries.
+local function save_board(api)
+  api.set("board:count", tostring(#board))
+  for i, msg in ipairs(board) do
+    api.set("board:" .. i, frame_encode(msg.from) .. "|" .. frame_encode(msg.text))
+  end
+end
+
+local function load_board(api)
+  local count = tonumber(api.get("board:count") or 0) or 0
+  if count <= 0 then return end
+  local loaded = {}
+  for i = 1, math.min(count, MAX_BOARD) do
+    local raw = tostring(api.get("board:" .. i) or "")
+    local from, text = raw:match("^([^|]*)|(.*)$")
+    if from and text ~= "" then
+      loaded[#loaded + 1] = { from = frame_decode(from), text = frame_decode(text) }
+    end
+  end
+  if #loaded > 0 then board = loaded end
+end
+
 local function send_input(api, client, text)
-  api.mc_send(client.nick, SERVICE, "INPUT", clean_line(text or ""), client.network or "")
+  -- bbs_id rides as the first token so one nick can use two boards on the
+  -- same host; servers fall back to treating the whole payload as text.
+  api.mc_send(client.nick, SERVICE, "INPUT",
+              client.bbs_id .. " " .. clean_line(text or ""), client.network or "")
 end
 
 local function remember_screen(s, verb, payload)
@@ -293,8 +337,9 @@ local function update_mirror(api, s)
   if not server_running or not s or server.mirror_key ~= s.key then return end
   api.terminal_clear(SERVER_TERM)
   api.terminal_status(SERVER_TERM, "USER " .. s.nick .. " CONNECTED - MIRROR MODE")
-  for _, line in ipairs((s.last and s.last.lines) or {}) do
-    api.terminal_write(SERVER_TERM, line .. "\n")
+  for _, value in ipairs((s.last and s.last.lines) or {}) do
+    local text = row_parts(value)
+    api.terminal_write(SERVER_TERM, text .. "\n")
   end
   api.terminal_prompt(SERVER_TERM, "mirror> ")
 end
@@ -314,9 +359,14 @@ local function status(api, s, text) out(api, s, "STATUS", text or "") end
 local function screen(api, s, status_text, prompt_text, lines, page_id)
   lines = lines or {}
   s.last = { status = clean_line(status_text or ""), prompt = clean_line(prompt_text or ""), lines = {} }
-  for _, text in ipairs(lines) do
-    local line_text = clean_frame_line(text or "")
-    s.last.lines[#s.last.lines + 1] = line_text
+  for _, value in ipairs(lines) do
+    local text, fg, bg = row_parts(value)
+    text = clean_frame_line(text)
+    if fg == 7 and bg == 0 then
+      s.last.lines[#s.last.lines + 1] = text
+    else
+      s.last.lines[#s.last.lines + 1] = { text = text, fg = fg, bg = bg }
+    end
   end
   if s.sent_status ~= s.last.status then
     send(api, s.nick, "STATUS", s.last.status, s.network)
@@ -385,20 +435,29 @@ end
 
 local function box_centered(inner) return box_row(center_in(inner or "", BOX_IN)) end
 
+-- One color per row (VGA palette index); borders adopt the row color —
+-- classic ANSI gradient style. RETRO fades cyan→white→cyan, BBS magenta.
+local function colored(text, fg, bg)
+  return { text = text, fg = fg, bg = bg or 0 }
+end
+
 local function welcome_lines(api, s)
+  local RETRO_FADE = { 11, 11, 15, 15, 11, 11 }
+  local BBS_FADE = { 13, 13, 15, 15, 13, 13 }
   local L = {}
   L[#L + 1] = ""
-  L[#L + 1] = box_top()
-  L[#L + 1] = box_row("")
-  for _, r in ipairs(fig("RETRO")) do L[#L + 1] = box_centered(r) end
-  L[#L + 1] = box_row("")
-  for _, r in ipairs(fig("BBS")) do L[#L + 1] = box_centered(r) end
-  L[#L + 1] = box_row("")
-  L[#L + 1] = box_centered("M A X C H A T   ·   M C - D A T A   B O A R D")
-  L[#L + 1] = box_row("")
-  L[#L + 1] = box_row("  SYSOP . . . . " .. (server.sysop ~= "" and server.sysop or "AVAILABLE"))
-  L[#L + 1] = box_row("  LAST CALL . . " .. s.nick)
-  L[#L + 1] = box_bot()
+  L[#L + 1] = colored(box_top(), 13)
+  L[#L + 1] = colored(box_row(""), 13)
+  for i, r in ipairs(fig("RETRO")) do L[#L + 1] = colored(box_centered(r), RETRO_FADE[i]) end
+  L[#L + 1] = colored(box_row(""), 13)
+  for i, r in ipairs(fig("BBS")) do L[#L + 1] = colored(box_centered(r), BBS_FADE[i]) end
+  L[#L + 1] = colored(box_row(""), 13)
+  L[#L + 1] = colored(box_centered("M A X C H A T   ·   M C - D A T A   B O A R D"), 15)
+  L[#L + 1] = colored(box_row(""), 13)
+  L[#L + 1] = colored(box_row("  SYSOP . . . . " ..
+                              (server.sysop ~= "" and server.sysop or "AVAILABLE")), 7)
+  L[#L + 1] = colored(box_row("  LAST CALL . . " .. s.nick), 7)
+  L[#L + 1] = colored(box_bot(), 13)
   L[#L + 1] = ""
   L[#L + 1] = "  Enter your handle to log in (demo user: " .. DEMO_USER .. ")."
   return L
@@ -419,15 +478,16 @@ local function trunc(s, w)
 end
 
 -- A standard framed page: centered title bar + divider + left-aligned body.
-local function framed(title, body)
+-- Cyan chrome, yellow title (override title_fg for alerts), grey body.
+local function framed(title, body, title_fg)
   local L = {""}
-  L[#L + 1] = box_top()
-  L[#L + 1] = box_centered(title or "")
-  L[#L + 1] = box_div()
+  L[#L + 1] = colored(box_top(), 3)
+  L[#L + 1] = colored(box_centered(title or ""), title_fg or 14)
+  L[#L + 1] = colored(box_div(), 3)
   for _, t in ipairs(body or {}) do
     L[#L + 1] = box_row("  " .. trunc(t or "", BOX_IN - 3))
   end
-  L[#L + 1] = box_bot()
+  L[#L + 1] = colored(box_bot(), 3)
   return L
 end
 
@@ -450,13 +510,14 @@ local function show_stats(api)
       api.terminal_write(SERVER_TERM, "  " .. s.nick .. "  mode=" .. s.mode .. "  size=" .. s.cols .. "x" .. s.rows .. "\n")
     end
   end
-  api.terminal_write(SERVER_TERM, "\nConsole: stats | mirror <nick> | mirror off | chat <nick> <text> | logoff <nick> | help\n")
+  api.terminal_write(SERVER_TERM, "\nConsole: stats | mirror <nick> | mirror off\n")
+  api.terminal_write(SERVER_TERM, "         chat <nick> <text> | logoff <nick> | help\n")
   api.terminal_prompt(SERVER_TERM, "sysop> ")
 end
 
 local function login_screen(api, s)
   s.mode = "login"
-  screen(api, s, "CONNECT 57600  " .. server.name, "login> ", welcome_lines(api, s))
+  screen(api, s, "CONNECT 57600  " .. server.name, "login> ", welcome_lines(api, s), "login")
 end
 
 local function password_screen(api, s)
@@ -475,7 +536,7 @@ local function login_failed(api, s)
     "That login was not accepted.",
     "",
     "Enter your handle to try again.",
-  }), "login-failed")
+  }, 12), "login-failed")
 end
 
 local function menu(api, s)
@@ -740,6 +801,8 @@ local function handle_session_input(api, s, input)
     local msg = text:match("^[Pp]%s+(.+)$")
     if msg then
       board[#board + 1] = { from = s.nick, text = clean_line(msg) }
+      while #board > MAX_BOARD do table.remove(board, 1) end
+      save_board(api)
       show_board(api, s)
     else
       line(api, s, "Use P <message> or B.")
@@ -835,6 +898,7 @@ end
 function on_load(api)
   math.randomseed(os.time and os.time() or 1)
   load_config(api)
+  load_board(api)
   api.echo("[bbs] loaded - /bbsserve starts Retro-BBS, /bbs <nick> dials.")
 end
 
@@ -995,6 +1059,7 @@ function on_mc_data(api, network, target, nick, service, verb, payload, notice)
     end
     sessions[key] = s
     server.connects = server.connects + 1
+    send(api, nick, "WELCOME", "caps=" .. CLIENT_CAPS, network)
     server_write(api, "CONNECT " .. nick .. " " .. s.cols .. "x" .. s.rows .. " " .. s.profile)
     login_screen(api, s)
     show_stats(api)
@@ -1002,9 +1067,16 @@ function on_mc_data(api, network, target, nick, service, verb, payload, notice)
   end
 
   if verb == "INPUT" then
-    local found = find_session(network, nick)
-    if not found then return true end
-    handle_session_input(api, found, payload)
+    -- New format: "<bbs_id> <text>". Old/bare payloads still route by nick.
+    local first, rest = payload:match("^(%S+)%s?(.*)$")
+    local found = first and sessions[session_key(network, nick, first)] or nil
+    if found then
+      handle_session_input(api, found, rest or "")
+    else
+      found = find_session(network, nick)
+      if not found then return true end
+      handle_session_input(api, found, payload)
+    end
     return true
   end
 
@@ -1054,6 +1126,17 @@ function on_mc_data(api, network, target, nick, service, verb, payload, notice)
       client.timer = nil
     end
   end
+  if verb == "WELCOME" then
+    client.server_caps = parse_kv(payload).caps or ""
+    return true
+  end
+  if verb == "BYE" then
+    client.connected = false
+    api.terminal_status(client.term, "DISCONNECTED: " .. (payload ~= "" and payload or client.bbs_id))
+    api.terminal_write(client.term, "\nThe BBS shut down. Carrier dropped.\n")
+    api.terminal_prompt(client.term, "")
+    return true
+  end
   if verb == "FRAME" then
     local parts = frame_parts(payload)
     api.terminal_clear(client.term)
@@ -1069,6 +1152,7 @@ function on_mc_data(api, network, target, nick, service, verb, payload, notice)
   elseif verb == "S" then
     local page_id, hash, ops = payload:match("^(%S+)%s+(%S+)%s+(.+)$")
     if page_id and hash and ops then
+      if static_cache_count() >= 128 then static_cache = {} end -- crude cap
       static_cache[static_cache_key(client.bbs_id, page_id, hash)] = ops
       if not api.terminal_frame(client.term, ops) then
         api.terminal_write(client.term, "[bbs] bad static frame\n")
@@ -1123,6 +1207,9 @@ end
 
 function on_terminal_closed(api, id)
   if id == SERVER_TERM then
+    for _, s in pairs(sessions) do
+      send(api, s.nick, "BYE", s.bbs_id, s.network)
+    end
     server_running = false
     sessions = {}
     server.mirror_key = nil
@@ -1138,5 +1225,13 @@ function on_terminal_closed(api, id)
 end
 
 function on_terminal_link(api, id, action_id)
-  api.terminal_write(id, "Links are reserved for a future BBS menu build. Type the menu choice for now.\n")
+  -- Hotspot clicks act like typed input on dial-in terminals.
+  if starts_with(id, "client:") then
+    for _, client in pairs(clients) do
+      if client.term == id then
+        send_input(api, client, action_id)
+        return
+      end
+    end
+  end
 end

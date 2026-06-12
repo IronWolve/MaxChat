@@ -116,7 +116,12 @@ private:
     QString log;        // redacted line for the raw log
     bool partial = false; // tail of a short write — already logged
     bool free = false;    // no flood penalty (PING/PONG)
+    // Flood penalty this line adds. Chat lines use the classic 2 s; MC DATA
+    // frames use 750 ms (spec throttle target) — a BBS screen is many small
+    // bounded frames and 2 s each made it crawl.
+    int penaltyMs = 2000;
   };
+  bool enqueueLine(const QString &line, int penaltyMs);
   QList<PendingLine> sendQueue_;
   QTimer sendTimer_;
   QElapsedTimer sendClock_;
