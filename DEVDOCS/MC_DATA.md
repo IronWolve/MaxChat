@@ -47,9 +47,14 @@ NOTICE  nick :\001MC DATA <service> <verb> <payload>\001
 Lua API:
 
 ```lua
-api.mc_send(target, service, verb, payload)
-api.mc_reply(target, service, verb, payload)
+api.mc_send(target, service, verb, payload [, network])
+api.mc_reply(target, service, verb, payload [, network])
 ```
+
+`network` is optional; empty/omitted uses the dispatch-context network (the
+network the triggering event arrived on). Scripts holding long-lived sessions
+should store the session's network and pass it explicitly so traffic stays on
+the connection it started on (e.g. sysop console actions, timers).
 
 Lua hook:
 
@@ -61,9 +66,13 @@ Rules:
 
 - Uses current/existing IRC network only.
 - `service` lowercase, `verb` uppercase.
-- Payload target: `300-350 bytes`.
+- Payload target: `300-350 bytes` (hard transport cap: 350).
 - Queue/throttle around `750-1000 ms`.
-- No auto-reply to `NOTICE`.
+- No auto-reply to `NOTICE` (Retro-BBS drops NOTICE-borne bbs traffic entirely).
+- Servers must rate-limit expensive verbs per peer (Retro-BBS: 3 s HELLO
+  cooldown + 16-session cap) — one HELLO can cost ~10 outgoing frames.
+- Session routing/lookup is `network + nick + bbs_id`; nick-only matching
+  cross-routes input between networks/boards.
 - `DCC`, `ACTION`, `SOUND`, `PING`, `VERSION`, `TIME`, `CLIENTINFO` unchanged.
 
 ## Script Terminal
@@ -97,6 +106,7 @@ Behavior:
   node pops/raises the window; right-click offers Open / Kill Terminal.
 - Closing or minimizing a window only HIDES it; the session stays alive and is
   re-shown from its tree node. Only Kill Terminal (menu or tree) destroys it.
+- Typing `/quit` in any script terminal kills it (same as Kill Terminal).
 - Fixed-grid profiles (ibm-vga/c64) keep their column/row count; the font scales
   to fill the window on resize. Font Size sets the base/initial window zoom.
 - Large paste guard over `2 KB` or `20 lines`.
@@ -463,6 +473,9 @@ HELLO payload includes caps=T,S
 Rules:
 
 - If the peer does not advertise `S`, send normal `T` frames.
+- Multi-chunk pages cache per chunk: part ids `page#1`, `page#2`, ... over the
+  same `S`/`R`/`Q` verbs (each part is its own cached page). The script chunk
+  budget is 300 bytes so `S <part> <hash> <ops>` fits the 350-byte cap.
 - Cache keys include `service + bbs_id + page_id + hash`.
 - `page_id` names the static page, such as `login`, `main`, `about`, or
   `hangman`.

@@ -248,3 +248,48 @@ Resume notes:
 - Initial full CTest without `QT_QPA_PLATFORM=offscreen` also aborts GUI/media
   tests in this headless environment due missing display/plugin setup; offscreen
   removes those environment-only aborts.
+
+## Phase 12+ Backlog (from 2026-06-12 audit + ideas)
+
+Ordered roughly by bang-for-buck. Phase 11 (color visual pass) stays first —
+the frame protocol already supports `Afb` attributes; bbs.lua just needs to
+emit them.
+
+### Phase 12 - Clickable menus (hotspots)
+
+- AnsiRenderer hotspots are fully wired end to end, but `on_terminal_link` in
+  bbs.lua is a dead-end stub.
+- Emit `[1] About` etc. as hotspots in the framed menu; on_terminal_link sends
+  the choice as INPUT. Mouse-driven BBS with zero protocol changes.
+
+### Phase 13 - Board persistence + mailbox
+
+- Message board is in-memory only; a restart wipes it. Persist via api.set
+  (cap entries, e.g. last 50).
+- Optional: per-user mailbox (the doc's planned mailbox feature).
+
+### Phase 14 - Protocol hygiene
+
+- WELCOME reply with server caps (client HELLO advertises caps; server never
+  echoes its own — needed before bitmap/B1 work).
+- BYE broadcast to connected sessions when the sysop kills the server console
+  (clients currently learn only via their next input timing out).
+- INPUT should carry bbs_id so one nick can use two boards on the same host
+  (today: network+nick lookup picks the first match).
+- frame_hash 24-bit -> 32-bit (collision = silently replaying a stale page).
+- Guard frame_pos rows/cols > 255 (free profiles can exceed the 2-hex-digit
+  field; today they clamp silently to FF).
+
+### Phase 15 - Bitmap cell art
+
+- Already drafted above (B/I verbs, raw1/rle1, caps=B1). Build static-cache
+  experience first (done), then this.
+
+### Misc small fixes (any phase)
+
+- math.randomseed: os.time may be nil in the sandbox -> hangman word order can
+  repeat per app launch. Seed from api.timer jitter or expose api.now().
+- Terminal input history (up/down arrow) in ScriptTerminalDialog.
+- Cap static_defs/static_cache sizes (unbounded per session/app run).
+- CP437/PETSCII helper mapping for compact byte values (doc'd future work).
+- MC SEC (encryption) remains future, must use real reviewed crypto.
