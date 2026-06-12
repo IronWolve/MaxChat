@@ -87,6 +87,24 @@ grows a tail; stacked balloons get short tails stopped above the balloon below
 - think-puffs: shrinking ellipses riding the same quadratic bow
   (`offset = 2t(1−t)·bow`), radii panel-scaled.
 
+## 6b. Balloon shapes (2026-06-12)
+
+Four distinct balloon types, chosen per line in `drawBalloons`:
+- **Speech** — rounded rect, curved tail (`drawTri`, quadratic bow).
+- **Thought** — a real scalloped CLOUD (`cloudPath`): bumps boolean-`united()`
+  around the text rect, simplified to one fluffy outline; tail is the shrinking
+  puff trail. (Was just a rounded rect with a bigger radius — not a cloud.)
+  `simplified()` ALONE does not merge subpaths — must `united()`.
+- **Shout** — jagged burst (`burstPath`): alternating outer/inner radius spikes.
+  Auto-detected by `looksLikeShout` (ALL-CAPS 3+ letters, or contains "!!").
+- **Action (/me)** — tailless cream caption box, italic (MS Comic Chat
+  narration style — intentionally not a balloon).
+
+Tail thickness: base half-width `clamp(size*0.016, 4, 9)`, pen
+`clamp(size/230, 1.2, 1.8)` — thinner than the original 0.022 / 2 px.
+Cloud/burst overhang beyond the text box is bounded (~0.6×bump) and the layout
+stacking gap was raised to `max(10, size/24)` so decorations don't collide.
+
 ## 7. ComicView interactions
 
 - Layout: `panelRects()` is the single source for painting AND hit-testing.
