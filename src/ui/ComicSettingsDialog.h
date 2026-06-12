@@ -6,6 +6,7 @@
 
 class QCheckBox;
 class QComboBox;
+class QFontComboBox;
 class QLineEdit;
 class QPlainTextEdit;
 class QSpinBox;
@@ -47,6 +48,8 @@ class ComicSettingsDialog final : public QDialog {
     QString captionColor_;
     QComboBox* captionScale_ = nullptr;
     QCheckBox* randomBg_ = nullptr;
+    QCheckBox* balloonTint_ = nullptr;
+    QFontComboBox* comicFont_ = nullptr;
     QCheckBox* ignoreCmds_ = nullptr;
     QPlainTextEdit* botPatterns_ = nullptr;
     QPlainTextEdit* botNicks_ = nullptr;

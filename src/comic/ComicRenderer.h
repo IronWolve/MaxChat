@@ -31,10 +31,14 @@ struct ComicLineItem {
                                        const QVector<ComicActor>& actors,
                                        const QVector<ComicLineItem>& lines, bool captions,
                                        double captionScale,
-                                       const QHash<QString, QString>& captionColors);
+                                       const QHash<QString, QString>& captionColors,
+                                       bool balloonTint = false,
+                                       const QString& fontFamily = {});
 
-// The font point-size a panel would actually use (for the spill check).
+// The font point-size a panel would actually use (for the spill check). The
+// font family affects fit, so the spill check must use the same one.
 [[nodiscard]] int panelMinFont(int size, const QVector<ComicActor>& actors,
-                               const QVector<ComicLineItem>& lines);
+                               const QVector<ComicLineItem>& lines,
+                               const QString& fontFamily = {});
 
 } // namespace maxchat::comic

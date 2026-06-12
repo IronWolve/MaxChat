@@ -3,6 +3,7 @@
 #include <QCheckBox>
 #include <QColorDialog>
 #include <QComboBox>
+#include <QFontComboBox>
 #include <QDialogButtonBox>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -127,6 +128,16 @@ ComicSettingsDialog::ComicSettingsDialog(QVariantMap settings, const QStringList
     randomBg_ = new QCheckBox(global);
     randomBg_->setChecked(settings_.value(QStringLiteral("comic_random_bg"), false).toBool());
     gf->addRow(QStringLiteral("Random background (unset rooms)"), randomBg_);
+
+    balloonTint_ = new QCheckBox(global);
+    balloonTint_->setChecked(settings_.value(QStringLiteral("comic_balloon_tint"), true).toBool());
+    gf->addRow(QStringLiteral("Tint balloons by speaker color"), balloonTint_);
+
+    comicFont_ = new QFontComboBox(global);
+    comicFont_->setCurrentFont(QFont(
+        settings_.value(QStringLiteral("comic_font"), QStringLiteral("Comic Relief")).toString()));
+    gf->addRow(QStringLiteral("Balloon font"), comicFont_);
+
     addPage(QStringLiteral("Global"), global);
 
     // ---- Characters (global nick -> stem map, one per line "nick=stem") ----
@@ -329,6 +340,8 @@ QVariantMap ComicSettingsDialog::settings() const {
     out.insert(QStringLiteral("comic_caption_color"), captionColor_);
     out.insert(QStringLiteral("comic_caption_scale"), captionScale_->currentData().toDouble());
     out.insert(QStringLiteral("comic_random_bg"), randomBg_->isChecked());
+    out.insert(QStringLiteral("comic_balloon_tint"), balloonTint_->isChecked());
+    out.insert(QStringLiteral("comic_font"), comicFont_->currentFont().family());
     out.insert(QStringLiteral("comic_ignore_cmds"), ignoreCmds_->isChecked());
 
     QStringList patterns;

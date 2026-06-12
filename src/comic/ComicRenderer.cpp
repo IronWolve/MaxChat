@@ -20,11 +20,29 @@ namespace {
 constexpr int Wrap = Qt::TextWordWrap;
 constexpr int WrapCentre = Qt::TextWordWrap | Qt::AlignCenter;
 
+// The balloon font family for the current render. Set once at the top of each
+// public entry point (renderComicPanel / panelMinFont) so the many comicFont()
+// calls inside the fit loops don't each need it threaded through. Render is
+// synchronous on the GUI thread, so a render-scope variable is safe.
+QString g_comicFontFamily = QStringLiteral("Comic Relief");
+
 QFont comicFont(int pointSize, bool bold = false) {
-    QFont f(QStringLiteral("Comic Relief"));
+    QFont f(g_comicFontFamily.isEmpty() ? QStringLiteral("Comic Relief") : g_comicFontFamily);
     f.setPointSize(std::max(1, pointSize));
     f.setBold(bold);
     return f;
+}
+
+// Faint tint of a balloon fill toward the speaker's nick colour (option) so
+// you can tell who's talking at a glance — kept very light to stay readable.
+QColor balloonFill(const QColor& nick, bool tint) {
+    if (!tint || !nick.isValid()) {
+        return QColor(255, 255, 255);
+    }
+    const double a = 0.16; // mostly white
+    return QColor(static_cast<int>(255 * (1 - a) + nick.red() * a),
+                  static_cast<int>(255 * (1 - a) + nick.green() * a),
+                  static_cast<int>(255 * (1 - a) + nick.blue() * a));
 }
 
 int floorLine(int size) {
@@ -429,7 +447,7 @@ void drawTail(QPainter& p, int size, int bx, int by, int bw, int bh, double head
 }
 
 void drawBalloons(QPainter& p, const QVector<Row>& rows, const QFont& font, int size, int charTop,
-                  const QVector<int>& cx) {
+                  const QVector<int>& cx, const QVector<QColor>& colColors, bool tint) {
     if (rows.isEmpty()) {
         return;
     }
@@ -461,11 +479,14 @@ void drawBalloons(QPainter& p, const QVector<Row>& rows, const QFont& font, int 
         QPen outline(QColor(0, 0, 0), bodyPen);
         outline.setJoinStyle(Qt::RoundJoin);
         const QRectF box(r.bx, r.by, r.bw, r.bh);
+        const QColor nickCol = (r.col >= 0 && r.col < colColors.size()) ? colColors.at(r.col)
+                                                                        : QColor();
+        const QColor fill = balloonFill(nickCol, tint);
         if (r.think) {
             // Proper thought cloud (scalloped silhouette), not a round rect.
             const QPainterPath cloud = cloudPath(box.adjusted(2, 2, -2, -2));
             p.setPen(Qt::NoPen);
-            p.fillPath(cloud, QColor(255, 255, 255));
+            p.fillPath(cloud, fill);
             p.setPen(outline);
             p.setBrush(Qt::NoBrush);
             p.drawPath(cloud);
@@ -474,13 +495,13 @@ void drawBalloons(QPainter& p, const QVector<Row>& rows, const QFont& font, int 
             const int spikes = std::clamp(static_cast<int>(std::lround(r.bw / 14.0)), 9, 22);
             const QPainterPath burst = burstPath(box, spikes);
             p.setPen(Qt::NoPen);
-            p.fillPath(burst, QColor(255, 255, 255));
+            p.fillPath(burst, fill);
             p.setPen(outline);
             p.setBrush(Qt::NoBrush);
             p.drawPath(burst);
         } else {
             p.setPen(outline);
-            p.setBrush(QColor(255, 255, 255));
+            p.setBrush(fill);
             p.drawRoundedRect(box, 7, 7);
         }
         p.setPen(QColor(0, 0, 0));
@@ -514,7 +535,8 @@ void caption(QPainter& p, int size, const QString& nick, int x, int w, int feet,
 } // namespace
 
 int panelMinFont(int size, const QVector<ComicActor>& actors,
-                 const QVector<ComicLineItem>& lines) {
+                 const QVector<ComicLineItem>& lines, const QString& fontFamily) {
+    g_comicFontFamily = fontFamily.isEmpty() ? QStringLiteral("Comic Relief") : fontFamily;
     QVector<int> cx;
     if (!actors.isEmpty()) {
         cx = initialCx(size, actors, lines.size());
@@ -538,7 +560,16 @@ int panelMinFont(int size, const QVector<ComicActor>& actors,
 
 QPixmap renderComicPanel(int size, const QImage& background, const QVector<ComicActor>& actors,
                          const QVector<ComicLineItem>& lines, bool captions, double captionScale,
-                         const QHash<QString, QString>& captionColors) {
+                         const QHash<QString, QString>& captionColors, bool balloonTint,
+                         const QString& fontFamily) {
+    g_comicFontFamily = fontFamily.isEmpty() ? QStringLiteral("Comic Relief") : fontFamily;
+    // Per-column tint colours (option): map each actor's nick → its caption
+    // colour so balloons can be faintly tinted by speaker.
+    QVector<QColor> colColors;
+    colColors.reserve(actors.size());
+    for (const ComicActor& a : actors) {
+        colColors.append(QColor(captionColors.value(a.nick.toLower())));
+    }
     QPixmap pm(size, size);
     pm.fill(QColor(255, 255, 255));
     QPainter p(&pm);
@@ -587,13 +618,13 @@ QPixmap renderComicPanel(int size, const QImage& background, const QVector<Comic
                 }
             }
         }
-        drawBalloons(p, rows, font, size, charTop, cx);
+        drawBalloons(p, rows, font, size, charTop, cx, colColors, balloonTint);
     } else if (!lines.isEmpty()) {
         QVector<int> cx;
         QVector<Row> rows;
         const QFont font = fitBalloons(p, size, lines, cx, actors,
                                        static_cast<int>(size * 0.72), rows);
-        drawBalloons(p, rows, font, size, size, cx);
+        drawBalloons(p, rows, font, size, size, cx, colColors, balloonTint);
     }
 
     p.setPen(QPen(QColor(0, 0, 0), 2));

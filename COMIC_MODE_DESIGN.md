@@ -100,6 +100,16 @@ Four distinct balloon types, chosen per line in `drawBalloons`:
 - **Action (/me)** — tailless cream caption box, italic (MS Comic Chat
   narration style — intentionally not a balloon).
 
+Balloon tint (option `comic_balloon_tint`, default on, Comic Settings ▸ Global):
+fills each balloon faintly (16%) toward the speaker's caption colour so you can
+tell who's talking at a glance. Per-column colours built in `renderComicPanel`
+from `captionColors`, passed to `drawBalloons`. Action captions stay cream.
+
+Balloon font (option `comic_font`, default "Comic Relief", Comic Settings ▸
+Global): the family for all balloon text. Threaded via the render-scope
+`g_comicFontFamily` (the fit loops call `comicFont()` many times); `panelMinFont`
+takes it too since the family affects fit. BOTH are in the panel-cache key.
+
 Tail thickness: base half-width `clamp(size*0.016, 4, 9)`, pen
 `clamp(size/230, 1.2, 1.8)` — thinner than the original 0.022 / 2 px.
 Cloud/burst overhang beyond the text box is bounded (~0.6×bump) and the layout

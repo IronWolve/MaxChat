@@ -434,6 +434,10 @@ QVariantMap SettingsStore::defaultSettings() {
   // dead code and is gone.
   settings.insert(QStringLiteral("scriptPerms"), QVariantMap());
   settings.insert(QStringLiteral("script_dirs"), QVariantList());
+  // Comic Mode visual options (match the dialog's inline fallbacks so the
+  // diff-save doesn't flag an untouched control as "changed").
+  settings.insert(QStringLiteral("comic_balloon_tint"), true);
+  settings.insert(QStringLiteral("comic_font"), QStringLiteral("Comic Relief"));
   settings.insert(QStringLiteral("networks"),
                   networkConfigListToVariantList(defaultNetworkConfigs()));
   return settings;
