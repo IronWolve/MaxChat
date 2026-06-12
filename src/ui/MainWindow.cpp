@@ -3710,7 +3710,12 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
             });
     connect(irc, &maxchat::irc::IrcConnection::dccRequest, this,
             [this, runInContext](const QString& sender, const QString& args) {
-                runInContext([&]() { m_dccManager->handleIncoming(sender, args); });
+                runInContext([&]() {
+                    if (!m_dccEnabled) {
+                        return;
+                    }
+                    m_dccManager->handleIncoming(sender, args);
+                });
             });
     connect(irc, &maxchat::irc::IrcConnection::ctcpSound, this,
             [this, signalNetwork](const QString& sender, const QString& target, const QString& file,
@@ -4215,6 +4220,7 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
     // Plain text in a "=peer" buffer is a DCC CHAT line, not an IRC message.
     if (m_currentTarget.startsWith(QLatin1Char('=')) &&
         !aliasExpansion.commandLine.startsWith(QLatin1Char('/'))) {
+        if (!m_dccEnabled) { return; }
         const QString peer = m_currentTarget.mid(1);
         m_dccManager->sendChatLine(peer, text);
         appendSystemLineToTarget(m_currentTarget,
@@ -6631,6 +6637,7 @@ void maxchat::ui::MainWindow::configureDcc() {
     if (dir.isEmpty()) {
         dir = QDir(m_settings.paths().configDir).filePath(QStringLiteral("downloads"));
     }
+    m_dccManager->setEnabled(settings.value(QStringLiteral("dcc_enabled"), false).toBool());
     m_dccManager->setDownloadDir(dir);
     m_dccManager->setPassive(settings.value(QStringLiteral("dcc_passive"), true).toBool());
     m_dccManager->setPortRange(settings.value(QStringLiteral("dcc_port_first"), 0).toInt(),
@@ -6653,6 +6660,11 @@ void maxchat::ui::MainWindow::openDccTransfers() {
 }
 
 void maxchat::ui::MainWindow::handleDccCommand(const QStringList& args) {
+    if (!m_dccEnabled) {
+        appendSystemLine(QStringLiteral(
+            "! File transfers are disabled. Enable them in Preferences → Files (DCC)."));
+        return;
+    }
     configureDcc();
 
     const QString sub = args.isEmpty() ? QString() : args.first().toLower();
@@ -8079,6 +8091,8 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
     m_autoReconnect = settings.value(QStringLiteral("auto_reconnect"), true).toBool();
     m_loggingEnabled = settings.value(QStringLiteral("logging"), true).toBool();
     m_replayLogEnabled = settings.value(QStringLiteral("replay_log"), true).toBool();
+    m_dccEnabled = settings.value(QStringLiteral("dcc_enabled"), false).toBool();
+    m_dccManager->setEnabled(m_dccEnabled);
     m_showTimestamps = settings.value(QStringLiteral("show_timestamps"), true).toBool();
     m_timestampFormat =
         settings.value(QStringLiteral("timestamp_format"), QStringLiteral("%I:%M %p")).toString();

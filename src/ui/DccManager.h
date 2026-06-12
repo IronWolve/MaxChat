@@ -59,6 +59,7 @@ class DccManager final : public QObject {
     void setPortRange(int first, int last);
     void setPassive(bool passive);
     void setAdvertisedIp(const QString& ip); // "" = use 127.0.0.1 fallback
+    void setEnabled(bool enabled) { enabled_ = enabled; }
     void setAcceptPolicy(const QString& policy, const QStringList& trustedNicks);
 
     void offerSend(const QString& peer, const QString& filePath);
@@ -128,6 +129,7 @@ class DccManager final : public QObject {
     QString downloadDir_;
     int portFirst_ = 0;
     int portLast_ = 0;
+    bool enabled_ = false;
     bool passive_ = true;
     QString advertisedIp_;
     QString acceptPolicy_ = QStringLiteral("ask");

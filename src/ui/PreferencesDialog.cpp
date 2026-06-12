@@ -333,6 +333,7 @@ QVariantMap PreferencesDialog::settings() const {
     if (ctcpRespondClientInfo_) out.insert(QStringLiteral("ctcp_respond_clientinfo"), ctcpRespondClientInfo_->isChecked());
     out.insert(QStringLiteral("logging"), loggingEnabled_->isChecked());
     out.insert(QStringLiteral("replay_log"), replayLogEnabled_->isChecked());
+    out.insert(QStringLiteral("dcc_enabled"), dccEnabled_->isChecked());
     out.insert(QStringLiteral("dcc_accept"), dccAccept_->currentData().toString());
     out.insert(QStringLiteral("dcc_trusted"),
                dccTrusted_->text().toLower().split(QRegularExpression(QStringLiteral("[,\\s]+")),
@@ -1254,6 +1255,14 @@ void PreferencesDialog::buildFilesTab(QWidget* tab) {
     auto* root = new QVBoxLayout(tab);
     auto* form = new QFormLayout();
 
+    dccEnabled_ = new QCheckBox(QString(), tab);
+    dccEnabled_->setObjectName(QStringLiteral("dccEnabled"));
+    dccEnabled_->setChecked(settings_.value(QStringLiteral("dcc_enabled"), false).toBool());
+    dccEnabled_->setToolTip(QStringLiteral(
+        "Allow DCC file transfers and chats. Off by default — most users don't need it."));
+    form->addRow(QStringLiteral("Enable File Transfers"), dccEnabled_);
+    form->addRow(new QFrame(tab)); // visual separator
+
     dccAccept_ = new QComboBox(tab);
     dccAccept_->setObjectName(QStringLiteral("dccAccept"));
     dccAccept_->addItem(QStringLiteral("Ask each time"), QStringLiteral("ask"));
@@ -1278,11 +1287,13 @@ void PreferencesDialog::buildFilesTab(QWidget* tab) {
     dccPortFirst_->setRange(0, 65535);
     dccPortFirst_->setSpecialValueText(QStringLiteral("any"));
     dccPortFirst_->setValue(settings_.value(QStringLiteral("dcc_port_first"), 0).toInt());
+    dccPortFirst_->setToolTip(QStringLiteral("Recommended: 5000 (forward this range in your router for active DCC)"));
     dccPortLast_ = new QSpinBox(tab);
     dccPortLast_->setObjectName(QStringLiteral("dccPortLast"));
     dccPortLast_->setRange(0, 65535);
     dccPortLast_->setSpecialValueText(QStringLiteral("any"));
     dccPortLast_->setValue(settings_.value(QStringLiteral("dcc_port_last"), 0).toInt());
+    dccPortLast_->setToolTip(QStringLiteral("Recommended: 5010 (forward this range in your router for active DCC)"));
 
     dccDir_ = new QLineEdit(settings_.value(QStringLiteral("dcc_dir")).toString(), tab);
     dccDir_->setObjectName(QStringLiteral("dccDir"));
@@ -1311,9 +1322,10 @@ void PreferencesDialog::buildFilesTab(QWidget* tab) {
     root->addLayout(form);
 
     auto* hint = new QLabel(
-        QStringLiteral("Passive DCC asks the OTHER side to open the port - best when you're "
-                       "behind NAT and they aren't. For active DCC (you open the port) behind "
-                       "NAT, set your public IP + a forwarded port range here."),
+        QStringLiteral("Passive DCC (default) asks the other side to open the port — best when "
+                       "you're behind NAT. For active DCC, set your public IP and forward a small "
+                       "port range (e.g. 5000–5010) in your router, then enter that range above. "
+                       "Passive is recommended for most users."),
         tab);
     hint->setWordWrap(true);
     root->addWidget(hint);
