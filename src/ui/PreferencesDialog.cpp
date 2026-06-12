@@ -153,9 +153,10 @@ QVariantMap contentServicesFromSettings(const QVariantMap& settings) {
 } // namespace
 
 PreferencesDialog::PreferencesDialog(QVariantMap settings, QStringList loadedScripts,
-                                     QString scriptsDir, QWidget* parent)
+                                     QString scriptsDir, QString soundsDir, QWidget* parent)
     : QDialog(parent), settings_(std::move(settings)),
-      loadedScripts_(std::move(loadedScripts)), scriptsDir_(std::move(scriptsDir)) {
+      loadedScripts_(std::move(loadedScripts)), scriptsDir_(std::move(scriptsDir)),
+      soundsDir_(std::move(soundsDir)) {
     setWindowTitle(QStringLiteral("Preferences"));
     resize(1000, 680);
 
@@ -658,8 +659,15 @@ void PreferencesDialog::buildNotificationsTab(QWidget* tab) {
     notifySoundFile_->addItem(QStringLiteral("Sci-fi chirp"), QStringLiteral("scifi_chirp.wav"));
     notifySoundFile_->addItem(QStringLiteral("Trek communicator"), QStringLiteral("trek_hail.wav"));
     setComboByData(notifySoundFile_, settings_.value(QStringLiteral("notify_sound_file"), QStringLiteral("notify.wav")).toString());
-    connect(notifySound_, &QCheckBox::toggled, notifySoundFile_, &QWidget::setEnabled);
-    notifySoundFile_->setEnabled(notifySound_->isChecked());
+    // Sound file picker is always enabled — user picks the sound even before enabling it.
+    // "Open dir" button lets the user drop custom .wav files into the sounds folder.
+    auto* openSoundsDir = new QPushButton(QStringLiteral("Open dir"), tab);
+    openSoundsDir->setToolTip(QStringLiteral("Open the custom sounds folder — drop your own .wav files here."));
+    const QString soundsDirCapture = soundsDir_;
+    connect(openSoundsDir, &QPushButton::clicked, this, [soundsDirCapture]() {
+        QDir().mkpath(soundsDirCapture);
+        QDesktopServices::openUrl(QUrl::fromLocalFile(soundsDirCapture));
+    });
 
     // Play CTCP sounds
     ctcpSound_ = new QCheckBox(tab);
@@ -693,7 +701,12 @@ void PreferencesDialog::buildNotificationsTab(QWidget* tab) {
     form->addRow(QStringLiteral("Toast theme"), notifyTheme_);
     form->addRow(QStringLiteral("Beep on highlight / PM"), beepHighlight_);
     form->addRow(QStringLiteral("Sound on notification"), notifySound_);
-    form->addRow(QStringLiteral("Sound file"), notifySoundFile_);
+    auto* soundFileRow = new QWidget(tab);
+    auto* soundFileLayout = new QHBoxLayout(soundFileRow);
+    soundFileLayout->setContentsMargins(0, 0, 0, 0);
+    soundFileLayout->addWidget(notifySoundFile_);
+    soundFileLayout->addWidget(openSoundsDir);
+    form->addRow(QStringLiteral("Sound file"), soundFileRow);
     form->addRow(QStringLiteral("Play CTCP sounds"), ctcpSound_);
     form->addRow(QStringLiteral("Minimize to tray"), minimizeToTray_);
     form->addRow(QStringLiteral("Check for updates on startup"), updateCheck_);

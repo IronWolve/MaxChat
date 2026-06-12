@@ -1692,7 +1692,9 @@ void maxchat::ui::MainWindow::openPreferences() {
         QDir(m_settings.paths().configDir).filePath(QStringLiteral("scripts"));
     const QStringList loadedScripts =
         maxchat::scripting::LuaEngine::available() ? m_lua->loaded() : QStringList{};
-    PreferencesDialog dialog(m_settings.loadWithDefaults(), loadedScripts, scriptsDir, this);
+    const QString soundsDir =
+        QDir(m_settings.paths().configDir).filePath(QStringLiteral("sounds"));
+    PreferencesDialog dialog(m_settings.loadWithDefaults(), loadedScripts, scriptsDir, soundsDir, this);
     connect(&dialog, &PreferencesDialog::exportSettingsRequested, this,
             &MainWindow::exportSettings);
     connect(&dialog, &PreferencesDialog::importSettingsRequested, this, [this, &dialog]() {

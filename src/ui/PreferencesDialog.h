@@ -19,7 +19,7 @@ class PreferencesDialog final : public QDialog {
     Q_OBJECT
 
   public:
-    explicit PreferencesDialog(QVariantMap settings, QStringList loadedScripts = {}, QString scriptsDir = {}, QWidget* parent = nullptr);
+    explicit PreferencesDialog(QVariantMap settings, QStringList loadedScripts = {}, QString scriptsDir = {}, QString soundsDir = {}, QWidget* parent = nullptr);
 
     [[nodiscard]] QVariantMap settings() const;
 
@@ -54,6 +54,7 @@ class PreferencesDialog final : public QDialog {
     QVariantMap settings_;
     QStringList loadedScripts_;
     QString scriptsDir_;
+    QString soundsDir_;
     QCheckBox* scriptRead_ = nullptr;
     QCheckBox* scriptWrite_ = nullptr;
     QCheckBox* scriptExec_ = nullptr;
