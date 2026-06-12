@@ -69,6 +69,15 @@ local function clean_line(s)
   return s
 end
 
+-- Like clean_line but KEEPS leading spaces, so pre-aligned/centered art rows
+-- survive (only control chars and trailing spaces are dropped). Truncation is
+-- by byte length to stay inside the MC DATA payload guard.
+local function clean_frame_line(s)
+  s = tostring(s or ""):gsub("[\r\n\t]", " "):gsub("%s+$", "")
+  if #s > MAX_LINE then s = s:sub(1, MAX_LINE - 3) .. "..." end
+  return s
+end
+
 local function save_config(api)
   api.set("server:name", server.name)
   api.set("server:sysop", server.sysop)
@@ -123,7 +132,7 @@ local function hex2(n)
 end
 
 local function frame_write(text)
-  text = clean_line(text or "")
+  text = clean_frame_line(text or "")
   if #text <= 255 then
     return "W" .. hex2(#text) .. text
   end
@@ -279,7 +288,7 @@ local function screen(api, s, status_text, prompt_text, lines, page_id)
   lines = lines or {}
   s.last = { status = clean_line(status_text or ""), prompt = clean_line(prompt_text or ""), lines = {} }
   for _, text in ipairs(lines) do
-    local line_text = clean_line(text or "")
+    local line_text = clean_frame_line(text or "")
     s.last.lines[#s.last.lines + 1] = line_text
   end
   if s.sent_status ~= s.last.status then
@@ -296,6 +305,76 @@ local function screen(api, s, status_text, prompt_text, lines, page_id)
     s.sent_prompt = s.last.prompt
   end
   update_mirror(api, s)
+end
+
+-- ===== ASCII-art welcome screen (ANSI Shadow style block letters) =====
+-- Block letters are 6 rows tall; each glyph is padded to a fixed width so rows
+-- concatenate into a column-aligned banner.
+local GLYPH = {
+  R = {"██████╗ ", "██╔══██╗", "██████╔╝", "██╔══██╗", "██║  ██║", "╚═╝  ╚═╝"},
+  E = {"███████╗", "██╔════╝", "█████╗  ", "██╔══╝  ", "███████╗", "╚══════╝"},
+  T = {"████████╗", "╚══██╔══╝", "   ██║   ", "   ██║   ", "   ██║   ", "   ╚═╝   "},
+  O = {" ██████╗ ", "██╔═══██╗", "██║   ██║", "██║   ██║", "╚██████╔╝", " ╚═════╝ "},
+  B = {"██████╗ ", "██╔══██╗", "██████╔╝", "██╔══██╗", "██████╔╝", "╚═════╝ "},
+  S = {"███████╗", "██╔════╝", "███████╗", "╚════██║", "███████║", "╚══════╝"},
+  [" "] = {"  ", "  ", "  ", "  ", "  ", "  "},
+}
+
+-- Display width = codepoint count (every glyph here is a single monospace cell).
+local function dwidth(s)
+  local n = 0
+  for _ in tostring(s or ""):gmatch("[^\128-\191]") do n = n + 1 end
+  return n
+end
+
+local function spaces(n) return n > 0 and string.rep(" ", n) or "" end
+
+local function fig(word)
+  local rows = {"", "", "", "", "", ""}
+  for i = 1, #word do
+    local g = GLYPH[word:sub(i, i):upper()] or GLYPH[" "]
+    for r = 1, 6 do rows[r] = rows[r] .. g[r] .. " " end
+  end
+  return rows
+end
+
+local BOX_W = 70                              -- total box width in cells
+local BOX_IN = BOX_W - 2                       -- inner width
+local BOX_MARGIN = math.floor((80 - BOX_W) / 2)
+
+local function center_in(s, w)
+  local pad = w - dwidth(s)
+  if pad <= 0 then return s end
+  return spaces(math.floor(pad / 2)) .. s
+end
+
+local function box_top() return spaces(BOX_MARGIN) .. "╔" .. string.rep("═", BOX_IN) .. "╗" end
+local function box_bot() return spaces(BOX_MARGIN) .. "╚" .. string.rep("═", BOX_IN) .. "╝" end
+
+local function box_row(inner)
+  inner = inner or ""
+  return spaces(BOX_MARGIN) .. "║" .. inner .. spaces(BOX_IN - dwidth(inner)) .. "║"
+end
+
+local function box_centered(inner) return box_row(center_in(inner or "", BOX_IN)) end
+
+local function welcome_lines(api, s)
+  local L = {}
+  L[#L + 1] = ""
+  L[#L + 1] = box_top()
+  L[#L + 1] = box_row("")
+  for _, r in ipairs(fig("RETRO")) do L[#L + 1] = box_centered(r) end
+  L[#L + 1] = box_row("")
+  for _, r in ipairs(fig("BBS")) do L[#L + 1] = box_centered(r) end
+  L[#L + 1] = box_row("")
+  L[#L + 1] = box_centered("M A X C H A T   ·   M C - D A T A   B O A R D")
+  L[#L + 1] = box_row("")
+  L[#L + 1] = box_row("  SYSOP . . . . " .. (server.sysop ~= "" and server.sysop or "AVAILABLE"))
+  L[#L + 1] = box_row("  LAST CALL . . " .. s.nick)
+  L[#L + 1] = box_bot()
+  L[#L + 1] = ""
+  L[#L + 1] = "  Enter your handle to log in (demo user: " .. DEMO_USER .. ")."
+  return L
 end
 
 local function show_stats(api)
@@ -323,16 +402,7 @@ end
 
 local function login_screen(api, s)
   s.mode = "login"
-  screen(api, s, "CONNECT 57600  " .. server.name, "login> ", {
-    "========================================",
-    "        " .. server.name,
-    "  MAXCHAT MC DATA  /  NODE 01  /  ANSI",
-    "  SYSOP: " .. (server.sysop ~= "" and server.sysop or "AVAILABLE"),
-    "  LAST CALL: " .. s.nick,
-    "----------------------------------------",
-    "Account required for this board.",
-    "Username:"
-  })
+  screen(api, s, "CONNECT 57600  " .. server.name, "login> ", welcome_lines(api, s))
 end
 
 local function password_screen(api, s)
