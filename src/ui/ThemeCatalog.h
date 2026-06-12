@@ -5,6 +5,7 @@
 #include <QPair>
 #include <QPalette>
 #include <QString>
+#include <QVariantMap>
 
 namespace maxchat::ui {
 
@@ -26,6 +27,9 @@ struct AppThemeDefinition {
   QColor chatFg;
   QString wallpaper;
   QList<QPair<double, QColor>> bgGradient;
+  // Optional bundled font preferences (only whitelisted *_font_family/size/bold
+  // keys survive parsing) — applied when the theme is selected.
+  QVariantMap fonts;
 };
 
 struct ChatThemeDefinition {
@@ -66,6 +70,24 @@ void reloadThemes();
 // ("u-<slug>"), or empty on failure.
 [[nodiscard]] QString saveUserAppTheme(const QString &name, const AppThemeDefinition &theme);
 [[nodiscard]] QString saveUserChatTheme(const QString &name, const ChatThemeDefinition &theme);
+
+// Theme packs: a single shareable JSON file bundling an app theme, a chat
+// theme, font preferences, and a wallpaper choice.
+struct ThemePack {
+  QString name;
+  AppThemeDefinition app;   // participates when !app.id.isEmpty()
+  ChatThemeDefinition chat; // participates when !chat.id.isEmpty()
+  QVariantMap fonts;        // whitelisted *_font_* keys only
+  QString wallpaper;
+  QString error; // import: non-empty on failure
+};
+// Write the pack to a JSON file. Returns false on I/O failure.
+[[nodiscard]] bool exportThemePack(const QString &path, const ThemePack &pack);
+// Read a pack (or a bare single-theme JSON) and install its themes as user
+// themes; the returned pack carries the new theme ids. Check .error.
+[[nodiscard]] ThemePack importThemePack(const QString &path);
+// The font settings keys a theme may bundle (used for whitelisting).
+[[nodiscard]] QStringList themeFontKeys();
 [[nodiscard]] QString effectiveWallpaperPath(const QString &theme,
                                              const QString &wallpaper);
 // QPalette matching a theme, so the OS palette can't bleed into unstyled

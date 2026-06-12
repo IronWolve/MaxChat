@@ -8430,11 +8430,20 @@ void maxchat::ui::MainWindow::applyTheme(const QString& theme) {
 
 void maxchat::ui::MainWindow::setTheme(const QString& theme, const bool save) {
     const QString normalized = normalizeThemeId(theme);
+    // Saved/imported themes can bundle font preferences — restore them with
+    // the colors (the Preferences combo does the same via applyFontSelections).
+    const QVariantMap themeFonts = appThemeById(normalized).fonts;
     if (save) {
         QVariantMap settings = m_settings.loadWithDefaults();
         settings.insert(QStringLiteral("theme"), normalized);
+        for (auto it = themeFonts.constBegin(); it != themeFonts.constEnd(); ++it) {
+            settings.insert(it.key(), it.value());
+        }
         if (!m_settings.saveRaw(settings)) {
             appendSystemLine(QStringLiteral("! Could not save theme."));
+        }
+        if (!themeFonts.isEmpty()) {
+            applyCurrentSettings(); // picks up the bundled fonts
         }
     }
     m_currentTheme = normalized;
