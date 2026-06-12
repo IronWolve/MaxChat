@@ -47,7 +47,7 @@ flagged "medium+ — push past the checklist for extra attack angles."
 the recommended model/effort or change it — before reading any files.** Do not begin the
 phase work until the user confirms.
 
-**Last session:** 2026-06-11 — DCC toggle: "Enable File Transfers" pref (default off), DccManager gated at all 4 entry points, stale-flag fix on prefs close, 4 new tests. Channel list: Get List button, min-users spinbox, search clear button, partial-state status, CHANNEL_LIST_DESIGN.md saved for Python backport. Scripts tab load/unload added to backlog (#31).
+**Last session:** 2026-06-11 — Channel list O(n²) freeze fixed: 100ms batch drain timer (500/tick), sort deferred to setComplete, per-batch filter applies only to new rows (O(n) total). Fixed Qt auto-sort row-corruption in addChannel (setSortingEnabled(false) before setItem). Fixed stale m_pendingChannels on dialog-close-mid-fetch. Server tab auto-focuses on connect. 48/48 tests green.
 
 **Audit history (Phase 11 closeout):** All 11 phases done.
 Test-coverage map vs Python below; 42 C++ test targets (broader than Python's 23) with known
