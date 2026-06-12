@@ -1,5 +1,6 @@
 #include "core/ChatLineFormatter.h"
 
+#include "core/UrlDetector.h"
 #include "irc/IrcFormat.h"
 
 #include <QStringBuilder>
@@ -95,11 +96,39 @@ ParsedLine parseLineShape(const QString& line) {
     return parsed;
 }
 
-QString messageHtml(const QString& text, const ChatLineFormatOptions& options) {
-    if (options.renderFormatting) {
-        return maxchat::irc::toHtml(text, options.defaultForeground, options.defaultBackground);
+QString linkifyUrls(const QString& html, const QString& plainText) {
+    const QStringList urls = maxchat::core::extractUrls(plainText);
+    if (urls.isEmpty()) {
+        return html;
     }
-    return maxchat::irc::stripFormatting(text).toHtmlEscaped();
+    QString result = html;
+    for (const QString& url : urls) {
+        const QString escaped = url.toHtmlEscaped();
+        // Only replace bare URL text — skip anything already inside an href.
+        // Simple guard: don't touch a match that is immediately preceded by '"'.
+        int pos = 0;
+        while ((pos = result.indexOf(escaped, pos)) != -1) {
+            if (pos > 0 && result.at(pos - 1) == QLatin1Char('"')) {
+                pos += escaped.size();
+                continue;
+            }
+            const QString linked = QStringLiteral("<a href=\"") + escaped
+                                   + QStringLiteral("\">") + escaped + QStringLiteral("</a>");
+            result.replace(pos, escaped.size(), linked);
+            pos += linked.size();
+        }
+    }
+    return result;
+}
+
+QString messageHtml(const QString& text, const ChatLineFormatOptions& options) {
+    QString html;
+    if (options.renderFormatting) {
+        html = maxchat::irc::toHtml(text, options.defaultForeground, options.defaultBackground);
+    } else {
+        html = maxchat::irc::stripFormatting(text).toHtmlEscaped();
+    }
+    return linkifyUrls(html, maxchat::irc::stripFormatting(text));
 }
 
 QString colorSpan(const QString& color, const QString& html) {
