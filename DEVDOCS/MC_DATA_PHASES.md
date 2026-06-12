@@ -1,6 +1,6 @@
 # MC DATA + Script Terminal Phases
 
-Current phase: Phase 1 - Branch + docs
+Current phase: Phase 2 - MC DATA Core
 
 Status key:
 
@@ -24,8 +24,8 @@ Status key:
 
 - [x] Create or switch to branch `mc-data-terminal`.
 - [x] Review `DEVDOCS/MC_DATA.md` for final wording before implementation.
-- [~] Commit `DEVDOCS/MC_DATA.md`.
-- [~] Commit `DEVDOCS/MC_DATA_PHASES.md`.
+- [x] Commit `DEVDOCS/MC_DATA.md`.
+- [x] Commit `DEVDOCS/MC_DATA_PHASES.md`.
 
 Exit criteria:
 
@@ -35,7 +35,7 @@ Exit criteria:
 
 ## Phase 2 - MC DATA Core
 
-- [ ] Add `McDataMessage`.
+- [~] Add `McDataMessage`.
 - [ ] Add `McDataCodec`.
 - [ ] Parse `MC DATA <service> <verb> <payload>`.
 - [ ] Normalize service lowercase and verb uppercase.
