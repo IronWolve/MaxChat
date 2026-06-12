@@ -2039,13 +2039,17 @@ void maxchat::ui::MainWindow::openPreferences() {
     // Live theme preview: combo changes in the Themes tab restyle the app
     // immediately (not saved); Cancel below restores the saved look.
     connect(&dialog, &PreferencesDialog::themePreviewRequested, this,
-            [this](const QString& app, const QString& chat, const QString& wallpaper) {
+            [this](const QString& app, const QString& chat, const QString& wallpaper,
+                   int chatOpacity) {
+                m_chatOpacity = std::clamp(chatOpacity, 20, 100);
                 setTheme(app, false);
                 setChatTheme(chat, false);
                 setWallpaper(wallpaper, false);
             });
     if (dialog.exec() != QDialog::Accepted) {
         const QVariantMap saved = m_settings.loadWithDefaults();
+        m_chatOpacity =
+            std::clamp(saved.value(QStringLiteral("chat_opacity"), 100).toInt(), 20, 100);
         setTheme(saved.value(QStringLiteral("theme"), QStringLiteral("synthwave")).toString(),
                  false);
         setChatTheme(
@@ -8828,7 +8832,8 @@ void maxchat::ui::MainWindow::resizeMessageInput() {
 void maxchat::ui::MainWindow::applyTheme(const QString& theme) {
     const QString normalized = normalizeThemeId(theme);
     const QString styleSheet =
-        styleSheetForAppearance(normalized, m_currentChatTheme, m_currentWallpaper);
+        styleSheetForAppearance(normalized, m_currentChatTheme, m_currentWallpaper,
+                                m_chatOpacity);
     // Apply palette + stylesheet app-wide so parentless dialogs are themed too,
     // and the OS palette can't bleed into widgets the QSS doesn't cover.
     if (normalized == systemThemeId()) {
@@ -9121,6 +9126,8 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
         settings.value(QStringLiteral("chat_theme"), QStringLiteral("follow")).toString());
     m_currentWallpaper =
         normalizeWallpaperValue(settings.value(QStringLiteral("wallpaper")).toString());
+    m_chatOpacity =
+        std::clamp(settings.value(QStringLiteral("chat_opacity"), 100).toInt(), 20, 100);
     applyTheme(m_currentTheme);
     // Re-apply the app font AFTER the theme: setting a global stylesheet re-polishes
     // widgets and drops qApp->setFont for chrome (menu bar, menus, dialogs), so the

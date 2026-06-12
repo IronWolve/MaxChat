@@ -29,6 +29,7 @@
 #include <QMessageBox>
 #include <QPushButton>
 #include <QRegularExpression>
+#include <QSlider>
 #include <QSpinBox>
 #include <QStackedWidget>
 #include <QTimer>
@@ -263,6 +264,9 @@ QVariantMap PreferencesDialog::settings() const {
     out.insert(QStringLiteral("theme"), theme_->currentData().toString());
     out.insert(QStringLiteral("chat_theme"), chatTheme_->currentData().toString());
     out.insert(QStringLiteral("wallpaper"), wallpaper_->currentData().toString());
+    if (chatOpacity_ != nullptr) {
+        out.insert(QStringLiteral("chat_opacity"), chatOpacity_->value());
+    }
     out.insert(QStringLiteral("app_font_family"), appFontFamily_->currentFont().family());
     out.insert(QStringLiteral("app_font_size"), appFontSize_->value());
     out.insert(QStringLiteral("app_font_bold"), appFontBold_->isChecked());
@@ -1421,6 +1425,28 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
         }
     });
     chatForm->addRow(QString(), chatEditRow);
+
+    // Chat background opacity: lets the wallpaper/gradient show through ANY
+    // chat theme (explicit themes used to paint fully opaque). 100 = Auto
+    // (theme decides: Follow+wallpaper is 80%, others opaque).
+    auto* opacityRow = new QWidget(chatBox);
+    auto* opacityLayout = new QHBoxLayout(opacityRow);
+    opacityLayout->setContentsMargins(0, 0, 0, 0);
+    chatOpacity_ = new QSlider(Qt::Horizontal, chatBox);
+    chatOpacity_->setObjectName(QStringLiteral("chatOpacity"));
+    chatOpacity_->setRange(20, 100);
+    chatOpacity_->setValue(
+        std::clamp(settings_.value(QStringLiteral("chat_opacity"), 100).toInt(), 20, 100));
+    auto* opacityValue = new QLabel(chatBox);
+    const auto opacityText = [](int value) {
+        return value >= 100 ? QStringLiteral("Auto") : QStringLiteral("%1%").arg(value);
+    };
+    opacityValue->setText(opacityText(chatOpacity_->value()));
+    connect(chatOpacity_, &QSlider::valueChanged, this,
+            [opacityValue, opacityText](int value) { opacityValue->setText(opacityText(value)); });
+    opacityLayout->addWidget(chatOpacity_, 1);
+    opacityLayout->addWidget(opacityValue);
+    chatForm->addRow(QStringLiteral("Background opacity"), opacityRow);
     root->addWidget(chatBox);
 
     auto* wallpaperBox = new QGroupBox(QStringLiteral("Wallpaper"), tab);
@@ -1481,13 +1507,15 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
         if (app.isEmpty() || chat.isEmpty()) {
             return; // separator row
         }
-        emit themePreviewRequested(app, chat, wallpaper_->currentData().toString());
+        emit themePreviewRequested(app, chat, wallpaper_->currentData().toString(),
+                                   chatOpacity_ != nullptr ? chatOpacity_->value() : 100);
     };
     connect(theme_, &QComboBox::currentIndexChanged, this, [emitPreview](int) { emitPreview(); });
     connect(chatTheme_, &QComboBox::currentIndexChanged, this,
             [emitPreview](int) { emitPreview(); });
     connect(wallpaper_, &QComboBox::currentIndexChanged, this,
             [emitPreview](int) { emitPreview(); });
+    connect(chatOpacity_, &QSlider::valueChanged, this, [emitPreview](int) { emitPreview(); });
 
     // A theme that bundles fonts re-applies them when selected (saved/imported
     // themes carry the fonts that were active when they were saved).

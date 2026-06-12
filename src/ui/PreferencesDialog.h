@@ -9,6 +9,7 @@ class QFontComboBox;
 class QLabel;
 class QLineEdit;
 class QListWidget;
+class QSlider;
 class QSpinBox;
 class QStackedWidget;
 
@@ -36,7 +37,7 @@ class PreferencesDialog final : public QDialog {
     void exportSettingsRequested();
     // Live preview: a theme/wallpaper combo changed; apply without saving.
     void themePreviewRequested(const QString& appTheme, const QString& chatTheme,
-                               const QString& wallpaper);
+                               const QString& wallpaper, int chatOpacity);
     void importSettingsRequested();
     void resetServerListRequested();
     void resetAllSettingsRequested();
@@ -87,6 +88,7 @@ class PreferencesDialog final : public QDialog {
     QComboBox* theme_ = nullptr;
     QComboBox* chatTheme_ = nullptr;
     QComboBox* wallpaper_ = nullptr;
+    QSlider* chatOpacity_ = nullptr;
     QFontComboBox* appFontFamily_ = nullptr;
     QSpinBox* appFontSize_ = nullptr;
     QCheckBox* appFontBold_ = nullptr;

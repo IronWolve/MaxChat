@@ -11,6 +11,7 @@
 #include <QStandardPaths>
 #include <QStringList>
 
+#include <algorithm>
 #include <cmath>
 
 namespace maxchat::ui {
@@ -652,7 +653,7 @@ QPalette paletteForAppearance(const QString& theme) {
 }
 
 QString styleSheetForAppearance(const QString& theme, const QString& chatTheme,
-                                const QString& wallpaper) {
+                                const QString& wallpaper, int chatOpacityPercent) {
     const QString themeId = normalizeThemeId(theme);
     if (themeId == systemThemeId()) {
         return {};
@@ -688,9 +689,17 @@ QString styleSheetForAppearance(const QString& theme, const QString& chatTheme,
         chatBgColor = chat.bg;
         chatFgColor = chat.fg;
     }
-    const QString chatBg = hasWallpaper && chat.id == QStringLiteral("follow")
-                               ? cssRgba(chatBgColor, 0.80)
-                               : cssRgb(chatBgColor);
+    QString chatBg;
+    const int opacity = std::clamp(chatOpacityPercent, 20, 100);
+    if (opacity < 100) {
+        // User-chosen translucency wins for every chat theme — this is what
+        // lets the wallpaper show through irssi/terminal-style themes.
+        chatBg = cssRgba(chatBgColor, opacity / 100.0);
+    } else {
+        chatBg = hasWallpaper && chat.id == QStringLiteral("follow")
+                     ? cssRgba(chatBgColor, 0.80)
+                     : cssRgb(chatBgColor);
+    }
     const QString chatFg = cssRgb(chatFgColor);
     const QString windowDecl =
         hasWallpaper
