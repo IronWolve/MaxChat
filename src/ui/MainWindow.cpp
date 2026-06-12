@@ -1280,7 +1280,12 @@ void maxchat::ui::MainWindow::buildMenus() {
     auto* findAction =
         toolsMenu->addAction(QStringLiteral("Find in Chat..."), this, &MainWindow::openChatFind);
     findAction->setShortcut(QKeySequence::Find);
-    toolsMenu->addAction(QStringLiteral("Replay Current Log"), this, &MainWindow::replayCurrentLog);
+    toolsMenu->addAction(QStringLiteral("Open Log Folder"), this, [this]() {
+        const QString logDir =
+            QDir(m_settings.paths().configDir).filePath(QStringLiteral("logs"));
+        QDir().mkpath(logDir);
+        QDesktopServices::openUrl(QUrl::fromLocalFile(logDir));
+    });
     toolsMenu->addSeparator();
     QAction* urlListAction =
         toolsMenu->addAction(QStringLiteral("URL List..."), this, &MainWindow::openUrlList);
@@ -2475,9 +2480,8 @@ void maxchat::ui::MainWindow::leaveCurrentChannel() {
     sendCommandOrMessage(QStringLiteral("/part %1").arg(channel));
 }
 
-bool maxchat::ui::MainWindow::seedReplayForBuffer(const QString& network, const QString& target,
-                                                  const bool force) {
-    if (!force && !m_replayLogEnabled) {
+bool maxchat::ui::MainWindow::seedReplayForBuffer(const QString& network, const QString& target) {
+    if (!m_replayLogEnabled) {
         return false;
     }
     const QString trimmedTarget = target.trimmed();
@@ -2486,15 +2490,14 @@ bool maxchat::ui::MainWindow::seedReplayForBuffer(const QString& network, const 
     }
 
     const QString key = network + QChar(0x1f) + trimmedTarget;
-    if (!force && m_replayedBuffers.contains(key)) {
+    if (m_replayedBuffers.contains(key)) {
         return false;
     }
 
     const maxchat::core::ChatBufferId id = bufferIdForNetworkTarget(network, trimmedTarget);
     // Seed history only into an empty buffer so it prepends cleanly; never inject
-    // it between live messages that already arrived. (force bypasses this for the
-    // manual Tools ▸ Replay action.)
-    if (!force && !m_chatBuffers.snapshot(id).lines.isEmpty()) {
+    // it between live messages that already arrived.
+    if (!m_chatBuffers.snapshot(id).lines.isEmpty()) {
         m_replayedBuffers.insert(key);
         return false;
     }
@@ -2546,25 +2549,6 @@ bool maxchat::ui::MainWindow::seedReplayForBuffer(const QString& network, const 
     divider.systemLine = true; // time is in the text, not the gutter
     (void)m_chatBuffers.appendLine(id, divider);
     return true;
-}
-
-void maxchat::ui::MainWindow::replayCurrentLog() {
-    if (m_chatView == nullptr) {
-        return;
-    }
-    const QString network = currentLogNetwork();
-    const QString target = currentLogTarget();
-    const maxchat::core::ChatBufferId id = bufferIdForNetworkTarget(network, target);
-    const int before = static_cast<int>(m_chatBuffers.snapshot(id).lines.size());
-    const bool seeded = seedReplayForBuffer(network, target, /*force=*/true);
-    if (seeded) {
-        (void)m_chatBuffers.markRead(id);
-    }
-    const int added = static_cast<int>(m_chatBuffers.snapshot(id).lines.size()) - before;
-    renderActiveBuffer();
-    statusBar()->showMessage(
-        added > 0 ? QStringLiteral("Replayed %1 log lines for %2/%3.").arg(added).arg(network, target)
-                  : QStringLiteral("No saved log lines for %1/%2.").arg(network, target));
 }
 
 void maxchat::ui::MainWindow::markAllRead() {

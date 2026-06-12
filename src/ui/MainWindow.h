@@ -160,12 +160,10 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     void updateWindowTitle();      // "MaxChat <ver> — <network> / <channel>" (active context)
     void updateNickLabel();        // your-nick label by the input box
     void leaveCurrentChannel();
-    void replayCurrentLog();
     // Seed a buffer's stored line model with dimmed log history + a "Chat ended"
     // divider so resume survives buffer switches (rendered, not painted). Returns
-    // true if any history was added. force=true re-seeds even a non-empty buffer
-    // (manual Tools ▸ Replay).
-    bool seedReplayForBuffer(const QString& network, const QString& target, bool force = false);
+    // true if any history was added.
+    bool seedReplayForBuffer(const QString& network, const QString& target);
     QSet<QString> m_replayedBuffers; // network\x1ftarget already seeded
     void markAllRead();
     void clearCurrentChat();

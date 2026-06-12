@@ -1133,12 +1133,12 @@ class MainWindowLinkPreviewTest final : public QObject {
                  1);
     }
 
-    void replayCurrentLogUsesLiveChatAlignment() {
+    void replayedLogLinesUseInlineAlignment() {
         QTemporaryDir temp;
         QVERIFY(temp.isValid());
 
         MainWindow window;
-        window.m_replayLogEnabled = false; // isolate buffer mechanics from on-disk log replay
+        window.m_replayLogEnabled = false; // suppress auto-seed on activateBufferTarget
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(chatView != nullptr);
 
@@ -1158,6 +1158,11 @@ class MainWindowLinkPreviewTest final : public QObject {
                                              QStringLiteral("12:34 AM    <alice> | old formatted"),
                                              QDateTime(today, QTime(1, 2, 4))));
 
+        // Seed replay while buffer is still empty (before live messages arrive).
+        window.m_replayLogEnabled = true;
+        window.seedReplayForBuffer(QStringLiteral("Libera.Chat"), QStringLiteral("#chat"));
+
+        // Append a live message after the replay seed — verifies log format is correct.
         window.appendSystemLineToTarget(QStringLiteral("#chat"),
                                         QStringLiteral("<dana> newly saved"));
         const QStringList saved = window.m_chatLogStore.recentLines(QStringLiteral("Libera.Chat"),
@@ -1166,8 +1171,7 @@ class MainWindowLinkPreviewTest final : public QObject {
         QVERIFY(saved.last().endsWith(QStringLiteral(" <dana> newly saved")));
         QVERIFY(!saved.last().contains(QStringLiteral(" | newly saved")));
 
-        chatView->clear();
-        window.replayCurrentLog();
+        window.renderActiveBuffer();
         const QString html = chatView->toHtml();
 
         QVERIFY(!html.contains(QStringLiteral("<table")));
