@@ -175,6 +175,19 @@ at least one buffer has it on; non-opted-in buffers skip panel rendering.
   "Active now: <name>" plus a live color-chip Preview row that follows the
   combo selection (window/panel/selected/accent/chat chips for app; message/
   timestamp/system chips for chat).
+- **Live apply (2026-06-11)**: changing the app/chat/wallpaper combo emits
+  `themePreviewRequested` → MainWindow restyles immediately (`setTheme(...,
+  false)` — no save). Cancel restores the saved theme keys; OK saves as usual.
+  `refillThemeCombo` deliberately leaves the final `setComboByData` unblocked
+  so an import/save also live-applies.
+- **Grouped combos (2026-06-11)**: user themes (`u-`) listed first, separator,
+  then built-ins (`refillThemeCombo`, also used for the initial fill).
+- **Chat preview (2026-06-11)**: a mini fake conversation (2 messages + a join
+  line) rendered with the real bg/fg/ts/bracket/system/nick-palette colors;
+  "Follow app theme" derives from the selected app theme and updates when the
+  app combo changes.
+- "Open themes folder..." button beside Save/Import/Export
+  (`userThemeDirectoryPath`).
 - **Delete (2026-06-11)**: Delete button beside Customize in both boxes,
   enabled only for user themes (`u-` ids, `isUserThemeId`); built-ins are not
   deletable. App: removes `<config>/themes/u-*.json`; chat: removes the entry

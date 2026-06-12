@@ -2,7 +2,22 @@
 
 Date: 2026-06-09 (audit closeout 2026-06-10; UI polish 2026-06-11)
 
-## Latest Completed Slice (themes tab polish + nick color modes, 2026-06-11 late)
+## Latest Completed Slice (themes live-apply + previews + new themes, 2026-06-11 late)
+
+- **Live apply**: theme/chat-theme/wallpaper combo changes restyle the whole
+  app instantly via `PreferencesDialog::themePreviewRequested` →
+  `MainWindow::setTheme/setChatTheme/setWallpaper(..., save=false)`; Cancel
+  reverts to saved settings, OK saves normally.
+- **Chat preview pane**: mini fake conversation (timestamps, bracketed colored
+  nicks, system join line) in the actual theme colors; follows the app theme
+  for "Follow".
+- **Grouped combos**: user themes first + separator + built-ins.
+- **"Open themes folder..."** button (new `userThemeDirectoryPath()`).
+- **New built-ins**: app `Sakura` (soft pink light), `Deep Ocean` (blue-navy),
+  `Ember` (warm dark orange), `High Contrast` (black/white/yellow,
+  accessibility); chat `Midnight - blue hours` (navy bg, blue nick palette).
+
+## Previous Slice (themes tab polish + nick color modes, 2026-06-11 late)
 
 - Themes tab: "Active now: <name>" labels + live color-chip previews in both
   the app and chat boxes; **Delete** button for user themes only

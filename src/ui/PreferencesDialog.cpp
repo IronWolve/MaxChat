@@ -412,19 +412,35 @@ void PreferencesDialog::refillThemeCombo(QComboBox* combo, const bool chat,
     if (combo == nullptr) {
         return;
     }
-    const QSignalBlocker blocker(combo);
-    combo->clear();
-    if (chat) {
-        for (const ChatThemeDefinition& theme : chatThemes()) {
-            combo->addItem(theme.label, theme.id);
+    {
+        // Your own themes first, separated from the built-ins, so they don't
+        // get lost in the long list.
+        const QSignalBlocker blocker(combo);
+        combo->clear();
+        QList<QPair<QString, QString>> user;
+        QList<QPair<QString, QString>> builtin;
+        if (chat) {
+            for (const ChatThemeDefinition& theme : chatThemes()) {
+                (isUserThemeId(theme.id) ? user : builtin).append({theme.label, theme.id});
+            }
+        } else {
+            for (const AppThemeDefinition& theme : appThemes()) {
+                (isUserThemeId(theme.id) ? user : builtin).append({theme.label, theme.id});
+            }
         }
-        setComboByData(combo, normalizeChatThemeId(selectId));
-    } else {
-        for (const AppThemeDefinition& theme : appThemes()) {
-            combo->addItem(theme.label, theme.id);
+        for (const auto& entry : user) {
+            combo->addItem(entry.first, entry.second);
         }
-        setComboByData(combo, normalizeThemeId(selectId));
+        if (!user.isEmpty() && !builtin.isEmpty()) {
+            combo->insertSeparator(combo->count());
+        }
+        for (const auto& entry : builtin) {
+            combo->addItem(entry.first, entry.second);
+        }
     }
+    // Unblocked on purpose: a selection change here refreshes previews and
+    // fires the live-apply signal (e.g. right after an import).
+    setComboByData(combo, chat ? normalizeChatThemeId(selectId) : normalizeThemeId(selectId));
 }
 
 void PreferencesDialog::setAllFonts(const QString& family, int size, bool bold) {
@@ -1176,12 +1192,9 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
     auto* appForm = new QFormLayout(appBox);
     theme_ = new QComboBox(appBox);
     theme_->setObjectName(QStringLiteral("theme"));
-    for (const AppThemeDefinition& theme : appThemes()) {
-        theme_->addItem(theme.label, theme.id);
-    }
     const QString activeAppId = normalizeThemeId(
         settings_.value(QStringLiteral("theme"), QStringLiteral("synthwave")).toString());
-    setComboByData(theme_, activeAppId);
+    refillThemeCombo(theme_, false, activeAppId);
     appForm->addRow(QStringLiteral("Theme"), theme_);
 
     // Make the active theme obvious: name it, and preview whatever is selected.
@@ -1280,12 +1293,9 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
     auto* chatForm = new QFormLayout(chatBox);
     chatTheme_ = new QComboBox(chatBox);
     chatTheme_->setObjectName(QStringLiteral("chatTheme"));
-    for (const ChatThemeDefinition& theme : chatThemes()) {
-        chatTheme_->addItem(theme.label, theme.id);
-    }
     const QString activeChatId = normalizeChatThemeId(
         settings_.value(QStringLiteral("chat_theme"), QStringLiteral("follow")).toString());
-    setComboByData(chatTheme_, activeChatId);
+    refillThemeCombo(chatTheme_, true, activeChatId);
     chatForm->addRow(QStringLiteral("Theme"), chatTheme_);
     auto* chatActive = new QLabel(
         QStringLiteral("Active now: <b>%1</b>").arg(chatThemeById(activeChatId).label), chatBox);
@@ -1295,21 +1305,64 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
     chatPreview->setObjectName(QStringLiteral("chatThemePreview"));
     chatPreview->setTextFormat(Qt::RichText);
     chatForm->addRow(QStringLiteral("Preview"), chatPreview);
-    const auto updateChatPreview = [this, chatPreview, chip]() {
+    // A miniature fake conversation in the real colors, instead of bare chips.
+    const auto updateChatPreview = [this, chatPreview]() {
         const ChatThemeDefinition def = chatThemeById(chatTheme_->currentData().toString());
-        if (def.id == QLatin1String("follow") || !def.bg.isValid()) {
-            chatPreview->setText(QStringLiteral("<i>follows the app theme's chat colors</i>"));
-            return;
+        QColor bg = def.bg;
+        QColor fg = def.fg;
+        if (def.id == QLatin1String("follow") || !bg.isValid()) {
+            const AppThemeDefinition app = appThemeById(theme_->currentData().toString());
+            bg = app.chatBg.isValid() ? app.chatBg
+                                      : (app.panel.isValid() ? app.panel : QColor(28, 30, 33));
+            fg = app.chatFg.isValid() ? app.chatFg
+                                      : (app.text.isValid() ? app.text : QColor(224, 226, 229));
         }
-        const QColor ts = def.timestamp.isValid() ? def.timestamp : QColor(0x8a, 0x8a, 0x8a);
-        const QColor sys = def.system.isValid() ? def.system : def.fg;
-        chatPreview->setText(chip(def.bg, def.fg, QStringLiteral("&lt;nick&gt; message")) +
-                             QStringLiteral("&nbsp;") +
-                             chip(def.bg, ts, QStringLiteral("12:00")) +
-                             QStringLiteral("&nbsp;") +
-                             chip(def.bg, sys, QStringLiteral("* joined")));
+        const bool darkBg =
+            (0.299 * bg.red() + 0.587 * bg.green() + 0.114 * bg.blue()) < 150.0;
+        const QColor ts = def.timestamp.isValid() ? def.timestamp
+                                                  : (darkBg ? QColor(0x8a, 0x8a, 0x8a)
+                                                            : QColor(0x6f, 0x6f, 0x6f));
+        const QColor sys = def.system.isValid() ? def.system : ts;
+        const QColor bracket = def.bracket.isValid() ? def.bracket : fg;
+        QStringList nickColors;
+        if (def.monoNicks) {
+            nickColors = {fg.name(), fg.name()};
+        } else if (!def.nickPalette.isEmpty()) {
+            for (const QColor& color : def.nickPalette) {
+                nickColors.append(color.name());
+            }
+        } else {
+            nickColors = darkBg ? QStringList{QStringLiteral("#61afef"), QStringLiteral("#98c379")}
+                                : QStringList{QStringLiteral("#1a6fc4"), QStringLiteral("#3c8a3c")};
+        }
+        const auto span = [](const QString& color, const QString& text) {
+            return QStringLiteral("<span style=\"color:%1\">%2</span>").arg(color, text);
+        };
+        const auto msgLine = [&](const QString& time, const QString& nickColor,
+                                 const QString& nick, const QString& text) {
+            return span(ts.name(), time) + QStringLiteral(" ") +
+                   span(bracket.name(), QStringLiteral("&lt;")) + span(nickColor, nick) +
+                   span(bracket.name(), QStringLiteral("&gt;")) + QStringLiteral(" ") +
+                   span(fg.name(), text);
+        };
+        chatPreview->setStyleSheet(
+            QStringLiteral("QLabel { background-color: %1; border: 1px solid %2; "
+                           "padding: 6px; font-family: monospace; }")
+                .arg(bg.name(), darkBg ? bg.lighter(160).name() : bg.darker(130).name()));
+        chatPreview->setText(
+            msgLine(QStringLiteral("[12:01]"), nickColors.value(0), QStringLiteral("dana"),
+                    QStringLiteral("the new theme looks great")) +
+            QStringLiteral("<br/>") +
+            msgLine(QStringLiteral("[12:02]"), nickColors.value(1 % nickColors.size()),
+                    QStringLiteral("sam"), QStringLiteral("ship it")) +
+            QStringLiteral("<br/>") + span(ts.name(), QStringLiteral("[12:02]")) +
+            QStringLiteral(" ") +
+            span(sys.name(), QStringLiteral("* casey has joined #maxchat")));
     };
     connect(chatTheme_, &QComboBox::currentIndexChanged, this,
+            [updateChatPreview](int) { updateChatPreview(); });
+    // "Follow app theme" previews change when the app theme changes too.
+    connect(theme_, &QComboBox::currentIndexChanged, this,
             [updateChatPreview](int) { updateChatPreview(); });
     updateChatPreview();
 
@@ -1381,9 +1434,19 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
     importTheme->setObjectName(QStringLiteral("importTheme"));
     auto* exportTheme = new QPushButton(QStringLiteral("Export..."), fileBox);
     exportTheme->setObjectName(QStringLiteral("exportTheme"));
+    auto* openThemesFolder = new QPushButton(QStringLiteral("Open themes folder..."), fileBox);
+    openThemesFolder->setObjectName(QStringLiteral("openThemesFolder"));
+    connect(openThemesFolder, &QPushButton::clicked, this, []() {
+        const QString dir = userThemeDirectoryPath();
+        if (!dir.isEmpty()) {
+            QDir().mkpath(dir);
+            QDesktopServices::openUrl(QUrl::fromLocalFile(dir));
+        }
+    });
     fileRow->addWidget(saveTheme);
     fileRow->addWidget(importTheme);
     fileRow->addWidget(exportTheme);
+    fileRow->addWidget(openThemesFolder);
     fileRow->addStretch(1);
     root->addWidget(fileBox);
     root->addStretch(1);
@@ -1392,6 +1455,25 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
             [this]() { setComboByData(theme_, defaultThemeId()); });
     connect(appOff, &QPushButton::clicked, this,
             [this]() { setComboByData(theme_, systemThemeId()); });
+
+    // Live apply: any theme/wallpaper change restyles the app immediately;
+    // MainWindow reverts to the saved look if the dialog is cancelled.
+    const auto emitPreview = [this]() {
+        if (theme_ == nullptr || chatTheme_ == nullptr || wallpaper_ == nullptr) {
+            return;
+        }
+        const QString app = theme_->currentData().toString();
+        const QString chat = chatTheme_->currentData().toString();
+        if (app.isEmpty() || chat.isEmpty()) {
+            return; // separator row
+        }
+        emit themePreviewRequested(app, chat, wallpaper_->currentData().toString());
+    };
+    connect(theme_, &QComboBox::currentIndexChanged, this, [emitPreview](int) { emitPreview(); });
+    connect(chatTheme_, &QComboBox::currentIndexChanged, this,
+            [emitPreview](int) { emitPreview(); });
+    connect(wallpaper_, &QComboBox::currentIndexChanged, this,
+            [emitPreview](int) { emitPreview(); });
 
     // A theme that bundles fonts re-applies them when selected (saved/imported
     // themes carry the fonts that were active when they were saved).

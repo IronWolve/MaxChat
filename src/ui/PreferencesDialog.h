@@ -29,6 +29,9 @@ class PreferencesDialog final : public QDialog {
 
   signals:
     void exportSettingsRequested();
+    // Live preview: a theme/wallpaper combo changed; apply without saving.
+    void themePreviewRequested(const QString& appTheme, const QString& chatTheme,
+                               const QString& wallpaper);
     void importSettingsRequested();
     void resetServerListRequested();
     void resetAllSettingsRequested();
