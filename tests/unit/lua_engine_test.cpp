@@ -548,7 +548,43 @@ class LuaEngineTest final : public QObject {
         QVERIFY(host.terminals.contains(
             QStringLiteral("open|bbs|client:alice:retro-bbs|Retro-BBS - alice|ibm-vga|80x25")));
         QVERIFY(host.mcData.contains(
-            QStringLiteral("synIRC|alice|bbs|HELLO|bbs_id=retro-bbs;cols=80;rows=25;profile=ibm-vga|privmsg")));
+            QStringLiteral("synIRC|alice|bbs|HELLO|bbs_id=retro-bbs;cols=80;rows=25;profile=ibm-vga;caps=T,S|privmsg")));
+
+        const auto containsMcDataPrefix = [&host](const QString& prefix) {
+            for (const QString& line : host.mcData) {
+                if (line.startsWith(prefix)) {
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        QVERIFY(engine.dispatch(QStringLiteral("on_mc_data"), QStringLiteral("synIRC"),
+                                {QStringLiteral("synIRC"), QStringLiteral("bob"),
+                                 QStringLiteral("alice"), QStringLiteral("bbs"),
+                                 QStringLiteral("HELLO"),
+                                 QStringLiteral("bbs_id=retro-bbs;cols=80;rows=25;profile=ibm-vga;caps=T,S"),
+                                 false}));
+        QVERIFY(engine.dispatch(QStringLiteral("on_mc_data"), QStringLiteral("synIRC"),
+                                {QStringLiteral("synIRC"), QStringLiteral("bob"),
+                                 QStringLiteral("alice"), QStringLiteral("bbs"),
+                                 QStringLiteral("INPUT"), QStringLiteral("sir_iw"), false}));
+        QVERIFY(engine.dispatch(QStringLiteral("on_mc_data"), QStringLiteral("synIRC"),
+                                {QStringLiteral("synIRC"), QStringLiteral("bob"),
+                                 QStringLiteral("alice"), QStringLiteral("bbs"),
+                                 QStringLiteral("INPUT"), QStringLiteral("bbsiscool"), false}));
+        QVERIFY(containsMcDataPrefix(QStringLiteral("synIRC|alice|bbs|S|main|")) ||
+                containsMcDataPrefix(QStringLiteral("synIRC|alice|bbs|S|main ")));
+
+        QVERIFY(engine.dispatch(QStringLiteral("on_mc_data"), QStringLiteral("synIRC"),
+                                {QStringLiteral("synIRC"), QStringLiteral("bob"),
+                                 QStringLiteral("alice"), QStringLiteral("bbs"),
+                                 QStringLiteral("INPUT"), QStringLiteral("1"), false}));
+        QVERIFY(engine.dispatch(QStringLiteral("on_mc_data"), QStringLiteral("synIRC"),
+                                {QStringLiteral("synIRC"), QStringLiteral("bob"),
+                                 QStringLiteral("alice"), QStringLiteral("bbs"),
+                                 QStringLiteral("INPUT"), QStringLiteral("B"), false}));
+        QVERIFY(containsMcDataPrefix(QStringLiteral("synIRC|alice|bbs|R|main ")));
 #else
         QSKIP("example scripts dir not defined");
 #endif

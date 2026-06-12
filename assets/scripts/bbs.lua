@@ -24,6 +24,7 @@ local SERVER_TERM = "server"
 local MAX_LINE = 220
 local DEMO_USER = "sir_iw"
 local DEMO_PASSWORD = "bbsiscool"
+local CLIENT_CAPS = "T,S"
 
 local server_running = false
 local server = {
@@ -38,6 +39,7 @@ local server = {
 }
 local sessions = {}
 local clients = {}
+local static_cache = {}
 local board = {
   { from = "sysop", text = "Welcome. Leave a short note with P <message>." }
 }
@@ -84,6 +86,13 @@ local function parse_kv(payload)
   return t
 end
 
+local function has_cap(caps, wanted)
+  for cap in tostring(caps or ""):gmatch("[^,]+") do
+    if trim(cap):upper() == wanted then return true end
+  end
+  return false
+end
+
 local function session_key(network, nick, bbs_id)
   return tostring(network or "") .. "|" .. tostring(nick or ""):lower() .. "|" .. tostring(bbs_id or DEFAULT_BBS_ID):lower()
 end
@@ -120,7 +129,20 @@ local function frame_pos(row, col)
   return "P" .. hex2(row) .. hex2(col)
 end
 
-local function send_terminal_frames(api, s, lines)
+local function static_cache_key(bbs_id, page_id, hash)
+  return tostring(bbs_id or DEFAULT_BBS_ID):lower() .. "|" .. tostring(page_id or "") .. "|" .. tostring(hash or "")
+end
+
+local function frame_hash(text)
+  local h = 0
+  text = tostring(text or "")
+  for i = 1, #text do
+    h = (h * 33 + string.byte(text, i)) % 16777216
+  end
+  return string.format("%06X", h)
+end
+
+local function terminal_frame_chunks(lines)
   local chunks = {}
   local current = "C"
   for row, text in ipairs(lines or {}) do
@@ -132,8 +154,35 @@ local function send_terminal_frames(api, s, lines)
     current = current .. op
   end
   if #current > 0 then chunks[#chunks + 1] = current end
+  return chunks
+end
+
+local function send_terminal_frames(api, s, lines)
+  local chunks = terminal_frame_chunks(lines)
   for _, chunk in ipairs(chunks) do
     send_raw(api, s.nick, "T", chunk)
+  end
+end
+
+local function send_static_or_terminal_frame(api, s, page_id, lines)
+  local chunks = terminal_frame_chunks(lines)
+  if s.supports_static and #chunks == 1 then
+    local ops = chunks[1]
+    local hash = frame_hash(ops)
+    local sent_key = page_id .. "|" .. hash
+    s.static_defs = s.static_defs or {}
+    s.static_sent = s.static_sent or {}
+    s.static_defs[sent_key] = ops
+    if s.static_sent[sent_key] then
+      send_raw(api, s.nick, "R", page_id .. " " .. hash)
+    else
+      send_raw(api, s.nick, "S", page_id .. " " .. hash .. " " .. ops)
+      s.static_sent[sent_key] = true
+    end
+  else
+    for _, chunk in ipairs(chunks) do
+      send_raw(api, s.nick, "T", chunk)
+    end
   end
 end
 
@@ -211,7 +260,7 @@ local function line(api, s, text) out(api, s, "LINE", text or "") end
 local function prompt(api, s, text) out(api, s, "PROMPT", text or "bbs> ") end
 local function status(api, s, text) out(api, s, "STATUS", text or "") end
 
-local function screen(api, s, status_text, prompt_text, lines)
+local function screen(api, s, status_text, prompt_text, lines, page_id)
   lines = lines or {}
   s.last = { status = clean_line(status_text or ""), prompt = clean_line(prompt_text or ""), lines = {} }
   for _, text in ipairs(lines) do
@@ -222,7 +271,11 @@ local function screen(api, s, status_text, prompt_text, lines)
     send(api, s.nick, "STATUS", s.last.status)
     s.sent_status = s.last.status
   end
-  send_terminal_frames(api, s, s.last.lines)
+  if page_id then
+    send_static_or_terminal_frame(api, s, page_id, s.last.lines)
+  else
+    send_terminal_frames(api, s, s.last.lines)
+  end
   if s.sent_prompt ~= s.last.prompt then
     send(api, s.nick, "PROMPT", s.last.prompt)
     s.sent_prompt = s.last.prompt
@@ -286,7 +339,7 @@ local function login_failed(api, s)
     "----------------------------------------",
     "Try again.",
     "Username:"
-  })
+  }, "login-failed")
 end
 
 local function menu(api, s)
@@ -302,7 +355,7 @@ local function menu(api, s)
     " 4  Page the sysop",
     " 5  Hangman door",
     " 6  Log off"
-  })
+  }, "main")
 end
 
 local function about(api, s)
@@ -312,7 +365,7 @@ local function about(api, s)
     "Traffic uses CTCP MC DATA on your current IRC network.",
     "No secrets, passwords, or private data should be sent here yet.",
     "Type B to return."
-  })
+  }, "about")
 end
 
 local function show_board(api, s)
@@ -346,7 +399,7 @@ local function page_sysop(api, s)
     "Page Sysop",
     "----------",
     "Type a short message for the sysop, or B to return."
-  })
+  }, "page-sysop")
 end
 
 local function hangman_word()
@@ -419,7 +472,7 @@ local function logoff(api, s)
   screen(api, s, "DISCONNECTED", "", {
     "Thanks for calling " .. server.name .. ".",
     "Carrier dropped."
-  })
+  }, "logoff")
   sessions[s.key] = nil
   if server.mirror_key == s.key then
     server.mirror_key = nil
@@ -585,7 +638,7 @@ local function connect_client(api, nick, bbs_id, profile)
       api.terminal_prompt(id, "")
     end
   end)
-  local ok = api.mc_send(nick, SERVICE, "HELLO", "bbs_id=" .. bbs_id .. ";cols=" .. tostring(cols) .. ";rows=" .. tostring(rows) .. ";profile=" .. profile)
+  local ok = api.mc_send(nick, SERVICE, "HELLO", "bbs_id=" .. bbs_id .. ";cols=" .. tostring(cols) .. ";rows=" .. tostring(rows) .. ";profile=" .. profile .. ";caps=" .. CLIENT_CAPS)
   if not ok then
     api.terminal_status(id, "SEND FAILED: " .. nick)
     api.terminal_write(id, "\nCould not send MC DATA HELLO. Are you connected to IRC?\n")
@@ -732,6 +785,7 @@ function on_mc_data(api, network, target, nick, service, verb, payload, notice)
       cols = tonumber(kv.cols) or 80,
       rows = tonumber(kv.rows) or 25,
       profile = kv.profile or DEFAULT_PROFILE,
+      supports_static = has_cap(kv.caps, "S"),
       mode = "menu",
       last = { lines = {} }
     }
@@ -757,6 +811,25 @@ function on_mc_data(api, network, target, nick, service, verb, payload, notice)
     end
     if not found then return true end
     handle_session_input(api, found, payload)
+    return true
+  end
+
+  if verb == "Q" then
+    local page_id, hash = payload:match("^(%S+)%s+(%S+)$")
+    if page_id and hash then
+      for _, s in pairs(sessions) do
+        if s.nick == nick then
+          local sent_key = page_id .. "|" .. hash
+          local ops = s.static_defs and s.static_defs[sent_key]
+          if ops then
+            send_raw(api, s.nick, "S", page_id .. " " .. hash .. " " .. ops)
+          elseif s.last and s.last.lines then
+            send_terminal_frames(api, s, s.last.lines)
+          end
+          break
+        end
+      end
+    end
     return true
   end
 
@@ -791,6 +864,32 @@ function on_mc_data(api, network, target, nick, service, verb, payload, notice)
   elseif verb == "T" then
     if not api.terminal_frame(client.term, payload) then
       api.terminal_write(client.term, "[bbs] bad terminal frame\n")
+    end
+  elseif verb == "S" then
+    local page_id, hash, ops = payload:match("^(%S+)%s+(%S+)%s+(.+)$")
+    if page_id and hash and ops then
+      static_cache[static_cache_key(client.bbs_id, page_id, hash)] = ops
+      if not api.terminal_frame(client.term, ops) then
+        api.terminal_write(client.term, "[bbs] bad static frame\n")
+      end
+    else
+      api.terminal_write(client.term, "[bbs] bad static frame header\n")
+    end
+  elseif verb == "R" then
+    local page_id, hash = payload:match("^(%S+)%s+(%S+)$")
+    local ops = page_id and hash and static_cache[static_cache_key(client.bbs_id, page_id, hash)]
+    if ops then
+      if not api.terminal_frame(client.term, ops) then
+        api.terminal_write(client.term, "[bbs] cached frame rejected\n")
+      end
+    elseif page_id and hash then
+      send_raw(api, client.nick, "Q", page_id .. " " .. hash)
+    else
+      api.terminal_write(client.term, "[bbs] bad cache replay header\n")
+    end
+  elseif verb == "D" then
+    if not api.terminal_frame(client.term, payload) then
+      api.terminal_write(client.term, "[bbs] bad dynamic frame\n")
     end
   elseif verb == "LINES" then
     for _, text in ipairs(frame_parts(payload)) do

@@ -220,6 +220,16 @@ bbs_id=retro-bbs
 bbs_name=Retro-BBS
 ```
 
+Script layout decision:
+
+- Keep Retro-BBS in one `bbs.lua` script for the first protocol passes.
+- Reason: one script lets one MaxChat instance act as server, client, or both,
+  which is useful for local two-terminal testing.
+- Split into `bbs_server.lua` and `bbs_client.lua` after static cache/manual BBS
+  testing proves the protocol shape.
+- When split, keep shared MC DATA framing helpers in a small common module only
+  if the Lua sandbox/module policy makes that practical.
+
 Commands:
 
 ```text
