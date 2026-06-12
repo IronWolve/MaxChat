@@ -32,6 +32,39 @@ When adding anything that should survive a buffer switch, store it in the model.
 
 ## THINGS I GOT WRONG
 
+- **2026-06-11 — Quick audit caught 6 issues in code that "looked done" (all
+  fixed same day). The recurring patterns, so we don't get caught again:**
+  1. **A permission name must mean what it says.** "Load modules" opened the
+     full Lua `package` library — `package.loadlib` + require's C searchers =
+     load any DLL = arbitrary native code, silently bypassing the separate
+     "Run programs" permission. Granting capability X must not smuggle in
+     capability Y. Fix: strip `loadlib` + C searchers (slots 3/4), force
+     text-only `load`/`loadfile`/`dofile` (bytecode is unverified).
+  2. **Every NEW network fetch path needs the SSRF/size treatment, not just
+     the first one.** The OG-card fetcher had the private-IP gate + redirect
+     re-check + byte cap; `api.http_get` (added later) had none of it — scripts
+     could hit localhost/169.254.169.254 and buffer unbounded bodies. When
+     adding a fetch path, reuse `resolvePreviewUrlPublicAsync` + a read cap;
+     check redirects too (`NoLessSafeRedirectPolicy` only stops downgrades).
+  3. **File ops that feed decisions must check their own success.**
+     `seedBundledScripts` ignored `QFile::copy` failures (locked/read-only dest
+     → record updated but dest not → file misclassified as "user edit" forever,
+     the upgrade mechanism bricks itself), and its `readAll` returned `""` for
+     both "empty" and "unreadable" (two locked files compare equal → a real
+     user edit could be clobbered as "unmodified"). Never compare or record
+     based on a read/copy you didn't verify.
+  4. **Round-tripping args through split-then-join loses quoting.**
+     `QProcess::splitCommand` strips quotes; re-joining with spaces broke any
+     `api.launch` argument containing a space on the ShellExecuteW path.
+     If you split, re-quote when you rebuild.
+  5. **"A replaces B" rules must be enforced at BOTH toggles.** Buttons-as-tabs
+     hides the server tree, but View ▸ Server List could force the tree back on
+     while tabs were active (a later setVisible fix made the hidden state
+     overridable). When two controls share state, every entry point must check
+     the invariant, not just the one that established it.
+  Process lesson: run a quick adversarial review pass after each feature batch
+  — all six were found by a 3-minute audit, not by usage.
+
 - **2026-06-11 — Comic Mode toggle semantics: a "global on + per-buffer hide-set"
   design is the wrong model for a per-channel feature.** The original toggle
   turned comic on for EVERY buffer on first enable, then later toggles maintained

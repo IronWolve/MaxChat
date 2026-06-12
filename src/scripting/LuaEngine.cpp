@@ -150,7 +150,20 @@ int l_launch(lua_State* L) {
     // QProcess::startDetached uses CreateProcess directly and can stall 5-10s
     // searching slow PATH entries or waiting on antivirus hooks.
     const QString prog = parts.at(0);
-    const QString argsStr = QStringList(parts.mid(1)).join(QLatin1Char(' '));
+    // splitCommand stripped the user's quotes — re-quote anything with spaces
+    // before re-joining, or `notepad "C:\My Files\a.txt"` arrives as two args.
+    QStringList quoted;
+    for (const QString& part : parts.mid(1)) {
+        if (part.contains(QLatin1Char(' ')) || part.contains(QLatin1Char('\t')) ||
+            part.contains(QLatin1Char('"')) || part.isEmpty()) {
+            QString escaped = part;
+            escaped.replace(QLatin1Char('"'), QStringLiteral("\\\""));
+            quoted.append(QLatin1Char('"') + escaped + QLatin1Char('"'));
+        } else {
+            quoted.append(part);
+        }
+    }
+    const QString argsStr = quoted.join(QLatin1Char(' '));
     const HINSTANCE result = ShellExecuteW(
         nullptr, L"open",
         reinterpret_cast<LPCWSTR>(prog.utf16()),
@@ -426,7 +439,31 @@ lua_State* LuaEngine::createState(const QString& dataDir, const ScriptPermission
     // load/dofile/loadfile + package/require: only with "load modules".
     if (perms.loadModules) {
         luaL_requiref(L, LUA_LOADLIBNAME, luaopen_package, 1);
-        lua_pop(L, 1);
+        // "Load modules" means LUA modules, never native code. Out of the box,
+        // package.loadlib and require's C-library searchers (slots 3 and 4)
+        // would dlopen/LoadLibrary any .so/.dll on disk — arbitrary native
+        // code execution that bypasses the separate "run programs" permission.
+        lua_pushnil(L);
+        lua_setfield(L, -2, "loadlib");
+        lua_getfield(L, -1, "searchers");
+        if (lua_istable(L, -1) != 0) {
+            lua_pushnil(L);
+            lua_rawseti(L, -2, 4); // all-in-one C loader
+            lua_pushnil(L);
+            lua_rawseti(L, -2, 3); // C library loader
+        }
+        lua_pop(L, 2); // searchers + package
+        // Precompiled Lua bytecode can corrupt the interpreter (it is not
+        // verified) — force text-only chunks for load/loadfile/dofile.
+        luaL_dostring(L,
+                      "local rawload, rawloadfile = load, loadfile\n"
+                      "load = function(c, n, _, e) return rawload(c, n, 't', e) end\n"
+                      "loadfile = function(f, _, e) return rawloadfile(f, 't', e) end\n"
+                      "dofile = function(f)\n"
+                      "  local fn, err = loadfile(f)\n"
+                      "  if not fn then error(err, 2) end\n"
+                      "  return fn()\n"
+                      "end\n");
     } else {
         for (const char* fn : {"dofile", "loadfile", "load", "loadstring"}) {
             lua_pushnil(L);
