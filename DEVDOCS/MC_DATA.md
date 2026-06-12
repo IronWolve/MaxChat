@@ -141,11 +141,17 @@ bbs_name=Retro-BBS
 Commands:
 
 ```text
-/bbsserve
-/bbs nick
-/bbs nick retro-bbs
+/bbsserve [name]
+/bbsconfig
+/bbsconfig name <name>
+/bbsconfig sysop <name>
+/bbsconfig welcome <text>
+/bbsconfig profile <ibm-vga|c64|free>
+/bbs <nick> [bbs_id]
 /bbsbook
+/bbsbook add <label> <nick> [bbs_id] [profile]
 /bbsbook dial Retro-BBS
+/bbsbook remove <label>
 ```
 
 `/bbs nick` uses the current IRC network.
@@ -229,23 +235,27 @@ Mailbox can be planned but is not required for the first demo unless persistence
 
 ## BBS Config
 
-Stored in Lua script data, not app settings:
+Stored with the Lua script preference API, not app settings and not loose files:
 
 ```text
-scripts-data/bbs/server.json
-scripts-data/bbs/address-book.json
+api.get(...)
+api.set(...)
 ```
 
 Server config:
 
-```json
-{
-  "bbs_id": "retro-bbs",
-  "bbs_name": "Retro-BBS",
-  "sysop": "IronWolve",
-  "profile": "ibm-vga",
-  "welcome": "Welcome to Retro-BBS"
-}
+```text
+server:name
+server:sysop
+server:profile
+server:welcome
+```
+
+Address book:
+
+```text
+book:labels
+book:<label> = nick|bbs_id|profile
 ```
 
 ## Terminal Rendering

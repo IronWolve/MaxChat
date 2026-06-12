@@ -1,6 +1,6 @@
 # MC DATA + Script Terminal Phases
 
-Current phase: Phase 7 - Retro-BBS Demo Script
+Current phase: Phase 8 - BBS Server Console
 
 Status key:
 
@@ -126,23 +126,23 @@ Exit criteria:
 
 ## Phase 7 - Retro-BBS Demo Script
 
-- [~] Add `bbs.lua`.
-- [ ] Add defaults: `bbs_id=retro-bbs`, `bbs_name=Retro-BBS`.
-- [ ] Add `/bbsserve`.
-- [ ] Add `/bbs nick`.
-- [ ] Add `/bbs nick retro-bbs`.
-- [ ] Add `/bbsbook`.
-- [ ] Add `/bbsbook dial Retro-BBS`.
-- [ ] Store server config in script data.
-- [ ] Store address book in script data.
-- [ ] Implement welcome/about screen.
-- [ ] Implement main menu.
-- [ ] Implement message board.
-- [ ] Implement who online.
-- [ ] Implement page sysop.
-- [ ] Implement break-in/sysop chat.
-- [ ] Implement hangman door.
-- [ ] Implement logoff.
+- [x] Add `bbs.lua`.
+- [x] Add defaults: `bbs_id=retro-bbs`, `bbs_name=Retro-BBS`.
+- [x] Add `/bbsserve`.
+- [x] Add `/bbs nick`.
+- [x] Add `/bbs nick retro-bbs`.
+- [x] Add `/bbsbook`.
+- [x] Add `/bbsbook dial Retro-BBS`.
+- [x] Store server config in script data.
+- [x] Store address book in script data.
+- [x] Implement welcome/about screen.
+- [x] Implement main menu.
+- [x] Implement message board.
+- [x] Implement who online.
+- [x] Implement page sysop.
+- [x] Implement break-in/sysop chat.
+- [x] Implement hangman door.
+- [x] Implement logoff.
 
 Exit criteria:
 
@@ -151,12 +151,12 @@ Exit criteria:
 
 ## Phase 8 - BBS Server Console
 
-- [ ] Add stats mode.
-- [ ] Show sessions, connections, messages, pages, and board identity.
-- [ ] Add mirror mode.
-- [ ] Mirror the last screen sent to a selected user.
-- [ ] Return to stats when mirrored user logs off.
-- [ ] Add server terminal commands for stats/mirror/chat/logoff where practical.
+- [x] Add stats mode.
+- [x] Show sessions, connections, messages, pages, and board identity.
+- [x] Add mirror mode.
+- [x] Mirror the last screen sent to a selected user.
+- [x] Return to stats when mirrored user logs off.
+- [~] Add server terminal commands for stats/mirror/chat/logoff where practical.
 
 Exit criteria:
 
