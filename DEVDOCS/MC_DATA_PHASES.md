@@ -194,6 +194,31 @@ Exit criteria:
 - No known CTCP/DCC regressions.
 - User has a testable build when requested.
 
+## Phase 11 - Retro-BBS Visual Pass
+
+Status: planned / not implemented yet.
+
+- [ ] Add colored frame row support in `assets/scripts/bbs.lua`.
+- [ ] Allow screen rows to be plain strings or `{ text=..., fg=..., bg=... }`
+      tables.
+- [ ] Keep generated compact frames compatible with existing `T`, `S`, and `R`
+      cache verbs.
+- [ ] Redesign the login screen first with JetBrains-safe box/block glyphs.
+- [ ] Redesign the main menu second, keeping it static-frame cached.
+- [ ] Keep dynamic/user-specific fields out of static cached art where practical.
+- [ ] Run focused `lua_engine` test.
+- [ ] Run full offscreen CTest.
+- [ ] Commit as one visual-polish change if tests pass.
+
+Resume notes:
+
+- No Phase 11 implementation was committed before this handoff.
+- Last completed commit before this phase was `9fd9756 feat: add BBS cache diagnostics`.
+- The next edit should start around `terminal_frame_chunks`, `frame_write`, and
+  `screen()` in `assets/scripts/bbs.lua`.
+- The current terminal frame protocol already supports color via `Afb`; the Lua
+  script just needs to emit `A` ops per row before `W`.
+
 ## Notes
 
 - Do not add new IRC connections for BBS. Use existing connected networks only.
