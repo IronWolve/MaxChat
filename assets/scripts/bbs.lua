@@ -22,6 +22,8 @@ local DEFAULT_BBS_NAME = "Retro-BBS"
 local DEFAULT_PROFILE = "ibm-vga"
 local SERVER_TERM = "server"
 local MAX_LINE = 220
+local DEMO_USER = "sir_iw"
+local DEMO_PASSWORD = "bbsiscool"
 
 local server_running = false
 local server = {
@@ -238,7 +240,31 @@ local function login_screen(api, s)
     "  SYSOP: " .. (server.sysop ~= "" and server.sysop or "AVAILABLE"),
     "  LAST CALL: " .. s.nick,
     "----------------------------------------",
-    "Enter handle, or press Enter for " .. s.nick .. "."
+    "Account required for this board.",
+    "Username:"
+  })
+end
+
+local function password_screen(api, s)
+  s.mode = "password"
+  screen(api, s, "CONNECT 57600  " .. server.name, "password> ", {
+    "========================================",
+    "        " .. server.name,
+    "----------------------------------------",
+    "Username accepted: " .. s.login_user,
+    "Password:"
+  })
+end
+
+local function login_failed(api, s)
+  s.login_user = nil
+  s.mode = "login"
+  screen(api, s, "LOGIN FAILED  " .. server.name, "login> ", {
+    "========================================",
+    "        ACCESS DENIED",
+    "----------------------------------------",
+    "Try again.",
+    "Username:"
   })
 end
 
@@ -447,12 +473,23 @@ local function handle_session_input(api, s, input)
   local low = text:lower()
 
   if s.mode == "login" then
-    if text ~= "" then
-      s.user = clean_line(text)
+    if text:lower() == DEMO_USER then
+      s.login_user = DEMO_USER
+      password_screen(api, s)
     else
-      s.user = s.nick
+      login_failed(api, s)
     end
-    menu(api, s)
+    return
+  end
+
+  if s.mode == "password" then
+    if text == DEMO_PASSWORD then
+      s.user = s.login_user or DEMO_USER
+      s.login_user = nil
+      menu(api, s)
+    else
+      login_failed(api, s)
+    end
     return
   end
 
