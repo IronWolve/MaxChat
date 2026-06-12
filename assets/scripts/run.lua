@@ -8,23 +8,11 @@
 --   !run notepad            open Notepad
 --   !run calc               open Calculator
 --   !run xdg-open .         open current folder (Linux)
---
--- The program is launched detached so it does not block the client.
-
-local is_windows = package and package.config:sub(1, 1) == "\\"
-
-local function launch(prog)
-    if is_windows then
-        os.execute('start "" ' .. prog)
-    else
-        os.execute(prog .. " &")
-    end
-end
 
 function on_command(api, command, args)
     if command:lower() ~= "run" then return false end
 
-    if not os or not os.execute then
+    if not api.launch then
         api.echo("[run] needs 'Run programs' permission — Preferences → Scripts → run")
         return true
     end
@@ -35,11 +23,11 @@ function on_command(api, command, args)
         return true
     end
 
-    local ok, err = pcall(launch, prog)
+    local ok = api.launch(prog)
     if ok then
         api.echo("Launched: " .. prog)
     else
-        api.echo("run: failed – " .. tostring(err))
+        api.echo("run: could not start " .. prog)
     end
     return true
 end

@@ -12,6 +12,7 @@
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QMetaType>
+#include <QProcess>
 #include <QTimer>
 #include <QVariant>
 
@@ -123,8 +124,20 @@ int l_timestamp(lua_State* L) {
 
 // api.data_dir()
 int l_data_dir(lua_State* L) {
-    const QByteArray v = dataDirOf(L).toUtf8();
+    const QString dir = dataDirOf(L);
+    QDir().mkpath(dir); // ensure the directory exists before scripts write to it
+    const QByteArray v = dir.toUtf8();
     lua_pushlstring(L, v.constData(), v.size());
+    return 1;
+}
+
+// api.launch(cmdline) — start a detached process; does not block.
+// Requires runPrograms permission. Returns true on success.
+int l_launch(lua_State* L) {
+    const QString cmd = QString::fromUtf8(luaL_checkstring(L, 1));
+    const QStringList parts = QProcess::splitCommand(cmd);
+    const bool ok = !parts.isEmpty() && QProcess::startDetached(parts.at(0), parts.mid(1));
+    lua_pushboolean(L, ok ? 1 : 0);
     return 1;
 }
 
@@ -592,6 +605,9 @@ static int installApi(lua_State* L, LuaEngine* engine, const QString& dataDir,
     reg("set", l_set);
     reg("timer", l_timer);
     reg("cancel_timer", l_cancel_timer);
+    if (perms.runPrograms) {
+        reg("launch", l_launch);
+    }
     if (perms.network) {
         reg("http_get", l_http_get);
     }
