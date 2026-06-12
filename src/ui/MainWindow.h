@@ -17,6 +17,7 @@
 #include "ui/SoundPlayer.h"
 #include "spell/Speller.h" // backend-neutral; OS speller works without Hunspell
 #include "upload/ImageUploader.h"
+#include "ui/ChannelListDialog.h"
 
 #include <QElapsedTimer>
 #include <QHash>
@@ -61,7 +62,6 @@ class DccManager;
 class Notifier;
 
 class BanListDialog;
-class ChannelListDialog;
 class ChatFindDialog;
 class RawLogDialog;
 class SpellTextEdit;
@@ -461,6 +461,8 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     int m_inputHistoryIndex = 0;
     bool m_haveFriendSnapshot = false;
     QTimer m_friendPollTimer;
+    QTimer m_channelDrainTimer;
+    QVector<ChannelListDialog::ChannelEntry> m_pendingChannels;
     Notifier* m_notifier = nullptr;
     QStringList m_highlightWords;
     bool m_notifyPm = true;

@@ -844,6 +844,21 @@ MainWindow::MainWindow(QWidget* parent)
             &MainWindow::handlePreviewImageFailed);
     m_friendPollTimer.setInterval(FriendPollIntervalMs);
     connect(&m_friendPollTimer, &QTimer::timeout, this, &MainWindow::pollFriends);
+    m_channelDrainTimer.setInterval(100);
+    connect(&m_channelDrainTimer, &QTimer::timeout, this, [this]() {
+        if (m_channelListDialog == nullptr || m_pendingChannels.isEmpty()) {
+            m_channelDrainTimer.stop();
+            m_pendingChannels.clear();  // drop buffered entries if dialog was closed mid-fetch
+            return;
+        }
+        constexpr int kBatchSize = 500;
+        const int take = qMin(kBatchSize, m_pendingChannels.size());
+        m_channelListDialog->addChannelsBulk(m_pendingChannels.mid(0, take));
+        m_pendingChannels.remove(0, take);
+        if (m_pendingChannels.isEmpty()) {
+            m_channelDrainTimer.stop();
+        }
+    });
     m_autoAwayTimer.setSingleShot(true);
     connect(&m_autoAwayTimer, &QTimer::timeout, this, &MainWindow::triggerAutoAway);
 
@@ -1927,6 +1942,8 @@ void maxchat::ui::MainWindow::openChannelList(bool reset) {
                 });
         connect(m_channelListDialog, &ChannelListDialog::listRequested, this, [this]() {
             if (m_channelListDialog == nullptr) { return; }
+            m_channelDrainTimer.stop();
+            m_pendingChannels.clear();
             m_channelListDialog->clearChannels();
             if (!connection().sendRaw(QStringLiteral("LIST"))) {
                 appendSystemLine(QStringLiteral("! Could not send LIST — not connected."));
@@ -1936,6 +1953,8 @@ void maxchat::ui::MainWindow::openChannelList(bool reset) {
     }
 
     if (reset) {
+        m_channelDrainTimer.stop();
+        m_pendingChannels.clear();
         m_channelListDialog->clearChannels();
     }
     m_channelListDialog->show();
@@ -3459,7 +3478,11 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
             [this, runInContext](const QString& channel, int users, const QString& topic) {
                 runInContext([&]() {
                     if (m_channelListDialog != nullptr) {
-                        m_channelListDialog->addChannel(channel, users, topic);
+                        // Buffer — drained every 100ms so the GUI stays responsive.
+                        m_pendingChannels.append({channel, users, topic});
+                        if (!m_channelDrainTimer.isActive()) {
+                            m_channelDrainTimer.start();
+                        }
                         return;
                     }
                     appendSystemLineToTarget(
@@ -3474,10 +3497,17 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
             });
     connect(irc, &maxchat::irc::IrcConnection::listEnd, this, [this, runInContext]() {
         runInContext([&]() {
+            m_channelDrainTimer.stop();
             if (m_channelListDialog != nullptr) {
+                // Flush any remaining buffered entries, then mark complete.
+                if (!m_pendingChannels.isEmpty()) {
+                    m_channelListDialog->addChannelsBulk(m_pendingChannels);
+                    m_pendingChannels.clear();
+                }
                 m_channelListDialog->setComplete(true);
                 return;
             }
+            m_pendingChannels.clear();
             appendSystemLineToTarget(QStringLiteral("server"),
                                      QStringLiteral("[list] End of /LIST."));
         });
@@ -3939,6 +3969,9 @@ void maxchat::ui::MainWindow::startConnection(const maxchat::core::NetworkConfig
     activateBufferTarget(m_currentTarget);
 
     rebuildNetworkTree();
+    // rebuildNetworkTree uses QSignalBlocker so currentItemChanged doesn't fire;
+    // sync the tab bar explicitly so the new server's tab is visually selected.
+    syncBufferTabs();
     updateChannelModeButton();
     // Replay is seeded per-buffer on first open (activateBufferTarget above), so
     // it survives buffer switches; no separate connect-time replay needed.
