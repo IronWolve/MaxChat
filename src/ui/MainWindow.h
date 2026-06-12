@@ -177,7 +177,6 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     void clearAllChats();
     void showUptime();
     void showNetInfo();
-    void showFeaturePlanned(const QString& feature, const QString& detail = {});
     void closeTarget(const QString& target);
     void exportSettings();
     void importSettings();

@@ -1504,7 +1504,9 @@ void maxchat::ui::MainWindow::buildMenus() {
             appendSystemLine(QStringLiteral("! Could not save comic caption setting."));
             return;
         }
-        showFeaturePlanned(QStringLiteral("Character Names"));
+        statusBar()->showMessage(enabled ? QStringLiteral("Character names on.")
+                                         : QStringLiteral("Character names off."));
+        refreshComic();
     });
 
     auto* helpMenu = menuBar()->addMenu(QStringLiteral("&Help"));
@@ -2672,8 +2674,8 @@ void maxchat::ui::MainWindow::seedBundledScripts(const QString& destDir) {
 
 void maxchat::ui::MainWindow::openScriptsManager() {
     if (!maxchat::scripting::LuaEngine::available()) {
-        showFeaturePlanned(QStringLiteral("Scripts"),
-                           QStringLiteral("This build was compiled without scripting support."));
+        appendSystemLine(QStringLiteral(
+            "! Scripts are unavailable: this build was compiled without scripting support."));
         return;
     }
     const QString scriptsDir =
@@ -2987,17 +2989,6 @@ void maxchat::ui::MainWindow::showNetInfo() {
     appendSystemLine(
         QStringLiteral("* %1 (%2): %3")
             .arg(m_connectionPlan.networkName, serverLabel, preferred.join(QStringLiteral(" - "))));
-}
-
-void maxchat::ui::MainWindow::showFeaturePlanned(const QString& feature, const QString& detail) {
-    const QString cleanFeature =
-        feature.trimmed().isEmpty() ? QStringLiteral("This feature") : feature.trimmed();
-    QString line = QStringLiteral("! %1 is planned for the C++ port.").arg(cleanFeature);
-    if (!detail.trimmed().isEmpty()) {
-        line += QStringLiteral(" %1").arg(detail.trimmed());
-    }
-    appendSystemLine(line);
-    statusBar()->showMessage(line.mid(2));
 }
 
 QString MainWindow::systemInfoText() const {
@@ -7162,9 +7153,8 @@ void maxchat::ui::MainWindow::openComicSettings() {
 void maxchat::ui::MainWindow::openCharacterGallery() {
     ensureComicArt();
     if (m_comicCharacterPaths.isEmpty()) {
-        showFeaturePlanned(QStringLiteral("Browse Characters"),
-                           QStringLiteral("No comic art found - set a comic art folder in "
-                                          "Comic Settings."));
+        appendSystemLine(QStringLiteral("! No comic art found - set your comic art folder in "
+                                        "Comic > Comic Settings first."));
         return;
     }
     QStringList stems = m_comicCharacterPaths.keys();

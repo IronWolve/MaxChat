@@ -1,9 +1,11 @@
 #include "spell/Speller.h"
 
-// Native Windows speller via the COM Spell Checking API (Win8+). Compiled ONLY
-// when MAXCHAT_OS_SPELL is defined (build.bat osspell) on Windows, so it can
-// never affect the default build. NOTE: written against the documented API but
-// NOT compile-tested from the Linux dev box — verify on the Windows build.
+// Native Windows speller via the COM Spell Checking API (Win8+). Compiled only
+// when MAXCHAT_OS_SPELL is defined — the DEFAULT for build.bat since 2026-06;
+// pass "noosspell" to skip. Compiles clean under MinGW; runtime selection is
+// Preferences > Spelling > Spell Engine > "Operating system" (falls back to
+// the internal engine with a chat notice when COM init or the language fails).
+// macOS backend intentionally skipped (user decision 2026-06-11).
 #if defined(MAXCHAT_OS_SPELL) && defined(_WIN32)
 
 #ifndef WIN32_LEAN_AND_MEAN
