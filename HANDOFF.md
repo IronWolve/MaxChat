@@ -2,7 +2,15 @@
 
 Date: 2026-06-09 (audit closeout 2026-06-10; UI polish 2026-06-11)
 
-## Latest Completed Slice (theme pack expansion + wallpapers, 2026-06-12)
+## Latest Completed Slice (OS nostalgia themes, 2026-06-12)
+
+5 app + 5 chat OS-styled theme pairs: **Windows 95** (battleship grey/navy),
+**Windows XP** (Luna blue + cream), **Windows 11** (light mica) + **Windows 11
+Dark**, **Aqua** (Mac OS X glossy white/blue). App themes 36 total, chat 24.
+OS chat themes use proportional fonts (fixed:false) and white message areas
+with era-accurate nick palettes. All structurally validated.
+
+## Previous Slice (theme pack expansion + wallpapers, 2026-06-12)
 
 - **6 new app themes**: Matrix, Catppuccin Mocha, One Dark, Pure Black,
   Rose Pine, Everforest (31 total).
