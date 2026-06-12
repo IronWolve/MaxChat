@@ -155,6 +155,7 @@ QString DccManager::destPath(const QString& name, qint64 size) const {
 // ---- outgoing SEND -------------------------------------------------------
 
 void DccManager::offerSend(const QString& peer, const QString& filePath) {
+    if (!enabled_) { emit status(QStringLiteral("DCC: file transfers are disabled.")); return; }
     const QFileInfo info(filePath);
     if (!info.isFile()) {
         emit status(QStringLiteral("DCC: file not found: %1").arg(filePath));
@@ -291,6 +292,7 @@ void DccManager::pumpSend(int id) {
 // ---- incoming dispatch ---------------------------------------------------
 
 void DccManager::handleIncoming(const QString& sender, const QString& args) {
+    if (!enabled_) return;
     QStringList toks = splitArgs(args);
     if (!toks.isEmpty() && toks.first().compare(QStringLiteral("DCC"), Qt::CaseInsensitive) == 0) {
         toks.removeFirst();
@@ -642,6 +644,7 @@ void DccManager::cancelTransfer(int id) {
 // ---- DCC CHAT ------------------------------------------------------------
 
 void DccManager::offerChat(const QString& peer) {
+    if (!enabled_) { emit status(QStringLiteral("DCC: file transfers are disabled.")); return; }
     const QString key = peer.trimmed().toLower();
     auto* chat = new ChatRuntime();
     chat->info.id = nextId_++;
@@ -809,6 +812,7 @@ void DccManager::wireChatSocket(const QString& key) {
 }
 
 void DccManager::sendChatLine(const QString& peer, const QString& line) {
+    if (!enabled_) return;
     ChatRuntime* chat = chats_.value(peer.trimmed().toLower());
     if (chat != nullptr && chat->socket != nullptr &&
         chat->info.state == DccChat::State::Active) {

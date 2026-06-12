@@ -132,6 +132,7 @@ class PreferencesDialog final : public QDialog {
     QCheckBox* ctcpRespondClientInfo_ = nullptr;
     QCheckBox* loggingEnabled_ = nullptr;
     QCheckBox* replayLogEnabled_ = nullptr;
+    QCheckBox* dccEnabled_ = nullptr;
     QComboBox* dccAccept_ = nullptr;
     QLineEdit* dccTrusted_ = nullptr;
     QCheckBox* dccPassive_ = nullptr;

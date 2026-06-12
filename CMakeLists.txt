@@ -630,10 +630,12 @@ target_link_libraries(dcc_manager_test
     PRIVATE
         maxchat_core
         Qt6::Network
+        Qt6::Widgets
         Qt6::Test
 )
 
 add_test(NAME dcc_manager COMMAND dcc_manager_test)
+set_tests_properties(dcc_manager PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 qt_add_executable(comic_art_test
     tests/unit/comic_art_test.cpp

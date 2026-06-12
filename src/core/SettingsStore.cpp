@@ -326,6 +326,7 @@ QVariantMap SettingsStore::defaultSettings() {
   settings.insert(QStringLiteral("ignore_invites"), false);
   settings.insert(QStringLiteral("invite_protect"), true);
   settings.insert(QStringLiteral("confirm_quit"), true);
+  settings.insert(QStringLiteral("dcc_enabled"), false);
   settings.insert(QStringLiteral("dcc_dir"), QString());
   settings.insert(QStringLiteral("dcc_accept"), QStringLiteral("ask"));
   settings.insert(QStringLiteral("dcc_trusted"), QStringList());
