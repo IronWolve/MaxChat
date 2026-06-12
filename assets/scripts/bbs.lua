@@ -377,6 +377,33 @@ local function welcome_lines(api, s)
   return L
 end
 
+local function box_div() return spaces(BOX_MARGIN) .. "╠" .. string.rep("═", BOX_IN) .. "╣" end
+
+-- Truncate by display width (codepoint count), adding an ellipsis if cut.
+local function trunc(s, w)
+  if dwidth(s) <= w then return s end
+  local out, n = {}, 0
+  for c in tostring(s):gmatch("[^\128-\191][\128-\191]*") do
+    if n >= w - 1 then break end
+    out[#out + 1] = c
+    n = n + 1
+  end
+  return table.concat(out) .. "…"
+end
+
+-- A standard framed page: centered title bar + divider + left-aligned body.
+local function framed(title, body)
+  local L = {""}
+  L[#L + 1] = box_top()
+  L[#L + 1] = box_centered(title or "")
+  L[#L + 1] = box_div()
+  for _, t in ipairs(body or {}) do
+    L[#L + 1] = box_row("  " .. trunc(t or "", BOX_IN - 3))
+  end
+  L[#L + 1] = box_bot()
+  return L
+end
+
 local function show_stats(api)
   if not server_running then return end
   local active = 0
@@ -407,85 +434,86 @@ end
 
 local function password_screen(api, s)
   s.mode = "password"
-  screen(api, s, "CONNECT 57600  " .. server.name, "password> ", {
-    "========================================",
-    "        " .. server.name,
-    "----------------------------------------",
+  screen(api, s, "CONNECT 57600  " .. server.name, "password> ", framed("LOGIN  ·  " .. server.name, {
     "Username accepted: " .. s.login_user,
-    "Password:"
-  })
+    "",
+    "Enter your password to continue.",
+  }))
 end
 
 local function login_failed(api, s)
   s.login_user = nil
   s.mode = "login"
-  screen(api, s, "LOGIN FAILED  " .. server.name, "login> ", {
-    "========================================",
-    "        ACCESS DENIED",
-    "----------------------------------------",
-    "Try again.",
-    "Username:"
-  }, "login-failed")
+  screen(api, s, "LOGIN FAILED  " .. server.name, "login> ", framed("!!  ACCESS DENIED  !!", {
+    "That login was not accepted.",
+    "",
+    "Enter your handle to try again.",
+  }), "login-failed")
 end
 
 local function menu(api, s)
   s.mode = "menu"
-  screen(api, s, "CONNECT: " .. server.name .. "  User: " .. s.user, "bbs> ", {
-    "========================================",
-    " " .. server.name,
-    " " .. server.welcome,
-    "========================================",
-    " 1  About this BBS",
-    " 2  Message board",
-    " 3  Who is online",
-    " 4  Page the sysop",
-    " 5  Hangman door",
-    " 6  Log off"
-  }, "main")
+  screen(api, s, "CONNECT: " .. server.name .. "  User: " .. s.user, "bbs> ", framed(server.name, {
+    server.welcome,
+    "",
+    "[1]  About this BBS",
+    "[2]  Message board",
+    "[3]  Who is online",
+    "[4]  Page the sysop",
+    "[5]  Hangman door",
+    "[6]  Log off",
+  }), "main")
 end
 
 local function about(api, s)
   s.mode = "about"
-  screen(api, s, "CONNECT: " .. server.name .. "  User: " .. s.user, "about> ", {
+  screen(api, s, "CONNECT: " .. server.name .. "  User: " .. s.user, "about> ", framed("About " .. server.name, {
     server.name .. " is a small MC DATA demo.",
     "Traffic uses CTCP MC DATA on your current IRC network.",
     "No secrets, passwords, or private data should be sent here yet.",
-    "Type B to return."
-  }, "about")
+    "",
+    "Press B to return to the main menu.",
+  }), "about")
 end
 
 local function show_board(api, s)
   s.mode = "board"
-  local lines = {"Message Board", "-------------"}
-  for i, msg in ipairs(board) do
-    lines[#lines + 1] = i .. ". " .. msg.from .. ": " .. msg.text
+  local body = {}
+  if #board == 0 then
+    body[#body + 1] = "No messages yet. Be the first to post."
+  else
+    for i, msg in ipairs(board) do
+      body[#body + 1] = string.format("%2d. %s: %s", i, msg.from, msg.text)
+    end
   end
-  lines[#lines + 1] = ""
-  lines[#lines + 1] = "P <message> posts. B returns to menu."
-  screen(api, s, "CONNECT: " .. server.name .. "  User: " .. s.user, "board> ", lines)
+  body[#body + 1] = ""
+  body[#body + 1] = "P <message> to post  ·  B to return"
+  screen(api, s, "CONNECT: " .. server.name .. "  User: " .. s.user, "board> ",
+    framed("Message Board", body))
 end
 
 local function show_who(api, s)
   s.mode = "who"
-  local lines = {"Who is online", "-------------"}
+  local body = {}
   local count = 0
   for _, other in pairs(sessions) do
     count = count + 1
-    lines[#lines + 1] = other.nick .. "  (" .. other.mode .. ")"
+    body[#body + 1] = string.format("%-20s (%s)", other.nick, other.mode)
   end
-  if count == 0 then lines[#lines + 1] = "Nobody. That should not happen, but here we are." end
-  lines[#lines + 1] = ""
-  lines[#lines + 1] = "Type B to return."
-  screen(api, s, "CONNECT: " .. server.name .. "  User: " .. s.user, "who> ", lines)
+  if count == 0 then body[#body + 1] = "Nobody online. That should not happen, but here we are." end
+  body[#body + 1] = ""
+  body[#body + 1] = "Press B to return."
+  screen(api, s, "CONNECT: " .. server.name .. "  User: " .. s.user, "who> ",
+    framed("Who Is Online (" .. count .. ")", body))
 end
 
 local function page_sysop(api, s)
   s.mode = "page"
-  screen(api, s, "CONNECT: " .. server.name .. "  User: " .. s.user, "page> ", {
-    "Page Sysop",
-    "----------",
-    "Type a short message for the sysop, or B to return."
-  }, "page-sysop")
+  screen(api, s, "CONNECT: " .. server.name .. "  User: " .. s.user, "page> ", framed("Page The Sysop", {
+    "Type a short message for the sysop.",
+    "",
+    "Press B to return without paging.",
+  }), "page-sysop")
 end
 
 local function hangman_word()
