@@ -810,7 +810,7 @@ function on_command(api, command, args)
     if args ~= "" then server.name = clean_line(args); save_config(api) end
     server_running = true
     server.id = DEFAULT_BBS_ID
-    api.terminal_open(SERVER_TERM, "Retro-BBS Server", "free", 100, 30)
+    api.terminal_open(SERVER_TERM, "Retro-BBS Server", "free", 80, 25)
     show_stats(api)
     return true
   end
