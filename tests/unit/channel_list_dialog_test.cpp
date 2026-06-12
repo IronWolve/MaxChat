@@ -16,7 +16,7 @@ class ChannelListDialogTest final : public QObject {
 private slots:
   void sortsByUserCountFiltersAndEmitsJoin() {
     ChannelListDialog dialog;
-    dialog.addChannel(QStringLiteral("#small"), 2, QStringLiteral("quiet"));
+    dialog.addChannel(QStringLiteral("#small"), 5, QStringLiteral("quiet"));
     dialog.addChannel(QStringLiteral("#large"), 100,
                       QStringLiteral("Linux help and chat"));
 
@@ -60,8 +60,9 @@ private slots:
     QVERIFY(table != nullptr);
     auto *minUsers = dialog.findChild<QSpinBox *>(QStringLiteral("min_users"));
     QVERIFY(minUsers != nullptr);
+    minUsers->setValue(0);  // reset to show all — tests filter behaviour, not the default
 
-    // Default: all visible
+    // min=0: all visible
     QCOMPARE(dialog.channelCount(), 3);
     int visible = 0;
     for (int i = 0; i < table->rowCount(); ++i) {

@@ -1207,7 +1207,7 @@ void maxchat::ui::MainWindow::buildMenus() {
     serverMenu->addAction(QStringLiteral("Leave Channel"), this, &MainWindow::leaveCurrentChannel);
     serverMenu->addSeparator();
     QAction* channelListAction = serverMenu->addAction(QStringLiteral("Channels..."), this,
-                                                       [this]() { openChannelList(true); });
+                                                       [this]() { openChannelList(false); });
     serverMenu->addSeparator();
     serverMenu->addAction(QStringLiteral("Quit"), qApp, &QApplication::quit);
 
@@ -1943,7 +1943,6 @@ void maxchat::ui::MainWindow::openBanList(const QString& channel) {
 void maxchat::ui::MainWindow::openChannelList(bool reset) {
     if (m_channelListDialog == nullptr) {
         m_channelListDialog = new ChannelListDialog(this);
-        m_channelListDialog->setAttribute(Qt::WA_DeleteOnClose);
         attachGeometryPersist(m_channelListDialog, m_settings, QStringLiteral("geom_channel_list"));
         connect(m_channelListDialog, &ChannelListDialog::joinRequested, this,
                 [this](const QString& channel) {

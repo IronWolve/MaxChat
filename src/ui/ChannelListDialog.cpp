@@ -75,10 +75,8 @@ ChannelListDialog::ChannelListDialog(QWidget *parent) : QDialog(parent) {
   m_minUsers = new QSpinBox(this);
   m_minUsers->setObjectName(QStringLiteral("min_users"));
   m_minUsers->setRange(0, 999999);
-  m_minUsers->setValue(0);
-  m_minUsers->setSpecialValueText(QStringLiteral("any"));
+  m_minUsers->setValue(3);
   m_minUsers->setToolTip(QStringLiteral("Hide channels with fewer than this many users"));
-  m_minUsers->setFixedWidth(70);
   topBar->addWidget(m_minUsers);
 
   layout->addLayout(topBar);
