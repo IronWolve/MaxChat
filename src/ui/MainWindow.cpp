@@ -5976,6 +5976,17 @@ QStringList MainWindow::completionCandidates(bool commandCompletion) const {
     return candidates;
 }
 
+namespace {
+// The traditional client nick palette: the readable slice of the standard
+// 16-color IRC palette (skips white/black/greys, which vanish on some bgs).
+QStringList classicIrcNickPalette() {
+    return {QStringLiteral("#009300"), QStringLiteral("#ff0000"), QStringLiteral("#7f0000"),
+            QStringLiteral("#9c009c"), QStringLiteral("#fc7f00"), QStringLiteral("#ffff00"),
+            QStringLiteral("#00fc00"), QStringLiteral("#009393"), QStringLiteral("#00ffff"),
+            QStringLiteral("#0000fc"), QStringLiteral("#ff00ff"), QStringLiteral("#00007f")};
+}
+} // namespace
+
 maxchat::core::ChatLineFormatOptions MainWindow::chatLineFormatOptions() const {
     maxchat::core::ChatLineFormatOptions options;
     options.showTimestamp = m_showTimestamps;
@@ -6010,9 +6021,16 @@ maxchat::core::ChatLineFormatOptions MainWindow::chatLineFormatOptions() const {
     if (!m_eventColor.isEmpty()) {
         options.systemColor = m_eventColor; // Fonts-page override wins
     }
-    options.monoNicks = chatTheme.monoNicks;
-    for (const QColor& color : chatTheme.nickPalette) {
-        options.nickPalette.append(color.name());
+    if (m_nickColorMode == QLatin1String("irc")) {
+        // Explicit classic-IRC choice overrides the chat theme's nick styling
+        // so chat and member list match the traditional client look.
+        options.monoNicks = false;
+        options.nickPalette = classicIrcNickPalette();
+    } else {
+        options.monoNicks = chatTheme.monoNicks;
+        for (const QColor& color : chatTheme.nickPalette) {
+            options.nickPalette.append(color.name());
+        }
     }
     for (auto it = m_nickColorOverrides.constBegin(); it != m_nickColorOverrides.constEnd();
          ++it) {
@@ -7702,11 +7720,18 @@ void maxchat::ui::MainWindow::recolorMemberList() {
     }
 
     const ChatThemeDefinition chatTheme = chatThemeById(m_currentChatTheme);
-    const bool plain = !m_coloredNicks || chatTheme.monoNicks;
+    // Mirror chatLineFormatOptions exactly — the member list and the chat view
+    // must color any given nick identically.
+    const bool ircMode = m_nickColorMode == QLatin1String("irc");
+    const bool plain = !m_coloredNicks || (chatTheme.monoNicks && !ircMode);
     QStringList palette;
-    palette.reserve(chatTheme.nickPalette.size());
-    for (const QColor& color : chatTheme.nickPalette) {
-        palette.append(color.name());
+    if (ircMode) {
+        palette = classicIrcNickPalette();
+    } else {
+        palette.reserve(chatTheme.nickPalette.size());
+        for (const QColor& color : chatTheme.nickPalette) {
+            palette.append(color.name());
+        }
     }
     const QSet<QString> awayNicks = m_awayNicksByNetwork.value(activeNetworkName());
 
@@ -8535,7 +8560,14 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
     m_separatorLine = settings.value(QStringLiteral("separator_line"), true).toBool();
     m_hideJoinPart = settings.value(QStringLiteral("hide_joinpart"), false).toBool();
     m_showFormatting = settings.value(QStringLiteral("show_formatting"), true).toBool();
-    m_coloredNicks = settings.value(QStringLiteral("colored_nicks"), true).toBool();
+    m_nickColorMode =
+        settings
+            .value(QStringLiteral("nick_color_mode"),
+                   settings.value(QStringLiteral("colored_nicks"), true).toBool()
+                       ? QStringLiteral("palette")
+                       : QStringLiteral("off"))
+            .toString();
+    m_coloredNicks = m_nickColorMode != QLatin1String("off");
     m_showMode = settings.value(QStringLiteral("show_mode"), true).toBool();
     m_pmEcho = settings.value(QStringLiteral("pm_echo"), true).toBool();
     m_indentWrap = settings.value(QStringLiteral("indent_wrap"), true).toBool();

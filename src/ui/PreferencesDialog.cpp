@@ -290,7 +290,9 @@ QVariantMap PreferencesDialog::settings() const {
     out.insert(QStringLiteral("separator_line"), separatorLine_->isChecked());
     out.insert(QStringLiteral("nick_width"), nickWidth_->value());
     out.insert(QStringLiteral("hide_joinpart"), hideJoinPart_->isChecked());
-    out.insert(QStringLiteral("colored_nicks"), coloredNicks_->isChecked());
+    out.insert(QStringLiteral("nick_color_mode"), nickColorMode_->currentData().toString());
+    out.insert(QStringLiteral("colored_nicks"),
+               nickColorMode_->currentData().toString() != QLatin1String("off"));
     out.insert(QStringLiteral("show_formatting"), showFormatting_->isChecked());
     out.insert(QStringLiteral("indent_wrap"), indentWrap_->isChecked());
     out.insert(QStringLiteral("marker_line"), markerLine_->isChecked());
@@ -492,9 +494,22 @@ void PreferencesDialog::buildAppearanceTab(QWidget* tab) {
 
     auto* nickBox = new QGroupBox(QStringLiteral("Nicknames"), tab);
     auto* nickForm = new QFormLayout(nickBox);
-    coloredNicks_ = new QCheckBox(QString(), tab);
-    coloredNicks_->setObjectName(QStringLiteral("coloredNicks"));
-    coloredNicks_->setChecked(settings_.value(QStringLiteral("colored_nicks"), true).toBool());
+    nickColorMode_ = new QComboBox(tab);
+    nickColorMode_->setObjectName(QStringLiteral("nickColorMode"));
+    nickColorMode_->addItem(QStringLiteral("Off - plain text color"), QStringLiteral("off"));
+    nickColorMode_->addItem(QStringLiteral("Theme palette"), QStringLiteral("palette"));
+    nickColorMode_->addItem(QStringLiteral("Classic IRC colors"), QStringLiteral("irc"));
+    {
+        // Legacy installs only have the colored_nicks bool.
+        const QString mode =
+            settings_
+                .value(QStringLiteral("nick_color_mode"),
+                       settings_.value(QStringLiteral("colored_nicks"), true).toBool()
+                           ? QStringLiteral("palette")
+                           : QStringLiteral("off"))
+                .toString();
+        setComboByData(nickColorMode_, mode);
+    }
     alignNicks_ = new QCheckBox(QString(), tab);
     alignNicks_->setObjectName(QStringLiteral("alignNicks"));
     alignNicks_->setChecked(settings_.value(QStringLiteral("align_nicks")).toBool());
@@ -505,7 +520,7 @@ void PreferencesDialog::buildAppearanceTab(QWidget* tab) {
     separatorLine_ = new QCheckBox(QString(), tab);
     separatorLine_->setObjectName(QStringLiteral("separatorLine"));
     separatorLine_->setChecked(settings_.value(QStringLiteral("separator_line"), true).toBool());
-    nickForm->addRow(QStringLiteral("Color nicknames"), coloredNicks_);
+    nickForm->addRow(QStringLiteral("Color nicknames"), nickColorMode_);
     nickForm->addRow(QStringLiteral("Align nick column"), alignNicks_);
     nickForm->addRow(QStringLiteral("Nick column width"), nickWidth_);
     nickForm->addRow(QStringLiteral("Nick separator line"), separatorLine_);
@@ -1164,11 +1179,48 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
     for (const AppThemeDefinition& theme : appThemes()) {
         theme_->addItem(theme.label, theme.id);
     }
-    setComboByData(
-        theme_,
-        normalizeThemeId(
-            settings_.value(QStringLiteral("theme"), QStringLiteral("synthwave")).toString()));
+    const QString activeAppId = normalizeThemeId(
+        settings_.value(QStringLiteral("theme"), QStringLiteral("synthwave")).toString());
+    setComboByData(theme_, activeAppId);
     appForm->addRow(QStringLiteral("Theme"), theme_);
+
+    // Make the active theme obvious: name it, and preview whatever is selected.
+    auto* appActive = new QLabel(
+        QStringLiteral("Active now: <b>%1</b>").arg(appThemeById(activeAppId).label), appBox);
+    appActive->setObjectName(QStringLiteral("activeAppTheme"));
+    appForm->addRow(QString(), appActive);
+    auto* appPreview = new QLabel(appBox);
+    appPreview->setObjectName(QStringLiteral("appThemePreview"));
+    appPreview->setTextFormat(Qt::RichText);
+    appForm->addRow(QStringLiteral("Preview"), appPreview);
+    const auto chip = [](const QColor& bg, const QColor& fg, const QString& text) {
+        return QStringLiteral(
+                   "<span style=\"background-color:%1;color:%2;\">&nbsp;&nbsp;%3&nbsp;&nbsp;"
+                   "</span>")
+            .arg(bg.name(), fg.name(), text);
+    };
+    const auto updateAppPreview = [this, appPreview, chip]() {
+        const AppThemeDefinition def = appThemeById(theme_->currentData().toString());
+        if (def.id == systemThemeId() || !def.bg.isValid()) {
+            appPreview->setText(QStringLiteral("<i>native system look - no colors</i>"));
+            return;
+        }
+        const QColor chatBg = def.chatBg.isValid() ? def.chatBg : def.bg;
+        const QColor chatFg = def.chatFg.isValid() ? def.chatFg : def.text;
+        appPreview->setText(chip(def.bg, def.text, QStringLiteral("window")) +
+                            QStringLiteral("&nbsp;") +
+                            chip(def.panel, def.text, QStringLiteral("panel")) +
+                            QStringLiteral("&nbsp;") +
+                            chip(def.on, QColor(def.onText), QStringLiteral("selected")) +
+                            QStringLiteral("&nbsp;") +
+                            chip(def.bg, def.accent, QStringLiteral("accent")) +
+                            QStringLiteral("&nbsp;") +
+                            chip(chatBg, chatFg, QStringLiteral("chat text")));
+    };
+    connect(theme_, &QComboBox::currentIndexChanged, this,
+            [updateAppPreview](int) { updateAppPreview(); });
+    updateAppPreview();
+
     auto* appButtons = new QHBoxLayout();
     auto* appDefault = new QPushButton(QStringLiteral("Default"), appBox);
     appDefault->setObjectName(QStringLiteral("themeDefault"));
@@ -1178,8 +1230,18 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
     appButtons->addWidget(appOff);
     appButtons->addStretch(1);
     appForm->addRow(QString(), appButtons);
+    auto* appEditRow = new QHBoxLayout();
     auto* appCustomize = new QPushButton(QStringLiteral("Customize..."), appBox);
     appCustomize->setObjectName(QStringLiteral("customizeAppTheme"));
+    appCustomize->setToolTip(
+        QStringLiteral("Edit a copy of the selected theme (saved as a user theme)"));
+    auto* appDelete = new QPushButton(QStringLiteral("Delete"), appBox);
+    appDelete->setObjectName(QStringLiteral("deleteAppTheme"));
+    appDelete->setToolTip(QStringLiteral("Delete the selected user theme (built-ins can't be "
+                                         "deleted)"));
+    appEditRow->addWidget(appCustomize);
+    appEditRow->addWidget(appDelete);
+    appEditRow->addStretch(1);
     connect(appCustomize, &QPushButton::clicked, this, [this]() {
         ThemeEditorDialog editor(ThemeEditorDialog::Scope::App, theme_->currentData().toString(),
                                  this);
@@ -1187,7 +1249,31 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
             refillThemeCombo(theme_, false, editor.resultId());
         }
     });
-    appForm->addRow(QString(), appCustomize);
+    const auto syncAppDelete = [this, appDelete]() {
+        appDelete->setEnabled(isUserThemeId(theme_->currentData().toString()));
+    };
+    connect(theme_, &QComboBox::currentIndexChanged, this,
+            [syncAppDelete](int) { syncAppDelete(); });
+    syncAppDelete();
+    connect(appDelete, &QPushButton::clicked, this, [this]() {
+        const QString id = theme_->currentData().toString();
+        if (!isUserThemeId(id)) {
+            return;
+        }
+        const QString label = theme_->currentText();
+        if (QMessageBox::question(this, QStringLiteral("Delete Theme"),
+                                  QStringLiteral("Delete the user theme \"%1\"?").arg(label)) !=
+            QMessageBox::Yes) {
+            return;
+        }
+        if (deleteUserAppTheme(id)) {
+            refillThemeCombo(theme_, false, defaultThemeId());
+        } else {
+            QMessageBox::warning(this, QStringLiteral("Delete Theme"),
+                                 QStringLiteral("Could not delete the theme file."));
+        }
+    });
+    appForm->addRow(QString(), appEditRow);
     root->addWidget(appBox);
 
     auto* chatBox = new QGroupBox(QStringLiteral("Chat area - message view + input"), tab);
@@ -1197,13 +1283,46 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
     for (const ChatThemeDefinition& theme : chatThemes()) {
         chatTheme_->addItem(theme.label, theme.id);
     }
-    setComboByData(
-        chatTheme_,
-        normalizeChatThemeId(
-            settings_.value(QStringLiteral("chat_theme"), QStringLiteral("follow")).toString()));
+    const QString activeChatId = normalizeChatThemeId(
+        settings_.value(QStringLiteral("chat_theme"), QStringLiteral("follow")).toString());
+    setComboByData(chatTheme_, activeChatId);
     chatForm->addRow(QStringLiteral("Theme"), chatTheme_);
+    auto* chatActive = new QLabel(
+        QStringLiteral("Active now: <b>%1</b>").arg(chatThemeById(activeChatId).label), chatBox);
+    chatActive->setObjectName(QStringLiteral("activeChatTheme"));
+    chatForm->addRow(QString(), chatActive);
+    auto* chatPreview = new QLabel(chatBox);
+    chatPreview->setObjectName(QStringLiteral("chatThemePreview"));
+    chatPreview->setTextFormat(Qt::RichText);
+    chatForm->addRow(QStringLiteral("Preview"), chatPreview);
+    const auto updateChatPreview = [this, chatPreview, chip]() {
+        const ChatThemeDefinition def = chatThemeById(chatTheme_->currentData().toString());
+        if (def.id == QLatin1String("follow") || !def.bg.isValid()) {
+            chatPreview->setText(QStringLiteral("<i>follows the app theme's chat colors</i>"));
+            return;
+        }
+        const QColor ts = def.timestamp.isValid() ? def.timestamp : QColor(0x8a, 0x8a, 0x8a);
+        const QColor sys = def.system.isValid() ? def.system : def.fg;
+        chatPreview->setText(chip(def.bg, def.fg, QStringLiteral("&lt;nick&gt; message")) +
+                             QStringLiteral("&nbsp;") +
+                             chip(def.bg, ts, QStringLiteral("12:00")) +
+                             QStringLiteral("&nbsp;") +
+                             chip(def.bg, sys, QStringLiteral("* joined")));
+    };
+    connect(chatTheme_, &QComboBox::currentIndexChanged, this,
+            [updateChatPreview](int) { updateChatPreview(); });
+    updateChatPreview();
+
+    auto* chatEditRow = new QHBoxLayout();
     auto* chatCustomize = new QPushButton(QStringLiteral("Customize..."), chatBox);
     chatCustomize->setObjectName(QStringLiteral("customizeChatTheme"));
+    auto* chatDelete = new QPushButton(QStringLiteral("Delete"), chatBox);
+    chatDelete->setObjectName(QStringLiteral("deleteChatTheme"));
+    chatDelete->setToolTip(QStringLiteral("Delete the selected user theme (built-ins can't be "
+                                          "deleted)"));
+    chatEditRow->addWidget(chatCustomize);
+    chatEditRow->addWidget(chatDelete);
+    chatEditRow->addStretch(1);
     connect(chatCustomize, &QPushButton::clicked, this, [this]() {
         ThemeEditorDialog editor(ThemeEditorDialog::Scope::Chat,
                                  chatTheme_->currentData().toString(), this);
@@ -1211,7 +1330,30 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
             refillThemeCombo(chatTheme_, true, editor.resultId());
         }
     });
-    chatForm->addRow(QString(), chatCustomize);
+    const auto syncChatDelete = [this, chatDelete]() {
+        chatDelete->setEnabled(isUserThemeId(chatTheme_->currentData().toString()));
+    };
+    connect(chatTheme_, &QComboBox::currentIndexChanged, this,
+            [syncChatDelete](int) { syncChatDelete(); });
+    syncChatDelete();
+    connect(chatDelete, &QPushButton::clicked, this, [this]() {
+        const QString id = chatTheme_->currentData().toString();
+        if (!isUserThemeId(id)) {
+            return;
+        }
+        if (QMessageBox::question(this, QStringLiteral("Delete Theme"),
+                                  QStringLiteral("Delete the user chat theme \"%1\"?")
+                                      .arg(chatTheme_->currentText())) != QMessageBox::Yes) {
+            return;
+        }
+        if (deleteUserChatTheme(id)) {
+            refillThemeCombo(chatTheme_, true, QStringLiteral("follow"));
+        } else {
+            QMessageBox::warning(this, QStringLiteral("Delete Theme"),
+                                 QStringLiteral("Could not delete the theme."));
+        }
+    });
+    chatForm->addRow(QString(), chatEditRow);
     root->addWidget(chatBox);
 
     auto* wallpaperBox = new QGroupBox(QStringLiteral("Wallpaper"), tab);

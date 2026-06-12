@@ -295,6 +295,7 @@ QVariantMap SettingsStore::defaultSettings() {
   settings.insert(QStringLiteral("timestamp_format"),
                   QStringLiteral("%I:%M %p"));
   settings.insert(QStringLiteral("colored_nicks"), true);
+  settings.insert(QStringLiteral("nick_color_mode"), QStringLiteral("palette"));
   settings.insert(QStringLiteral("show_formatting"), true);
   settings.insert(QStringLiteral("hide_joinpart"), false);
   settings.insert(QStringLiteral("chat_font_family"),

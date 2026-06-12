@@ -67,7 +67,7 @@ class PreferencesDialogTest final : public QObject {
         auto* buttonBarVisible = dialog.findChild<QCheckBox*>(QStringLiteral("buttonBarVisible"));
         auto* buttonsAsTabs = dialog.findChild<QCheckBox*>(QStringLiteral("buttonsAsTabs"));
         auto* connectOnStart = dialog.findChild<QCheckBox*>(QStringLiteral("connectOnStart"));
-        auto* coloredNicks = dialog.findChild<QCheckBox*>(QStringLiteral("coloredNicks"));
+        auto* nickColorMode = dialog.findChild<QComboBox*>(QStringLiteral("nickColorMode"));
         auto* showFormatting = dialog.findChild<QCheckBox*>(QStringLiteral("showFormatting"));
         auto* logging = dialog.findChild<QCheckBox*>(QStringLiteral("loggingEnabled"));
         auto* replay = dialog.findChild<QCheckBox*>(QStringLiteral("replayLogEnabled"));
@@ -95,7 +95,7 @@ class PreferencesDialogTest final : public QObject {
         QVERIFY(buttonBarVisible != nullptr);
         QVERIFY(buttonsAsTabs != nullptr);
         QVERIFY(connectOnStart != nullptr);
-        QVERIFY(coloredNicks != nullptr);
+        QVERIFY(nickColorMode != nullptr);
         QVERIFY(showFormatting != nullptr);
         QVERIFY(logging != nullptr);
         QVERIFY(replay != nullptr);
@@ -120,7 +120,7 @@ class PreferencesDialogTest final : public QObject {
         buttonBarVisible->setChecked(false);
         buttonsAsTabs->setChecked(true);
         connectOnStart->setChecked(true);
-        coloredNicks->setChecked(false);
+        nickColorMode->setCurrentIndex(nickColorMode->findData(QStringLiteral("off")));
         showFormatting->setChecked(false);
         logging->setChecked(false);
         replay->setChecked(false);
@@ -149,6 +149,7 @@ class PreferencesDialogTest final : public QObject {
         QCOMPARE(values.value(QStringLiteral("buffer_tabs")).toBool(), true);
         QCOMPARE(values.value(QStringLiteral("connect_on_start")).toBool(), true);
         QCOMPARE(values.value(QStringLiteral("colored_nicks")).toBool(), false);
+        QCOMPARE(values.value(QStringLiteral("nick_color_mode")).toString(), QStringLiteral("off"));
         QCOMPARE(values.value(QStringLiteral("show_formatting")).toBool(), false);
         QCOMPARE(values.value(QStringLiteral("logging")).toBool(), false);
         QCOMPARE(values.value(QStringLiteral("replay_log")).toBool(), false);
