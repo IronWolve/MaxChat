@@ -4,11 +4,13 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QDialogButtonBox>
+#include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QSet>
+#include <QSpinBox>
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QVBoxLayout>
@@ -47,15 +49,41 @@ QString rowText(const QTableWidget *table, int row) {
 
 ChannelListDialog::ChannelListDialog(QWidget *parent) : QDialog(parent) {
   setWindowTitle(QStringLiteral("Channel List"));
-  resize(820, 520);
+  resize(820, 560);
 
   auto *layout = new QVBoxLayout(this);
 
+  // ── Top bar: Get List | filter | Min users ─────────────────────────────
+  auto *topBar = new QHBoxLayout();
+
+  m_getListButton = new QPushButton(QStringLiteral("Get List"), this);
+  m_getListButton->setObjectName(QStringLiteral("get_list_button"));
+  m_getListButton->setToolTip(QStringLiteral("Fetch channel list from the server (/LIST)"));
+  topBar->addWidget(m_getListButton);
+
+  topBar->addSpacing(8);
+
   m_filterEdit = new QLineEdit(this);
   m_filterEdit->setObjectName(QStringLiteral("channel_filter"));
-  m_filterEdit->setPlaceholderText(QStringLiteral("Filter channels or topics"));
-  layout->addWidget(m_filterEdit);
+  m_filterEdit->setPlaceholderText(QStringLiteral("Search channels or topics"));
+  m_filterEdit->setClearButtonEnabled(true);
+  topBar->addWidget(m_filterEdit, 1);
 
+  topBar->addSpacing(8);
+  topBar->addWidget(new QLabel(QStringLiteral("Min users:"), this));
+
+  m_minUsers = new QSpinBox(this);
+  m_minUsers->setObjectName(QStringLiteral("min_users"));
+  m_minUsers->setRange(0, 999999);
+  m_minUsers->setValue(0);
+  m_minUsers->setSpecialValueText(QStringLiteral("any"));
+  m_minUsers->setToolTip(QStringLiteral("Hide channels with fewer than this many users"));
+  m_minUsers->setFixedWidth(70);
+  topBar->addWidget(m_minUsers);
+
+  layout->addLayout(topBar);
+
+  // ── Table ───────────────────────────────────────────────────────────────
   m_table = new QTableWidget(this);
   m_table->setObjectName(QStringLiteral("channel_table"));
   m_table->setColumnCount(3);
@@ -77,7 +105,8 @@ ChannelListDialog::ChannelListDialog(QWidget *parent) : QDialog(parent) {
   m_table->verticalHeader()->setVisible(false);
   layout->addWidget(m_table, 1);
 
-  m_statusLabel = new QLabel(QStringLiteral("0 channels"), this);
+  // ── Status + buttons ───────────────────────────────────────────────────
+  m_statusLabel = new QLabel(QStringLiteral("No channels loaded — click Get List"), this);
   layout->addWidget(m_statusLabel);
 
   auto *buttons = new QDialogButtonBox(this);
@@ -87,12 +116,18 @@ ChannelListDialog::ChannelListDialog(QWidget *parent) : QDialog(parent) {
   QPushButton *copyButton =
       buttons->addButton(QStringLiteral("Copy"), QDialogButtonBox::ActionRole);
   copyButton->setObjectName(QStringLiteral("copy_button"));
+  copyButton->setToolTip(
+      QStringLiteral("Copy selected rows to clipboard (all visible rows if none selected)"));
   QPushButton *closeButton =
       buttons->addButton(QStringLiteral("Close"), QDialogButtonBox::RejectRole);
   closeButton->setObjectName(QStringLiteral("close_button"));
   layout->addWidget(buttons);
 
+  connect(m_getListButton, &QPushButton::clicked, this,
+          &ChannelListDialog::listRequested);
   connect(m_filterEdit, &QLineEdit::textChanged, this,
+          &ChannelListDialog::applyFilter);
+  connect(m_minUsers, &QSpinBox::valueChanged, this,
           &ChannelListDialog::applyFilter);
   connect(m_table, &QTableWidget::itemSelectionChanged, this,
           &ChannelListDialog::updateActions);
@@ -118,6 +153,7 @@ ChannelListDialog::ChannelListDialog(QWidget *parent) : QDialog(parent) {
 
 void ChannelListDialog::clearChannels() {
   m_complete = false;
+  m_fetching = true;
   m_table->setSortingEnabled(false);
   m_table->setRowCount(0);
   m_table->setSortingEnabled(true);
@@ -167,6 +203,14 @@ void ChannelListDialog::addChannel(const QString &channel, int users,
 
 void ChannelListDialog::setComplete(bool complete) {
   m_complete = complete;
+  m_fetching = !complete;
+  m_getListButton->setEnabled(true);
+  updateStatus();
+}
+
+void ChannelListDialog::setFetching(bool fetching) {
+  m_fetching = fetching;
+  m_getListButton->setEnabled(!fetching);
   updateStatus();
 }
 
@@ -195,17 +239,21 @@ QString ChannelListDialog::selectedChannel() const {
 
 void ChannelListDialog::applyFilter() {
   const QString filter = m_filterEdit->text().trimmed();
+  const int minUsers = m_minUsers->value();
   int visibleCount = 0;
   for (int row = 0; row < m_table->rowCount(); ++row) {
     const QTableWidgetItem *channel = m_table->item(row, ChannelColumn);
+    const QTableWidgetItem *usersItem = m_table->item(row, UsersColumn);
     const QTableWidgetItem *topic = m_table->item(row, TopicColumn);
-    const bool matches =
+    const int users = usersItem == nullptr ? 0 : usersItem->data(Qt::UserRole).toInt();
+    const bool textMatch =
         filter.isEmpty() ||
         (channel != nullptr &&
          channel->text().contains(filter, Qt::CaseInsensitive)) ||
         (topic != nullptr && topic->text().contains(filter, Qt::CaseInsensitive));
-    m_table->setRowHidden(row, !matches);
-    if (matches) {
+    const bool userMatch = (users >= minUsers);
+    m_table->setRowHidden(row, !textMatch || !userMatch);
+    if (textMatch && userMatch) {
       ++visibleCount;
     }
   }
@@ -244,6 +292,16 @@ void ChannelListDialog::updateActions() {
 }
 
 void ChannelListDialog::updateStatus() {
+  if (m_table->rowCount() == 0) {
+    if (m_fetching) {
+      m_statusLabel->setText(QStringLiteral("Loading channel list..."));
+    } else {
+      m_statusLabel->setText(
+          QStringLiteral("No channels loaded — click Get List"));
+    }
+    return;
+  }
+
   int visibleCount = 0;
   for (int row = 0; row < m_table->rowCount(); ++row) {
     if (!m_table->isRowHidden(row)) {
@@ -251,11 +309,12 @@ void ChannelListDialog::updateStatus() {
     }
   }
 
-  const QString state = m_complete ? QStringLiteral("loaded")
-                                   : QStringLiteral("loading");
+  const QString state = m_fetching    ? QStringLiteral("loading")
+                        : m_complete  ? QStringLiteral("loaded")
+                                      : QStringLiteral("partial");
   if (visibleCount == m_table->rowCount()) {
     m_statusLabel->setText(
-        QStringLiteral("%1 channels %2").arg(m_table->rowCount()).arg(state));
+        QStringLiteral("%1 channels, %2").arg(m_table->rowCount()).arg(state));
   } else {
     m_statusLabel->setText(
         QStringLiteral("%1 of %2 channels shown, %3")

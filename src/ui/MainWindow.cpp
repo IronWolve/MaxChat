@@ -1925,6 +1925,14 @@ void maxchat::ui::MainWindow::openChannelList(bool reset) {
                 [this](const QString& channel) {
                     sendCommandOrMessage(QStringLiteral("/join %1").arg(channel));
                 });
+        connect(m_channelListDialog, &ChannelListDialog::listRequested, this, [this]() {
+            if (m_channelListDialog == nullptr) { return; }
+            m_channelListDialog->clearChannels();
+            if (!connection().sendRaw(QStringLiteral("LIST"))) {
+                appendSystemLine(QStringLiteral("! Could not send LIST — not connected."));
+                m_channelListDialog->setComplete(true);
+            }
+        });
     }
 
     if (reset) {
