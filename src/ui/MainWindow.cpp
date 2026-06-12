@@ -3439,7 +3439,7 @@ void maxchat::ui::MainWindow::closeTarget(const QString& target) {
     // Free the buffer's stored lines and every per-buffer key — without this a
     // long session leaks one full scrollback per channel/PM ever opened, and a
     // REJOINED channel would inherit a stale unread-marker position.
-    m_chatBuffers.removeBuffer(bufferIdForTarget(cleanTarget));
+    (void)m_chatBuffers.removeBuffer(bufferIdForTarget(cleanTarget));
     {
         const QString key = activeNetworkName() + QChar(0x1f) + cleanTarget;
         m_bufferMarkerCount.remove(key);
@@ -4873,7 +4873,7 @@ void maxchat::ui::MainWindow::closeNetwork(const QString& network) {
         m_bufferMarkerCount.remove(key);
         m_replayedBuffers.remove(key);
         m_comicEnabledBuffers.remove(key);
-        m_chatBuffers.removeBuffer(id);
+        (void)m_chatBuffers.removeBuffer(id);
     }
 
     // Drop the per-network bookkeeping (keep the manual-disconnect tombstone:
