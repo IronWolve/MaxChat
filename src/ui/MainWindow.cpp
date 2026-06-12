@@ -7025,6 +7025,20 @@ void maxchat::ui::MainWindow::appendCenteredDivider(const QString& text, const Q
     blockFormat.setAlignment(Qt::AlignHCenter);
     blockFormat.setTopMargin(8);
     blockFormat.setBottomMargin(6);
+    // With aligned nicks, content lives right of the nick column / separator
+    // bar. Centre the divider within THAT area — a full-width divider crosses
+    // the bar and visually collides with the nick column.
+    if (m_alignNicks) {
+        const maxchat::core::FormattedChatLine column =
+            maxchat::core::formatChatLine(QString(), chatLineFormatOptions());
+        if (!column.prefixPlain.isEmpty()) {
+            const int indent =
+                QFontMetrics(m_chatView->font()).horizontalAdvance(column.prefixPlain);
+            if (indent > 0) {
+                blockFormat.setLeftMargin(indent);
+            }
+        }
+    }
     if (!m_chatView->document()->isEmpty()) {
         cursor.insertBlock(blockFormat);
     } else {
@@ -7615,6 +7629,25 @@ void maxchat::ui::MainWindow::refreshComic() {
             msg.nick = src.mid(2, sp - 2);
             msg.text = maxchat::irc::stripFormatting(src.mid(sp + 1)).trimmed();
             msg.action = true;
+            // Replayed log lines lose the systemLine flag, so join/part/quit
+            // events come back looking like /me actions — filter them by verb
+            // (live events never get here; they keep systemLine = true).
+            static const QStringList kEventVerbs = {
+                QStringLiteral("joined "),         QStringLiteral("left "),
+                QStringLiteral("quit"),            QStringLiteral("was kicked from "),
+                QStringLiteral("is now known as "), QStringLiteral("sets mode "),
+                QStringLiteral("changed modes for "), QStringLiteral("set the topic"),
+                QStringLiteral("changed the topic")};
+            bool isEvent = false;
+            for (const QString& verb : kEventVerbs) {
+                if (msg.text.startsWith(verb)) {
+                    isEvent = true;
+                    break;
+                }
+            }
+            if (isEvent) {
+                continue;
+            }
         } else {
             continue;
         }
