@@ -558,6 +558,14 @@ class LuaEngineTest final : public QObject {
             }
             return false;
         };
+        const auto containsTerminalPrefix = [&host](const QString& prefix) {
+            for (const QString& line : host.terminals) {
+                if (line.startsWith(prefix)) {
+                    return true;
+                }
+            }
+            return false;
+        };
 
         QVERIFY(engine.dispatch(QStringLiteral("on_mc_data"), QStringLiteral("synIRC"),
                                 {QStringLiteral("synIRC"), QStringLiteral("bob"),
@@ -585,6 +593,17 @@ class LuaEngineTest final : public QObject {
                                  QStringLiteral("alice"), QStringLiteral("bbs"),
                                  QStringLiteral("INPUT"), QStringLiteral("B"), false}));
         QVERIFY(containsMcDataPrefix(QStringLiteral("synIRC|alice|bbs|R|main ")));
+        QVERIFY(engine.dispatch(QStringLiteral("on_command"), QStringLiteral("synIRC"),
+                                {QStringLiteral("bbscache"), QString()}));
+        QVERIFY(!host.echoes.isEmpty());
+        QVERIFY(host.echoes.last().contains(QStringLiteral("fallback T=")));
+        QVERIFY(engine.dispatch(QStringLiteral("on_command"), QStringLiteral("synIRC"),
+                                {QStringLiteral("bbscache"), QStringLiteral("clear")}));
+        QVERIFY(host.echoes.contains(QStringLiteral("[bbscache] cleared local static frame cache")));
+        QVERIFY(engine.dispatch(QStringLiteral("on_command"), QStringLiteral("synIRC"),
+                                {QStringLiteral("bbscache"), QString()}));
+        QVERIFY(host.echoes.contains(QStringLiteral("[bbscache] local static frames=0")));
+        QVERIFY(containsTerminalPrefix(QStringLiteral("write|bbs|server|Cache: static sent=")));
 #else
         QSKIP("example scripts dir not defined");
 #endif
