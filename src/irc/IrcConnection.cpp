@@ -15,15 +15,27 @@ namespace {
 // An IRCv3 line is the 512-byte message plus up to ~8KB of message tags
 // (server-time, account-tag, …), so the incoming cap must be far larger than
 // the 512-byte *send* cap. Matches the Python client (8192 line / 65536 buffer).
-constexpr qsizetype MaxIncomingLineBytes = 8192;
+// IRCv3 allows 8191 bytes of tags plus the 512-byte message — tag-heavy
+// servers legitimately exceed the old 8 KB cap.
+constexpr qsizetype MaxIncomingLineBytes = 10240;
 constexpr qsizetype MaxPendingBytes = 65536;
 // Process at most this many lines per event-loop turn; defer the rest so a flood
 // or netsplit burst can't freeze the UI (Python drains 100 lines per tick).
 constexpr int MaxLinesPerTick = 100;
+// Unconditional ceiling for buffered-but-unprocessed bytes: a server flooding
+// complete lines faster than the throttled drain must not grow memory forever.
+constexpr qsizetype MaxBacklogBytes = 4 * 1024 * 1024;
+constexpr int IdleProbeAfterMs = 90000; // silence before we PING
+constexpr int IdleAbortAfterMs = 30000; // silence after the PING before abort
 
 } // namespace
 
 IrcConnection::IrcConnection(QObject *parent) : QObject(parent) {
+  idleTimer_.setSingleShot(true);
+  idleProbeTimer_.setSingleShot(true);
+  connect(&idleTimer_, &QTimer::timeout, this, &IrcConnection::onIdleTimeout);
+  connect(&idleProbeTimer_, &QTimer::timeout, this,
+          &IrcConnection::onIdleProbeTimeout);
   connect(&session_, &IrcSession::connected, this, &IrcConnection::connected);
   connect(&session_, &IrcSession::registered, this, [this]() {
     registrationTimer_.stop();
@@ -225,6 +237,8 @@ bool IrcConnection::measureLag() { return session_.measureLag(); }
 void IrcConnection::retireSocket() {
   connectTimer_.stop();
   registrationTimer_.stop();
+  idleTimer_.stop();
+  idleProbeTimer_.stop();
   session_.setConnected(false);
   socketReady_ = false;
   buffer_.clear();
@@ -248,6 +262,7 @@ void IrcConnection::onSocketConnected(QSslSocket *socket) {
   socketReady_ = true;
   session_.setConnected(true);
   session_.onConnected();
+  idleTimer_.start(IdleProbeAfterMs);
   if (!session_.isRegistered() && activeRegistrationTimeoutMs_ > 0) {
     registrationTimer_.start(activeRegistrationTimeoutMs_);
   }
@@ -257,7 +272,19 @@ void IrcConnection::onReadyRead(QSslSocket *socket) {
   if (socket != socket_) {
     return;
   }
+  // Any data at all feeds the read-idle watchdog.
+  idleProbeTimer_.stop();
+  idleTimer_.start(IdleProbeAfterMs);
   buffer_.append(socket->readAll());
+  if (buffer_.size() > MaxBacklogBytes) {
+    // Complete lines arriving faster than the throttled drain forever =
+    // protocol flood; cap memory and drop the connection.
+    buffer_.clear();
+    emit errorOccurred(
+        QStringLiteral("IRC server is flooding; disconnecting"));
+    socket->abort();
+    return;
+  }
   queueIncomingLines(socket);
   // Only abort on a single oversized *incomplete* line — not on a backlog of
   // complete lines still being drained in throttled batches (see MaxLinesPerTick).
@@ -267,6 +294,25 @@ void IrcConnection::onReadyRead(QSslSocket *socket) {
         QStringLiteral("IRC server sent an oversized line; disconnecting"));
     socket->abort();
   }
+}
+
+void IrcConnection::onIdleTimeout() {
+  if (socket_ == nullptr || !socketReady_) {
+    return;
+  }
+  // Quiet link — ask for proof of life. Any inbound data cancels the probe.
+  session_.sendRaw(QStringLiteral("PING :maxchat-keepalive"));
+  idleProbeTimer_.start(IdleAbortAfterMs);
+}
+
+void IrcConnection::onIdleProbeTimeout() {
+  if (socket_ == nullptr || !socketReady_) {
+    return;
+  }
+  emitTimedFailure(
+      QStringLiteral("no data from server for %1 seconds")
+          .arg((IdleProbeAfterMs + IdleAbortAfterMs) / 1000),
+      QStringLiteral("connection timed out"));
 }
 
 void IrcConnection::onSocketDisconnected(QSslSocket *socket) {
@@ -337,11 +383,23 @@ void IrcConnection::onRegistrationTimeout() {
 }
 
 void IrcConnection::queueIncomingLines(QSslSocket *socket) {
+  // Re-entrancy guard: handleLine can spin a nested event loop (e.g. a script
+  // doing a synchronous fetch), during which readyRead fires again. A nested
+  // drain would invalidate the outer pass's read position — let the nested
+  // call just append bytes; this pass (or the re-arm below) picks them up.
+  if (draining_) {
+    return;
+  }
+  draining_ = true;
   int handled = 0;
-  while (socket == socket_ && buffer_.contains("\r\n")) {
-    const int lineEnd = buffer_.indexOf("\r\n");
-    const QByteArray chunk = buffer_.left(lineEnd);
-    buffer_.remove(0, lineEnd + 2);
+  qsizetype pos = 0; // consume via an index; one remove() at the end is O(n)
+  while (socket == socket_ && handled < MaxLinesPerTick) {
+    const qsizetype lineEnd = buffer_.indexOf("\r\n", pos);
+    if (lineEnd < 0) {
+      break;
+    }
+    const QByteArray chunk = buffer_.mid(pos, lineEnd - pos);
+    pos = lineEnd + 2;
     if (chunk.isEmpty()) {
       continue;
     }
@@ -349,11 +407,13 @@ void IrcConnection::queueIncomingLines(QSslSocket *socket) {
       emit systemText(QStringLiteral("Dropped oversized IRC line from server"));
       continue;
     }
+    ++handled;
     session_.handleLine(QString::fromUtf8(chunk));
-    if (++handled >= MaxLinesPerTick) {
-      break; // yield; finish the remaining lines on the next event-loop turn
-    }
   }
+  if (socket == socket_ && pos > 0) {
+    buffer_.remove(0, pos);
+  }
+  draining_ = false;
   // More complete lines still buffered → keep draining after yielding so a big
   // burst doesn't block the UI thread.
   if (socket == socket_ && buffer_.contains("\r\n")) {
@@ -377,14 +437,10 @@ void IrcConnection::emitTerminalDisconnect(const QString &reason) {
 void IrcConnection::emitTimedFailure(const QString &errorMessage,
                                      const QString &disconnectReason) {
   emit errorOccurred(errorMessage);
-  connectTimer_.stop();
-  registrationTimer_.stop();
   terminalDisconnectEmitted_ = true;
-  if (socket_ != nullptr) {
-    socket_->abort();
-  }
-  session_.setConnected(false);
-  socketReady_ = false;
+  // Fully retire the socket (stop timers, disconnect signals, abort, delete) —
+  // leaving an aborted socket in socket_ keeps dead-object hazards alive.
+  retireSocket();
   emit disconnected(disconnectReason);
 }
 

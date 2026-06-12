@@ -57,7 +57,11 @@ QString ctcpSummary(const QString &kind, const QString &from,
 
 } // namespace
 
-IrcSession::IrcSession(QObject *parent) : QObject(parent) {}
+IrcSession::IrcSession(QObject *parent) : QObject(parent) {
+  sendClock_.start();
+  sendTimer_.setSingleShot(true);
+  connect(&sendTimer_, &QTimer::timeout, this, [this]() { pumpSendQueue(); });
+}
 
 void IrcSession::configureRegistration(const Registration &registration) {
   nick_ = registration.nick;
@@ -76,13 +80,22 @@ void IrcSession::configureRegistration(const Registration &registration) {
   allowInsecureAuth_ = registration.allowInsecureAuth;
   insecureAuthWarned_ = false;
   authed_ = false;
+  capEnded_ = false;
   autojoin_ = registration.autojoin;
   serverCaps_.clear();
   isupport_.clear();
   lagToken_.clear();
 }
 
-void IrcSession::setConnected(bool connected) { socketConnected_ = connected; }
+void IrcSession::setConnected(bool connected) {
+  socketConnected_ = connected;
+  if (!connected) {
+    // A dead socket invalidates everything queued for it.
+    sendQueue_.clear();
+    sendTimer_.stop();
+    sendPenaltyUntilMs_ = 0;
+  }
+}
 
 void IrcSession::setWriter(Writer writer) { writer_ = std::move(writer); }
 
@@ -129,21 +142,118 @@ bool IrcSession::sendRaw(const QString &line) {
   clean.remove(QLatin1Char('\r'));
   clean.remove(QLatin1Char('\n'));
 
-  const QByteArray payload = (clean + QStringLiteral("\r\n")).toUtf8();
+  QByteArray payload = (clean + QStringLiteral("\r\n")).toUtf8();
   if (payload.size() > IrcMaxWireBytes) {
+    // Overlong PRIVMSG/NOTICE: split the text at UTF-8-safe boundaries and
+    // send several lines (rejecting the whole message loses user input; CTCP
+    // payloads are excluded — splitting would break the \x01 framing).
+    static const QRegularExpression kSplittable(
+        QStringLiteral("^((?:PRIVMSG|NOTICE) \\S+ :)(.*)$"));
+    const QRegularExpressionMatch match = kSplittable.match(clean);
+    if (match.hasMatch() && !match.captured(2).startsWith(QChar(0x01))) {
+      const QString prefix = match.captured(1);
+      const QString text = match.captured(2);
+      const qsizetype budget =
+          IrcMaxWireBytes - prefix.toUtf8().size() - 2; // minus \r\n
+      if (budget < 16) {
+        emit errorOccurred(
+            QStringLiteral("IRC line is too long; message not sent"));
+        return false;
+      }
+      bool allOk = true;
+      QString chunk;
+      qsizetype chunkBytes = 0;
+      for (qsizetype i = 0; i < text.size();) {
+        // Keep surrogate pairs together so a chunk never ends mid-codepoint.
+        const qsizetype step =
+            (text.at(i).isHighSurrogate() && i + 1 < text.size()) ? 2 : 1;
+        const QString piece = text.mid(i, step);
+        const qsizetype pieceBytes = piece.toUtf8().size();
+        if (chunkBytes + pieceBytes > budget && !chunk.isEmpty()) {
+          allOk = sendRaw(prefix + chunk) && allOk;
+          chunk.clear();
+          chunkBytes = 0;
+        }
+        chunk += piece;
+        chunkBytes += pieceBytes;
+        i += step;
+      }
+      if (!chunk.isEmpty()) {
+        allOk = sendRaw(prefix + chunk) && allOk;
+      }
+      return allOk;
+    }
     emit errorOccurred(
         QStringLiteral("IRC line is too long; message not sent"));
     return false;
   }
 
-  const qsizetype written = writer_(payload);
-  if (written != payload.size()) {
-    emit errorOccurred(QStringLiteral("Socket write failed; message not sent"));
-    return false;
+  PendingLine item;
+  item.payload = std::move(payload);
+  item.log = redactLine(clean);
+  // Keepalives must not wait behind a flood-throttled queue: zero penalty and
+  // jump ahead of everything except a half-written line (stream sync).
+  item.free = clean.startsWith(QStringLiteral("PONG")) ||
+              clean.startsWith(QStringLiteral("PING"));
+  if (item.free) {
+    const int insertAt =
+        (!sendQueue_.isEmpty() && sendQueue_.first().partial) ? 1 : 0;
+    sendQueue_.insert(insertAt, item);
+  } else {
+    sendQueue_.append(item);
   }
-
-  emit rawLine(QStringLiteral(">>"), redactLine(clean));
+  pumpSendQueue();
   return true;
+}
+
+void IrcSession::pumpSendQueue() {
+  if (!socketConnected_ || !writer_) {
+    sendQueue_.clear();
+    sendTimer_.stop();
+    return;
+  }
+  // ircII-style penalty model: each line pushes a deadline 2 s further into
+  // the future; while the deadline is less than 24 s ahead we may send
+  // immediately (a 12-line burst covers registration + autojoin), beyond that
+  // the rest waits for the timer. Sustained floods settle at 1 line / 2 s.
+  constexpr qint64 kPenaltyPerLineMs = 2000;
+  constexpr qint64 kBurstWindowMs = 24000;
+  const qint64 now = sendClock_.elapsed();
+  if (sendPenaltyUntilMs_ < now) {
+    sendPenaltyUntilMs_ = now;
+  }
+  while (!sendQueue_.isEmpty()) {
+    if (!sendQueue_.first().free &&
+        sendPenaltyUntilMs_ - now >= kBurstWindowMs) {
+      sendTimer_.start(
+          static_cast<int>(sendPenaltyUntilMs_ - now - kBurstWindowMs + 1));
+      return;
+    }
+    PendingLine item = sendQueue_.takeFirst();
+    const qsizetype written = writer_(item.payload);
+    if (written < 0) {
+      emit errorOccurred(
+          QStringLiteral("Socket write failed; message not sent"));
+      sendQueue_.clear();
+      return;
+    }
+    if (written < item.payload.size()) {
+      // Short write: part of the line is on the wire. NOTHING else may be
+      // sent before the rest of it or the stream desyncs mid-line — park the
+      // tail at the very front and retry shortly.
+      item.payload.remove(0, written);
+      item.partial = true;
+      sendQueue_.prepend(item);
+      sendTimer_.start(20);
+      return;
+    }
+    if (!item.partial) {
+      emit rawLine(QStringLiteral(">>"), item.log);
+    }
+    if (!item.free) {
+      sendPenaltyUntilMs_ += kPenaltyPerLineMs;
+    }
+  }
 }
 
 bool IrcSession::privmsg(const QString &target, const QString &text) {
@@ -225,7 +335,7 @@ void IrcSession::handleLine(const QString &line) {
   if (command == QStringLiteral("AUTHENTICATE") && !params.isEmpty() &&
       params.first() == QStringLiteral("+")) {
     if (!passwordAuthAllowed()) {
-      sendRaw(QStringLiteral("CAP END"));
+      sendCapEndOnce();
       return;
     }
     const QString account = saslAccount_.isEmpty() ? nick_ : saslAccount_;
@@ -235,14 +345,26 @@ void IrcSession::handleLine(const QString &line) {
     payload.append(account.toUtf8());
     payload.append('\0');
     payload.append(saslPassword_.toUtf8());
-    sendRaw(QStringLiteral("AUTHENTICATE %1")
-                .arg(QString::fromLatin1(payload.toBase64())));
+    // SASL payloads are chunked at 400 bytes per the spec — a long
+    // account+password pair must not blow the 512-byte line limit (which
+    // would stall registration entirely). An exact 400-multiple (or empty)
+    // payload is terminated with "AUTHENTICATE +".
+    const QByteArray b64 = payload.toBase64();
+    for (qsizetype i = 0; i < b64.size(); i += 400) {
+      sendRaw(QStringLiteral("AUTHENTICATE %1")
+                  .arg(QString::fromLatin1(b64.mid(i, 400))));
+    }
+    if (b64.isEmpty() || b64.size() % 400 == 0) {
+      sendRaw(QStringLiteral("AUTHENTICATE +"));
+    }
     return;
   }
 
   if (command == QStringLiteral("900") || command == QStringLiteral("903")) {
     authed_ = true;
-    sendRaw(QStringLiteral("CAP END"));
+    // 900 and 903 commonly both arrive — CAP END must go out exactly once
+    // (some ircds answer a second one with a confusing 410).
+    sendCapEndOnce();
     return;
   }
 
@@ -251,7 +373,7 @@ void IrcSession::handleLine(const QString &line) {
       command == QStringLiteral("907")) {
     emit systemText(
         QStringLiteral("SASL authentication failed - continuing without it"));
-    sendRaw(QStringLiteral("CAP END"));
+    sendCapEndOnce();
     return;
   }
 
@@ -281,12 +403,24 @@ void IrcSession::handleLine(const QString &line) {
     // text (Python surfaces 005 too).
   }
 
-  if (command == QStringLiteral("433") || command == QStringLiteral("436")) {
+  // 433 nick-in-use / 436 collision / 432 erroneous nick: during registration
+  // all three must trigger a retry or registration hangs until the watchdog
+  // kills an otherwise-fine connection. Capped so a server that rejects every
+  // alternate can't make us loop forever.
+  if (command == QStringLiteral("433") || command == QStringLiteral("436") ||
+      command == QStringLiteral("432")) {
     if (!registered_) {
+      if (nickTry_ >= 9) {
+        emit systemText(
+            QStringLiteral("Could not find a usable nickname - giving up."));
+        return;
+      }
       ++nickTry_;
       nick_ = alternateNick(nickTry_);
       sendRaw(QStringLiteral("NICK %1").arg(nick_));
       emit systemText(QStringLiteral("Nick in use - trying %1").arg(nick_));
+    } else if (command == QStringLiteral("432")) {
+      emit systemText(QStringLiteral("That nickname is not allowed here."));
     } else {
       emit systemText(QStringLiteral("That nickname is already in use."));
     }
@@ -922,10 +1056,11 @@ void IrcSession::handleCap(const QStringList &params, const QString &trailing) {
       wanted.append(QStringLiteral("sasl"));
     }
 
-    sendRaw(
-        wanted.isEmpty()
-            ? QStringLiteral("CAP END")
-            : QStringLiteral("CAP REQ :%1").arg(wanted.join(QLatin1Char(' '))));
+    if (wanted.isEmpty()) {
+      sendCapEndOnce();
+    } else {
+      sendRaw(QStringLiteral("CAP REQ :%1").arg(wanted.join(QLatin1Char(' '))));
+    }
     return;
   }
 
@@ -935,14 +1070,22 @@ void IrcSession::handleCap(const QStringList &params, const QString &trailing) {
         !saslPassword_.isEmpty() && passwordAuthAllowed()) {
       sendRaw(QStringLiteral("AUTHENTICATE PLAIN"));
     } else {
-      sendRaw(QStringLiteral("CAP END"));
+      sendCapEndOnce();
     }
     return;
   }
 
   if (subCommand == QStringLiteral("NAK")) {
-    sendRaw(QStringLiteral("CAP END"));
+    sendCapEndOnce();
   }
+}
+
+void IrcSession::sendCapEndOnce() {
+  if (capEnded_) {
+    return;
+  }
+  capEnded_ = true;
+  sendRaw(QStringLiteral("CAP END"));
 }
 
 } // namespace maxchat::irc

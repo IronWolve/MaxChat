@@ -3068,6 +3068,16 @@ void maxchat::ui::MainWindow::closeTarget(const QString& target) {
     }
 
     forgetTarget(cleanTarget);
+    // Free the buffer's stored lines and every per-buffer key — without this a
+    // long session leaks one full scrollback per channel/PM ever opened, and a
+    // REJOINED channel would inherit a stale unread-marker position.
+    m_chatBuffers.removeBuffer(bufferIdForTarget(cleanTarget));
+    {
+        const QString key = activeNetworkName() + QChar(0x1f) + cleanTarget;
+        m_bufferMarkerCount.remove(key);
+        m_replayedBuffers.remove(key);
+        m_comicEnabledBuffers.remove(key);
+    }
     if (cleanTarget.compare(m_currentTarget, Qt::CaseInsensitive) == 0) {
         activateBufferTarget({});
         updateChannelModeButton();
@@ -6245,6 +6255,11 @@ void maxchat::ui::MainWindow::handlePreviewImageFetched(const QUrl& url, const Q
     const QImage stored = (image.width() > maxW || image.height() > maxH)
         ? image.scaled(maxW, maxH, Qt::KeepAspectRatio, Qt::SmoothTransformation)
         : image;
+    if (m_previewImageCache.size() > 64) {
+        // Decoded images are big; cheap full flush beats LRU bookkeeping.
+        // Evicted images simply re-fetch if their line scrolls back into view.
+        m_previewImageCache.clear();
+    }
     m_previewImageCache.insert(key, stored);
     // The image landed after the line was already laid out with a broken <img>.
     // Re-render the active buffer (preserving scroll position) so it now shows.
@@ -6263,6 +6278,9 @@ void maxchat::ui::MainWindow::handlePreviewImageFailed(const QUrl& url, const QS
     Q_UNUSED(reason);
     const QString key = url.toString();
     m_previewImagePending.remove(key);
+    if (m_previewImageFailed.size() > 512) {
+        m_previewImageFailed.clear(); // add-only set; cap it for week-long sessions
+    }
     m_previewImageFailed.insert(key); // don't hammer a 404/blocked URL on every render
 }
 
@@ -8723,6 +8741,12 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
     m_confirmQuit = settings.value(QStringLiteral("confirm_quit"), true).toBool();
     m_scrollback = std::max(100, settings.value(QStringLiteral("scrollback"), 2000).toInt());
     m_chatBuffers.setMaxLinesPerBuffer(m_scrollback);
+    if (m_chatView != nullptr && m_chatView->document() != nullptr) {
+        // The live append path only inserts; without a block cap a buffer left
+        // active for days grows the QTextDocument unbounded. The model keeps
+        // m_scrollback lines; let the view hold a little more between renders.
+        m_chatView->document()->setMaximumBlockCount(m_scrollback + 64);
+    }
     m_autoAwayMins = settings.value(QStringLiteral("auto_away_mins"), 0).toInt();
     if (m_autoAwayMins > 0) {
         m_autoAwayTimer.start(m_autoAwayMins * 60 * 1000);
