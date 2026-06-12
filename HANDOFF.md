@@ -2,7 +2,22 @@
 
 Date: 2026-06-09 (audit closeout 2026-06-10; UI polish 2026-06-11)
 
-## Latest Completed Slice (OG cards + prefs speed, 2026-06-12)
+## Latest Completed Slice (close server + chat opacity, 2026-06-12)
+
+- **Close Server** (tree network-row context menu): confirm-if-connected →
+  disconnect (abort emits synchronously, so fallout lands first) → free all
+  the network's buffers + per-buffer keys + per-network maps + connection
+  object (non-default) → hop to next known network or bare view. Leaves a
+  manual-disconnect tombstone so a late disconnect can't auto-reconnect.
+- **Chat background opacity** (Prefs ▸ Themes ▸ chat box, key `chat_opacity`,
+  20–100, 100="Auto"): below 100 the alpha applies to EVERY chat theme so the
+  wallpaper/gradient shows through (explicit themes used to paint opaque).
+  Live preview (themePreviewRequested now carries opacity).
+- Backports doc: FB-8..13 added in ../maxchat/DEVDOCS/BACKPORTS.md covering
+  the chat-text fixes, IRC hardening, OG card fixes, memory caps, UX adds,
+  and the diff-save pattern. Python port itself untouched (user: later).
+
+## Previous Slice (OG cards + prefs speed, 2026-06-12)
 
 OG card review (escaping/wiring verdict: SOLID — no injection path, og_show_*
 toggles live everywhere) + fixes: og:url/canonical scheme-guarded (crafted
