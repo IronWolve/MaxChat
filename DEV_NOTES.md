@@ -716,3 +716,18 @@ Implemented in one pass (all compiled debug+release, selftest OK):
   on_terminal_link forwards hotspot clicks as INPUT (frame-mode hotspot
   emission still unsupported in the grid renderer); login screen is now a
   cacheable static page; server console help line split (was wrapping 80 cols).
+
+## Pic gallery / bitmap art (2026-06-12)
+
+- Phase 15 done: B/I bitmap verbs in bbs.lua, caps=B1. Menu [6] Pic gallery,
+  [7] Log off (was 6). Any key in picview returns to the gallery (handled
+  BEFORE the global b/q shortcuts).
+- Three public-domain space photos embedded as hex (PIL pipeline: autocontrast
+  + contrast + 80x50 fit + blur, threshold for rle1-friendly images, Floyd
+  dither for the raw1 showcase). rle1 halves thresholded images; RLE EXPANDS
+  3x on dithered ones — encoder picks the smaller, exactly as the spec said.
+- Client decodes + renders locally as half-blocks (▀▄█) via api.terminal_frame;
+  frame_write_full = no MAX_LINE cap (local ops never cross MC DATA).
+- GOTCHA: FakeHost scriptNetwork() returned "net" while tests dispatch with
+  "synIRC" — the B3 network-match made the client ignore B/I in tests. Fixed
+  the fake to return synIRC. In the real app api.network() == dispatch network.

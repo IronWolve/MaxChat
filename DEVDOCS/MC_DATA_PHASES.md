@@ -280,10 +280,17 @@ emit them.
 - Guard frame_pos rows/cols > 255 (free profiles can exceed the 2-hex-digit
   field; today they clamp silently to FF).
 
-### Phase 15 - Bitmap cell art
+### Phase 15 - Bitmap cell art — DONE 2026-06-12
 
-- Already drafted above (B/I verbs, raw1/rle1, caps=B1). Build static-cache
-  experience first (done), then this.
+- B/I verbs implemented in bbs.lua (caps=B1 negotiated via HELLO/WELCOME).
+- Pic gallery menu ([6]): three public-domain space photos, 80x50 1-bit
+  rendered as half-blocks in 80x25 cells. Thresholded images ship rle1
+  (~half the bytes), dithered ones raw1 (RLE expands on dither noise).
+- rle1: alternating runs starting at bit 0, one hex byte per run, 00 run
+  flips color (encodes runs >255). raw1: one hex char = 4 pixels MSB-first.
+- Client caches assets by bbs_id|id|hash; chunks reassembled from
+  "B <id> <w> <h> <hash> <enc> <i>/<n> <data>"; I renders locally (no
+  MC DATA cost on revisit). Any key in picview returns to the gallery.
 
 ### Misc small fixes (any phase)
 

@@ -92,7 +92,7 @@ class FakeHost final : public ScriptHost {
     }
     QString scriptMe(const QString&) override { return QStringLiteral("me"); }
     QString scriptTarget() override { return QStringLiteral("#chan"); }
-    QString scriptNetwork() override { return QStringLiteral("net"); }
+    QString scriptNetwork() override { return QStringLiteral("synIRC"); }
     QStringList scriptChannels(const QString&) override {
         return {QStringLiteral("#a"), QStringLiteral("#b")};
     }
@@ -210,7 +210,7 @@ class LuaEngineTest final : public QObject {
         QCOMPARE(host.says, QStringList{QStringLiteral("#c|hi")});
         QCOMPARE(host.inserts, QStringList{QStringLiteral("draft")});
         QCOMPARE(host.notifies, QStringList{QStringLiteral("T|B")});
-        QCOMPARE(host.echoes, QStringList{QStringLiteral("me/#chan/net")});
+        QCOMPARE(host.echoes, QStringList{QStringLiteral("me/#chan/synIRC")});
     }
 
     void apiFilesRoundTripInDataDir() {
@@ -548,7 +548,7 @@ class LuaEngineTest final : public QObject {
         QVERIFY(host.terminals.contains(
             QStringLiteral("open|bbs|client:alice:retro-bbs|Retro-BBS - alice|ibm-vga|80x25")));
         QVERIFY(host.mcData.contains(
-            QStringLiteral("synIRC|alice|bbs|HELLO|bbs_id=retro-bbs;cols=80;rows=25;profile=ibm-vga;caps=T,S|privmsg")));
+            QStringLiteral("synIRC|alice|bbs|HELLO|bbs_id=retro-bbs;cols=80;rows=25;profile=ibm-vga;caps=T,S,B1|privmsg")));
 
         const auto containsMcDataPrefix = [&host](const QString& prefix) {
             for (const QString& line : host.mcData) {
@@ -571,7 +571,7 @@ class LuaEngineTest final : public QObject {
                                 {QStringLiteral("synIRC"), QStringLiteral("bob"),
                                  QStringLiteral("alice"), QStringLiteral("bbs"),
                                  QStringLiteral("HELLO"),
-                                 QStringLiteral("bbs_id=retro-bbs;cols=80;rows=25;profile=ibm-vga;caps=T,S"),
+                                 QStringLiteral("bbs_id=retro-bbs;cols=80;rows=25;profile=ibm-vga;caps=T,S,B1"),
                                  false}));
         QVERIFY(engine.dispatch(QStringLiteral("on_mc_data"), QStringLiteral("synIRC"),
                                 {QStringLiteral("synIRC"), QStringLiteral("bob"),
@@ -593,6 +593,44 @@ class LuaEngineTest final : public QObject {
                                  QStringLiteral("alice"), QStringLiteral("bbs"),
                                  QStringLiteral("INPUT"), QStringLiteral("B"), false}));
         QVERIFY(containsMcDataPrefix(QStringLiteral("synIRC|alice|bbs|R|main")));
+
+        // Pic gallery: 6 opens it, 1 sends bitmap chunks (B) + insert (I),
+        // any key returns to the gallery list.
+        QVERIFY(engine.dispatch(QStringLiteral("on_mc_data"), QStringLiteral("synIRC"),
+                                {QStringLiteral("synIRC"), QStringLiteral("bob"),
+                                 QStringLiteral("alice"), QStringLiteral("bbs"),
+                                 QStringLiteral("INPUT"), QStringLiteral("6"), false}));
+        QVERIFY(engine.dispatch(QStringLiteral("on_mc_data"), QStringLiteral("synIRC"),
+                                {QStringLiteral("synIRC"), QStringLiteral("bob"),
+                                 QStringLiteral("alice"), QStringLiteral("bbs"),
+                                 QStringLiteral("INPUT"), QStringLiteral("1"), false}));
+        QVERIFY(containsMcDataPrefix(QStringLiteral("synIRC|alice|bbs|B|earth 80 50 ")));
+        QVERIFY(containsMcDataPrefix(QStringLiteral("synIRC|alice|bbs|I|earth ")));
+        QVERIFY(engine.dispatch(QStringLiteral("on_mc_data"), QStringLiteral("synIRC"),
+                                {QStringLiteral("synIRC"), QStringLiteral("bob"),
+                                 QStringLiteral("alice"), QStringLiteral("bbs"),
+                                 QStringLiteral("INPUT"), QStringLiteral("x"), false}));
+        QVERIFY(containsMcDataPrefix(QStringLiteral("synIRC|alice|bbs|S|pics")));
+        QVERIFY(engine.dispatch(QStringLiteral("on_mc_data"), QStringLiteral("synIRC"),
+                                {QStringLiteral("synIRC"), QStringLiteral("bob"),
+                                 QStringLiteral("alice"), QStringLiteral("bbs"),
+                                 QStringLiteral("INPUT"), QStringLiteral("B"), false}));
+
+        // Client side: receiving B then I decodes and renders a local frame.
+        // frame_hash("F0F0") per the script's djb-33 mod 2^32 = 002737EC.
+        QVERIFY(engine.dispatch(QStringLiteral("on_mc_data"), QStringLiteral("synIRC"),
+                                {QStringLiteral("synIRC"), QStringLiteral("bob"),
+                                 QStringLiteral("alice"), QStringLiteral("bbs"),
+                                 QStringLiteral("B"),
+                                 QStringLiteral("t 4 4 002737EC raw1 1/1 F0F0"), false}));
+        QVERIFY(engine.dispatch(QStringLiteral("on_mc_data"), QStringLiteral("synIRC"),
+                                {QStringLiteral("synIRC"), QStringLiteral("bob"),
+                                 QStringLiteral("alice"), QStringLiteral("bbs"),
+                                 QStringLiteral("I"), QStringLiteral("t 002737EC P0101"),
+                                 false}));
+        QVERIFY(containsTerminalPrefix(
+            QStringLiteral("frame|bbs|client:alice:retro-bbs|CP0101AF0W")));
+
         QVERIFY(engine.dispatch(QStringLiteral("on_command"), QStringLiteral("synIRC"),
                                 {QStringLiteral("bbscache"), QString()}));
         QVERIFY(!host.echoes.isEmpty());
