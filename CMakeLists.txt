@@ -282,6 +282,8 @@ qt_add_executable(maxchat-c
     src/ui/MediaPlayerDialog.h
     src/ui/FriendsNotifyDialog.cpp
     src/ui/FriendsNotifyDialog.h
+    src/ui/GeometryPersist.cpp
+    src/ui/GeometryPersist.h
     src/ui/IgnoreListDialog.cpp
     src/ui/IgnoreListDialog.h
     src/ui/MainWindow.cpp
@@ -1002,6 +1004,8 @@ qt_add_executable(main_window_link_preview_test
     src/ui/MediaPlayerDialog.h
     src/ui/FriendsNotifyDialog.cpp
     src/ui/FriendsNotifyDialog.h
+    src/ui/GeometryPersist.cpp
+    src/ui/GeometryPersist.h
     src/ui/IgnoreListDialog.cpp
     src/ui/IgnoreListDialog.h
     src/ui/MainWindow.cpp
