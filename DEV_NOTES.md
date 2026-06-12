@@ -31,6 +31,21 @@ When adding anything that should survive a buffer switch, store it in the model.
 
 ## THINGS I GOT WRONG
 
+- **2026-06-12 — "Yell garbled the avatar": a non-face cell misclassified as a
+  face.** MS Comic Chat .avb files carry a large square self/preview cell
+  (e.g. 262x332) alongside the real head cells (~166x190). The art decoder
+  classifies cells by aspect ratio (h > w*1.4 → body), so the near-square big
+  cell slipped through as a FACE. The emotion→face stretch maps "shouting"
+  (the last of 9 emotions) onto the LAST face id — which was that junk cell —
+  compositing a whole body where the head goes. Only shouting hit it; emotions
+  0–7 mapped to real faces, which is why it looked emotion-specific.
+  Fix: `dropOutlierFaces` removes face cells whose area > 1.8× the median face
+  (a head is much smaller than a body/self cell). **Lesson: classifying art
+  cells by a single heuristic (aspect) isn't enough — validate against the
+  cohort (a face is head-sized relative to its siblings), and when a mapping
+  reaches the extreme index, the extreme cell is the most likely to be junk.**
+
+
 - **2026-06-12 — DCC review: every trust decision must name WHO it trusts.**
   The recurring hole across 6 of the 15 findings: an identifier (token, port
   number, filename, TCP connection) was treated as authorization without

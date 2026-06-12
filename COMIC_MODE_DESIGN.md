@@ -9,7 +9,7 @@ UI_SURFACES.md §9; this is the *how and why*.
 
 | Piece | File | Job |
 |-------|------|-----|
-| Art decoding | `src/comic/ComicArt.cpp` | .avb (characters) / .bgb (backgrounds): zlib-deflated cells; `scanArtDir` |
+| Art decoding | `src/comic/ComicArt.cpp` | .avb (characters) / .bgb (backgrounds): zlib-deflated cells; `scanArtDir`. `dropOutlierFaces` removes self/preview cells misclassified as faces (else "shouting" → garbled body, fixed 2026-06-12) |
 | Character | `src/comic/ComicCharacter.cpp` | body poses + emotion faces; `imageTrimmed(emotion, facing, pose)`, `faceCell` for picker previews |
 | Emotion guess | `src/comic/ComicEmotion.cpp` | `guessEmotion(body)` — pure text heuristics, unit-tested (`comic_emotion_test`) |
 | Panel renderer | `src/comic/ComicRenderer.cpp` | `renderComicPanel` — balloons, tails, captions, actors over a background |

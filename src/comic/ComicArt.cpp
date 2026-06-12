@@ -206,6 +206,37 @@ QList<int> zlibDibOffsets(const QByteArray& data) {
     return out;
 }
 
+// Drop "face" cells that are really full-body / self-preview cells. The
+// aspect-ratio classifier (h > w*1.4 = body) lets near-square oversized cells
+// through as faces (e.g. a 262x332 self cell next to 166x190 heads); the
+// emotion→face stretch then maps "shouting" (the last emotion) onto that junk
+// cell, garbling the avatar. A real face is head-sized — much smaller area
+// than these outliers.
+void dropOutlierFaces(QHash<int, QImage>& faces) {
+    if (faces.size() < 3) {
+        return; // too few to establish a median
+    }
+    QList<qint64> areas;
+    for (const QImage& f : faces) {
+        areas.append(static_cast<qint64>(f.width()) * f.height());
+    }
+    std::sort(areas.begin(), areas.end());
+    const qint64 median = areas.at(areas.size() / 2);
+    const qint64 cap = median * 9 / 5; // 1.8x the median face area
+    QList<int> drop;
+    for (auto it = faces.constBegin(); it != faces.constEnd(); ++it) {
+        if (static_cast<qint64>(it.value().width()) * it.value().height() > cap) {
+            drop.append(it.key());
+        }
+    }
+    // Never drop them all (a degenerate set where every face looks "large").
+    if (drop.size() < faces.size()) {
+        for (const int id : drop) {
+            faces.remove(id);
+        }
+    }
+}
+
 QList<QImage> cleanBodies(QList<QImage> bodies, const QHash<int, QImage>& faces) {
     if (bodies.size() < 2 || faces.isEmpty()) {
         return bodies;
@@ -340,6 +371,7 @@ CharacterCells loadCharacterCells(const QString& path) {
                     cells.faces.insert(it.key(), img);
                 }
             }
+            dropOutlierFaces(cells.faces);
             if (cells.ok()) {
                 if (!name.isEmpty()) {
                     cells.name = name;
@@ -376,6 +408,7 @@ CharacterCells loadCharacterCells(const QString& path) {
     for (int k = 0; k < faceList.size(); ++k) {
         cells.faces.insert(k + 1, faceList.at(k));
     }
+    dropOutlierFaces(cells.faces);
     cells.bodies = cleanBodies(cells.bodies, cells.faces);
     return cells;
 }
