@@ -94,7 +94,7 @@ ChannelListDialog::ChannelListDialog(QWidget *parent) : QDialog(parent) {
   m_table->setSelectionMode(QAbstractItemView::ExtendedSelection);
   m_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
   m_table->setAlternatingRowColors(true);
-  m_table->setSortingEnabled(true);
+  m_table->setSortingEnabled(false);  // enabled via setComplete() to avoid auto-sort mid-addChannel
   m_table->horizontalHeader()->setStretchLastSection(true);
   m_table->horizontalHeader()->setSectionResizeMode(ChannelColumn,
                                                     QHeaderView::ResizeToContents);
@@ -154,10 +154,8 @@ ChannelListDialog::ChannelListDialog(QWidget *parent) : QDialog(parent) {
 void ChannelListDialog::clearChannels() {
   m_complete = false;
   m_fetching = true;
-  m_table->setSortingEnabled(false);
+  m_table->setSortingEnabled(false);  // stays disabled until setComplete(true)
   m_table->setRowCount(0);
-  m_table->setSortingEnabled(true);
-  m_table->sortItems(UsersColumn, Qt::DescendingOrder);
   updateActions();
   updateStatus();
 }
@@ -169,6 +167,8 @@ void ChannelListDialog::addChannel(const QString &channel, int users,
     return;
   }
 
+  // Prevent auto-sort during setItem: Qt sorts after each setItem when
+  // sortingEnabled=true, shifting row indices before we finish writing all columns.
   m_table->setSortingEnabled(false);
 
   int row = -1;
@@ -190,14 +190,49 @@ void ChannelListDialog::addChannel(const QString &channel, int users,
   m_table->setItem(row, UsersColumn, new NumericTableWidgetItem(users));
   m_table->setItem(row, TopicColumn, new QTableWidgetItem(topic.trimmed()));
 
-  m_table->setSortingEnabled(true);
-  const int sortColumn = m_table->horizontalHeader()->sortIndicatorSection();
-  const Qt::SortOrder sortOrder =
-      m_table->horizontalHeader()->sortIndicatorOrder();
-  m_table->sortItems(sortColumn < 0 ? UsersColumn : sortColumn, sortOrder);
+  // sortItems() works regardless of setSortingEnabled state and avoids the
+  // double-sort bug from setSortingEnabled(true) triggering its own auto-sort.
+  // addChannelsBulk defers sorting to setComplete; addChannel sorts per-row.
+  {
+    const int col = m_table->horizontalHeader()->sortIndicatorSection();
+    const Qt::SortOrder order = m_table->horizontalHeader()->sortIndicatorOrder();
+    m_table->sortItems(col < 0 ? UsersColumn : col, order);
+  }
 
   applyFilter();
   updateActions();
+  updateStatus();
+}
+
+void ChannelListDialog::addChannelsBulk(const QVector<ChannelEntry>& entries) {
+  if (entries.isEmpty()) { return; }
+  // Sorting is already disabled (clearChannels leaves it off; setComplete re-enables).
+  // Suppress repaints for the entire batch — one repaint at end instead of per-row.
+  const int firstNewRow = m_table->rowCount();
+  m_table->setUpdatesEnabled(false);
+  for (const ChannelEntry& e : entries) {
+    const QString name = e.name.trimmed();
+    if (name.isEmpty()) { continue; }
+    const int row = m_table->rowCount();
+    m_table->insertRow(row);
+    m_table->setItem(row, ChannelColumn, new QTableWidgetItem(name));
+    m_table->setItem(row, UsersColumn, new NumericTableWidgetItem(e.users));
+    m_table->setItem(row, TopicColumn, new QTableWidgetItem(e.topic.trimmed()));
+  }
+  m_table->setUpdatesEnabled(true);
+  // Filter only the newly-inserted rows — avoids O(n²) from re-scanning all rows each batch.
+  const QString filter = m_filterEdit->text().trimmed();
+  const int minUsers = m_minUsers->value();
+  for (int row = firstNewRow; row < m_table->rowCount(); ++row) {
+    const QTableWidgetItem *ch = m_table->item(row, ChannelColumn);
+    const QTableWidgetItem *ui = m_table->item(row, UsersColumn);
+    const QTableWidgetItem *tp = m_table->item(row, TopicColumn);
+    const int users = ui != nullptr ? ui->data(Qt::UserRole).toInt() : 0;
+    const bool textMatch = filter.isEmpty() ||
+        (ch != nullptr && ch->text().contains(filter, Qt::CaseInsensitive)) ||
+        (tp != nullptr && tp->text().contains(filter, Qt::CaseInsensitive));
+    m_table->setRowHidden(row, !textMatch || users < minUsers);
+  }
   updateStatus();
 }
 
@@ -205,6 +240,14 @@ void ChannelListDialog::setComplete(bool complete) {
   m_complete = complete;
   m_fetching = !complete;
   m_getListButton->setEnabled(true);
+  if (complete) {
+    // Enable interactive column sorting, then sort once, then filter.
+    // setSortingEnabled(true) fires its own internal sort; by calling it
+    // before applyFilter we ensure no hidden-row state exists yet to corrupt.
+    m_table->setSortingEnabled(true);
+    m_table->sortItems(UsersColumn, Qt::DescendingOrder);
+    applyFilter();
+  }
   updateStatus();
 }
 

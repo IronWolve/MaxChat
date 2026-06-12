@@ -2,6 +2,7 @@
 
 #include <QDialog>
 #include <QString>
+#include <QVector>
 
 class QLabel;
 class QLineEdit;
@@ -15,10 +16,13 @@ class ChannelListDialog final : public QDialog {
   Q_OBJECT
 
 public:
+  struct ChannelEntry { QString name; int users = 0; QString topic; };
+
   explicit ChannelListDialog(QWidget *parent = nullptr);
 
   void clearChannels();
   void addChannel(const QString &channel, int users, const QString &topic);
+  void addChannelsBulk(const QVector<ChannelEntry>& entries);
   void setComplete(bool complete);
   void setFetching(bool fetching);
 
