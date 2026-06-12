@@ -1,6 +1,6 @@
 # MC DATA + Script Terminal Phases
 
-Current phase: Phase 8 - BBS Server Console
+Current phase: Phase 9 - Future-Service Hooks
 
 Status key:
 
@@ -156,7 +156,7 @@ Exit criteria:
 - [x] Add mirror mode.
 - [x] Mirror the last screen sent to a selected user.
 - [x] Return to stats when mirrored user logs off.
-- [~] Add server terminal commands for stats/mirror/chat/logoff where practical.
+- [x] Add server terminal commands for stats/mirror/chat/logoff where practical.
 
 Exit criteria:
 

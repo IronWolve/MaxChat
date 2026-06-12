@@ -166,7 +166,7 @@ local function show_stats(api)
       api.terminal_write(SERVER_TERM, "  " .. s.nick .. "  mode=" .. s.mode .. "  size=" .. s.cols .. "x" .. s.rows .. "\n")
     end
   end
-  api.terminal_write(SERVER_TERM, "\nConsole: stats | mirror <nick> | mirror off | chat <nick> <text> | help\n")
+  api.terminal_write(SERVER_TERM, "\nConsole: stats | mirror <nick> | mirror off | chat <nick> <text> | logoff <nick> | help\n")
   api.terminal_prompt(SERVER_TERM, "sysop> ")
 end
 
@@ -328,7 +328,7 @@ local function handle_server_input(api, text)
     return
   end
   if cmd == "help" then
-    server_write(api, "stats | mirror <nick> | mirror off | chat <nick> <text>")
+    server_write(api, "stats | mirror <nick> | mirror off | chat <nick> <text> | logoff <nick>")
     return
   end
   if cmd == "mirror" then
@@ -356,6 +356,19 @@ local function handle_server_input(api, text)
         line(api, s, "SYSOP: " .. clean_line(msg))
         prompt(api, s, s.mode .. "> ")
         server_write(api, "Sent to " .. s.nick .. ".")
+        return
+      end
+    end
+    server_write(api, "No matching session.")
+    return
+  end
+  if cmd == "logoff" then
+    local want = trim(rest):lower()
+    if want == "" then server_write(api, "Usage: logoff <nick>"); return end
+    for _, s in pairs(sessions) do
+      if s.nick:lower():find(want, 1, true) then
+        server_write(api, "Logging off " .. s.nick .. ".")
+        logoff(api, s)
         return
       end
     end
