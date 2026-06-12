@@ -77,6 +77,8 @@ class LuaEngine final : public QObject {
     void hostTerminalClose(const QString& scriptName, const QString& id);
     void hostTerminalClear(const QString& scriptName, const QString& id);
     void hostTerminalWrite(const QString& scriptName, const QString& id, const QString& text);
+    [[nodiscard]] bool hostTerminalFrame(const QString& scriptName, const QString& id,
+                                         const QString& ops);
     void hostTerminalStatus(const QString& scriptName, const QString& id, const QString& text);
     void hostTerminalPrompt(const QString& scriptName, const QString& id, const QString& text);
     [[nodiscard]] QSize hostTerminalSize(const QString& scriptName, const QString& id);

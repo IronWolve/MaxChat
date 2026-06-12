@@ -2649,6 +2649,19 @@ void maxchat::ui::MainWindow::scriptTerminalWrite(const QString& scriptName, con
     }
 }
 
+bool maxchat::ui::MainWindow::scriptTerminalFrame(const QString& scriptName, const QString& id,
+                                                  const QString& ops) {
+    if (m_scriptTerminals == nullptr) {
+        return false;
+    }
+    QString error;
+    const bool ok = m_scriptTerminals->applyFrame(terminalScopedId(scriptName, id), ops, &error);
+    if (!ok) {
+        appendSystemLine(QStringLiteral("[scripts] Terminal frame rejected: %1").arg(error));
+    }
+    return ok;
+}
+
 void maxchat::ui::MainWindow::scriptTerminalStatus(const QString& scriptName, const QString& id,
                                                    const QString& text) {
     if (m_scriptTerminals != nullptr) {

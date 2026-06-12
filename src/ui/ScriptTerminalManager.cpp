@@ -68,6 +68,16 @@ void ScriptTerminalManager::clear(const QString& id) {
     }
 }
 
+bool ScriptTerminalManager::applyFrame(const QString& id, const QString& ops, QString* error) {
+    if (ScriptTerminalDialog* dlg = terminal(id); dlg != nullptr) {
+        return dlg->applyFrame(ops, error);
+    }
+    if (error != nullptr) {
+        *error = QStringLiteral("terminal not open");
+    }
+    return false;
+}
+
 void ScriptTerminalManager::setStatusText(const QString& id, const QString& text) {
     if (ScriptTerminalDialog* dlg = terminal(id); dlg != nullptr) {
         dlg->setStatusText(text);

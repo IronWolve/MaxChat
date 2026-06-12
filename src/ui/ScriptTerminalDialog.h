@@ -2,7 +2,9 @@
 
 #include "ui/TerminalProfile.h"
 
+#include <QColor>
 #include <QDialog>
+#include <QVector>
 
 class QLabel;
 class QLineEdit;
@@ -23,6 +25,7 @@ class ScriptTerminalDialog final : public QDialog {
 
     void writeText(const QString& text);
     void clear();
+    bool applyFrame(const QString& ops, QString* error = nullptr);
     void setStatusText(const QString& text);
     void setPromptText(const QString& text);
     void setProfile(const TerminalProfile& profile);
@@ -40,6 +43,14 @@ class ScriptTerminalDialog final : public QDialog {
   private:
     void applyProfile();
     void updateFixedGridSize();
+    void ensureFrameGrid();
+    void renderFrameGrid();
+
+    struct FrameCell {
+        QChar ch = QLatin1Char(' ');
+        int fg = 7;
+        int bg = 0;
+    };
 
     QString id_;
     TerminalProfile profile_;
@@ -47,6 +58,12 @@ class ScriptTerminalDialog final : public QDialog {
     QTextBrowser* display_ = nullptr;
     QLabel* prompt_ = nullptr;
     QLineEdit* input_ = nullptr;
+    QVector<QVector<FrameCell>> frameGrid_;
+    int frameCursorRow_ = 0;
+    int frameCursorCol_ = 0;
+    int frameFg_ = 7;
+    int frameBg_ = 0;
+    bool frameMode_ = false;
 };
 
 } // namespace maxchat::ui

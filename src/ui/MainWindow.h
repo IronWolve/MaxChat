@@ -90,6 +90,8 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     void scriptTerminalClear(const QString& scriptName, const QString& id) override;
     void scriptTerminalWrite(const QString& scriptName, const QString& id,
                              const QString& text) override;
+    bool scriptTerminalFrame(const QString& scriptName, const QString& id,
+                             const QString& ops) override;
     void scriptTerminalStatus(const QString& scriptName, const QString& id,
                               const QString& text) override;
     void scriptTerminalPrompt(const QString& scriptName, const QString& id,
