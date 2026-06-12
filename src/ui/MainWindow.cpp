@@ -6705,6 +6705,8 @@ void maxchat::ui::MainWindow::appendCenteredDivider(const QString& text, const Q
     cursor.movePosition(QTextCursor::End);
     QTextBlockFormat blockFormat; // fresh format: centered, no inherited margins
     blockFormat.setAlignment(Qt::AlignHCenter);
+    blockFormat.setTopMargin(4);
+    blockFormat.setBottomMargin(2);
     if (!m_chatView->document()->isEmpty()) {
         cursor.insertBlock(blockFormat);
     } else {
