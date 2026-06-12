@@ -517,6 +517,7 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     QHash<QString, QString> m_comicBackgroundPaths; // filename -> .bgb path
     QHash<QString, QString> m_comicAutoChars;       // nick -> assigned stem
     QHash<QString, QImage> m_comicBgCache;
+    QHash<QString, QPixmap> m_comicPanelCache; // rendered-panel cache, keyed by full visual input
     bool m_dccEnabled = false;
     DccManager* m_dccManager = nullptr;
     QList<QAction*> m_themeActions;
