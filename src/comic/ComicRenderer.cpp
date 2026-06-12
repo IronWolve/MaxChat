@@ -25,6 +25,11 @@ constexpr int WrapCentre = Qt::TextWordWrap | Qt::AlignCenter;
 // calls inside the fit loops don't each need it threaded through. Render is
 // synchronous on the GUI thread, so a render-scope variable is safe.
 QString g_comicFontFamily = QStringLiteral("Comic Relief");
+// When character-name captions are shown under each figure, the /me action
+// box doesn't need to repeat the nick (it read "iw_chat coffee" with "iw_chat"
+// labelled right below). Set per render; default true (panelMinFont's
+// conservative fit path).
+bool g_actionIncludeName = true;
 
 QFont comicFont(int pointSize, bool bold = false) {
     QFont f(g_comicFontFamily.isEmpty() ? QStringLiteral("Comic Relief") : g_comicFontFamily);
@@ -39,7 +44,7 @@ QColor balloonFill(const QColor& nick, bool tint) {
     if (!tint || !nick.isValid()) {
         return QColor(255, 255, 255);
     }
-    const double a = 0.16; // mostly white
+    const double a = 0.20; // mostly white, but visibly the speaker hue
     return QColor(static_cast<int>(255 * (1 - a) + nick.red() * a),
                   static_cast<int>(255 * (1 - a) + nick.green() * a),
                   static_cast<int>(255 * (1 - a) + nick.blue() * a));
@@ -220,7 +225,8 @@ QVector<Row> layout(QPainter& p, const QFont& font, int size, const QVector<Comi
                 (line.actorIndex >= 0 && line.actorIndex < actors.size())
                     ? actors[line.actorIndex].nick
                     : QString();
-            body = QStringLiteral("%1 %2").arg(nick, line.text).trimmed();
+            body = g_actionIncludeName ? QStringLiteral("%1 %2").arg(nick, line.text).trimmed()
+                                       : line.text.trimmed();
             QFont ital(font);
             ital.setItalic(true);
             p.setFont(ital);
@@ -537,6 +543,7 @@ void caption(QPainter& p, int size, const QString& nick, int x, int w, int feet,
 int panelMinFont(int size, const QVector<ComicActor>& actors,
                  const QVector<ComicLineItem>& lines, const QString& fontFamily) {
     g_comicFontFamily = fontFamily.isEmpty() ? QStringLiteral("Comic Relief") : fontFamily;
+    g_actionIncludeName = true; // conservative fit (widest case)
     QVector<int> cx;
     if (!actors.isEmpty()) {
         cx = initialCx(size, actors, lines.size());
@@ -563,6 +570,9 @@ QPixmap renderComicPanel(int size, const QImage& background, const QVector<Comic
                          const QHash<QString, QString>& captionColors, bool balloonTint,
                          const QString& fontFamily) {
     g_comicFontFamily = fontFamily.isEmpty() ? QStringLiteral("Comic Relief") : fontFamily;
+    // Captions under each figure already name the speaker — drop the redundant
+    // nick from /me action boxes when they're on.
+    g_actionIncludeName = !captions;
     // Per-column tint colours (option): map each actor's nick → its caption
     // colour so balloons can be faintly tinted by speaker.
     QVector<QColor> colColors;
