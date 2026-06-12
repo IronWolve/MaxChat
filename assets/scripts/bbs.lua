@@ -11,6 +11,7 @@
 --   /bbsconfig welcome <text>        set welcome line
 --   /bbsconfig profile <profile>     set ibm-vga, c64, or free
 --   /bbs <nick> [bbs_id]             dial a BBS hosted by another user
+--   /bbscache [clear]                show or clear local static frame cache
 --   /bbsbook                         list address-book entries
 --   /bbsbook add <label> <nick> [bbs_id] [profile]
 --   /bbsbook dial <label>
@@ -35,7 +36,11 @@ local server = {
   profile = DEFAULT_PROFILE,
   pages = 0,
   connects = 0,
-  mirror_key = nil
+  mirror_key = nil,
+  static_sent = 0,
+  cache_replays = 0,
+  cache_misses = 0,
+  fallback_frames = 0
 }
 local sessions = {}
 local clients = {}
@@ -133,6 +138,12 @@ local function static_cache_key(bbs_id, page_id, hash)
   return tostring(bbs_id or DEFAULT_BBS_ID):lower() .. "|" .. tostring(page_id or "") .. "|" .. tostring(hash or "")
 end
 
+local function static_cache_count()
+  local count = 0
+  for _ in pairs(static_cache) do count = count + 1 end
+  return count
+end
+
 local function frame_hash(text)
   local h = 0
   text = tostring(text or "")
@@ -159,6 +170,7 @@ end
 
 local function send_terminal_frames(api, s, lines)
   local chunks = terminal_frame_chunks(lines)
+  server.fallback_frames = server.fallback_frames + #chunks
   for _, chunk in ipairs(chunks) do
     send_raw(api, s.nick, "T", chunk)
   end
@@ -174,12 +186,15 @@ local function send_static_or_terminal_frame(api, s, page_id, lines)
     s.static_sent = s.static_sent or {}
     s.static_defs[sent_key] = ops
     if s.static_sent[sent_key] then
+      server.cache_replays = server.cache_replays + 1
       send_raw(api, s.nick, "R", page_id .. " " .. hash)
     else
+      server.static_sent = server.static_sent + 1
       send_raw(api, s.nick, "S", page_id .. " " .. hash .. " " .. ops)
       s.static_sent[sent_key] = true
     end
   else
+    server.fallback_frames = server.fallback_frames + #chunks
     for _, chunk in ipairs(chunks) do
       send_raw(api, s.nick, "T", chunk)
     end
@@ -293,6 +308,7 @@ local function show_stats(api)
   api.terminal_write(SERVER_TERM, "Sysop: " .. (server.sysop ~= "" and server.sysop or api.me()) .. "\n")
   api.terminal_write(SERVER_TERM, "Profile: " .. server.profile .. "\n")
   api.terminal_write(SERVER_TERM, "Connections: " .. server.connects .. "  Active: " .. active .. "  Pages: " .. server.pages .. "  Messages: " .. #board .. "\n")
+  api.terminal_write(SERVER_TERM, "Cache: static sent=" .. server.static_sent .. "  replays=" .. server.cache_replays .. "  misses=" .. server.cache_misses .. "  fallback T=" .. server.fallback_frames .. "\n")
   api.terminal_write(SERVER_TERM, "\nActive sessions:\n")
   if active == 0 then
     api.terminal_write(SERVER_TERM, "  none\n")
@@ -726,6 +742,18 @@ function on_command(api, command, args)
     return true
   end
 
+  if command == "bbscache" then
+    local sub = (words(args)[1] or "stats"):lower()
+    if sub == "clear" then
+      static_cache = {}
+      api.echo("[bbscache] cleared local static frame cache")
+    else
+      api.echo("[bbscache] local static frames=" .. tostring(static_cache_count()))
+      api.echo("[bbscache] server static sent=" .. server.static_sent .. " replays=" .. server.cache_replays .. " misses=" .. server.cache_misses .. " fallback T=" .. server.fallback_frames)
+    end
+    return true
+  end
+
   if command == "bbsbook" then
     local parts = words(args)
     local sub = (parts[1] or "list"):lower()
@@ -817,6 +845,7 @@ function on_mc_data(api, network, target, nick, service, verb, payload, notice)
   if verb == "Q" then
     local page_id, hash = payload:match("^(%S+)%s+(%S+)$")
     if page_id and hash then
+      server.cache_misses = server.cache_misses + 1
       for _, s in pairs(sessions) do
         if s.nick == nick then
           local sent_key = page_id .. "|" .. hash
@@ -883,6 +912,7 @@ function on_mc_data(api, network, target, nick, service, verb, payload, notice)
         api.terminal_write(client.term, "[bbs] cached frame rejected\n")
       end
     elseif page_id and hash then
+      server.cache_misses = server.cache_misses + 1
       send_raw(api, client.nick, "Q", page_id .. " " .. hash)
     else
       api.terminal_write(client.term, "[bbs] bad cache replay header\n")

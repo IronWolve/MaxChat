@@ -240,6 +240,8 @@ Commands:
 /bbsconfig welcome <text>
 /bbsconfig profile <ibm-vga|c64|free>
 /bbs <nick> [bbs_id]
+/bbscache
+/bbscache clear
 /bbsbook
 /bbsbook add <label> <nick> [bbs_id] [profile]
 /bbsbook dial Retro-BBS
@@ -500,6 +502,10 @@ MC DATA bbs S main A94F2C <ops>
 Implementation notes:
 
 - Start with in-memory cache per app session.
+- `/bbscache` shows local cache size and server-side static-frame counters.
+- `/bbscache clear` clears the local static-frame cache for manual testing.
+- The server console shows static frames sent, cache replays, cache misses, and
+  fallback `T` frame sends.
 - Later, persistent cache may live under the script data directory.
 - Keep the resend path simple: if the server cannot find the requested static
   frame, send a normal `T` frame instead.
