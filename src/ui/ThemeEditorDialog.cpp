@@ -1,5 +1,7 @@
 #include "ui/ThemeEditorDialog.h"
 
+#include <QMessageBox>
+
 #include "ui/ThemeCatalog.h"
 
 #include <QCheckBox>
@@ -143,6 +145,14 @@ void ThemeEditorDialog::save() {
         theme.fixedFont = fixedFont_ != nullptr && fixedFont_->isChecked();
         theme.monoNicks = monoNicks_ != nullptr && monoNicks_->isChecked();
         resultId_ = saveUserChatTheme(name, theme);
+    }
+    if (resultId_.isEmpty()) {
+        // Write failure (unwritable config dir) used to accept() silently with
+        // an empty id — the user's edits vanished without a word.
+        QMessageBox::warning(this, QStringLiteral("Save Theme"),
+                             QStringLiteral("Could not write the theme file - check that the "
+                                            "config folder is writable."));
+        return;
     }
     accept();
 }

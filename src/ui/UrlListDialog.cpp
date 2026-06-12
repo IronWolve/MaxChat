@@ -14,10 +14,21 @@ namespace maxchat::ui {
 namespace {
 
 QUrl openableUrl(const QString& url) {
+    QUrl out;
     if (url.startsWith(QStringLiteral("www."), Qt::CaseInsensitive)) {
-        return QUrl(QStringLiteral("https://") + url);
+        out = QUrl(QStringLiteral("https://") + url);
+    } else {
+        out = QUrl(url);
     }
-    return QUrl(url);
+    // Defence in depth: the URL detector only emits http/https/ftp/www., but
+    // this dialog must not depend on its producer — never hand file:// or
+    // javascript: to QDesktopServices.
+    const QString scheme = out.scheme().toLower();
+    if (scheme != QLatin1String("http") && scheme != QLatin1String("https") &&
+        scheme != QLatin1String("ftp")) {
+        return {};
+    }
+    return out;
 }
 
 } // namespace

@@ -31,6 +31,22 @@ When adding anything that should survive a buffer switch, store it in the model.
 
 ## THINGS I GOT WRONG
 
+- **2026-06-12 — DCC review: every trust decision must name WHO it trusts.**
+  The recurring hole across 6 of the 15 findings: an identifier (token, port
+  number, filename, TCP connection) was treated as authorization without
+  checking the principal behind it. The passive token authorized ANY sender;
+  RESUME authorized any nick that knew the port; listening sockets trusted
+  whoever connected first; an existing same-name file authorized appending a
+  stranger's bytes ("resume"). And CHAT offers skipped authorization entirely
+  (auto-connect = IP disclosure to any CTCP). **Rule: every DCC message and
+  connection must be checked against the OFFER's nick/host/state, and every
+  numeric field range-checked — toUInt() without an ok-flag turned "65536"
+  into port 0 and misclassified the offer.** Also: notifications repeated two
+  old classes — QLabel AutoText rendering remote HTML (toasts, after fixing
+  the same in the audio bar days earlier: grep ALL QLabels fed remote text),
+  and substring highlight matching ("art" fires on "start").
+
+
 - **2026-06-12 — Media/input/startup sweep: 20+ findings, the recurring themes:**
   1. **Every fetch path must use the shared hardened fetcher.** ImageViewerDialog
      rolled its own QNAM fetch — no DNS SSRF gate, no redirect re-vetting, no

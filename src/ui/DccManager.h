@@ -1,7 +1,9 @@
 #pragma once
 
+#include <QElapsedTimer>
 #include <QHash>
 #include <QObject>
+#include <QTimer>
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -27,6 +29,7 @@ struct DccTransfer {
     quint16 port = 0;
     qint64 size = 0;
     qint64 transferred = 0;
+    qint64 offeredAtMs = 0; // manager clock; incoming Pending offers expire
 };
 
 // How many bytes of an incoming DCC chunk may be written to disk, given the
@@ -91,6 +94,12 @@ class DccManager final : public QObject {
         bool allSent = false;
         qint64 startOffset = 0;
         QByteArray ackBuf;
+        // 64-bit monotonic ack tracking: the wire acks are 32-bit and wrap at
+        // 4 GiB — comparing them to (size & 0xFFFFFFFF) finished huge sends
+        // after the first ack.
+        quint32 lastAck32 = 0;
+        qint64 ackBase = 0;
+        qint64 lastProgressMs = 0; // stall watchdog
     };
     struct ChatRuntime {
         DccChat info;
@@ -98,6 +107,15 @@ class DccManager final : public QObject {
         QTcpSocket* socket = nullptr;
         QByteArray buffer;
         QString pendingToken;
+        quint32 expectedHost = 0; // verify the connecting peer when known
+    };
+    // An incoming CHAT offer held for explicit user acceptance (the old code
+    // auto-connected — IP disclosure to anyone who CTCP'd a chat offer).
+    struct PendingChatOffer {
+        quint32 host = 0;
+        quint16 port = 0;
+        QString token;
+        qint64 atMs = 0;
     };
 
     DccTransfer* findById(int id);
@@ -116,6 +134,10 @@ class DccManager final : public QObject {
     void inResume(const QString& sender, const QStringList& toks);
     void inAccept(const QString& sender, const QStringList& toks);
     void inChat(const QString& sender, const QStringList& toks);
+    void acceptIncomingChat(const QString& sender, quint32 host, quint16 port,
+                            const QString& token);
+    void teardownChat(ChatRuntime* chat);
+    void sweepStale();
     void connectChat(ChatRuntime& chat, quint32 host, quint16 port);
     void wireChatSocket(const QString& key);
 
@@ -125,6 +147,9 @@ class DccManager final : public QObject {
     QHash<quint16, int> sendByPort_;     // active send local port -> id
     QHash<QString, int> resuming_;       // resume key -> id
     QHash<QString, ChatRuntime*> chats_; // lowercase peer -> chat
+    QHash<QString, PendingChatOffer> pendingChatOffers_; // lowercase peer -> offer
+    QElapsedTimer clock_;
+    QTimer sweepTimer_;
     int nextId_ = 1;
     QString downloadDir_;
     int portFirst_ = 0;

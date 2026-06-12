@@ -2,7 +2,40 @@
 
 Date: 2026-06-09 (audit closeout 2026-06-10; UI polish 2026-06-11)
 
-## Latest Completed Slice (media/input/startup sweep, 2026-06-12)
+## Latest Completed Slice (DCC hardening + notifications + small fry, 2026-06-12)
+
+**DCC (15 findings, all serious ones fixed):**
+- CHAT offers now follow the accept policy (was: auto-connect for ANYONE —
+  IP disclosure via one CTCP). Non-auto offers are held 2 min; `/dcc chat
+  <nick>` accepts a pending offer instead of crossing offers.
+- Replacing an existing chat tears down the old socket/server (was: old TCP
+  peer's bytes landed in the NEW session — chat hijack).
+- RESUME/ACCEPT offsets validated (sender match, state match, 0<pos<size) —
+  a forged negative ACCEPT pos used to DEFEAT the disk-write cap.
+- Passive-token replies and RESUME require the offer's nick; listening
+  sockets verify the connecting peer IP against the offer where known.
+- Receives download to `<name>.part`, renamed on completion — resume can
+  never append a stranger's bytes to an unrelated existing file; final paths
+  reserved against concurrent same-name offers.
+- 64-bit ack tracking (>4 GiB sends no longer "complete" on the first ack);
+  strict port/host parsing ("70000"→4464 and "65536"→passive are gone);
+  Windows filename hygiene (CON/NUL, trailing dots, backslashes).
+- Pending offers expire after 10 min; active transfers stall-fail after
+  2 min of no progress; cancel cleans all negotiation state; sockets freed.
+
+**Notifications:** toast labels PlainText (HTML injection via nick/message);
+whole-word highlight matching ("art" no longer fires on "start"); DND now
+silences the beep AND remote CTCP SOUND; restore-from-tray un-minimizes;
+OS-notification clicks open the right buffer (messageClicked was never
+connected!) and honor notify_duration; toasts appear on the app's monitor.
+
+**Small fry:** URL list scheme allowlist (defence in depth); theme editor
+reports save failures instead of silently discarding edits; transfer percent
+clamped 0-100. Verified SOLID: ChatLogStore path traversal defences,
+GeometryPersist, NetworkImport merge, ChatFind, UrlDetector. Noted only:
+ban-list optimistic row removal; theme slug collisions.
+
+## Previous Slice (media/input/startup sweep, 2026-06-12)
 
 Three-agent review of inline media players, the input box, and startup order.
 **Media:** ImageViewerDialog now fetches through services::ImageFetcher (DNS
