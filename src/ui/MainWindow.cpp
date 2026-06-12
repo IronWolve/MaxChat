@@ -973,8 +973,16 @@ MainWindow::MainWindow(QWidget* parent)
     const QString scriptsDir =
         QDir(m_settings.paths().configDir).filePath(QStringLiteral("scripts"));
     m_scriptTerminals = new ScriptTerminalManager(this);
+    // Terminal hooks run in the network context the terminal was OPENED on,
+    // not whatever network is active now — a BBS session must keep sending to
+    // the network it dialed on even if the user switches buffers.
+    const auto terminalContext = [this](const QString& scopedId) {
+        const QString network =
+            m_scriptTerminals != nullptr ? m_scriptTerminals->terminalNetwork(scopedId) : QString();
+        return network.isEmpty() ? activeNetworkName() : network;
+    };
     connect(m_scriptTerminals, &ScriptTerminalManager::inputSubmitted, this,
-            [this](const QString& scopedId, const QString& text) {
+            [this, terminalContext](const QString& scopedId, const QString& text) {
                 if (m_lua == nullptr) {
                     return;
                 }
@@ -983,10 +991,10 @@ MainWindow::MainWindow(QWidget* parent)
                     return;
                 }
                 m_lua->dispatchToScript(split->first, QStringLiteral("on_terminal_input"),
-                                        activeNetworkName(), {split->second, text});
+                                        terminalContext(scopedId), {split->second, text});
             });
     connect(m_scriptTerminals, &ScriptTerminalManager::linkActivated, this,
-            [this](const QString& scopedId, const QString& actionId) {
+            [this, terminalContext](const QString& scopedId, const QString& actionId) {
                 if (m_lua == nullptr) {
                     return;
                 }
@@ -995,10 +1003,10 @@ MainWindow::MainWindow(QWidget* parent)
                     return;
                 }
                 m_lua->dispatchToScript(split->first, QStringLiteral("on_terminal_link"),
-                                        activeNetworkName(), {split->second, actionId});
+                                        terminalContext(scopedId), {split->second, actionId});
             });
     connect(m_scriptTerminals, &ScriptTerminalManager::terminalClosed, this,
-            [this](const QString& scopedId) {
+            [this](const QString& scopedId, const QString& network) {
                 if (m_lua == nullptr) {
                     return;
                 }
@@ -1007,7 +1015,8 @@ MainWindow::MainWindow(QWidget* parent)
                     return;
                 }
                 m_lua->dispatchToScript(split->first, QStringLiteral("on_terminal_closed"),
-                                        activeNetworkName(), {split->second});
+                                        network.isEmpty() ? activeNetworkName() : network,
+                                        {split->second});
             });
     connect(m_scriptTerminals, &ScriptTerminalManager::terminalsChanged, this,
             [this]() { rebuildNetworkTree(); });

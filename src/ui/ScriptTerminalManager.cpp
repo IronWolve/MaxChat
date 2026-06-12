@@ -78,6 +78,7 @@ void ScriptTerminalManager::closeTerminal(const QString& id) {
 void ScriptTerminalManager::killTerminal(const QString& id) {
     ScriptTerminalDialog* dlg = terminal(id);
     const bool known = terminals_.contains(id) || meta_.contains(id);
+    const QString network = meta_.value(id).network;
     terminals_.remove(id);
     meta_.remove(id);
     order_.removeAll(id);
@@ -85,9 +86,13 @@ void ScriptTerminalManager::killTerminal(const QString& id) {
         dlg->deleteLater();
     }
     if (known) {
-        emit terminalClosed(id);
+        emit terminalClosed(id, network);
         emit terminalsChanged();
     }
+}
+
+QString ScriptTerminalManager::terminalNetwork(const QString& id) const {
+    return meta_.value(id).network;
 }
 
 QList<TerminalInfo> ScriptTerminalManager::terminals() const {
