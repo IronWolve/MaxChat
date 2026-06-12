@@ -26,6 +26,7 @@
 #include "ui/ColorPickerDialog.h"
 #include "comic/ComicArt.h"
 #include "comic/ComicCharacter.h"
+#include "comic/ComicEmotion.h"
 #include "comic/ComicRenderer.h"
 #include "ui/ComicSettingsDialog.h"
 #include "ui/ComicView.h"
@@ -7230,9 +7231,10 @@ void maxchat::ui::MainWindow::saveComic() {
         return;
     }
     QString defaultName =
-        QStringLiteral("comic-%1.png")
+        QStringLiteral("comic-%1-%2.png")
             .arg(QString(m_currentTarget).remove(QLatin1Char('#')).remove(QLatin1Char('&')).replace(
-                QLatin1Char('/'), QLatin1Char('_')));
+                     QLatin1Char('/'), QLatin1Char('_')),
+                 QDate::currentDate().toString(QStringLiteral("yyyy-MM-dd")));
     QString path = QFileDialog::getSaveFileName(this, QStringLiteral("Save comic image"),
                                                 defaultName, QStringLiteral("PNG image (*.png)"));
     if (path.isEmpty()) {
@@ -7313,43 +7315,6 @@ quint32 comicHash(const QString& s) {
 }
 
 // Text-based emotion guess (port of _emotion_for).
-QString comicEmotionFor(const QString& body) {
-    const QString low = body.toLower();
-    if (low.contains(QStringLiteral(":d")) || low.contains(QStringLiteral(":-d")) ||
-        low.contains(QStringLiteral("lol")) || low.contains(QStringLiteral("rotfl")) ||
-        low.contains(QStringLiteral("haha"))) {
-        return QStringLiteral("laughing");
-    }
-    if (body.contains(QStringLiteral(":)")) || body.contains(QStringLiteral(":-)")) ||
-        body.contains(QStringLiteral("(:")) || body.contains(QStringLiteral("=)"))) {
-        return QStringLiteral("happy");
-    }
-    if (body.contains(QStringLiteral(":(")) || body.contains(QStringLiteral(":-(")) ||
-        body.contains(QStringLiteral("):")) || body.contains(QStringLiteral("=("))) {
-        return QStringLiteral("sad");
-    }
-    if (body.contains(QStringLiteral(";)")) || body.contains(QStringLiteral(";-)"))) {
-        return QStringLiteral("coy");
-    }
-    if (body.contains(QStringLiteral("?!")) || body.contains(QStringLiteral("!?"))) {
-        return QStringLiteral("scared");
-    }
-    int letters = 0;
-    bool allUpper = true;
-    for (const QChar c : body) {
-        if (c.isLetter()) {
-            ++letters;
-            if (!c.isUpper()) {
-                allUpper = false;
-            }
-        }
-    }
-    if (letters >= 3 && allUpper) {
-        return QStringLiteral("shouting");
-    }
-    return QStringLiteral("neutral");
-}
-
 
 struct ComicMsg {
     QString nick;
@@ -7486,7 +7451,7 @@ QString maxchat::ui::MainWindow::comicEmotionForMessage(const QString& nick,
             currentNickForNetwork(activeNetworkName()).toLower()) {
         return m_comicSelfEmotion;
     }
-    return comicEmotionFor(text);
+    return maxchat::comic::guessEmotion(text);
 }
 
 void maxchat::ui::MainWindow::refreshComic() {

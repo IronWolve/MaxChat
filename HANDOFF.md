@@ -2,7 +2,30 @@
 
 Date: 2026-06-09 (audit closeout 2026-06-10; UI polish 2026-06-11)
 
-## Latest Completed Slice (themes live-apply + previews + new themes, 2026-06-11 late)
+## Latest Completed Slice (gap cleanup + comic emotion upgrade, 2026-06-11 late)
+
+- **Stale stubs gone**: Comic ▸ Character Names now confirms + live-refreshes
+  (was printing "planned" despite working); Scripts/Browse Characters fallbacks
+  reworded; dead `showFeaturePlanned` helper removed.
+- **Lua-only scripting**: the 4 legacy Python example scripts deleted from the
+  user's deployed scripts dir (repo assets were already Lua-only).
+- **Windows native spellcheck**: discovered ALREADY DONE — WindowsSpeller
+  (ISpellChecker COM) compiles into the default Windows build
+  (MAXCHAT_OS_SPELL=ON); select via Preferences ▸ Spelling ▸ "Operating
+  system". Stale "not compile-tested" comment refreshed. macOS skipped by
+  user decision. AUDIT #30 can be closed for Windows.
+- **Translations clarified**: Qt-standard dialogs/buttons translate (qt_*.qm
+  deployed + loaded per `interface_language`); app-specific strings have no
+  maxchat_*.qm catalogs — plumbing would pick them up if ever generated.
+- **Comic emotion guesser** extracted to `src/comic/ComicEmotion.{h,cpp}`
+  (`maxchat::comic::guessEmotion`) and upgraded: angry + bored are now
+  reachable from text (they NEVER fired before — 2 of 9 emotions dead in auto
+  mode), emoji recognized (😂😡😭😱😉🙂🥱 etc.), `!!!` → shouting, precedence
+  rules (angry `>:(` beats sad `:(`; laughing beats happy). New
+  `comic_emotion_test` (20 cases) registered in CTest — built, not yet run.
+- Save Comic default filename now includes the date (`comic-chan-2026-06-11.png`).
+
+## Previous Slice (themes live-apply + previews + new themes, 2026-06-11 late)
 
 - **Live apply**: theme/chat-theme/wallpaper combo changes restyle the whole
   app instantly via `PreferencesDialog::themePreviewRequested` →
