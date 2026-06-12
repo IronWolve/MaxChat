@@ -731,3 +731,13 @@ Implemented in one pass (all compiled debug+release, selftest OK):
 - GOTCHA: FakeHost scriptNetwork() returned "net" while tests dispatch with
   "synIRC" — the B3 network-match made the client ignore B/I in tests. Fixed
   the fake to return synIRC. In the real app api.network() == dispatch network.
+
+## MCB1 Z85 armor (2026-06-12)
+
+- Added raw1z/rle1z: Z85 (base85) armor for MCB1 binary payloads, 37% smaller
+  on the wire than hex (earth 510->320, moon 670->420, astro 1000->625).
+  Hex raw1/rle1 still decode (back-compat); the decoder now goes
+  armor->bytes->bits, and the old nibble-wise hex raw1 maps identically.
+- Z85 is the practical ceiling: base94 would save only ~2% more and needs
+  >64-bit block math in Lua. MC DATA terminal frames stay UNARMORED — they
+  are already text; any armor would expand them ~25%.

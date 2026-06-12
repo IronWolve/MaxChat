@@ -563,10 +563,16 @@ Useful sizes:
 
 Encoding:
 
-- `raw1`: packed 1-bit pixels, hexadecimal text.
-- `rle1`: simple 1-bit run-length encoding, hexadecimal text.
-- Use `raw1` when RLE would grow the payload.
-- Use `rle1` for sparse logos, borders, and large flat areas.
+- `raw1`: packed 1-bit pixels, hexadecimal text (100% armor overhead).
+- `rle1`: 1-bit run-length (alternating runs from bit 0, one byte per run,
+  a 0 run flips color), hexadecimal text.
+- `raw1z` / `rle1z`: same pixel encodings armored as Z85 (base85, 5 chars per
+  4 bytes, ~25% overhead) — the densest IRC-safe single-byte armor; base94 is
+  the theoretical ceiling (~22%) but needs >64-bit block math for ~2% more.
+  Z85 only applies to binary payloads; terminal frames are already text and
+  would EXPAND under any armor.
+- Use the raw variant when RLE would grow the payload (dithered photos).
+- Use the rle variant for thresholded photos, logos, and flat areas.
 - Avoid color bitmap transfer in v1; use terminal attributes and overlays for
   color first.
 
