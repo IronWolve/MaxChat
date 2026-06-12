@@ -81,7 +81,13 @@
 #include <QInputDialog>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QAbstractItemView>
+#include <QAbstractSlider>
+#include <QAbstractSpinBox>
+#include <QComboBox>
 #include <QKeyEvent>
+#include <QPlainTextEdit>
+#include <QShowEvent>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QUrl>
@@ -973,7 +979,108 @@ void MainWindow::dropEvent(QDropEvent* event) {
     QMainWindow::dropEvent(event);
 }
 
+// True if w is a writable text field — typing should stay there, not jump to
+// the message box. The chat view is a read-only QTextBrowser, so it returns
+// false and keystrokes typed while the chat is clicked redirect to m_input.
+static bool isTextEntry(QWidget* w) {
+    if (w == nullptr) { return false; }
+    if (qobject_cast<QAbstractSpinBox*>(w) != nullptr) { return true; }
+    if (auto* cb = qobject_cast<QComboBox*>(w)) { return cb->isEditable(); }
+    if (qobject_cast<QLineEdit*>(w) != nullptr) { return true; }
+    if (auto* te = qobject_cast<QTextEdit*>(w)) { return !te->isReadOnly(); }
+    if (auto* pe = qobject_cast<QPlainTextEdit*>(w)) { return !pe->isReadOnly(); }
+    return false;
+}
+
+// HexChat-style key redirect.
+//
+// Invariants that must hold forever:
+//  1. If a QMenu, combo popup, or modal dialog is active → do nothing.
+//  2. If the focused widget is a writable text field → do nothing.
+//  3. If the focused widget is interactive (button, list, slider, tab bar)
+//     → do nothing (let it keep its own key handling).
+//  4. If the event has Ctrl/Alt/Meta → do nothing (let shortcuts through).
+//  5. Only printable text characters trigger the redirect.
+//  6. Install via qApp->installEventFilter(this), NOT per-widget — so that
+//     clicks on the chat view, nick list, topic bar, etc. all funnel here
+//     without needing per-widget installs.
+//
+// Why this breaks if you change it:
+//  - Removing the qApp install means widgets not explicitly filtered are
+//    missed (the original bug: clicking chat → typing did nothing).
+//  - Removing the activePopupWidget/activeModalWidget guard makes typing in
+//    a right-click spell-check menu jump to the input field mid-selection.
+//  - Removing the isTextEntry guard would steal keystrokes from alias/prefs
+//    text fields that live in child widgets of this window (non-modal).
+//  - Removing the interactive-widget guard (buttons, list, slider, tabbar)
+//    breaks keyboard navigation in dialogs and the member list.
+bool MainWindow::redirectKeyToInput(QKeyEvent* e) {
+    // Guard 1: menu, popup, or modal dialog active — leave completely alone.
+    if (QApplication::activePopupWidget() != nullptr ||
+        QApplication::activeModalWidget() != nullptr) {
+        return false;
+    }
+    // Guard: only when this window is the active top-level window.
+    if (QApplication::activeWindow() != this) {
+        return false;
+    }
+    // Escape: return focus to the message box (no find bar in C++ yet, just focus).
+    if (e->key() == Qt::Key_Escape) {
+        if (m_input != nullptr && QApplication::focusWidget() != m_input) {
+            m_input->setFocus();
+            return true;
+        }
+        return false;
+    }
+    // Guard 2: focus is already in a writable text field — let it handle keys.
+    if (isTextEntry(QApplication::focusWidget())) {
+        return false;
+    }
+    // Guard 3: interactive navigation widget — don't steal activation/nav keys.
+    QWidget* focus = QApplication::focusWidget();
+    if (qobject_cast<QAbstractButton*>(focus) != nullptr ||
+        qobject_cast<QAbstractItemView*>(focus) != nullptr ||
+        qobject_cast<QAbstractSlider*>(focus) != nullptr ||
+        qobject_cast<QTabBar*>(focus) != nullptr) {
+        return false;
+    }
+    // Guard 4: Ctrl/Alt/Meta shortcuts pass through unchanged.
+    if (e->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier)) {
+        return false;
+    }
+    // Guard 5: only printable characters (not arrows, Tab, F-keys, etc.).
+    const QString text = e->text();
+    if (text.isEmpty() || !text.at(0).isPrint()) {
+        return false;
+    }
+    // Redirect: focus the message box and pre-fill the typed character.
+    if (m_input != nullptr) {
+        m_input->setFocus();
+        m_input->insertPlainText(text);
+        QTextCursor c = m_input->textCursor();
+        c.movePosition(QTextCursor::End);
+        m_input->setTextCursor(c);
+    }
+    return true;
+}
+
+void MainWindow::showEvent(QShowEvent* event) {
+    QMainWindow::showEvent(event);
+    // Set focus to the message box on first show so the user can type immediately.
+    if (!m_focusedOnce && m_input != nullptr) {
+        m_focusedOnce = true;
+        m_input->setFocus();
+    }
+}
+
 bool MainWindow::eventFilter(QObject* watched, QEvent* event) {
+    // Key redirect must run before per-widget handling so it can consume
+    // events from any widget in the window hierarchy.
+    if (event->type() == QEvent::KeyPress) {
+        if (redirectKeyToInput(static_cast<QKeyEvent*>(event))) {
+            return true;
+        }
+    }
     if (watched == m_input && event->type() == QEvent::KeyPress) {
         auto* keyEvent = static_cast<QKeyEvent*>(event);
         if (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter) {
@@ -1583,6 +1690,11 @@ void maxchat::ui::MainWindow::buildLayout() {
     // viewport, not the widget, so the viewport must be filtered too or
     // right-click spelling suggestions never fire.
     m_input->viewport()->installEventFilter(this);
+    // Global key redirect: typing anywhere in the main window jumps to the
+    // message box. Installed on QApplication so every widget inside this
+    // window's hierarchy is covered (see redirectKeyToInput for the guards
+    // that keep menus, dialogs, and interactive widgets unaffected).
+    qApp->installEventFilter(this);
     connect(m_input, &SpellTextEdit::imageReceived, this, &MainWindow::startImageUpload);
 
     // mIRC formatting: Ctrl+B/I/U insert the control codes, Ctrl+K opens the
