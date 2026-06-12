@@ -111,34 +111,43 @@ free      flexible      Any-size script terminal
 Working choice:
 
 ```text
-Spleen OTF
-Primary candidate: Spleen 8x16 for ibm-vga
-Larger options: Spleen 12x24, Spleen 16x32
-License: BSD-2-Clause
-Source: https://github.com/fcambus/spleen
+JetBrains Mono
+Bundled files: assets/fonts/JetBrainsMono-Regular.ttf
+               assets/fonts/JetBrainsMono-Bold.ttf
+License file:  assets/fonts/JetBrainsMono-OFL.txt
 ```
 
 Reason:
 
 - We want a programmer/terminal font, not a strict VGA emulator.
-- Spleen has the blocky old-terminal feel we want for BBS/script terminals.
-- Spleen includes Box Drawing, Block Elements, Braille, Powerline, and CP437
-  support in the larger sizes.
-- BSD-2-Clause is simple to ship with MaxChat.
-- OTF builds are available, so Qt can load the font directly.
-- It keeps normal chat independent: JetBrains Mono remains the default chat/UI
-  monospace font unless the user changes it.
+- JetBrains Mono is already bundled with MaxChat and loaded by the app.
+- Local font coverage check showed full Box Drawing coverage (`128/128`) and
+  full Block Elements coverage (`32/32`) in both regular and bold weights.
+- Common BBS/ANSI samples are present, including single/double line boxes,
+  shade blocks, half blocks, filled blocks, and common geometric markers.
+- It avoids adding another font asset, license file, and packaging path.
+- It keeps the BBS/script terminal visually consistent with the existing chat
+  font defaults.
 
 Display rules:
 
-- Use Spleen only for script/BBS terminal profiles by default.
-- Prefer native pixel sizes or integer multiples where practical.
-- Disable or reduce smoothing for this terminal font if Qt/platform rendering
-  gives a blurry result.
+- Use JetBrains Mono for script/BBS terminal profiles by default.
 - Keep the terminal renderer Unicode-based; do not emulate VGA hardware text
   mode just to use the font.
+- Do not rely on Braille Patterns or Symbols for Legacy Computing in the first
+  BBS screens; bundled JetBrains Mono does not cover those ranges.
+- If a future feature needs PETSCII/C64-specific legacy glyphs, add a separate
+  optional terminal font/profile after checking coverage and license terms.
 
 Alternates considered:
+
+```text
+Spleen OTF
+```
+
+- Blockier old-terminal feel, BSD-2-Clause license, and CP437-capable in larger
+  sizes.
+- Keep as an optional future terminal style if JetBrains Mono feels too modern.
 
 ```text
 PxPlus IBM VGA 8x16

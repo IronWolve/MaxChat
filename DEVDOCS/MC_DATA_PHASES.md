@@ -201,10 +201,10 @@ Exit criteria:
 - Keep each phase commit-sized so pieces can be reverted cleanly.
 - Phase 2 targeted MC DATA tests passed.
 - Phase 5 profile IDs/sizing are implemented with existing fonts. The current
-  terminal font candidate is Spleen OTF because it is blocky, terminal-focused,
-  CP437-capable in larger sizes, and BSD-2-Clause licensed. It is documented in
-  `DEVDOCS/MC_DATA.md`; asset bundling remains open until license files and
-  Qt rendering are verified.
+  terminal font decision is to keep using bundled JetBrains Mono because local
+  coverage checks showed full Box Drawing and Block Elements support. Spleen OTF
+  remains documented as an optional future style, but no new font asset is
+  required for the first BBS terminal.
 - Compact terminal frame draft is documented in `DEVDOCS/MC_DATA.md`. It uses
   single-letter ops, fixed-width hex fields, and byte-length writes to reduce
   CTCP payload size. Treat it as a working protocol until implementation proves
