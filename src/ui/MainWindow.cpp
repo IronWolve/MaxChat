@@ -1736,6 +1736,31 @@ void maxchat::ui::MainWindow::openPreferences() {
             &MainWindow::openComicSettings);
     connect(&dialog, &PreferencesDialog::browseCharactersRequested, this,
             &MainWindow::openCharacterGallery);
+    connect(&dialog, &PreferencesDialog::loadScriptRequested, this,
+            [this, &dialog](const QString& name) {
+                handleScriptsCommand(QStringLiteral("load"), name);
+                if (maxchat::scripting::LuaEngine::available()) {
+                    dialog.refreshScriptList(m_lua->loaded());
+                }
+            });
+    connect(&dialog, &PreferencesDialog::unloadScriptRequested, this,
+            [this, &dialog](const QString& name) {
+                handleScriptsCommand(QStringLiteral("unload"), name);
+                if (maxchat::scripting::LuaEngine::available()) {
+                    dialog.refreshScriptList(m_lua->loaded());
+                }
+            });
+    connect(&dialog, &PreferencesDialog::reloadScriptRequested, this,
+            [this, &dialog](const QString& name) {
+                handleScriptsCommand(QStringLiteral("reload"), name);
+                if (maxchat::scripting::LuaEngine::available()) {
+                    dialog.refreshScriptList(m_lua->loaded());
+                }
+            });
+    connect(&dialog, &PreferencesDialog::editScriptRequested, this,
+            [](const QString& path) {
+                QDesktopServices::openUrl(QUrl::fromLocalFile(path));
+            });
     connect(&dialog, &PreferencesDialog::testNotificationRequested, this, [this, &dialog]() {
         // Use the dialog's current (unsaved) settings, not the cached m_notify*
         QVariantMap testSettings = dialog.settings();

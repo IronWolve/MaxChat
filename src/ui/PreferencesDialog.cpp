@@ -755,23 +755,93 @@ void PreferencesDialog::buildComicTab(QWidget* tab) {
             &PreferencesDialog::browseCharactersRequested);
 }
 
+void PreferencesDialog::refreshScriptList(const QStringList& loaded) {
+    if (scriptList_ == nullptr || scriptsDir_.isEmpty()) {
+        return;
+    }
+    scriptList_->clear();
+    const QFileInfoList files = QDir(scriptsDir_).entryInfoList(
+        {QStringLiteral("*.lua")}, QDir::Files, QDir::Name);
+    for (const QFileInfo& fi : files) {
+        const QString name = fi.completeBaseName();
+        const bool isLoaded = loaded.contains(name);
+        auto* item = new QListWidgetItem(
+            isLoaded ? QStringLiteral("%1  ✓ loaded").arg(fi.fileName()) : fi.fileName());
+        item->setData(Qt::UserRole,     name);
+        item->setData(Qt::UserRole + 1, fi.absoluteFilePath());
+        if (isLoaded) {
+            QFont f = item->font();
+            f.setBold(true);
+            item->setFont(f);
+        }
+        scriptList_->addItem(item);
+    }
+    if (scriptList_->count() == 0) {
+        auto* empty = new QListWidgetItem(
+            QStringLiteral("No .lua scripts found — add scripts to the folder below"));
+        empty->setFlags(Qt::NoItemFlags);
+        scriptList_->addItem(empty);
+    }
+}
+
 void PreferencesDialog::buildScriptsTab(QWidget* tab) {
     auto* root = new QVBoxLayout(tab);
 
-    // Currently loaded scripts — populated from the live engine at dialog open.
-    auto* loadedGroup = new QGroupBox(QStringLiteral("Currently loaded"), tab);
-    auto* loadedLayout = new QVBoxLayout(loadedGroup);
-    loadedLayout->setSpacing(2);
-    if (loadedScripts_.isEmpty()) {
-        auto* none = new QLabel(QStringLiteral("No scripts loaded."), loadedGroup);
-        none->setEnabled(false);
-        loadedLayout->addWidget(none);
-    } else {
-        for (const QString& name : std::as_const(loadedScripts_)) {
-            loadedLayout->addWidget(new QLabel(name, loadedGroup));
-        }
+    // ── Script list ──────────────────────────────────────────────────────────
+    auto* scriptsGroup = new QGroupBox(QStringLiteral("Scripts"), tab);
+    auto* scriptsLayout = new QVBoxLayout(scriptsGroup);
+
+    scriptList_ = new QListWidget(scriptsGroup);
+    scriptsLayout->addWidget(scriptList_, 1);
+
+    auto* scriptBtns = new QHBoxLayout();
+    auto* loadBtn   = new QPushButton(QStringLiteral("Load"),   scriptsGroup);
+    auto* unloadBtn = new QPushButton(QStringLiteral("Unload"), scriptsGroup);
+    auto* reloadBtn = new QPushButton(QStringLiteral("Reload"), scriptsGroup);
+    auto* editBtn   = new QPushButton(QStringLiteral("Edit"),   scriptsGroup);
+    scriptBtns->addWidget(loadBtn);
+    scriptBtns->addWidget(unloadBtn);
+    scriptBtns->addWidget(reloadBtn);
+    scriptBtns->addWidget(editBtn);
+    if (!scriptsDir_.isEmpty()) {
+        auto* openBtn = new QPushButton(QStringLiteral("Open Folder"), scriptsGroup);
+        openBtn->setToolTip(scriptsDir_);
+        connect(openBtn, &QPushButton::clicked, this, [this]() {
+            QDesktopServices::openUrl(QUrl::fromLocalFile(scriptsDir_));
+        });
+        scriptBtns->addWidget(openBtn);
     }
-    root->addWidget(loadedGroup);
+    scriptBtns->addStretch(1);
+    scriptsLayout->addLayout(scriptBtns);
+    root->addWidget(scriptsGroup);
+
+    refreshScriptList(loadedScripts_);
+
+    const auto currentName = [this]() -> QString {
+        const QListWidgetItem* item = scriptList_->currentItem();
+        return item ? item->data(Qt::UserRole).toString() : QString();
+    };
+    const auto currentPath = [this]() -> QString {
+        const QListWidgetItem* item = scriptList_->currentItem();
+        return item ? item->data(Qt::UserRole + 1).toString() : QString();
+    };
+
+    connect(loadBtn,   &QPushButton::clicked, this, [this, currentName]() {
+        const QString n = currentName();
+        if (!n.isEmpty()) emit loadScriptRequested(n);
+    });
+    connect(unloadBtn, &QPushButton::clicked, this, [this, currentName]() {
+        const QString n = currentName();
+        if (!n.isEmpty()) emit unloadScriptRequested(n);
+    });
+    connect(reloadBtn, &QPushButton::clicked, this, [this, currentName]() {
+        const QString n = currentName();
+        if (!n.isEmpty()) emit reloadScriptRequested(n);
+    });
+    connect(editBtn,   &QPushButton::clicked, this, [this, currentPath]() {
+        const QString p = currentPath();
+        if (!p.isEmpty()) emit editScriptRequested(p);
+    });
 
     auto* note = new QLabel(
         QStringLiteral("Lua scripts run sandboxed by default — they can react to chat, add "
@@ -853,17 +923,6 @@ void PreferencesDialog::buildScriptsTab(QWidget* tab) {
         delete scriptDirs_->takeItem(scriptDirs_->currentRow());
     });
 
-    if (!scriptsDir_.isEmpty()) {
-        auto* openFolder = new QPushButton(QStringLiteral("Open scripts folder..."), tab);
-        openFolder->setToolTip(scriptsDir_);
-        connect(openFolder, &QPushButton::clicked, this, [this]() {
-            QDesktopServices::openUrl(QUrl::fromLocalFile(scriptsDir_));
-        });
-        auto* folderRow = new QHBoxLayout();
-        folderRow->addWidget(openFolder);
-        folderRow->addStretch(1);
-        root->addLayout(folderRow);
-    }
 }
 
 void PreferencesDialog::buildFontsTab(QWidget* tab) {
