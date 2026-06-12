@@ -23,6 +23,7 @@
 #include <QHash>
 #include <QImage>
 #include <QList>
+#include <QSet>
 #include <QMainWindow>
 #include <QNetworkAccessManager>
 #include <QPoint>
@@ -509,6 +510,7 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     QAction* m_comicModeAction = nullptr;
     ComicView* m_comicView = nullptr;
     bool m_comicMode = false;
+    QSet<QString> m_comicHiddenBuffers; // per-buffer view suppression (key = network\x1ftarget)
     QString m_comicSelfEmotion = QStringLiteral("auto"); // override for your panels; "auto" = guess
     QString m_comicArtDirLoaded;
     QHash<QString, QString> m_comicCharacterPaths;  // stem -> .avb path
