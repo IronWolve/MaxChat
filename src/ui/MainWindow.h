@@ -193,6 +193,9 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     void reconnectNetwork(const QString& network);
     void reconnectCurrentServer();
     void disconnectNetwork(const QString& network);
+    // Disconnect AND remove a network: frees its buffers, per-network state,
+    // tree row, and (non-default) connection object.
+    void closeNetwork(const QString& network);
     void disconnectFromCurrentServer();
     void handleDisconnected(const QString& network, const QString& reason);
     void handleDisconnected(const QString& reason);
