@@ -2,6 +2,7 @@
 
 #include "app/AppInfo.h"
 #include "irc/IrcMessage.h"
+#include "irc/McDataCodec.h"
 #include "irc/IrcRedaction.h"
 
 #include <QByteArray>
@@ -485,6 +486,15 @@ void IrcSession::handleLine(const QString &line) {
     const QString text = msg.trailing();
     const CtcpMessage ctcp = parseCtcpMessage(text);
     if (ctcp.valid) {
+      const std::optional<McDataMessage> mcData =
+          parseMcDataCtcp(ctcp.command, ctcp.args);
+      if (mcData.has_value()) {
+        emit mcDataReceived(msg.nick(), params.first(), mcData->service,
+                            mcData->verb, mcData->payload,
+                            command == QStringLiteral("NOTICE"));
+        return;
+      }
+
       if (command == QStringLiteral("NOTICE")) {
         // A CTCP PING reply echoes our timestamp — show the round-trip time.
         if (ctcp.command == QStringLiteral("PING")) {

@@ -1,6 +1,6 @@
 # MC DATA + Script Terminal Phases
 
-Current phase: Phase 2 - MC DATA Core
+Current phase: Phase 3 - Lua MC DATA API
 
 Status key:
 
@@ -35,14 +35,14 @@ Exit criteria:
 
 ## Phase 2 - MC DATA Core
 
-- [~] Add `McDataMessage`.
-- [ ] Add `McDataCodec`.
-- [ ] Parse `MC DATA <service> <verb> <payload>`.
-- [ ] Normalize service lowercase and verb uppercase.
-- [ ] Route CTCP `MC DATA` separately from generic CTCP summaries.
-- [ ] Preserve existing `DCC`, `ACTION`, `SOUND`, `PING`, `VERSION`, `TIME`, and `CLIENTINFO`.
-- [ ] Add tests for request/reply parsing.
-- [ ] Add regression tests proving DCC and existing CTCP behavior still works.
+- [x] Add `McDataMessage`.
+- [x] Add `McDataCodec`.
+- [x] Parse `MC DATA <service> <verb> <payload>`.
+- [x] Normalize service lowercase and verb uppercase.
+- [x] Route CTCP `MC DATA` separately from generic CTCP summaries.
+- [x] Preserve existing `DCC`, `ACTION`, `SOUND`, `PING`, `VERSION`, `TIME`, and `CLIENTINFO`.
+- [x] Add tests for request/reply parsing.
+- [x] Add regression tests proving DCC and existing CTCP behavior still works.
 
 Exit criteria:
 
@@ -51,7 +51,7 @@ Exit criteria:
 
 ## Phase 3 - Lua MC DATA API
 
-- [ ] Add `api.mc_send(target, service, verb, payload)`.
+- [~] Add `api.mc_send(target, service, verb, payload)`.
 - [ ] Add `api.mc_reply(target, service, verb, payload)`.
 - [ ] Add `on_mc_data(api, network, target, nick, service, verb, payload, notice)`.
 - [ ] Add host-side MC DATA send queue.
@@ -199,3 +199,6 @@ Exit criteria:
 - Do not send secrets over MC DATA v1.
 - Do not bundle fonts without checking redistribution license.
 - Keep each phase commit-sized so pieces can be reverted cleanly.
+- Phase 2 targeted tests passed. Full `irc_session` currently has one unrelated
+  `commandStatusAndErrorsEmitReadableText` expectation mismatch to handle outside
+  the MC DATA core commit.
