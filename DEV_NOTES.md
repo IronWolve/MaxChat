@@ -32,6 +32,28 @@ When adding anything that should survive a buffer switch, store it in the model.
 
 ## THINGS I GOT WRONG
 
+- **2026-06-11 — Comic balloon tails: per-case ad-hoc geometry instead of one
+  rule set.** The original `drawTail` had three separate geometries (tail-to-
+  head, stacked-balloon stub, side-exit), each with its own arbitrary numbers:
+  base width scaled with the BALLOON (narrow balloon → needle tail, wide →
+  slab), tips used magic lean fractions (0.55 / 0.82) instead of aiming at the
+  speaker, and lengths differed wildly between cases. User-visible result:
+  "no real logic to length, angle, size… some tails thin, some short."
+  Fix (commits b4a84fa + 247736a): ONE geometry — panel-relative base width,
+  tip along the actual base→head vector with clamped length (5–16% of panel)
+  and lean (~50° from vertical), quadratic-curved edges in the single
+  `drawTri` helper. **Lesson: when the same visual element is drawn from
+  several code paths, centralise the geometry and derive everything from a
+  few panel-relative constants — per-case magic numbers WILL drift apart and
+  look inconsistent. Full rules in COMIC_MODE_DESIGN.md §6.**
+
+- **2026-06-11 — Two of nine comic emotions were unreachable and nobody
+  noticed.** `comicEmotionFor` never returned "angry" or "bored" — the art,
+  the picker, and the renderer all supported them, but auto mode could not
+  produce them, for months. **Lesson: when a classifier feeds a fixed enum,
+  test that EVERY enum value is producible** (now guarded by
+  `comic_emotion_test`).
+
 - **2026-06-11 — Quick audit caught 6 issues in code that "looked done" (all
   fixed same day). The recurring patterns, so we don't get caught again:**
   1. **A permission name must mean what it says.** "Load modules" opened the
