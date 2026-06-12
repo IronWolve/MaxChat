@@ -1043,9 +1043,11 @@ bool MainWindow::redirectKeyToInput(QKeyEvent* e) {
         return false;
     }
     // Guard 3: interactive navigation widget — don't steal activation/nav keys.
+    // QAbstractItemView (tree, member list) is intentionally NOT here: arrow
+    // keys reach Guard 5 (non-printable → return false) so tree navigation is
+    // preserved, while printable characters still redirect to the input box.
     QWidget* focus = QApplication::focusWidget();
     if (qobject_cast<QAbstractButton*>(focus) != nullptr ||
-        qobject_cast<QAbstractItemView*>(focus) != nullptr ||
         qobject_cast<QAbstractSlider*>(focus) != nullptr ||
         qobject_cast<QTabBar*>(focus) != nullptr) {
         return false;
@@ -1370,54 +1372,6 @@ void maxchat::ui::MainWindow::buildMenus() {
     connect(m_chatSeparatorAction, &QAction::toggled, this,
             [this](const bool visible) { setChatSeparatorVisible(visible, true); });
     viewMenu->addSeparator();
-    QMenu* themeMenu = viewMenu->addMenu(QStringLiteral("Theme"));
-    auto* themeGroup = new QActionGroup(this);
-    themeGroup->setExclusive(true);
-    for (const AppThemeDefinition& theme : appThemes()) {
-        QAction* action = themeMenu->addAction(theme.label);
-        action->setCheckable(true);
-        action->setData(theme.id);
-        themeGroup->addAction(action);
-        m_themeActions.append(action);
-        connect(action, &QAction::triggered, this, [this, id = theme.id]() { setTheme(id, true); });
-    }
-
-    QMenu* chatThemeMenu = viewMenu->addMenu(QStringLiteral("Chat Theme"));
-    auto* chatThemeGroup = new QActionGroup(this);
-    chatThemeGroup->setExclusive(true);
-    for (const ChatThemeDefinition& theme : chatThemes()) {
-        QAction* action = chatThemeMenu->addAction(theme.label);
-        action->setCheckable(true);
-        action->setData(theme.id);
-        chatThemeGroup->addAction(action);
-        m_chatThemeActions.append(action);
-        connect(action, &QAction::triggered, this,
-                [this, id = theme.id]() { setChatTheme(id, true); });
-    }
-
-    QMenu* wallpaperMenu = viewMenu->addMenu(QStringLiteral("Wallpaper"));
-    auto* wallpaperGroup = new QActionGroup(this);
-    wallpaperGroup->setExclusive(true);
-    for (const WallpaperDefinition& wallpaper : wallpaperChoices()) {
-        QAction* action = wallpaperMenu->addAction(wallpaper.label);
-        action->setCheckable(true);
-        action->setData(wallpaper.value);
-        wallpaperGroup->addAction(action);
-        m_wallpaperActions.append(action);
-        connect(action, &QAction::triggered, this,
-                [this, value = wallpaper.value]() { setWallpaper(value, true); });
-    }
-    wallpaperMenu->addSeparator();
-    wallpaperMenu->addAction(QStringLiteral("Load Image..."), this, [this]() {
-        const QString path =
-            QFileDialog::getOpenFileName(this, QStringLiteral("Choose Wallpaper"), QString(),
-                                         QStringLiteral("Images (*.png *.jpg *.jpeg *.webp)"));
-        if (!path.isEmpty()) {
-            setWallpaper(path, true);
-        }
-    });
-    m_looksMenu = viewMenu->addMenu(QStringLiteral("Saved Looks"));
-    rebuildLooksMenu();
     viewMenu->addSeparator();
     viewMenu->addAction(QStringLiteral("Clear Current Chat"), this, &MainWindow::clearCurrentChat);
     viewMenu->addAction(QStringLiteral("Mark All Read"), this, &MainWindow::markAllRead);
@@ -1459,6 +1413,55 @@ void maxchat::ui::MainWindow::buildMenus() {
     prefsAction->setShortcut(QKeySequence(QStringLiteral("Ctrl+P")));
     settingsMenu->addAction(QStringLiteral("Ignore List..."), this, &MainWindow::openIgnoreList);
     settingsMenu->addAction(QStringLiteral("Aliases..."), this, &MainWindow::openAliases);
+    settingsMenu->addSeparator();
+    QMenu* themesMenu = settingsMenu->addMenu(QStringLiteral("Themes"));
+    QMenu* themeMenu = themesMenu->addMenu(QStringLiteral("Theme"));
+    auto* themeGroup = new QActionGroup(this);
+    themeGroup->setExclusive(true);
+    for (const AppThemeDefinition& theme : appThemes()) {
+        QAction* action = themeMenu->addAction(theme.label);
+        action->setCheckable(true);
+        action->setData(theme.id);
+        themeGroup->addAction(action);
+        m_themeActions.append(action);
+        connect(action, &QAction::triggered, this, [this, id = theme.id]() { setTheme(id, true); });
+    }
+    QMenu* chatThemeMenu = themesMenu->addMenu(QStringLiteral("Chat Theme"));
+    auto* chatThemeGroup = new QActionGroup(this);
+    chatThemeGroup->setExclusive(true);
+    for (const ChatThemeDefinition& theme : chatThemes()) {
+        QAction* action = chatThemeMenu->addAction(theme.label);
+        action->setCheckable(true);
+        action->setData(theme.id);
+        chatThemeGroup->addAction(action);
+        m_chatThemeActions.append(action);
+        connect(action, &QAction::triggered, this,
+                [this, id = theme.id]() { setChatTheme(id, true); });
+    }
+    QMenu* wallpaperMenu = themesMenu->addMenu(QStringLiteral("Wallpaper"));
+    auto* wallpaperGroup = new QActionGroup(this);
+    wallpaperGroup->setExclusive(true);
+    for (const WallpaperDefinition& wallpaper : wallpaperChoices()) {
+        QAction* action = wallpaperMenu->addAction(wallpaper.label);
+        action->setCheckable(true);
+        action->setData(wallpaper.value);
+        wallpaperGroup->addAction(action);
+        m_wallpaperActions.append(action);
+        connect(action, &QAction::triggered, this,
+                [this, value = wallpaper.value]() { setWallpaper(value, true); });
+    }
+    wallpaperMenu->addSeparator();
+    wallpaperMenu->addAction(QStringLiteral("Load Image..."), this, [this]() {
+        const QString wallPath =
+            QFileDialog::getOpenFileName(this, QStringLiteral("Choose Wallpaper"), QString(),
+                                         QStringLiteral("Images (*.png *.jpg *.jpeg *.webp)"));
+        if (!wallPath.isEmpty()) {
+            setWallpaper(wallPath, true);
+        }
+    });
+    m_looksMenu = themesMenu->addMenu(QStringLiteral("Saved Looks"));
+    rebuildLooksMenu();
+    settingsMenu->addSeparator();
     settingsMenu->addAction(QStringLiteral("Keyboard Shortcuts..."), this,
                             &MainWindow::openShortcutEditor);
     settingsMenu->addAction(QStringLiteral("Friends / Notify..."), this,
