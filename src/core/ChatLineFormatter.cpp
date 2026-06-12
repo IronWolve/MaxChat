@@ -102,7 +102,10 @@ QString linkifyUrls(const QString& html, const QString& plainText) {
         return html;
     }
     QString result = html;
-    for (const QString& url : urls) {
+    QStringList ordered = urls;
+    std::sort(ordered.begin(), ordered.end(),
+              [](const QString& a, const QString& b) { return a.size() > b.size(); });
+    for (const QString& url : ordered) {
         const QString escaped = url.toHtmlEscaped();
         // Only replace bare URL text — skip anything already inside an href.
         // Simple guard: don't touch a match that is immediately preceded by '"'.
@@ -128,7 +131,15 @@ QString messageHtml(const QString& text, const ChatLineFormatOptions& options) {
     } else {
         html = maxchat::irc::stripFormatting(text).toHtmlEscaped();
     }
-    return linkifyUrls(html, maxchat::irc::stripFormatting(text));
+    html = linkifyUrls(html, maxchat::irc::stripFormatting(text));
+    if (!options.bodyColor.isEmpty()) {
+        // Dim-replay: tint the whole body. defaultForeground alone only feeds
+        // reverse-video, so without this the "dimmed" history rendered the
+        // message text at full brightness.
+        html = QStringLiteral("<span style=\"color:%1\">%2</span>")
+                   .arg(options.bodyColor, html);
+    }
+    return html;
 }
 
 QString colorSpan(const QString& color, const QString& html) {
@@ -136,8 +147,12 @@ QString colorSpan(const QString& color, const QString& html) {
 }
 
 QString labelHtml(const ParsedLine& parsed, const ChatLineFormatOptions& options) {
-    const QString escapedLabel = parsed.label.toHtmlEscaped();
-    const QString nick = parsed.labelNick;
+    // Strip mIRC formatting from the label: raw codes would render as literal
+    // digits ("<04nick>") and, worse, make the colour hash differ from the
+    // member list's (which hashes the clean nick).
+    const QString cleanLabel = maxchat::irc::stripFormatting(parsed.label);
+    const QString escapedLabel = cleanLabel.toHtmlEscaped();
+    const QString nick = maxchat::irc::stripFormatting(parsed.labelNick);
     if (nick.trimmed().isEmpty()) {
         return escapedLabel;
     }
@@ -156,12 +171,12 @@ QString labelHtml(const ParsedLine& parsed, const ChatLineFormatOptions& options
     }
 
     // Tint the <> / - - / * marks around the nick separately (BitchX-style).
-    const qsizetype nickStart = parsed.label.indexOf(nick);
+    const qsizetype nickStart = cleanLabel.indexOf(nick);
     if (nickStart < 0) {
         return nickColor.isEmpty() ? escapedLabel : colorSpan(nickColor, escapedLabel);
     }
-    const QString open = parsed.label.left(nickStart).toHtmlEscaped();
-    const QString close = parsed.label.mid(nickStart + nick.size()).toHtmlEscaped();
+    const QString open = cleanLabel.left(nickStart).toHtmlEscaped();
+    const QString close = cleanLabel.mid(nickStart + nick.size()).toHtmlEscaped();
     const QString nickHtml = nick.toHtmlEscaped();
     QString html;
     if (!open.isEmpty()) {

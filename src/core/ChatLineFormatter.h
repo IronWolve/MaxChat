@@ -20,6 +20,7 @@ struct ChatLineFormatOptions {
     QString timestampColor = QStringLiteral("#8a8a8a");
     QString bracketColor;             // colors <> -- around nicks separately
     QString systemColor;              // join/part/status lines, when systemLine
+    QString bodyColor;                // wraps the message body (dim replay)
     bool monoNicks = false;           // irssi-style: nicks in plain chat fg
     QStringList nickPalette;          // hex colors; empty = default palette
     bool systemLine = false;          // this line is a system/event line

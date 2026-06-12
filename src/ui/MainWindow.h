@@ -169,6 +169,9 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     void updateNickLabel();        // your-nick label by the input box
     void leaveCurrentChannel();
     void leaveAllChannels(const QString& network); // empty = active network
+    [[nodiscard]] QColor resolvedChatBackground() const;
+    // One source of nick colours for chat view + member list (contrast-guarded).
+    [[nodiscard]] QStringList effectiveNickPalette(bool* monoOut) const;
     // Seed a buffer's stored line model with dimmed log history + a "Chat ended"
     // divider so resume survives buffer switches (rendered, not painted). Returns
     // true if any history was added.

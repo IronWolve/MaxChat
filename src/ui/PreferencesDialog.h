@@ -23,6 +23,11 @@ class PreferencesDialog final : public QDialog {
     explicit PreferencesDialog(QVariantMap settings, QStringList loadedScripts = {}, QString scriptsDir = {}, QString soundsDir = {}, QWidget* parent = nullptr);
 
     [[nodiscard]] QVariantMap settings() const;
+    // Only the keys whose values differ from the dialog-open snapshot. Saving
+    // just these (merged over a FRESH load) stops the open-time snapshot from
+    // clobbering anything written while the dialog was up (child dialogs,
+    // window geometry, IRC-driven keys) and stops materialising defaults.
+    [[nodiscard]] QVariantMap changedSettings() const;
 
   public slots:
     void refreshScriptList(const QStringList& loaded);
@@ -66,6 +71,7 @@ class PreferencesDialog final : public QDialog {
     void buildDataTab(QWidget* tab);
 
     QVariantMap settings_;
+    QVariantMap originalSettings_; // untouched snapshot for changedSettings()
     QStringList loadedScripts_;
     QString scriptsDir_;
     QString soundsDir_;

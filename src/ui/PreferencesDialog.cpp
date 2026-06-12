@@ -156,6 +156,7 @@ QVariantMap contentServicesFromSettings(const QVariantMap& settings) {
 PreferencesDialog::PreferencesDialog(QVariantMap settings, QStringList loadedScripts,
                                      QString scriptsDir, QString soundsDir, QWidget* parent)
     : QDialog(parent), settings_(std::move(settings)),
+      originalSettings_(settings_),
       loadedScripts_(std::move(loadedScripts)), scriptsDir_(std::move(scriptsDir)),
       soundsDir_(std::move(soundsDir)) {
     setWindowTitle(QStringLiteral("Preferences"));
@@ -234,6 +235,18 @@ PreferencesDialog::PreferencesDialog(QVariantMap settings, QStringList loadedScr
     connect(buttons, &QDialogButtonBox::accepted, this, &PreferencesDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, this, &PreferencesDialog::reject);
     root->addWidget(buttons);
+}
+
+QVariantMap PreferencesDialog::changedSettings() const {
+    const QVariantMap full = settings();
+    QVariantMap changed;
+    for (auto it = full.constBegin(); it != full.constEnd(); ++it) {
+        if (!originalSettings_.contains(it.key()) ||
+            originalSettings_.value(it.key()) != it.value()) {
+            changed.insert(it.key(), it.value());
+        }
+    }
+    return changed;
 }
 
 QVariantMap PreferencesDialog::settings() const {
