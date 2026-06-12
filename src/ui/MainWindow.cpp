@@ -7946,6 +7946,9 @@ void maxchat::ui::MainWindow::refreshComic() {
     const QVariantMap settings = m_settings.loadWithDefaults();
     const bool captions = settings.value(QStringLiteral("comic_captions"), true).toBool();
     const double captionScale = settings.value(QStringLiteral("comic_caption_scale"), 1.0).toDouble();
+    const bool balloonTint = settings.value(QStringLiteral("comic_balloon_tint"), true).toBool();
+    const QString comicFontFamily =
+        settings.value(QStringLiteral("comic_font"), QStringLiteral("Comic Relief")).toString();
     const int panelCount = std::clamp(settings.value(QStringLiteral("comic_panels"), 4).toInt(), 1, 6);
     const int perPanel = std::clamp(settings.value(QStringLiteral("comic_per_panel"), 4).toInt(), 1, 6);
     const int minFont = std::clamp(settings.value(QStringLiteral("comic_min_font"), 9).toInt(), 6, 13);
@@ -8095,7 +8098,7 @@ void maxchat::ui::MainWindow::refreshComic() {
                 li.action = m.action;
                 rlines.append(li);
             }
-            if (maxchat::comic::panelMinFont(kSize, actors, rlines) >= minFont) {
+            if (maxchat::comic::panelMinFont(kSize, actors, rlines, comicFontFamily) >= minFont) {
                 panels.last() = trial;
                 extended = true;
             }
@@ -8168,10 +8171,12 @@ void maxchat::ui::MainWindow::refreshComic() {
         // Panel cache: rendering is the hot path (every new message re-renders
         // the whole strip, but only the LAST panel actually changes). The key
         // covers every visual input, so settings/theme/art changes simply miss.
-        QString key = QStringLiteral("%1|%2|%3")
+        QString key = QStringLiteral("%1|%2|%3|%4|%5")
                           .arg(background.cacheKey())
                           .arg(captions ? captionScale : -1.0)
-                          .arg(kSize);
+                          .arg(kSize)
+                          .arg(comicFontFamily)
+                          .arg(balloonTint ? 1 : 0);
         for (const maxchat::comic::ComicActor& a : actors) {
             key += QStringLiteral("|%1:%2:%3:%4")
                        .arg(a.nick, a.emotion, QString::number(a.pose),
@@ -8190,7 +8195,8 @@ void maxchat::ui::MainWindow::refreshComic() {
                 m_comicPanelCache.clear(); // cheap flush beats LRU bookkeeping here
             }
             panelPm = maxchat::comic::renderComicPanel(kSize, background, actors, rlines,
-                                                       captions, captionScale, captionColors);
+                                                       captions, captionScale, captionColors,
+                                                       balloonTint, comicFontFamily);
             m_comicPanelCache.insert(key, panelPm);
         }
         rendered.append(panelPm);
