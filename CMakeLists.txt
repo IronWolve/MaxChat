@@ -436,6 +436,35 @@ target_link_libraries(terminal_profile_test
 
 add_test(NAME terminal_profile COMMAND terminal_profile_test)
 
+qt_add_executable(script_terminal_manager_test
+    tests/unit/script_terminal_manager_test.cpp
+    src/ui/ScriptTerminalManager.cpp
+    src/ui/ScriptTerminalManager.h
+    src/ui/ScriptTerminalDialog.cpp
+    src/ui/ScriptTerminalDialog.h
+    src/ui/AnsiRenderer.cpp
+    src/ui/AnsiRenderer.h
+    src/ui/TerminalFrame.cpp
+    src/ui/TerminalFrame.h
+    src/ui/TerminalProfile.cpp
+    src/ui/TerminalProfile.h
+)
+
+target_include_directories(script_terminal_manager_test
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(script_terminal_manager_test
+    PRIVATE
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Widgets
+        Qt6::Test
+)
+
+add_test(NAME script_terminal_manager COMMAND script_terminal_manager_test)
+
 qt_add_executable(irc_message_test
     tests/unit/irc_message_test.cpp
 )
