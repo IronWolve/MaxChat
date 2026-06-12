@@ -2,7 +2,21 @@
 
 Date: 2026-06-09 (audit closeout 2026-06-10; UI polish 2026-06-11)
 
-## Latest Completed Slice (DCC hardening + notifications + small fry, 2026-06-12)
+## Latest Completed Slice (theme pack expansion + wallpapers, 2026-06-12)
+
+- **6 new app themes**: Matrix, Catppuccin Mocha, One Dark, Pure Black,
+  Rose Pine, Everforest (31 total).
+- **10 new chat themes** (the short list more than doubled, 19 total):
+  Matrix, Dracula, Nord, Gruvbox, One Dark, Solarized dark, Pure Black,
+  Old School (black on white w/ classic IRC nick palette), Cyber (neon on
+  void), Rose Pine — all with ts/bracket/system colours and nick palettes
+  matched to their app counterparts.
+- **8 generated wallpapers** (numpy+PIL, 1920x1080, ~50-460 KB each):
+  matrix-rain, aurora, nebula, circuit, deep-waves, dusk-peaks, hex-mesh,
+  ember-bokeh — auto-discovered from assets/wallpapers. Generator was a
+  throwaway script (not committed); visually verified.
+
+## Previous Slice (DCC hardening + notifications + small fry, 2026-06-12)
 
 **DCC (15 findings, all serious ones fixed):**
 - CHAT offers now follow the accept policy (was: auto-connect for ANYONE —
