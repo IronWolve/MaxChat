@@ -24,8 +24,8 @@ class AnsiRendererTest final : public QObject {
     }
 
     void rendersHotspotsAsLocalLinks() {
-        const QString html = AnsiRenderer::hotspot(QStringLiteral("main-menu"),
-                                                   QStringLiteral("Main <Menu>"));
+        const QString html = AnsiRenderer::toHtml(
+            AnsiRenderer::hotspot(QStringLiteral("main-menu"), QStringLiteral("Main <Menu>")));
         QVERIFY(html.contains(QStringLiteral("mc-term:main-menu")));
         QVERIFY(html.contains(QStringLiteral("Main &lt;Menu&gt;")));
     }
