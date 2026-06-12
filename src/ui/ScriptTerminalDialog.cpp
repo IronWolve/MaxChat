@@ -82,6 +82,9 @@ QString colorCss(const QColor& color) {
 ScriptTerminalDialog::ScriptTerminalDialog(QString id, QString title, TerminalProfile profile,
                                            QWidget* parent)
     : QDialog(parent), id_(std::move(id)), profile_(std::move(profile)) {
+    setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::WindowSystemMenuHint |
+                   Qt::WindowMinimizeButtonHint | Qt::WindowMaximizeButtonHint |
+                   Qt::WindowCloseButtonHint);
     setWindowTitle(title.isEmpty() ? id_ : title);
     setAttribute(Qt::WA_DeleteOnClose);
     resize(900, 600);
