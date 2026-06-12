@@ -13,6 +13,10 @@
 #include <QJsonValue>
 #include <QMetaType>
 #include <QProcess>
+#if defined(Q_OS_WIN)
+#include <windows.h>
+#include <shellapi.h>
+#endif
 #include <QTimer>
 #include <QVariant>
 
@@ -136,7 +140,26 @@ int l_data_dir(lua_State* L) {
 int l_launch(lua_State* L) {
     const QString cmd = QString::fromUtf8(luaL_checkstring(L, 1));
     const QStringList parts = QProcess::splitCommand(cmd);
-    const bool ok = !parts.isEmpty() && QProcess::startDetached(parts.at(0), parts.mid(1));
+    if (parts.isEmpty()) {
+        lua_pushboolean(L, 0);
+        return 1;
+    }
+#if defined(Q_OS_WIN)
+    // ShellExecuteW is the correct Windows API for launching programs: it
+    // handles UWP/Store apps, the shell PATH cache, and UAC elevation prompts.
+    // QProcess::startDetached uses CreateProcess directly and can stall 5-10s
+    // searching slow PATH entries or waiting on antivirus hooks.
+    const QString prog = parts.at(0);
+    const QString argsStr = QStringList(parts.mid(1)).join(QLatin1Char(' '));
+    const HINSTANCE result = ShellExecuteW(
+        nullptr, L"open",
+        reinterpret_cast<LPCWSTR>(prog.utf16()),
+        argsStr.isEmpty() ? nullptr : reinterpret_cast<LPCWSTR>(argsStr.utf16()),
+        nullptr, SW_SHOWNORMAL);
+    const bool ok = (reinterpret_cast<quintptr>(result) > 32);
+#else
+    const bool ok = QProcess::startDetached(parts.at(0), parts.mid(1));
+#endif
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;
 }
