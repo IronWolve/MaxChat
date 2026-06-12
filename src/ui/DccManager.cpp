@@ -53,6 +53,64 @@ QStringList splitArgs(const QString& args) {
     return out;
 }
 
+// Strict numeric parsing: toUInt() without an ok-flag turned "70000" into
+// port 4464 and "65536" into port 0 (misclassified as passive).
+bool parsePort(const QString& tok, quint16* out, bool allowZero) {
+    bool ok = false;
+    const uint value = tok.toUInt(&ok);
+    if (!ok || value > 65535 || (value == 0 && !allowZero)) {
+        return false;
+    }
+    *out = static_cast<quint16>(value);
+    return true;
+}
+
+bool parseHost(const QString& tok, quint32* out) {
+    bool ok = false;
+    const quint32 value = tok.toUInt(&ok);
+    if (!ok || value == 0) { // 0.0.0.0 connects to localhost on Linux
+        return false;
+    }
+    const QHostAddress addr(value);
+    if (addr.isMulticast()) {
+        return false;
+    }
+    *out = value; // loopback allowed: local DCC between two clients is legit
+    return true;
+}
+
+// Windows-safe filename: QFileInfo::fileName() already blocks ../ traversal;
+// this adds backslashes, drive colons, trailing dots/spaces, and the reserved
+// device names (an offer literally named "CON" hits the console device).
+QString sanitizeFileName(const QString& raw) {
+    QString base = QFileInfo(raw).fileName();
+    base.replace(QLatin1Char('\\'), QLatin1Char('_'));
+    base.replace(QLatin1Char(':'), QLatin1Char('_'));
+    while (base.endsWith(QLatin1Char('.')) || base.endsWith(QLatin1Char(' '))) {
+        base.chop(1);
+    }
+    if (base.isEmpty()) {
+        return QStringLiteral("file");
+    }
+    static const QStringList kReserved = {
+        QStringLiteral("CON"),  QStringLiteral("PRN"),  QStringLiteral("AUX"),
+        QStringLiteral("NUL"),  QStringLiteral("COM1"), QStringLiteral("COM2"),
+        QStringLiteral("COM3"), QStringLiteral("COM4"), QStringLiteral("COM5"),
+        QStringLiteral("COM6"), QStringLiteral("COM7"), QStringLiteral("COM8"),
+        QStringLiteral("COM9"), QStringLiteral("LPT1"), QStringLiteral("LPT2"),
+        QStringLiteral("LPT3"), QStringLiteral("LPT4"), QStringLiteral("LPT5"),
+        QStringLiteral("LPT6"), QStringLiteral("LPT7"), QStringLiteral("LPT8"),
+        QStringLiteral("LPT9")};
+    if (kReserved.contains(base.section(QLatin1Char('.'), 0, 0).toUpper())) {
+        base.prepend(QLatin1Char('_'));
+    }
+    return base;
+}
+
+bool sameNick(const QString& a, const QString& b) {
+    return a.trimmed().compare(b.trimmed(), Qt::CaseInsensitive) == 0;
+}
+
 QString newToken() {
     // Use the system CSPRNG (like Python's secrets.token_hex) — the token is the
     // only barrier stopping a third party from injecting a fake passive reply.
@@ -78,7 +136,47 @@ qint64 dccWritableChunk(qint64 offeredSize, qint64 transferred, qint64 available
     return std::min(available, remaining);
 }
 
-DccManager::DccManager(QObject* parent) : QObject(parent) {}
+DccManager::DccManager(QObject* parent) : QObject(parent) {
+    clock_.start();
+    sweepTimer_.setInterval(30000);
+    connect(&sweepTimer_, &QTimer::timeout, this, [this]() { sweepStale(); });
+    sweepTimer_.start();
+}
+
+void DccManager::sweepStale() {
+    constexpr qint64 kOfferTtlMs = 10 * 60 * 1000; // unaccepted offers expire
+    constexpr qint64 kStallMs = 120 * 1000;        // no progress = dead peer
+    const qint64 now = clock_.elapsed();
+    QVector<int> expire;
+    QVector<int> stall;
+    for (const DccTransfer& t : std::as_const(transfers_)) {
+        if (t.direction == DccTransfer::Direction::Receive &&
+            t.state == DccTransfer::State::Pending && t.offeredAtMs > 0 &&
+            now - t.offeredAtMs > kOfferTtlMs) {
+            expire.append(t.id);
+        } else if (t.state == DccTransfer::State::Active) {
+            const Runtime& r = runtimes_.value(t.id);
+            if (r.lastProgressMs > 0 && now - r.lastProgressMs > kStallMs) {
+                stall.append(t.id);
+            }
+        }
+    }
+    for (const int id : expire) {
+        cancelTransfer(id);
+        emit status(QStringLiteral("DCC: file offer expired (not accepted)."));
+    }
+    for (const int id : stall) {
+        finishTransfer(id, false);
+        emit status(QStringLiteral("DCC: transfer stalled - no data for 2 minutes."));
+    }
+    for (auto it = pendingChatOffers_.begin(); it != pendingChatOffers_.end();) {
+        if (now - it.value().atMs > 120000) {
+            it = pendingChatOffers_.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
 
 DccManager::~DccManager() {
     for (ChatRuntime* chat : std::as_const(chats_)) {
@@ -128,24 +226,47 @@ quint16 DccManager::openListenPort(QTcpServer* server) {
 QString DccManager::destPath(const QString& name, qint64 size) const {
     const QString dir = downloadDir_.isEmpty() ? QDir::homePath() : downloadDir_;
     QDir().mkpath(dir);
-    const QString base = QFileInfo(name).fileName().isEmpty() ? QStringLiteral("file")
-                                                              : QFileInfo(name).fileName();
+    const QString base = sanitizeFileName(name);
+    // A path is taken if a final file exists, a .part is in progress, or
+    // another live receive already reserved it (two same-name offers used to
+    // share one path and clobber each other).
+    const auto reservedByTransfer = [this](const QString& path) {
+        for (const DccTransfer& t : transfers_) {
+            if (t.direction != DccTransfer::Direction::Receive || t.localPath != path) {
+                continue;
+            }
+            if (t.state == DccTransfer::State::Pending ||
+                t.state == DccTransfer::State::Offered ||
+                t.state == DccTransfer::State::Resuming ||
+                t.state == DccTransfer::State::Connecting ||
+                t.state == DccTransfer::State::Active) {
+                return true;
+            }
+        }
+        return false;
+    };
     const QString candidate = QDir(dir).filePath(base);
-    const QFileInfo existing(candidate);
-    if (!existing.exists()) {
+    // Resume only OUR OWN partial (.part). The old "any smaller same-name file
+    // is a resume candidate" appended a stranger's bytes to unrelated files
+    // the user already had.
+    const QFileInfo part(candidate + QStringLiteral(".part"));
+    if (part.exists() && part.size() > 0 && size > 0 && part.size() < size &&
+        !reservedByTransfer(candidate)) {
         return candidate;
     }
-    // Partial file of the right name + smaller than the offer → resume candidate.
-    if (existing.size() > 0 && size > 0 && existing.size() < size) {
+    if (!QFileInfo::exists(candidate) && !part.exists() && !reservedByTransfer(candidate)) {
         return candidate;
     }
-    // Otherwise disambiguate: file.1.ext, file.2.ext, ...
-    const QString stem = existing.completeBaseName();
-    const QString suffix = existing.suffix().isEmpty() ? QString()
-                                                       : QStringLiteral(".%1").arg(existing.suffix());
+    const QFileInfo info(candidate);
+    const QString stem = info.completeBaseName();
+    const QString suffix =
+        info.suffix().isEmpty() ? QString() : QStringLiteral(".%1").arg(info.suffix());
     for (int i = 1; i < 10000; ++i) {
-        const QString tryPath = QDir(dir).filePath(QStringLiteral("%1.%2%3").arg(stem).arg(i).arg(suffix));
-        if (!QFileInfo::exists(tryPath)) {
+        const QString tryPath =
+            QDir(dir).filePath(QStringLiteral("%1.%2%3").arg(stem).arg(i).arg(suffix));
+        if (!QFileInfo::exists(tryPath) &&
+            !QFileInfo::exists(tryPath + QStringLiteral(".part")) &&
+            !reservedByTransfer(tryPath)) {
             return tryPath;
         }
     }
@@ -229,6 +350,7 @@ void DccManager::beginSend(int id, QTcpSocket* socket) {
     }
     Runtime& r = rt(id);
     r.socket = socket;
+    r.lastProgressMs = clock_.elapsed();
     r.file = new QFile(t->localPath, socket);
     if (!r.file->open(QIODevice::ReadOnly)) {
         finishTransfer(id, false);
@@ -243,16 +365,23 @@ void DccManager::beginSend(int id, QTcpSocket* socket) {
 
     connect(socket, &QTcpSocket::bytesWritten, this, [this, id](qint64) { pumpSend(id); });
     connect(socket, &QTcpSocket::readyRead, this, [this, id, socket]() {
-        // Receiver acks running byte count as big-endian uint32.
+        // Receiver acks running byte count as big-endian uint32. The counter
+        // wraps at 4 GiB — track the wraps so a >4 GiB send doesn't "complete"
+        // on the first ack (old code compared against size & 0xFFFFFFFF).
         Runtime& rr = rt(id);
         rr.ackBuf.append(socket->readAll());
+        rr.lastProgressMs = clock_.elapsed();
         DccTransfer* tr = findById(id);
         while (rr.ackBuf.size() >= 4) {
             const quint32 ack =
                 qFromBigEndian<quint32>(reinterpret_cast<const uchar*>(rr.ackBuf.constData()));
             rr.ackBuf.remove(0, 4);
-            if (tr != nullptr && tr->size > 0 &&
-                ack >= static_cast<quint32>(tr->size & 0xFFFFFFFF)) {
+            if (ack < rr.lastAck32) {
+                rr.ackBase += Q_INT64_C(0x100000000);
+            }
+            rr.lastAck32 = ack;
+            const qint64 ackTotal = rr.ackBase + ack;
+            if (tr != nullptr && tr->size > 0 && ackTotal >= tr->size) {
                 finishTransfer(id, true);
                 return;
             }
@@ -282,6 +411,7 @@ void DccManager::pumpSend(int id) {
         }
         r.socket->write(chunk);
         t->transferred += chunk.size();
+        r.lastProgressMs = clock_.elapsed();
     }
     if (r.file->atEnd()) {
         r.allSent = true;
@@ -316,23 +446,34 @@ void DccManager::inSend(const QString& sender, const QStringList& toks) {
     if (toks.size() < 5) {
         return;
     }
-    const QString name = QFileInfo(toks.at(1)).fileName();
-    const quint32 host = toks.at(2).toUInt();
-    const quint16 port = static_cast<quint16>(toks.at(3).toUInt());
+    const QString name = sanitizeFileName(toks.at(1));
+    quint32 host = 0;
+    quint16 port = 0;
+    const bool hostOk = parseHost(toks.at(2), &host);
+    if (!parsePort(toks.at(3), &port, /*allowZero=*/true)) {
+        return;
+    }
     // Clamp a negative/garbage offered size to 0 (treated as "write nothing").
     const qint64 size = std::max<qint64>(0, toks.at(4).toLongLong());
     const QString token = toks.size() >= 6 ? toks.at(5) : QString();
 
     // Passive reply to our own offer: peer listened, we connect out and send.
     if (!token.isEmpty() && awaitingTokens_.contains(token)) {
-        if (port == 0) {
+        if (port == 0 || !hostOk) {
             return;
         }
-        const int id = awaitingTokens_.take(token);
+        const int id = awaitingTokens_.value(token);
         DccTransfer* t = findById(id);
         if (t == nullptr || t->state == DccTransfer::State::Cancelled) {
             return;
         }
+        // The token authorizes the SEND — but only from the nick we offered
+        // to. Anyone observing the offer could otherwise echo the token with
+        // their own ip/port and steal the file.
+        if (!sameNick(sender, t->peer)) {
+            return;
+        }
+        awaitingTokens_.remove(token);
         t->state = DccTransfer::State::Connecting;
         emitChanged();
         auto* socket = new QTcpSocket(this);
@@ -344,6 +485,9 @@ void DccManager::inSend(const QString& sender, const QStringList& toks) {
     }
     if (port == 0 && token.isEmpty()) {
         return;
+    }
+    if (port != 0 && !hostOk) {
+        return; // active offer with a garbage host (would connect to 0.0.0.0)
     }
 
     // Anti-flood: ignore new offers once too many are already waiting.
@@ -372,6 +516,7 @@ void DccManager::inSend(const QString& sender, const QStringList& toks) {
     transfer.port = port;
     transfer.size = size;
     transfer.localPath = destPath(name, size);
+    transfer.offeredAtMs = clock_.elapsed();
     transfers_.append(transfer);
     // Remember the token for a passive offer (port 0) so accept() can reply.
     if (!token.isEmpty()) {
@@ -399,8 +544,8 @@ void DccManager::acceptTransfer(int id) {
         return;
     }
 
-    // Resume if a partial file of the right name exists.
-    const QFileInfo info(t->localPath);
+    // Resume only our own partial download (<final>.part).
+    const QFileInfo info(t->localPath + QStringLiteral(".part"));
     if (info.exists() && info.size() > 0 && t->size > 0 && info.size() < t->size) {
         rt(id).startOffset = info.size();
         t->transferred = info.size();
@@ -446,6 +591,20 @@ void DccManager::acceptTransfer(int id) {
         emitChanged();
         connect(server, &QTcpServer::newConnection, this, [this, server, id]() {
             QTcpSocket* socket = server->nextPendingConnection();
+            DccTransfer* t = findById(id);
+            if (t == nullptr || t->state == DccTransfer::State::Cancelled) {
+                socket->abort();
+                socket->deleteLater();
+                server->close();
+                return;
+            }
+            // First-connection-wins is an attack surface: verify the peer is
+            // the host from the offer before trusting the stream as the file.
+            if (t->host != 0 && socket->peerAddress().toIPv4Address() != t->host) {
+                socket->abort();
+                socket->deleteLater();
+                return; // keep listening for the real peer
+            }
             server->close();
             beginReceive(id, socket);
         });
@@ -467,7 +626,10 @@ void DccManager::beginReceive(int id, QTcpSocket* socket) {
     }
     Runtime& r = rt(id);
     r.socket = socket;
-    r.file = new QFile(t->localPath, socket);
+    r.lastProgressMs = clock_.elapsed();
+    // Download into <final>.part; finishTransfer renames on success — resume
+    // can then never target an unrelated pre-existing file.
+    r.file = new QFile(t->localPath + QStringLiteral(".part"), socket);
     const bool resume = r.startOffset > 0;
     if (!r.file->open(resume ? (QIODevice::ReadWrite) : QIODevice::WriteOnly)) {
         finishTransfer(id, false);
@@ -502,6 +664,7 @@ void DccManager::beginReceive(int id, QTcpSocket* socket) {
         }
         rr.file->write(data);
         tr->transferred += data.size();
+        rr.lastProgressMs = clock_.elapsed();
         const quint32 ack = qToBigEndian<quint32>(static_cast<quint32>(tr->transferred & 0xFFFFFFFF));
         socket->write(reinterpret_cast<const char*>(&ack), sizeof(ack));
         emitChanged();
@@ -523,7 +686,10 @@ void DccManager::inResume(const QString& sender, const QStringList& toks) {
     if (toks.size() < 4) {
         return;
     }
-    const quint16 port = static_cast<quint16>(toks.at(2).toUInt());
+    quint16 port = 0;
+    if (!parsePort(toks.at(2), &port, /*allowZero=*/true)) {
+        return;
+    }
     const qint64 pos = toks.at(3).toLongLong();
     const QString token = toks.size() >= 5 ? toks.at(4) : QString();
     int id = -1;
@@ -534,6 +700,14 @@ void DccManager::inResume(const QString& sender, const QStringList& toks) {
     }
     DccTransfer* t = id >= 0 ? findById(id) : nullptr;
     if (t == nullptr) {
+        return;
+    }
+    // Only the offer's peer may resume, only before the transfer started, and
+    // only to a sane offset. A third party guessing the port could otherwise
+    // reset an ACTIVE transfer mid-stream; pos past EOF made "success" out of
+    // sending nothing; negative pos corrupted all progress accounting.
+    if (!sameNick(sender, t->peer) || t->direction != DccTransfer::Direction::Send ||
+        t->state != DccTransfer::State::Offered || pos <= 0 || pos >= t->size) {
         return;
     }
     rt(id).startOffset = pos;
@@ -551,7 +725,10 @@ void DccManager::inAccept(const QString& sender, const QStringList& toks) {
         return;
     }
     const QString name = QFileInfo(toks.at(1)).fileName();
-    const quint16 port = static_cast<quint16>(toks.at(2).toUInt());
+    quint16 port = 0;
+    if (!parsePort(toks.at(2), &port, /*allowZero=*/true)) {
+        return;
+    }
     const qint64 pos = toks.at(3).toLongLong();
     const QString token = toks.size() >= 5 ? toks.at(4) : QString();
     const QString key = token.isEmpty()
@@ -560,6 +737,13 @@ void DccManager::inAccept(const QString& sender, const QStringList& toks) {
     int id = resuming_.value(key, resuming_.value(token, -1));
     DccTransfer* t = id >= 0 ? findById(id) : nullptr;
     if (t == nullptr) {
+        return;
+    }
+    // Sender must match, we must actually be resuming, and the offset must be
+    // within [0, what we asked for]. A forged negative pos defeated the
+    // disk-write cap (remaining = size - pos > size → near-unbounded write).
+    if (!sameNick(sender, t->peer) || t->state != DccTransfer::State::Resuming ||
+        pos < 0 || pos > rt(id).startOffset || pos > t->size) {
         return;
     }
     rt(id).startOffset = pos;
@@ -590,8 +774,18 @@ void DccManager::finishTransfer(int id, bool ok) {
     if (r.file != nullptr) {
         r.file->close();
     }
+    if (ok && t->direction == DccTransfer::Direction::Receive) {
+        // Promote the .part to its final name (path was reserved at offer time).
+        const QString partPath = t->localPath + QStringLiteral(".part");
+        if (QFile::exists(partPath) && !QFile::rename(partPath, t->localPath)) {
+            emit status(QStringLiteral("DCC: saved as %1 (could not rename)").arg(partPath));
+        }
+    }
     if (r.socket != nullptr) {
         r.socket->disconnectFromHost();
+        r.socket->deleteLater(); // also frees r.file (parented to the socket)
+        r.socket = nullptr;
+        r.file = nullptr;
     }
     if (r.server != nullptr) {
         r.server->close();
@@ -626,18 +820,30 @@ void DccManager::cancelTransfer(int id) {
         return;
     }
     Runtime& r = rt(id);
+    if (r.file != nullptr) {
+        r.file->close();
+        r.file = nullptr; // freed with the socket below (parented)
+    }
     if (r.socket != nullptr) {
         r.socket->abort();
+        r.socket->deleteLater();
+        r.socket = nullptr;
     }
     if (r.server != nullptr) {
         r.server->close();
         r.server->deleteLater();
         r.server = nullptr;
     }
-    if (r.file != nullptr) {
-        r.file->close();
-    }
     t->state = DccTransfer::State::Cancelled;
+    // Cancelled negotiation state must die too: a stale passive token or
+    // resume key could otherwise be replayed against this id later.
+    sendByPort_.remove(t->port);
+    for (const QString& k : awaitingTokens_.keys(id)) {
+        awaitingTokens_.remove(k);
+    }
+    for (const QString& k : resuming_.keys(id)) {
+        resuming_.remove(k);
+    }
     emitChanged();
 }
 
@@ -646,6 +852,18 @@ void DccManager::cancelTransfer(int id) {
 void DccManager::offerChat(const QString& peer) {
     if (!enabled_) { emit status(QStringLiteral("DCC: file transfers are disabled.")); return; }
     const QString key = peer.trimmed().toLower();
+    // If this peer already offered US a chat (held for the accept policy),
+    // /dcc chat <nick> accepts it instead of crossing offers.
+    if (pendingChatOffers_.contains(key)) {
+        const PendingChatOffer offer = pendingChatOffers_.take(key);
+        if (clock_.elapsed() - offer.atMs <= 120000) {
+            acceptIncomingChat(peer, offer.host, offer.port, offer.token);
+            return;
+        }
+        emit status(QStringLiteral("DCC: the chat offer from %1 expired - offering a new "
+                                   "chat instead.")
+                        .arg(peer));
+    }
     auto* chat = new ChatRuntime();
     chat->info.id = nextId_++;
     chat->info.peer = peer;
@@ -691,19 +909,45 @@ void DccManager::offerChat(const QString& peer) {
     emit chatStateChanged(peer, static_cast<int>(chat->info.state));
 }
 
+void DccManager::teardownChat(ChatRuntime* chat) {
+    if (chat == nullptr) {
+        return;
+    }
+    // The old replace-path deleted the struct but left socket/server alive
+    // with lambdas keyed by nick — bytes from the OLD TCP peer landed in the
+    // NEW session (chat hijack/poisoning).
+    if (chat->socket != nullptr) {
+        chat->socket->disconnect(this);
+        chat->socket->abort();
+        chat->socket->deleteLater();
+        chat->socket = nullptr;
+    }
+    if (chat->server != nullptr) {
+        chat->server->disconnect(this);
+        chat->server->close();
+        chat->server->deleteLater();
+        chat->server = nullptr;
+    }
+}
+
 void DccManager::inChat(const QString& sender, const QStringList& toks) {
     if (toks.size() < 4) {
         return;
     }
-    const quint32 host = toks.at(2).toUInt();
-    const quint16 port = static_cast<quint16>(toks.at(3).toUInt());
+    quint32 host = 0;
+    quint16 port = 0;
+    const bool hostOk = parseHost(toks.at(2), &host);
+    if (!parsePort(toks.at(3), &port, /*allowZero=*/true)) {
+        return;
+    }
     const QString token = toks.size() >= 5 ? toks.at(4) : QString();
     const QString key = sender.trimmed().toLower();
 
     // Passive reply to our own offer.
     ChatRuntime* existing = chats_.value(key);
-    if (existing != nullptr && !existing->pendingToken.isEmpty() && existing->pendingToken == token) {
-        if (port == 0) {
+    if (existing != nullptr && !existing->pendingToken.isEmpty() &&
+        existing->pendingToken == token) {
+        if (port == 0 || !hostOk) {
             return;
         }
         connectChat(*existing, host, port);
@@ -713,6 +957,31 @@ void DccManager::inChat(const QString& sender, const QStringList& toks) {
     if (port == 0 && token.isEmpty()) {
         return;
     }
+    if (port != 0 && !hostOk) {
+        return;
+    }
+    // An incoming chat offer follows the SAME accept policy as files. The old
+    // code auto-connected for everyone: any user could CTCP a CHAT offer and
+    // every client with DCC on connected back, disclosing its real IP.
+    const QString low = sender.trimmed().toLower();
+    const bool autoAccept = acceptPolicy_ == QStringLiteral("all") ||
+                            (acceptPolicy_ == QStringLiteral("trusted") && trusted_.contains(low));
+    if (!autoAccept) {
+        if (pendingChatOffers_.size() >= MaxPendingOffers && !pendingChatOffers_.contains(low)) {
+            return;
+        }
+        pendingChatOffers_.insert(low, {host, port, token, clock_.elapsed()});
+        emit status(QStringLiteral("DCC: chat offer from %1 - use /dcc chat %1 to accept "
+                                   "(expires in 2 minutes).")
+                        .arg(sender));
+        return;
+    }
+    acceptIncomingChat(sender, host, port, token);
+}
+
+void DccManager::acceptIncomingChat(const QString& sender, quint32 host, quint16 port,
+                                    const QString& token) {
+    const QString key = sender.trimmed().toLower();
     // Anti-flood: ignore new chat offers once too many are pending/connecting.
     int pendingChats = 0;
     for (const ChatRuntime* c : std::as_const(chats_)) {
@@ -720,6 +989,7 @@ void DccManager::inChat(const QString& sender, const QStringList& toks) {
             ++pendingChats;
         }
     }
+    ChatRuntime* existing = chats_.value(key);
     if (pendingChats >= MaxPendingOffers && existing == nullptr) {
         emit status(
             QStringLiteral("DCC: ignoring chat offer from %1 (too many pending).").arg(sender));
@@ -728,7 +998,9 @@ void DccManager::inChat(const QString& sender, const QStringList& toks) {
     auto* chat = new ChatRuntime();
     chat->info.id = nextId_++;
     chat->info.peer = sender;
+    chat->expectedHost = host;
     if (existing != nullptr) {
+        teardownChat(existing);
         delete chats_.take(key);
     }
     chats_.insert(key, chat);
@@ -738,12 +1010,30 @@ void DccManager::inChat(const QString& sender, const QStringList& toks) {
         // Passive offer to us: listen and reply.
         chat->server = new QTcpServer(this);
         const quint16 myPort = openListenPort(chat->server);
+        if (myPort == 0) {
+            // Port range exhausted: advertising port 0 would strand the peer
+            // and leave a dead Connecting entry consuming the flood budget.
+            chat->info.state = DccChat::State::Closed;
+            emit chatStateChanged(sender, static_cast<int>(chat->info.state));
+            teardownChat(chat);
+            delete chats_.take(key);
+            emit status(QStringLiteral("DCC: could not open a listening port for chat."));
+            return;
+        }
         connect(chat->server, &QTcpServer::newConnection, this, [this, key]() {
             ChatRuntime* c = chats_.value(key);
             if (c == nullptr) {
                 return;
             }
-            c->socket = c->server->nextPendingConnection();
+            QTcpSocket* socket = c->server->nextPendingConnection();
+            // Verify the connecting peer is the host from the offer.
+            if (c->expectedHost != 0 &&
+                socket->peerAddress().toIPv4Address() != c->expectedHost) {
+                socket->abort();
+                socket->deleteLater();
+                return; // keep listening
+            }
+            c->socket = socket;
             c->server->close();
             wireChatSocket(key);
             c->info.state = DccChat::State::Active;
@@ -826,14 +1116,9 @@ void DccManager::closeChat(const QString& peer) {
     if (chat == nullptr) {
         return;
     }
-    if (chat->socket != nullptr) {
-        chat->socket->abort();
-    }
-    if (chat->server != nullptr) {
-        chat->server->close();
-    }
     chat->info.state = DccChat::State::Closed;
     emit chatStateChanged(chat->info.peer, static_cast<int>(chat->info.state));
+    teardownChat(chat);
     delete chats_.take(key);
 }
 

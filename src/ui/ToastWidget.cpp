@@ -56,6 +56,7 @@ ToastWidget::ToastWidget(const QString& title, const QString& body,
     textCol->setSpacing(2);
 
     auto* titleLabel = new QLabel(title, card);
+    titleLabel->setTextFormat(Qt::PlainText); // nick is remote text — never rich
     QFont titleFont = titleLabel->font();
     titleFont.setBold(true);
     titleFont.setPointSize(titleFont.pointSize() + 1);
@@ -64,6 +65,7 @@ ToastWidget::ToastWidget(const QString& title, const QString& body,
     textCol->addWidget(titleLabel);
 
     auto* bodyLabel = new QLabel(body, card);
+    bodyLabel->setTextFormat(Qt::PlainText); // message body likewise
     bodyLabel->setWordWrap(true);
     bodyLabel->setStyleSheet(QStringLiteral("background:transparent;"));
     textCol->addWidget(bodyLabel);

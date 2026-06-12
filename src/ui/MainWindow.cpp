@@ -2462,6 +2462,9 @@ void maxchat::ui::MainWindow::checkForUpdates(bool manual) {
 void maxchat::ui::MainWindow::handleCtcpSound(const QString& network, const QString& sender,
                                               const QString& target, const QString& file,
                                               const QString& text) {
+    // Do Not Disturb silences remote-triggered sounds like everything else.
+    const bool suppressSound =
+        m_settings.loadWithDefaults().value(QStringLiteral("dnd"), false).toBool();
     // A PM SOUND lands under the sender's buffer; a channel SOUND under the
     // channel (Python parity).
     const bool isPm = !isChannelTarget(target);
@@ -2477,7 +2480,8 @@ void maxchat::ui::MainWindow::handleCtcpSound(const QString& network, const QStr
 
     // Play only when the feature is on AND the named .wav already exists locally.
     const QVariantMap settings = m_settings.loadWithDefaults();
-    if (file.isEmpty() || !settings.value(QStringLiteral("ctcp_sound"), false).toBool()) {
+    if (suppressSound || file.isEmpty() ||
+        !settings.value(QStringLiteral("ctcp_sound"), false).toBool()) {
         return;
     }
     const QString soundsDir = QDir(m_settings.paths().configDir).filePath(QStringLiteral("sounds"));
@@ -4051,8 +4055,11 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
                             QString title = QStringLiteral("%1 mentioned you").arg(sender);
                             notify(title, text, activeNetworkName(), conversation);
                         }
-                        if ((privateToMe || highlight) && m_beepHighlight) {
-                            QApplication::beep();
+                        if ((privateToMe || highlight) && m_beepHighlight &&
+                            !m_settings.loadWithDefaults()
+                                 .value(QStringLiteral("dnd"), false)
+                                 .toBool()) {
+                            QApplication::beep(); // DND promises to silence the beep too
                         }
                     }
 
@@ -5930,12 +5937,23 @@ bool MainWindow::textHighlightsMe(const QString& text, const QString& nick) cons
     // Match against the plain text (Python strips mIRC codes first) so a colour
     // or bold code adjacent to / inside your nick can't hide a highlight.
     const QString plain = maxchat::irc::stripFormatting(text);
-    if (!nick.isEmpty() && plain.contains(nick, Qt::CaseInsensitive)) {
+    // Whole-word match: bare contains() made nick "art" highlight on "start"
+    // and word "hi" on "this". \b treats IRC nick punctuation ([]{}\|^`-)
+    // as word chars poorly, so use explicit boundary lookarounds on letters
+    // and digits instead.
+    const auto wordHit = [&plain](const QString& needle) {
+        const QRegularExpression re(
+            QStringLiteral("(?<![A-Za-z0-9_])%1(?![A-Za-z0-9_])")
+                .arg(QRegularExpression::escape(needle)),
+            QRegularExpression::CaseInsensitiveOption);
+        return re.match(plain).hasMatch();
+    };
+    if (!nick.isEmpty() && wordHit(nick)) {
         return true;
     }
     for (const QString& word : m_highlightWords) {
         const QString trimmed = word.trimmed();
-        if (!trimmed.isEmpty() && plain.contains(trimmed, Qt::CaseInsensitive)) {
+        if (!trimmed.isEmpty() && wordHit(trimmed)) {
             return true;
         }
     }
@@ -9359,7 +9377,12 @@ void maxchat::ui::MainWindow::notify(const QString& title, const QString& text,
     // OS native notification - post through the visible tray icon (showMessage
     // on a hidden tray is a no-op), available only when a daemon/tray accepts it.
     if (m_notifyStyle == QLatin1String("system") && m_osNotifyAvailable && m_tray != nullptr) {
-        m_tray->showMessage(title, text, m_tray->icon(), 5000);
+        // Remember where this notification points so messageClicked can open
+        // the right buffer (clicks used to do nothing on the system path).
+        m_lastNotifyNetwork = network;
+        m_lastNotifyTarget = target;
+        m_tray->showMessage(title, text, m_tray->icon(),
+                            std::max(1, m_notifyDuration) * 1000);
         return;
     }
 
@@ -9385,7 +9408,11 @@ void maxchat::ui::MainWindow::notify(const QString& title, const QString& text,
         QString net = network;
         QString tgt = target;
         onClick = [this, net, tgt]() {
-            show();
+            if (isMinimized()) {
+                showNormal();
+            } else {
+                show();
+            }
             raise();
             activateWindow();
             setActiveNetwork(net);
@@ -9393,7 +9420,11 @@ void maxchat::ui::MainWindow::notify(const QString& title, const QString& text,
         };
     } else {
         onClick = [this]() {
-            show();
+            if (isMinimized()) {
+                showNormal();
+            } else {
+                show();
+            }
             raise();
             activateWindow();
         };
@@ -9428,6 +9459,20 @@ void maxchat::ui::MainWindow::setupTrayIcon() {
         }
     });
 
+    connect(m_tray, &QSystemTrayIcon::messageClicked, this, [this]() {
+        if (isMinimized()) {
+            showNormal();
+        } else {
+            show();
+        }
+        raise();
+        activateWindow();
+        if (!m_lastNotifyTarget.isEmpty()) {
+            setActiveNetwork(m_lastNotifyNetwork);
+            activateBufferTarget(m_lastNotifyTarget);
+        }
+    });
+
     updateTrayIcon();
     m_tray->show();
 }
@@ -9453,7 +9498,13 @@ void maxchat::ui::MainWindow::toggleWindowVisibility() {
     if (isVisible() && !isMinimized()) {
         hide();
     } else {
-        show();
+        // Minimize-to-tray hides the window while it is still minimized;
+        // plain show() would restore it minimized to the taskbar.
+        if (isMinimized()) {
+            showNormal();
+        } else {
+            show();
+        }
         raise();
         activateWindow();
     }

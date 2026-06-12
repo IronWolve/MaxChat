@@ -520,6 +520,8 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     QAction* m_comicModeAction = nullptr;
     ComicView* m_comicView = nullptr;
     QPointer<MediaPlayerDialog> m_mediaPlayerDialog; // single reusable video player
+    QString m_lastNotifyNetwork; // where the last OS notification points
+    QString m_lastNotifyTarget;
     bool m_comicMode = false;            // backend running — true iff any buffer opted in
     QSet<QString> m_comicEnabledBuffers; // per-buffer opt-in (key = network\x1ftarget)
     QString m_comicSelfEmotion = QStringLiteral("auto"); // override for your panels; "auto" = guess

@@ -80,7 +80,15 @@ void Notifier::remove(ToastWidget* toast) {
 }
 
 void Notifier::relayout() {
-    QScreen* screen = QGuiApplication::primaryScreen();
+    // Toasts belong on the screen the app lives on, not always the primary
+    // monitor. The Notifier is parented to the main window.
+    QScreen* screen = nullptr;
+    if (auto* window = qobject_cast<QWidget*>(parent())) {
+        screen = window->screen();
+    }
+    if (screen == nullptr) {
+        screen = QGuiApplication::primaryScreen();
+    }
     if (!screen) return;
 
     QRect g = screen->availableGeometry();

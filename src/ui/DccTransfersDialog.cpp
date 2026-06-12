@@ -180,7 +180,7 @@ void DccTransfersDialog::refresh() {
         const DccTransfer& t = transfers.at(row);
         const QString progress =
             t.size > 0 ? QStringLiteral("%1%  (%2 / %3)")
-                             .arg(t.transferred * 100 / t.size)
+                             .arg(std::clamp<qint64>(t.transferred * 100 / t.size, 0, 100))
                              .arg(humanBytes(t.transferred), humanBytes(t.size))
                        : humanBytes(t.transferred);
         auto* dirItem = new QTableWidgetItem(
