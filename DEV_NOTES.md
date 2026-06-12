@@ -675,3 +675,25 @@ Implemented in one pass (all compiled debug+release, selftest OK):
   viewport; recomputed in resizeEvent). Font Size menu sets the base size and
   re-zooms the window via resizeWindowForFont; dragging then re-fits. "free"
   profiles (fitMode none, e.g. the BBS sysop console) keep the configured size.
+
+## BBS/MC DATA audit fixes (2026-06-12)
+
+- B1 network routing: terminal hooks (on_terminal_input/link/closed) now run in
+  the network context the terminal was OPENED on (manager stores it; closed
+  signal carries it). api.mc_send/mc_reply gained an optional 5th arg `network`;
+  bbs.lua session/client sends always pass their stored network so sysop
+  console actions reach sessions on other networks.
+- B2: bbs.lua drops ALL NOTICE-borne MC DATA (spec: no auto-reply to NOTICE).
+- B3: session lookups (INPUT/Q/LOGOFF, client frames) match network+nick, and
+  LOGOFF honors its bbs_id payload — nick-only matching cross-routed input.
+- B4: per-peer HELLO cooldown (3 s, timer-cleared), MAX_SESSIONS=16 cap, and
+  offline HELLOs no longer store ghost sessions.
+- B5: cut_utf8() byte-safe truncation in clean_line/clean_frame_line — a cut
+  mid-codepoint made the C++ parser reject the WHOLE frame.
+- B11: sysop console nick matching is exact-first, substring fallback.
+- REGRESSION caught by lua_engine test: framed screens exceed one chunk, and
+  static caching only handled single-chunk pages — every framed page silently
+  fell back to T frames. Static cache now works per chunk ("main#1", "main#2",
+  same S/R/Q verbs); chunk budget lowered 330→300 so "S <part> <hash> " fits
+  the 350-byte MC DATA cap. **Lesson: re-run lua_engine (bundled-script test)
+  after ANY bbs.lua change — terminal tests alone don't cover the protocol.**

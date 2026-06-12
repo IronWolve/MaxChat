@@ -45,6 +45,9 @@ local server = {
 local sessions = {}
 local clients = {}
 local static_cache = {}
+local hello_cooldown = {}      -- network|nick -> true while a peer's HELLO is throttled
+local MAX_SESSIONS = 16
+local HELLO_COOLDOWN_MS = 3000
 local board = {
   { from = "sysop", text = "Welcome. Leave a short note with P <message>." }
 }
@@ -63,9 +66,24 @@ local function starts_with(s, prefix)
   return tostring(s or ""):sub(1, #prefix) == prefix
 end
 
+-- Cut a string to at most `limit` BYTES without splitting a UTF-8 sequence
+-- (the C++ frame parser rejects a W length that splits a character, which
+-- would make the whole frame fail to render).
+local function cut_utf8(s, limit)
+  if #s <= limit then return s end
+  local i = limit
+  while i > 0 do
+    local b = s:byte(i)
+    if b < 0x80 then break end          -- ASCII: safe boundary after it
+    if b >= 0xC0 then i = i - 1; break end -- lead byte: drop the partial char
+    i = i - 1                            -- continuation byte: keep walking back
+  end
+  return s:sub(1, math.max(0, i))
+end
+
 local function clean_line(s)
   s = trim(s):gsub("[\r\n\t]", " ")
-  if #s > MAX_LINE then s = s:sub(1, MAX_LINE - 3) .. "..." end
+  if #s > MAX_LINE then s = cut_utf8(s, MAX_LINE - 3) .. "..." end
   return s
 end
 
@@ -74,7 +92,7 @@ end
 -- by byte length to stay inside the MC DATA payload guard.
 local function clean_frame_line(s)
   s = tostring(s or ""):gsub("[\r\n\t]", " "):gsub("%s+$", "")
-  if #s > MAX_LINE then s = s:sub(1, MAX_LINE - 3) .. "..." end
+  if #s > MAX_LINE then s = cut_utf8(s, MAX_LINE - 3) .. "..." end
   return s
 end
 
@@ -119,12 +137,15 @@ local function client_term(nick, bbs_id)
   return "client:" .. tostring(nick or "unknown"):gsub("[^%w%-_]", "_") .. ":" .. tostring(bbs_id or DEFAULT_BBS_ID):gsub("[^%w%-_]", "_")
 end
 
-local function send(api, nick, verb, payload)
-  api.mc_send(nick, SERVICE, verb, clean_line(payload or ""))
+-- network is optional: empty/nil uses the dispatch-context network. Session
+-- and client sends always pass their stored network so traffic stays on the
+-- connection it started on (sysop console acts across networks).
+local function send(api, nick, verb, payload, network)
+  api.mc_send(nick, SERVICE, verb, clean_line(payload or ""), network or "")
 end
 
-local function send_raw(api, nick, verb, payload)
-  api.mc_send(nick, SERVICE, verb, tostring(payload or ""))
+local function send_raw(api, nick, verb, payload, network)
+  api.mc_send(nick, SERVICE, verb, tostring(payload or ""), network or "")
 end
 
 local function hex2(n)
@@ -167,7 +188,9 @@ local function terminal_frame_chunks(lines)
   local current = "C"
   for row, text in ipairs(lines or {}) do
     local op = frame_pos(row, 1) .. frame_write(text)
-    if #current + #op > 330 and #current > 0 then
+    -- 300, not the 350 transport cap: static sends prepend "<page#N> <hash> "
+    -- (~20 bytes) and the whole payload must stay under the MC DATA limit.
+    if #current + #op > 300 and #current > 0 then
       chunks[#chunks + 1] = current
       current = ""
     end
@@ -181,31 +204,35 @@ local function send_terminal_frames(api, s, lines)
   local chunks = terminal_frame_chunks(lines)
   server.fallback_frames = server.fallback_frames + #chunks
   for _, chunk in ipairs(chunks) do
-    send_raw(api, s.nick, "T", chunk)
+    send_raw(api, s.nick, "T", chunk, s.network)
   end
 end
 
+-- Multi-chunk pages are cached per chunk: part ids "main#1", "main#2", ...
+-- reuse the existing S/R/Q verbs unchanged (each part is its own cached page).
 local function send_static_or_terminal_frame(api, s, page_id, lines)
   local chunks = terminal_frame_chunks(lines)
-  if s.supports_static and #chunks == 1 then
-    local ops = chunks[1]
-    local hash = frame_hash(ops)
-    local sent_key = page_id .. "|" .. hash
+  if s.supports_static then
     s.static_defs = s.static_defs or {}
     s.static_sent = s.static_sent or {}
-    s.static_defs[sent_key] = ops
-    if s.static_sent[sent_key] then
-      server.cache_replays = server.cache_replays + 1
-      send_raw(api, s.nick, "R", page_id .. " " .. hash)
-    else
-      server.static_sent = server.static_sent + 1
-      send_raw(api, s.nick, "S", page_id .. " " .. hash .. " " .. ops)
-      s.static_sent[sent_key] = true
+    for i, ops in ipairs(chunks) do
+      local part_id = (#chunks == 1) and page_id or (page_id .. "#" .. i)
+      local hash = frame_hash(ops)
+      local sent_key = part_id .. "|" .. hash
+      s.static_defs[sent_key] = ops
+      if s.static_sent[sent_key] then
+        server.cache_replays = server.cache_replays + 1
+        send_raw(api, s.nick, "R", part_id .. " " .. hash, s.network)
+      else
+        server.static_sent = server.static_sent + 1
+        send_raw(api, s.nick, "S", part_id .. " " .. hash .. " " .. ops, s.network)
+        s.static_sent[sent_key] = true
+      end
     end
   else
     server.fallback_frames = server.fallback_frames + #chunks
     for _, chunk in ipairs(chunks) do
-      send_raw(api, s.nick, "T", chunk)
+      send_raw(api, s.nick, "T", chunk, s.network)
     end
   end
 end
@@ -234,8 +261,8 @@ local function frame_parts(payload)
   return parts
 end
 
-local function send_input(api, nick, text)
-  api.mc_send(nick, SERVICE, "INPUT", clean_line(text or ""))
+local function send_input(api, client, text)
+  api.mc_send(client.nick, SERVICE, "INPUT", clean_line(text or ""), client.network or "")
 end
 
 local function remember_screen(s, verb, payload)
@@ -275,7 +302,7 @@ end
 local function out(api, s, verb, payload)
   payload = clean_line(payload or "")
   remember_screen(s, verb, payload)
-  send(api, s.nick, verb, payload)
+  send(api, s.nick, verb, payload, s.network)
   update_mirror(api, s)
 end
 
@@ -292,7 +319,7 @@ local function screen(api, s, status_text, prompt_text, lines, page_id)
     s.last.lines[#s.last.lines + 1] = line_text
   end
   if s.sent_status ~= s.last.status then
-    send(api, s.nick, "STATUS", s.last.status)
+    send(api, s.nick, "STATUS", s.last.status, s.network)
     s.sent_status = s.last.status
   end
   if page_id then
@@ -301,7 +328,7 @@ local function screen(api, s, status_text, prompt_text, lines, page_id)
     send_terminal_frames(api, s, s.last.lines)
   end
   if s.sent_prompt ~= s.last.prompt then
-    send(api, s.nick, "PROMPT", s.last.prompt)
+    send(api, s.nick, "PROMPT", s.last.prompt, s.network)
     s.sent_prompt = s.last.prompt
   end
   update_mirror(api, s)
@@ -596,6 +623,20 @@ local function logoff(api, s)
   end
 end
 
+-- Console nick matching: exact nick first, substring only as a fallback, so
+-- "logoff a" can't grab the first session that happens to contain an "a".
+local function console_find(want)
+  want = trim(want):lower()
+  if want == "" then return nil end
+  for _, s in pairs(sessions) do
+    if s.nick:lower() == want then return s end
+  end
+  for _, s in pairs(sessions) do
+    if s.nick:lower():find(want, 1, true) then return s end
+  end
+  return nil
+end
+
 local function handle_server_input(api, text)
   text = trim(text)
   local cmd, rest = text:match("^(%S+)%s*(.*)$")
@@ -615,13 +656,11 @@ local function handle_server_input(api, text)
       show_stats(api)
       return
     end
-    local want = trim(rest):lower()
-    for _, s in pairs(sessions) do
-      if s.nick:lower():find(want, 1, true) then
-        server.mirror_key = s.key
-        update_mirror(api, s)
-        return
-      end
+    local s = console_find(rest)
+    if s then
+      server.mirror_key = s.key
+      update_mirror(api, s)
+      return
     end
     server_write(api, "No matching session for mirror.")
     return
@@ -629,26 +668,23 @@ local function handle_server_input(api, text)
   if cmd == "chat" then
     local nick, msg = rest:match("^(%S+)%s+(.+)$")
     if not nick then server_write(api, "Usage: chat <nick> <text>"); return end
-    for _, s in pairs(sessions) do
-      if s.nick:lower():find(nick:lower(), 1, true) then
-        line(api, s, "SYSOP: " .. clean_line(msg))
-        prompt(api, s, s.mode .. "> ")
-        server_write(api, "Sent to " .. s.nick .. ".")
-        return
-      end
+    local s = console_find(nick)
+    if s then
+      line(api, s, "SYSOP: " .. clean_line(msg))
+      prompt(api, s, s.mode .. "> ")
+      server_write(api, "Sent to " .. s.nick .. ".")
+      return
     end
     server_write(api, "No matching session.")
     return
   end
   if cmd == "logoff" then
-    local want = trim(rest):lower()
-    if want == "" then server_write(api, "Usage: logoff <nick>"); return end
-    for _, s in pairs(sessions) do
-      if s.nick:lower():find(want, 1, true) then
-        server_write(api, "Logging off " .. s.nick .. ".")
-        logoff(api, s)
-        return
-      end
+    if trim(rest) == "" then server_write(api, "Usage: logoff <nick>"); return end
+    local s = console_find(rest)
+    if s then
+      server_write(api, "Logging off " .. s.nick .. ".")
+      logoff(api, s)
+      return
     end
     server_write(api, "No matching session.")
     return
@@ -741,7 +777,8 @@ local function connect_client(api, nick, bbs_id, profile)
   api.terminal_prompt(id, "")
   local cols, rows = api.terminal_size(id)
   local key = client_key(api.network(), nick, bbs_id)
-  local client = { nick = nick, bbs_id = bbs_id, term = id, profile = profile, connected = false }
+  local client = { network = api.network(), nick = nick, bbs_id = bbs_id, term = id,
+                   profile = profile, connected = false }
   clients[key] = client
   client.timer = api.timer(12000, function()
     local current = clients[key]
@@ -893,18 +930,47 @@ function on_command(api, command, args)
   return false
 end
 
+-- Find this nick's session on THIS network (and board, when bbs_id is known).
+-- Nick-only matching would cross-route input between networks/boards.
+local function find_session(network, nick, bbs_id)
+  if bbs_id and bbs_id ~= "" then
+    return sessions[session_key(network, nick, bbs_id)]
+  end
+  for _, s in pairs(sessions) do
+    if s.network == network and s.nick == nick then return s end
+  end
+  return nil
+end
+
+local function session_count()
+  local n = 0
+  for _ in pairs(sessions) do n = n + 1 end
+  return n
+end
+
 function on_mc_data(api, network, target, nick, service, verb, payload, notice)
   if tostring(service or ""):lower() ~= SERVICE then return false end
+  -- Spec: never auto-reply to NOTICE. Everything below can send, so drop
+  -- NOTICE-borne bbs traffic entirely (log-only would also be acceptable).
+  if notice then return true end
   verb = tostring(verb or ""):upper()
   payload = tostring(payload or "")
 
   if verb == "HELLO" then
+    -- Per-peer cooldown: every HELLO costs ~10 outgoing frames (login screen),
+    -- so an unthrottled peer could make us flood our own send queue.
+    local cd_key = tostring(network) .. "|" .. tostring(nick):lower()
+    if hello_cooldown[cd_key] then return true end
+    hello_cooldown[cd_key] = true
+    api.timer(HELLO_COOLDOWN_MS, function() hello_cooldown[cd_key] = nil end)
+
     load_config(api)
     local kv = parse_kv(payload)
     local bbs_id = kv.bbs_id or DEFAULT_BBS_ID
     local key = session_key(network, nick, bbs_id)
     local s = {
       key = key,
+      network = network,
       nick = nick,
       user = nick,
       bbs_id = bbs_id,
@@ -915,14 +981,19 @@ function on_mc_data(api, network, target, nick, service, verb, payload, notice)
       mode = "menu",
       last = { lines = {} }
     }
-    sessions[key] = s
     if not server_running then
+      -- Reply without storing: no ghost sessions while the board is offline.
       screen(api, s, "OFFLINE", "", {
         "Retro-BBS is not running here.",
         "Ask the other user to run /bbsserve."
       })
       return true
     end
+    if not sessions[key] and session_count() >= MAX_SESSIONS then
+      send(api, nick, "LINE", "Board is full. Try again later.")
+      return true
+    end
+    sessions[key] = s
     server.connects = server.connects + 1
     server_write(api, "CONNECT " .. nick .. " " .. s.cols .. "x" .. s.rows .. " " .. s.profile)
     login_screen(api, s)
@@ -931,10 +1002,7 @@ function on_mc_data(api, network, target, nick, service, verb, payload, notice)
   end
 
   if verb == "INPUT" then
-    local found = nil
-    for _, s in pairs(sessions) do
-      if s.nick == nick then found = s; break end
-    end
+    local found = find_session(network, nick)
     if not found then return true end
     handle_session_input(api, found, payload)
     return true
@@ -944,16 +1012,14 @@ function on_mc_data(api, network, target, nick, service, verb, payload, notice)
     local page_id, hash = payload:match("^(%S+)%s+(%S+)$")
     if page_id and hash then
       server.cache_misses = server.cache_misses + 1
-      for _, s in pairs(sessions) do
-        if s.nick == nick then
-          local sent_key = page_id .. "|" .. hash
-          local ops = s.static_defs and s.static_defs[sent_key]
-          if ops then
-            send_raw(api, s.nick, "S", page_id .. " " .. hash .. " " .. ops)
-          elseif s.last and s.last.lines then
-            send_terminal_frames(api, s, s.last.lines)
-          end
-          break
+      local s = find_session(network, nick)
+      if s then
+        local sent_key = page_id .. "|" .. hash
+        local ops = s.static_defs and s.static_defs[sent_key]
+        if ops then
+          send_raw(api, s.nick, "S", page_id .. " " .. hash .. " " .. ops, s.network)
+        elseif s.last and s.last.lines then
+          send_terminal_frames(api, s, s.last.lines)
         end
       end
     end
@@ -961,8 +1027,13 @@ function on_mc_data(api, network, target, nick, service, verb, payload, notice)
   end
 
   if verb == "LOGOFF" then
+    -- Payload carries the bbs_id; only drop that board's session on this
+    -- network (a bare LOGOFF still only affects this network's sessions).
     for key, s in pairs(sessions) do
-      if s.nick == nick then sessions[key] = nil end
+      if s.network == network and s.nick == nick and
+         (payload == "" or s.bbs_id == payload) then
+        sessions[key] = nil
+      end
     end
     show_stats(api)
     return true
@@ -970,7 +1041,10 @@ function on_mc_data(api, network, target, nick, service, verb, payload, notice)
 
   local client = nil
   for _, item in pairs(clients) do
-    if item.nick == nick then client = item; break end
+    if item.nick == nick and (item.network == nil or item.network == network) then
+      client = item
+      break
+    end
   end
   if not client then return true end
   if not client.connected then
@@ -1011,7 +1085,7 @@ function on_mc_data(api, network, target, nick, service, verb, payload, notice)
       end
     elseif page_id and hash then
       server.cache_misses = server.cache_misses + 1
-      send_raw(api, client.nick, "Q", page_id .. " " .. hash)
+      send_raw(api, client.nick, "Q", page_id .. " " .. hash, client.network)
     else
       api.terminal_write(client.term, "[bbs] bad cache replay header\n")
     end
@@ -1039,7 +1113,7 @@ function on_terminal_input(api, id, text)
   if starts_with(id, "client:") then
     for _, client in pairs(clients) do
       if client.term == id then
-        send_input(api, client.nick, text)
+        send_input(api, client, text)
         return
       end
     end
@@ -1056,7 +1130,7 @@ function on_terminal_closed(api, id)
   end
   for key, client in pairs(clients) do
     if client.term == id then
-      api.mc_send(client.nick, SERVICE, "LOGOFF", client.bbs_id)
+      api.mc_send(client.nick, SERVICE, "LOGOFF", client.bbs_id, client.network or "")
       clients[key] = nil
       return
     end

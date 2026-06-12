@@ -544,7 +544,7 @@ class LuaEngineTest final : public QObject {
                                 {QStringLiteral("bbs"), QStringLiteral("alice retro-bbs")}));
 
         QVERIFY(host.terminals.contains(
-            QStringLiteral("open|bbs|server|Retro-BBS Server|free|100x30")));
+            QStringLiteral("open|bbs|server|Retro-BBS Server|free|80x25")));
         QVERIFY(host.terminals.contains(
             QStringLiteral("open|bbs|client:alice:retro-bbs|Retro-BBS - alice|ibm-vga|80x25")));
         QVERIFY(host.mcData.contains(
@@ -581,8 +581,8 @@ class LuaEngineTest final : public QObject {
                                 {QStringLiteral("synIRC"), QStringLiteral("bob"),
                                  QStringLiteral("alice"), QStringLiteral("bbs"),
                                  QStringLiteral("INPUT"), QStringLiteral("bbsiscool"), false}));
-        QVERIFY(containsMcDataPrefix(QStringLiteral("synIRC|alice|bbs|S|main|")) ||
-                containsMcDataPrefix(QStringLiteral("synIRC|alice|bbs|S|main ")));
+        // Framed pages span multiple chunks; static parts are "main" or "main#N".
+        QVERIFY(containsMcDataPrefix(QStringLiteral("synIRC|alice|bbs|S|main")));
 
         QVERIFY(engine.dispatch(QStringLiteral("on_mc_data"), QStringLiteral("synIRC"),
                                 {QStringLiteral("synIRC"), QStringLiteral("bob"),
@@ -592,7 +592,7 @@ class LuaEngineTest final : public QObject {
                                 {QStringLiteral("synIRC"), QStringLiteral("bob"),
                                  QStringLiteral("alice"), QStringLiteral("bbs"),
                                  QStringLiteral("INPUT"), QStringLiteral("B"), false}));
-        QVERIFY(containsMcDataPrefix(QStringLiteral("synIRC|alice|bbs|R|main ")));
+        QVERIFY(containsMcDataPrefix(QStringLiteral("synIRC|alice|bbs|R|main")));
         QVERIFY(engine.dispatch(QStringLiteral("on_command"), QStringLiteral("synIRC"),
                                 {QStringLiteral("bbscache"), QString()}));
         QVERIFY(!host.echoes.isEmpty());

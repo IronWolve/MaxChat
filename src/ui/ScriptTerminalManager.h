@@ -43,6 +43,8 @@ class ScriptTerminalManager final : public QObject {
     void closeAll();
     // Live terminals in creation order, for building the tree nodes.
     [[nodiscard]] QList<TerminalInfo> terminals() const;
+    // Network the terminal's owning script ran on (empty if unknown).
+    [[nodiscard]] QString terminalNetwork(const QString& id) const;
     void writeText(const QString& id, const QString& text);
     void clear(const QString& id);
     bool applyFrame(const QString& id, const QString& ops, QString* error = nullptr);
@@ -57,7 +59,9 @@ class ScriptTerminalManager final : public QObject {
   signals:
     void inputSubmitted(const QString& id, const QString& text);
     void linkActivated(const QString& id, const QString& actionId);
-    void terminalClosed(const QString& id);
+    // network = the terminal's owning network, so script teardown hooks run in
+    // the right connection context (not whatever network happens to be active).
+    void terminalClosed(const QString& id, const QString& network);
     // A terminal was created or killed; the tree should rebuild its nodes.
     void terminalsChanged();
     // The user changed terminal font/grid from a terminal's Settings menu.

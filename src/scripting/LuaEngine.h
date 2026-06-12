@@ -68,9 +68,10 @@ class LuaEngine final : public QObject {
     void hostInsertInput(const QString& text);
     void hostNotify(const QString& title, const QString& text);
     void hostSendRaw(const QString& line);
+    // network: optional override; empty = the current dispatch context network.
     [[nodiscard]] bool hostMcData(const QString& target, const QString& service,
                                   const QString& verb, const QString& payload,
-                                  bool notice);
+                                  bool notice, const QString& network = {});
     [[nodiscard]] bool hostTerminalOpen(const QString& scriptName, const QString& id,
                                         const QString& title, const QString& profile,
                                         int cols, int rows);

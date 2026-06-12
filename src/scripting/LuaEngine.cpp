@@ -235,16 +235,21 @@ int l_mc_data(lua_State* L, const bool notice) {
     const QString service = QString::fromUtf8(luaL_checkstring(L, 2));
     const QString verb = QString::fromUtf8(luaL_checkstring(L, 3));
     const QString payload = QString::fromUtf8(luaL_optstring(L, 4, ""));
-    lua_pushboolean(L, engine->hostMcData(target, service, verb, payload, notice) ? 1 : 0);
+    const QString network = QString::fromUtf8(luaL_optstring(L, 5, ""));
+    lua_pushboolean(L,
+                    engine->hostMcData(target, service, verb, payload, notice, network) ? 1 : 0);
     return 1;
 }
 
-// api.mc_send(target, service, verb, payload)
+// api.mc_send(target, service, verb, payload [, network])
+// network defaults to the dispatch-context network (the one the triggering
+// event arrived on); pass it explicitly when replying outside that context,
+// e.g. sysop console actions aimed at a session on another network.
 int l_mc_send(lua_State* L) {
     return l_mc_data(L, false);
 }
 
-// api.mc_reply(target, service, verb, payload)
+// api.mc_reply(target, service, verb, payload [, network])
 int l_mc_reply(lua_State* L) {
     return l_mc_data(L, true);
 }
@@ -647,9 +652,10 @@ void LuaEngine::hostSendRaw(const QString& line) {
 
 bool LuaEngine::hostMcData(const QString& target, const QString& service,
                            const QString& verb, const QString& payload,
-                           const bool notice) {
+                           const bool notice, const QString& network) {
     return host_ != nullptr &&
-           host_->scriptMcData(currentNetwork_, target, service, verb, payload, notice);
+           host_->scriptMcData(network.isEmpty() ? currentNetwork_ : network, target, service,
+                               verb, payload, notice);
 }
 
 bool LuaEngine::hostTerminalOpen(const QString& scriptName, const QString& id,
