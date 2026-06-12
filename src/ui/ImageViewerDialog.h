@@ -7,10 +7,15 @@ class QLabel;
 class QNetworkAccessManager;
 class QScrollArea;
 
+namespace maxchat::services {
+class ImageFetcher;
+}
+
 namespace maxchat::ui {
 
-// Full-size viewer for an image link previewed in chat. Downloads the image
-// itself (size-capped) and scales it to fit the screen.
+// Full-size viewer for an image link previewed in chat. Fetches through
+// services::ImageFetcher so it gets the same SSRF gate, per-redirect
+// re-vetting, timeout, and download cap as the inline previews.
 class ImageViewerDialog final : public QDialog {
     Q_OBJECT
 
@@ -23,6 +28,7 @@ class ImageViewerDialog final : public QDialog {
     QLabel* imageLabel_ = nullptr;
     QScrollArea* scrollArea_ = nullptr;
     QNetworkAccessManager* network_ = nullptr;
+    maxchat::services::ImageFetcher* fetcher_ = nullptr;
 };
 
 } // namespace maxchat::ui
