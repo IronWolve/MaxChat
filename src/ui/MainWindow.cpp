@@ -127,6 +127,7 @@
 #include <QTextEdit>
 #include <QToolBar>
 #include <QToolButton>
+#include <QTimer>
 #include <QTreeWidget>
 #include <QVBoxLayout>
 #include <QVariantList>
@@ -1121,6 +1122,18 @@ bool MainWindow::eventFilter(QObject* watched, QEvent* event) {
         showInputContextMenu(contextEvent->pos(), contextEvent->globalPos());
         return true;
     }
+    // After any QMenu closes, restore focus to the input box (deferred so Qt
+    // finishes menu teardown first). Guards: only when this is the active
+    // window, no modal on top, and focus hasn't already landed in a text field.
+    if (event->type() == QEvent::Hide && qobject_cast<QMenu*>(watched) != nullptr) {
+        QTimer::singleShot(0, this, [this]() {
+            if (m_input == nullptr) return;
+            if (QApplication::activeWindow() != this) return;
+            if (QApplication::activeModalWidget() != nullptr) return;
+            if (isTextEntry(QApplication::focusWidget())) return;
+            m_input->setFocus();
+        });
+    }
     return QMainWindow::eventFilter(watched, event);
 }
 
@@ -1577,8 +1590,20 @@ void maxchat::ui::MainWindow::buildLayout() {
                     return;
                 }
                 const QString target = item->data(0, Qt::UserRole).toString();
+                const QString network = treeItemNetwork(item).trimmed().isEmpty()
+                    ? activeNetworkName() : treeItemNetwork(item).trimmed();
                 QMenu menu(this);
-                if (!target.isEmpty() && !isTreeStatusTarget(target)) {
+                if (isTreeStatusTarget(target)) {
+                    menu.addAction(QStringLiteral("Disconnect"), this,
+                                   [this, network]() { disconnectNetwork(network); });
+                    menu.addAction(QStringLiteral("Reconnect Now"), this,
+                                   [this, network]() { reconnectNetwork(network); });
+                    menu.addSeparator();
+                    menu.addAction(QStringLiteral("Server List..."), this,
+                                   &MainWindow::openServerList);
+                    menu.addAction(QStringLiteral("Quick Connect..."), this,
+                                   &MainWindow::openQuickConnect);
+                } else if (!target.isEmpty()) {
                     menu.addAction(QStringLiteral("Close"), this,
                                    [this, index]() { closeBufferTab(index); });
                 }
@@ -6836,8 +6861,8 @@ void maxchat::ui::MainWindow::appendCenteredDivider(const QString& text, const Q
     cursor.movePosition(QTextCursor::End);
     QTextBlockFormat blockFormat; // fresh format: centered, no inherited margins
     blockFormat.setAlignment(Qt::AlignHCenter);
-    blockFormat.setTopMargin(4);
-    blockFormat.setBottomMargin(2);
+    blockFormat.setTopMargin(8);
+    blockFormat.setBottomMargin(6);
     if (!m_chatView->document()->isEmpty()) {
         cursor.insertBlock(blockFormat);
     } else {
@@ -7064,6 +7089,18 @@ void maxchat::ui::MainWindow::saveComic() {
 }
 
 void maxchat::ui::MainWindow::setComicMode(bool enabled) {
+    // Comic panels only make sense in channel/query buffers, not the server window.
+    if (m_currentTarget.trimmed().isEmpty()) {
+        const QString key = comicKey(activeNetworkName(), m_currentTarget);
+        const bool viewVisible = m_comicMode && !m_comicHiddenBuffers.contains(key);
+        if (m_comicModeAction != nullptr && m_comicModeAction->isChecked() != viewVisible) {
+            const QSignalBlocker blocker(m_comicModeAction);
+            m_comicModeAction->setChecked(viewVisible);
+        }
+        statusBar()->showMessage(QStringLiteral("Comic Mode: not available on the server buffer."));
+        return;
+    }
+
     const QString key = comicKey(activeNetworkName(), m_currentTarget);
 
     if (!m_comicMode && enabled) {
@@ -7908,6 +7945,7 @@ void maxchat::ui::MainWindow::rebuildNetworkTree() {
         networks.append(m_connectionPlan.networkName);
     }
 
+    QTreeWidgetItem* itemToSelect = nullptr;
     for (const QString& network : networks) {
         const QString cleanNetwork = network.trimmed();
         if (cleanNetwork.isEmpty()) {
@@ -7932,7 +7970,7 @@ void maxchat::ui::MainWindow::rebuildNetworkTree() {
             rootItem->setForeground(0, QColor(0x9a, 0xa0, 0xa6));
         }
         if (active && currentTargetForNetwork(cleanNetwork).trimmed().isEmpty()) {
-            m_networkTree->setCurrentItem(rootItem);
+            itemToSelect = rootItem;
         }
         for (const QString& target : visibleTreeTargets(cleanNetwork)) {
             auto* item =
@@ -7940,13 +7978,18 @@ void maxchat::ui::MainWindow::rebuildNetworkTree() {
             rootItem->addChild(item);
             if (active &&
                 target.compare(currentTargetForNetwork(cleanNetwork), Qt::CaseInsensitive) == 0) {
-                m_networkTree->setCurrentItem(item);
+                itemToSelect = item;
             }
         }
+        // addTopLevelItem must come before setCurrentItem — calling setCurrentItem
+        // on an item not yet in the tree is a no-op and causes the fallback below
+        // to select topLevelItem(0) (the wrong/first server) instead of the active one.
         m_networkTree->addTopLevelItem(rootItem);
     }
     m_networkTree->expandAll();
-    if (m_networkTree->currentItem() == nullptr) {
+    if (itemToSelect != nullptr) {
+        m_networkTree->setCurrentItem(itemToSelect);
+    } else if (m_networkTree->currentItem() == nullptr) {
         QTreeWidgetItem* rootItem = m_networkTree->topLevelItem(0);
         if (rootItem != nullptr) {
             m_networkTree->setCurrentItem(rootItem);
@@ -8412,9 +8455,13 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
         }
     }
     setButtonBarVisible(settings.value(QStringLiteral("show_button_bar"), true).toBool(), false);
-    setBufferTabsVisible(settings.value(QStringLiteral("buffer_tabs"), false).toBool(), false);
+    // setServerListVisible must run before setBufferTabsVisible: when both are on,
+    // tabs win (they hide the tree). If tabs ran first and hid the tree, the
+    // subsequent setSplitterPanelVisible call inside setServerListVisible would
+    // restore it via splitter->setSizes, causing both to show at the same time.
     setServerListVisible(settings.value(QStringLiteral("server_list_visible"), true).toBool(),
                          false);
+    setBufferTabsVisible(settings.value(QStringLiteral("buffer_tabs"), false).toBool(), false);
     setMembersVisible(settings.value(QStringLiteral("member_list_visible"), true).toBool(), false);
     m_nickColumnWidth = std::clamp(settings.value(QStringLiteral("nick_width"), 16).toInt(), 4, 40);
     if (m_chatSeparatorAction != nullptr && m_chatSeparatorAction->isChecked() != m_separatorLine) {
