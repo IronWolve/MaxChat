@@ -100,6 +100,43 @@ local function send(api, nick, verb, payload)
   api.mc_send(nick, SERVICE, verb, clean_line(payload or ""))
 end
 
+local function send_raw(api, nick, verb, payload)
+  api.mc_send(nick, SERVICE, verb, tostring(payload or ""))
+end
+
+local function hex2(n)
+  return string.format("%02X", math.max(0, math.min(255, tonumber(n) or 0)))
+end
+
+local function frame_write(text)
+  text = clean_line(text or "")
+  if #text <= 255 then
+    return "W" .. hex2(#text) .. text
+  end
+  return "X" .. string.format("%04X", #text) .. text
+end
+
+local function frame_pos(row, col)
+  return "P" .. hex2(row) .. hex2(col)
+end
+
+local function send_terminal_frames(api, s, lines)
+  local chunks = {}
+  local current = "C"
+  for row, text in ipairs(lines or {}) do
+    local op = frame_pos(row, 1) .. frame_write(text)
+    if #current + #op > 330 and #current > 0 then
+      chunks[#chunks + 1] = current
+      current = ""
+    end
+    current = current .. op
+  end
+  if #current > 0 then chunks[#chunks + 1] = current end
+  for _, chunk in ipairs(chunks) do
+    send_raw(api, s.nick, "T", chunk)
+  end
+end
+
 local function frame_encode(s)
   s = clean_line(s or "")
   s = s:gsub("%%", "%%25")
@@ -177,34 +214,18 @@ local function status(api, s, text) out(api, s, "STATUS", text or "") end
 local function screen(api, s, status_text, prompt_text, lines)
   lines = lines or {}
   s.last = { status = clean_line(status_text or ""), prompt = clean_line(prompt_text or ""), lines = {} }
-  local encoded = { frame_encode(s.last.status), frame_encode(s.last.prompt) }
   for _, text in ipairs(lines) do
     local line_text = clean_line(text or "")
     s.last.lines[#s.last.lines + 1] = line_text
-    encoded[#encoded + 1] = frame_encode(line_text)
   end
-  local payload = table.concat(encoded, "|")
-  if #payload <= 330 then
-    send(api, s.nick, "FRAME", payload)
-  else
-    clear(api, s)
-    status(api, s, status_text or "")
-    local chunk = {}
-    local chunk_len = 0
-    for _, text in ipairs(lines) do
-      local encoded_line = frame_encode(text)
-      if chunk_len + #encoded_line + 1 > 300 and #chunk > 0 then
-        send(api, s.nick, "LINES", table.concat(chunk, "|"))
-        chunk = {}
-        chunk_len = 0
-      end
-      chunk[#chunk + 1] = encoded_line
-      chunk_len = chunk_len + #encoded_line + 1
-    end
-    if #chunk > 0 then
-      send(api, s.nick, "LINES", table.concat(chunk, "|"))
-    end
-    prompt(api, s, prompt_text or "")
+  if s.sent_status ~= s.last.status then
+    send(api, s.nick, "STATUS", s.last.status)
+    s.sent_status = s.last.status
+  end
+  send_terminal_frames(api, s, s.last.lines)
+  if s.sent_prompt ~= s.last.prompt then
+    send(api, s.nick, "PROMPT", s.last.prompt)
+    s.sent_prompt = s.last.prompt
   end
   update_mirror(api, s)
 end
@@ -767,6 +788,10 @@ function on_mc_data(api, network, target, nick, service, verb, payload, notice)
       api.terminal_write(client.term, (parts[i] or "") .. "\n")
     end
     api.terminal_prompt(client.term, parts[2] or "")
+  elseif verb == "T" then
+    if not api.terminal_frame(client.term, payload) then
+      api.terminal_write(client.term, "[bbs] bad terminal frame\n")
+    end
   elseif verb == "LINES" then
     for _, text in ipairs(frame_parts(payload)) do
       api.terminal_write(client.term, text .. "\n")

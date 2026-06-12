@@ -32,6 +32,8 @@ class ScriptHost {
     virtual void scriptTerminalClear(const QString& scriptName, const QString& id) = 0;
     virtual void scriptTerminalWrite(const QString& scriptName, const QString& id,
                                      const QString& text) = 0;
+    virtual bool scriptTerminalFrame(const QString& scriptName, const QString& id,
+                                     const QString& ops) = 0;
     virtual void scriptTerminalStatus(const QString& scriptName, const QString& id,
                                       const QString& text) = 0;
     virtual void scriptTerminalPrompt(const QString& scriptName, const QString& id,

@@ -1,6 +1,7 @@
 #include "ui/ScriptTerminalDialog.h"
 
 #include "ui/AnsiRenderer.h"
+#include "ui/TerminalFrame.h"
 
 #include <QApplication>
 #include <QClipboard>
@@ -20,6 +21,7 @@
 #include <QUrl>
 #include <QVBoxLayout>
 
+#include <array>
 #include <algorithm>
 
 namespace maxchat::ui {
@@ -75,6 +77,23 @@ class TerminalInputLineEdit final : public QLineEdit {
 
 QString colorCss(const QColor& color) {
     return color.isValid() ? color.name(QColor::HexRgb) : QStringLiteral("transparent");
+}
+
+QString frameColor(const int index, const bool background) {
+    static const std::array<const char*, 16> colors = {
+        "#000000", "#0000aa", "#00aa00", "#00aaaa", "#aa0000", "#aa00aa",
+        "#aa5500", "#aaaaaa", "#555555", "#5555ff", "#55ff55", "#55ffff",
+        "#ff5555", "#ff55ff", "#ffff55", "#ffffff",
+    };
+    if (index >= 0 && index < static_cast<int>(colors.size())) {
+        return QString::fromLatin1(colors.at(static_cast<size_t>(index)));
+    }
+    return background ? QStringLiteral("#000000") : QStringLiteral("#aaaaaa");
+}
+
+QString htmlEscapedChar(const QChar ch) {
+    QString s(ch);
+    return s.toHtmlEscaped();
 }
 
 } // namespace
@@ -150,6 +169,11 @@ QSize ScriptTerminalDialog::terminalSize() const {
 }
 
 void ScriptTerminalDialog::writeText(const QString& text) {
+    if (frameMode_) {
+        frameGrid_.clear();
+        frameMode_ = false;
+        display_->clear();
+    }
     QTextCursor cursor = display_->textCursor();
     cursor.movePosition(QTextCursor::End);
     cursor.insertHtml(AnsiRenderer::toHtml(text));
@@ -158,7 +182,83 @@ void ScriptTerminalDialog::writeText(const QString& text) {
 }
 
 void ScriptTerminalDialog::clear() {
+    frameGrid_.clear();
+    frameCursorRow_ = 0;
+    frameCursorCol_ = 0;
+    frameFg_ = 7;
+    frameBg_ = 0;
+    frameMode_ = false;
     display_->clear();
+}
+
+bool ScriptTerminalDialog::applyFrame(const QString& ops, QString* error) {
+    QVector<TerminalFrame::Op> parsed;
+    if (!TerminalFrame::parse(ops, &parsed, error)) {
+        return false;
+    }
+    frameMode_ = true;
+    ensureFrameGrid();
+    for (const TerminalFrame::Op& op : parsed) {
+        switch (op.type) {
+        case TerminalFrame::OpType::Clear:
+            for (auto& row : frameGrid_) {
+                for (FrameCell& cell : row) {
+                    cell = {};
+                }
+            }
+            frameCursorRow_ = 0;
+            frameCursorCol_ = 0;
+            frameFg_ = 7;
+            frameBg_ = 0;
+            break;
+        case TerminalFrame::OpType::Home:
+            frameCursorRow_ = 0;
+            frameCursorCol_ = 0;
+            break;
+        case TerminalFrame::OpType::Position:
+            frameCursorRow_ =
+                std::clamp(op.row - 1, 0, std::max(0, static_cast<int>(frameGrid_.size()) - 1));
+            frameCursorCol_ =
+                std::clamp(op.col - 1, 0,
+                           std::max(0, static_cast<int>(frameGrid_.value(frameCursorRow_).size()) - 1));
+            break;
+        case TerminalFrame::OpType::Attribute:
+            frameFg_ = std::clamp(op.fg, 0, 15);
+            frameBg_ = std::clamp(op.bg, 0, 15);
+            break;
+        case TerminalFrame::OpType::Write:
+        case TerminalFrame::OpType::ExtendedWrite:
+            for (const QChar ch : op.text) {
+                if (ch == QLatin1Char('\n')) {
+                    ++frameCursorRow_;
+                    frameCursorCol_ = 0;
+                    continue;
+                }
+                if (frameCursorRow_ < 0 || frameCursorRow_ >= frameGrid_.size()) {
+                    continue;
+                }
+                auto& row = frameGrid_[frameCursorRow_];
+                if (frameCursorCol_ < 0 || frameCursorCol_ >= row.size()) {
+                    continue;
+                }
+                row[frameCursorCol_] = {ch, frameFg_, frameBg_};
+                ++frameCursorCol_;
+                if (frameCursorCol_ >= row.size()) {
+                    frameCursorCol_ = 0;
+                    ++frameCursorRow_;
+                }
+            }
+            break;
+        case TerminalFrame::OpType::Newline:
+            ++frameCursorRow_;
+            frameCursorCol_ = 0;
+            break;
+        }
+    }
+    frameCursorRow_ =
+        std::clamp(frameCursorRow_, 0, std::max(0, static_cast<int>(frameGrid_.size()) - 1));
+    renderFrameGrid();
+    return true;
 }
 
 void ScriptTerminalDialog::setStatusText(const QString& text) {
@@ -222,6 +322,56 @@ void ScriptTerminalDialog::updateFixedGridSize() {
     const int charWidth = std::max(1, metrics.horizontalAdvance(QLatin1Char('M')));
     const int lineHeight = std::max(1, metrics.lineSpacing());
     display_->setMinimumSize(profile_.cols * charWidth + 24, profile_.rows * lineHeight + 24);
+}
+
+void ScriptTerminalDialog::ensureFrameGrid() {
+    const QSize size = terminalSize();
+    const int rows = std::max(1, size.height());
+    const int cols = std::max(1, size.width());
+    if (frameGrid_.size() != rows || (!frameGrid_.isEmpty() && frameGrid_.first().size() != cols)) {
+        frameGrid_.resize(rows);
+        for (auto& row : frameGrid_) {
+            row.resize(cols);
+        }
+    }
+}
+
+void ScriptTerminalDialog::renderFrameGrid() {
+    QString html;
+    html += QStringLiteral("<pre style=\"margin:0;white-space:pre;\">");
+    int lastFg = -1;
+    int lastBg = -1;
+    bool spanOpen = false;
+    const auto closeSpan = [&html, &spanOpen]() {
+        if (spanOpen) {
+            html += QStringLiteral("</span>");
+            spanOpen = false;
+        }
+    };
+    const auto openSpan = [&html, &spanOpen](const int fg, const int bg) {
+        html += QStringLiteral("<span style=\"color:%1;background-color:%2;\">")
+                    .arg(frameColor(fg, false), frameColor(bg, true));
+        spanOpen = true;
+    };
+    for (int rowIndex = 0; rowIndex < frameGrid_.size(); ++rowIndex) {
+        const auto& row = frameGrid_.at(rowIndex);
+        for (const FrameCell& cell : row) {
+            if (!spanOpen || cell.fg != lastFg || cell.bg != lastBg) {
+                closeSpan();
+                openSpan(cell.fg, cell.bg);
+                lastFg = cell.fg;
+                lastBg = cell.bg;
+            }
+            html += htmlEscapedChar(cell.ch);
+        }
+        if (rowIndex + 1 < frameGrid_.size()) {
+            html += QLatin1Char('\n');
+        }
+    }
+    closeSpan();
+    html += QStringLiteral("</pre>");
+    display_->setHtml(html);
+    display_->verticalScrollBar()->setValue(0);
 }
 
 } // namespace maxchat::ui

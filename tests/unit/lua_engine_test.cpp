@@ -60,6 +60,11 @@ class FakeHost final : public ScriptHost {
                              const QString& text) override {
         terminals.append(QStringLiteral("write|%1|%2|%3").arg(scriptName, id, text));
     }
+    bool scriptTerminalFrame(const QString& scriptName, const QString& id,
+                             const QString& ops) override {
+        terminals.append(QStringLiteral("frame|%1|%2|%3").arg(scriptName, id, ops));
+        return !ops.isEmpty();
+    }
     void scriptTerminalStatus(const QString& scriptName, const QString& id,
                               const QString& text) override {
         terminals.append(QStringLiteral("status|%1|%2|%3").arg(scriptName, id, text));
@@ -352,6 +357,7 @@ class LuaEngineTest final : public QObject {
                            "  api.terminal_status('main', 'CONNECT: Retro-BBS')\n"
                            "  api.terminal_prompt('main', 'bbs> ')\n"
                            "  api.terminal_write('main', 'hello')\n"
+                           "  api.echo(tostring(api.terminal_frame('main', 'CP0101W02Hi')))\n"
                            "  local cols, rows = api.terminal_size('main')\n"
                            "  api.echo(cols..'x'..rows)\n"
                            "  api.terminal_profile('main', 'c64')\n"
@@ -369,6 +375,7 @@ class LuaEngineTest final : public QObject {
                      QStringLiteral("status|term|main|CONNECT: Retro-BBS"),
                      QStringLiteral("prompt|term|main|bbs> "),
                      QStringLiteral("write|term|main|hello"),
+                     QStringLiteral("frame|term|main|CP0101W02Hi"),
                      QStringLiteral("profile|term|main|c64|80x25"),
                      QStringLiteral("fit|term|main|integer"),
                      QStringLiteral("clear|term|main"),
@@ -376,6 +383,7 @@ class LuaEngineTest final : public QObject {
                  }));
         QCOMPARE(host.echoes,
                  QStringList({
+                     QStringLiteral("true"),
                      QStringLiteral("true"),
                      QStringLiteral("100x30"),
                      QStringLiteral("<hotspot action=\"menu\">Menu</hotspot>"),

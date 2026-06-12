@@ -26,6 +26,7 @@ class ScriptTerminalManager final : public QObject {
     void closeAll();
     void writeText(const QString& id, const QString& text);
     void clear(const QString& id);
+    bool applyFrame(const QString& id, const QString& ops, QString* error = nullptr);
     void setStatusText(const QString& id, const QString& text);
     void setPromptText(const QString& id, const QString& text);
     void setProfile(const QString& id, const TerminalProfile& profile);

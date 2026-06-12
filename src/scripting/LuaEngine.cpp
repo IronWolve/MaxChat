@@ -287,6 +287,16 @@ int l_terminal_write(lua_State* L) {
     return 0;
 }
 
+int l_terminal_frame(lua_State* L) {
+    lua_pushboolean(L,
+                    engineOf(L)->hostTerminalFrame(scriptNameOf(L),
+                                                   QString::fromUtf8(luaL_checkstring(L, 1)),
+                                                   QString::fromUtf8(luaL_checkstring(L, 2)))
+                        ? 1
+                        : 0);
+    return 1;
+}
+
 int l_terminal_status(lua_State* L) {
     engineOf(L)->hostTerminalStatus(scriptNameOf(L), QString::fromUtf8(luaL_checkstring(L, 1)),
                                     QString::fromUtf8(luaL_checkstring(L, 2)));
@@ -668,6 +678,11 @@ void LuaEngine::hostTerminalWrite(const QString& scriptName, const QString& id,
     }
 }
 
+bool LuaEngine::hostTerminalFrame(const QString& scriptName, const QString& id,
+                                  const QString& ops) {
+    return host_ != nullptr && host_->scriptTerminalFrame(scriptName, id, ops);
+}
+
 void LuaEngine::hostTerminalStatus(const QString& scriptName, const QString& id,
                                    const QString& text) {
     if (host_ != nullptr) {
@@ -839,6 +854,7 @@ static int installApi(lua_State* L, LuaEngine* engine, const QString& dataDir,
     reg("terminal_close", l_terminal_close);
     reg("terminal_clear", l_terminal_clear);
     reg("terminal_write", l_terminal_write);
+    reg("terminal_frame", l_terminal_frame);
     reg("terminal_status", l_terminal_status);
     reg("terminal_prompt", l_terminal_prompt);
     reg("terminal_size", l_terminal_size);
@@ -1075,6 +1091,9 @@ bool LuaEngine::hostTerminalOpen(const QString&, const QString&, const QString&,
 void LuaEngine::hostTerminalClose(const QString&, const QString&) {}
 void LuaEngine::hostTerminalClear(const QString&, const QString&) {}
 void LuaEngine::hostTerminalWrite(const QString&, const QString&, const QString&) {}
+bool LuaEngine::hostTerminalFrame(const QString&, const QString&, const QString&) {
+    return false;
+}
 void LuaEngine::hostTerminalStatus(const QString&, const QString&, const QString&) {}
 void LuaEngine::hostTerminalPrompt(const QString&, const QString&, const QString&) {}
 QSize LuaEngine::hostTerminalSize(const QString&, const QString&) {

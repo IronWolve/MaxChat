@@ -194,6 +194,7 @@ api.terminal_open(id, title, profile_or_cols, rows)
 api.terminal_close(id)
 api.terminal_clear(id)
 api.terminal_write(id, text)
+api.terminal_frame(id, ops)
 api.terminal_status(id, text)
 api.terminal_prompt(id, text)
 api.terminal_size(id)
@@ -384,7 +385,7 @@ Prrcc         position cursor; row and column are two-digit hex
 Afb           set color attribute; foreground/background are one hex digit each
 Wll<data>     write text; ll is two-digit hex byte length
 N             newline
-Xllll<data>   extended write; llll is four-digit hex byte length, TBD for v1
+Xllll<data>   extended write; llll is four-digit hex byte length
 ```
 
 Example:
@@ -417,6 +418,9 @@ Screen-size notes:
 Encoding notes:
 
 - `W` length is byte length, not character count.
+- `api.terminal_frame(id, ops)` parses and applies this op stream to a terminal
+  grid.
+- Retro-BBS uses `MC DATA bbs T <ops>` for compact display updates.
 - Plain ASCII is cheapest.
 - Unicode box/block characters work but cost more bytes.
 - Future CP437/PETSCII helpers may map compact byte values to display glyphs.

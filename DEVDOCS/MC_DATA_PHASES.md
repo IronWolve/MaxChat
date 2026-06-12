@@ -114,6 +114,7 @@ Exit criteria:
 - [x] Add `api.terminal_profile(id, profile)`.
 - [x] Add `api.terminal_fit(id, mode)`.
 - [x] Add `api.terminal_hotspot(action_id, label)`.
+- [x] Add `api.terminal_frame(id, ops)` for compact positioned terminal frames.
 - [x] Add `on_terminal_input(api, id, text)`.
 - [x] Add `on_terminal_link(api, id, action_id)`.
 - [x] Add `on_terminal_closed(api, id)`.
@@ -143,6 +144,7 @@ Exit criteria:
 - [x] Implement break-in/sysop chat.
 - [x] Implement hangman door.
 - [x] Implement logoff.
+- [x] Send compact `MC DATA bbs T <ops>` display frames for BBS screens.
 
 Exit criteria:
 
@@ -207,8 +209,9 @@ Exit criteria:
   required for the first BBS terminal.
 - Compact terminal frame draft is documented in `DEVDOCS/MC_DATA.md`. It uses
   single-letter ops, fixed-width hex fields, and byte-length writes to reduce
-  CTCP payload size. Treat it as a working protocol until implementation proves
-  the final op set.
+  CTCP payload size. Parser and Lua terminal API support are implemented;
+  continue treating the op set as a working protocol until manual BBS testing
+  settles the final shape.
 - Phase 10 full offscreen CTest is `51/51` passing.
 - Initial full CTest without `QT_QPA_PLATFORM=offscreen` also aborts GUI/media
   tests in this headless environment due missing display/plugin setup; offscreen

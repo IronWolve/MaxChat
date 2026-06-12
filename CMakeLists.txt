@@ -308,6 +308,8 @@ qt_add_executable(maxchat-c
     src/ui/ScriptTerminalDialog.h
     src/ui/ScriptTerminalManager.cpp
     src/ui/ScriptTerminalManager.h
+    src/ui/TerminalFrame.cpp
+    src/ui/TerminalFrame.h
     src/ui/ShortcutEditorDialog.cpp
     src/ui/ShortcutEditorDialog.h
     src/ui/SpellcheckHighlighter.cpp
@@ -394,6 +396,25 @@ target_link_libraries(ansi_renderer_test
 )
 
 add_test(NAME ansi_renderer COMMAND ansi_renderer_test)
+
+qt_add_executable(terminal_frame_test
+    tests/unit/terminal_frame_test.cpp
+    src/ui/TerminalFrame.cpp
+    src/ui/TerminalFrame.h
+)
+
+target_include_directories(terminal_frame_test
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(terminal_frame_test
+    PRIVATE
+        Qt6::Core
+        Qt6::Test
+)
+
+add_test(NAME terminal_frame COMMAND terminal_frame_test)
 
 qt_add_executable(terminal_profile_test
     tests/unit/terminal_profile_test.cpp
@@ -1097,6 +1118,8 @@ qt_add_executable(main_window_link_preview_test
     src/ui/ScriptTerminalDialog.h
     src/ui/ScriptTerminalManager.cpp
     src/ui/ScriptTerminalManager.h
+    src/ui/TerminalFrame.cpp
+    src/ui/TerminalFrame.h
     src/ui/ShortcutEditorDialog.cpp
     src/ui/ShortcutEditorDialog.h
     src/ui/SpellcheckHighlighter.cpp
