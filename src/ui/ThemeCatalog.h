@@ -89,6 +89,9 @@ struct ThemePack {
 // The font settings keys a theme may bundle (used for whitelisting).
 [[nodiscard]] QStringList themeFontKeys();
 
+// Where user app themes live on disk (<config>/maxchat/themes).
+[[nodiscard]] QString userThemeDirectoryPath();
+
 // User-created themes ("u-" ids) can be deleted; built-ins cannot.
 [[nodiscard]] bool isUserThemeId(const QString &id);
 bool deleteUserAppTheme(const QString &id);

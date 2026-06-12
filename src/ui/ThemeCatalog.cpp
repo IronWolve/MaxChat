@@ -972,6 +972,10 @@ QStringList themeFontKeys() {
     return keys;
 }
 
+QString userThemeDirectoryPath() {
+    return userThemeDirectory();
+}
+
 bool isUserThemeId(const QString& id) {
     return id.startsWith(QStringLiteral("u-"));
 }

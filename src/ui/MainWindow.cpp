@@ -1997,7 +1997,22 @@ void maxchat::ui::MainWindow::openPreferences() {
             QStringLiteral("This is what a notification looks like \u2014 click to open the chat."),
             bg, fg, accent, corner, durationMs, icon);
     });
+    // Live theme preview: combo changes in the Themes tab restyle the app
+    // immediately (not saved); Cancel below restores the saved look.
+    connect(&dialog, &PreferencesDialog::themePreviewRequested, this,
+            [this](const QString& app, const QString& chat, const QString& wallpaper) {
+                setTheme(app, false);
+                setChatTheme(chat, false);
+                setWallpaper(wallpaper, false);
+            });
     if (dialog.exec() != QDialog::Accepted) {
+        const QVariantMap saved = m_settings.loadWithDefaults();
+        setTheme(saved.value(QStringLiteral("theme"), QStringLiteral("synthwave")).toString(),
+                 false);
+        setChatTheme(
+            saved.value(QStringLiteral("chat_theme"), QStringLiteral("follow")).toString(),
+            false);
+        setWallpaper(saved.value(QStringLiteral("wallpaper")).toString(), false);
         return;
     }
 
