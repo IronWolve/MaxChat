@@ -25,7 +25,7 @@ local SERVER_TERM = "server"
 local MAX_LINE = 220
 local DEMO_USER = "sir_iw"
 local DEMO_PASSWORD = "bbsiscool"
-local CLIENT_CAPS = "T,S"
+local CLIENT_CAPS = "T,S,B1"
 
 local server_running = false
 local server = {
@@ -51,6 +51,31 @@ local HELLO_COOLDOWN_MS = 3000
 local board = {
   { from = "sysop", text = "Welcome. Leave a short note with P <message>." }
 }
+
+-- 1-bit pic gallery (B/I bitmap verbs, caps=B1). 80x50 px rendered as
+-- half-blocks in 80x25 cells. Public-domain space-agency photos, reduced to
+-- 1-bit: thresholded images compress well with rle1, dithered ones ship raw1.
+local PICS = {
+  { id = "earth", title = "Earth from space", w = 80, h = 50, enc = "rle1",
+    data = {
+      "103020311E321D341B3619070129020419030627030517030727030615030827020715030827020813040703011D060B13040620090B1204061B0E0B110605190903040C1008020202030112010304040201020B100B04210102020B0F0D0424010C0E0E0324010C0E0E03310D1102300D2B01170D2B02160D22010802160D430D0E01340D0D030702290E0D",
+      "030306290E0C0303062A0F12042B0F13032B0F13041401160E13051202151012051103151012041302151011030E0206080E1120120C121F130C121F0C03040C131D08020206020B151C06030207030A151D0305020C02051731030419300205192F01061C331F302030202F222D2405042212"
+    } },
+  { id = "moon", title = "The Moon", w = 80, h = 50, enc = "rle1",
+    data = {
+      "1038180C012B1805082C16050A2C15050B2B15030F2A1402102A252C242C242D2409032024080602011C22090A1B0B0214090B1B0B0213090D1A1D01010A0E1A1E0A0E0F030720090E0E050522080E0E060423070E0D070413040B070F0E0507100D02081003020805080F17160705080B020214040301040D08030A0903020E0104050301040E1201020803",
+      "020D0C06111001010904010D0E03120F02010904010D0403060411100D02010D04060306110F0D010209020104101102030A120707101A061207080F1A0604010D07081009020E0604010D08041407070A070301111D06070907040210200208080804020B02032A070905030803032B06090503090204040125050906080A040225040906090A0302320708",
+      "0A04013108080602020302310906060307300A050505082E0C040506072E0C050506062D0E050505062C10050306062C10060206072A09"
+    } },
+  { id = "astro", title = "Moonwalker", w = 80, h = 50, enc = "raw1",
+    data = {
+      "12AAAADBBDFFFFFFFFFE24AAAB6CF6B7FFF6F7BB1555B5DBBBFDFFFFDEFD52A4D6EEFD57FDFDFFFE2D537DB2B52BFFDFFFEA05AADFFB76B5FFFFDBBD556DF6EDFA57FDFF6DF52AB6AFFF556AFFFFFFFEB55BFB7BFA7FFFFFFFFF6FFEBFFF5D5FEFFFFFFFBAD7EDFFF5BFFFFFEDFF6FFFBFFEBEFFFFDEF7FEBFBDFFFBFDBFFFFFD0BF7BFFFFFF1BFFFFFEFFEA",
+      "AEEFF6B6AFFBFFFF2F7D7BBBFF5E9DFFFFFFF7F6AF6EDB052FFFFFFFFFFE769BF77557FFFFFFFFFF2B0DFEDAAFEFFFFFFFFF16FFFBBFFFFFFFFFFFFF45B77FFB7777FD7FFFFF22FFFFDDFFEFF757FFFF08DBEF6BBDF3596FFFFF25FEFBB6FFDDFABFFFFF5F57FFFBD6F7F5FFFFFF755AFFDFFFFABB7EFFFFADAADFFFD5A88ADFFFFF52D57FFFFAF557FFFF7D",
+      "0977B7FDD15F82FFDBFF549D7EFFA96D4B77F5F52AD7DBFF513B2FFDDAAC2556FFD485D4BFF7F57756ABAAB80A43775F5FDD2AD56AC42A1DFDEBEBFF55255A20A00BAB5ABEFD554AAC8090ACA89777B629015A010176F401BDFF0AA4540201DB55246F6E2952400004BFED413BFF0448000016DEF6FDDEFF20511000092BDB56DBBF00A80000042BFFFFFFEF",
+      "2058000017157AADD6BF28A000008956D7F7FFDF2AA00000222A501D5ABF09000800000000436FCF0400100100012000152F100000105000800000970000002A8242AB00000500000055401155600000"
+    } },
+}
+
 
 local function trim(s)
   return (tostring(s or ""):gsub("^%s+", ""):gsub("%s+$", ""))
@@ -277,6 +302,64 @@ local function frame_parts(payload)
     parts[#parts + 1] = frame_decode(part)
   end
   return parts
+end
+
+-- ===== bitmap art client (B/I verbs) =====
+local bitmap_cache = {}   -- bbs_id|id|hash -> {w,h,enc,data}
+
+local function bitmap_key(bbs_id, id, hash)
+  return tostring(bbs_id):lower() .. "|" .. tostring(id) .. "|" .. tostring(hash)
+end
+
+local function decode_bits(enc, data, total)
+  local bits = {}
+  if enc == "raw1" then
+    for i = 1, #data do
+      local v = tonumber(data:sub(i, i), 16)
+      if not v then return nil end
+      bits[#bits + 1] = (v >= 8) and 1 or 0; v = v % 8
+      bits[#bits + 1] = (v >= 4) and 1 or 0; v = v % 4
+      bits[#bits + 1] = (v >= 2) and 1 or 0; v = v % 2
+      bits[#bits + 1] = v
+    end
+  elseif enc == "rle1" then
+    -- alternating runs starting with bit 0; one hex byte per run; a 00 run
+    -- flips color without pixels (encodes runs longer than 255)
+    local cur = 0
+    for i = 1, #data - 1, 2 do
+      local n = tonumber(data:sub(i, i + 1), 16)
+      if not n then return nil end
+      for _ = 1, n do bits[#bits + 1] = cur end
+      cur = 1 - cur
+    end
+  else
+    return nil
+  end
+  if #bits < total then return nil end
+  return bits
+end
+
+-- Local-render variant of frame_write: no MAX_LINE cap. These ops feed
+-- api.terminal_frame directly and never cross MC DATA.
+local function frame_write_full(text)
+  if #text <= 255 then return "W" .. hex2(#text) .. text end
+  return "X" .. string.format("%04X", #text) .. text
+end
+
+local function render_bitmap(api, term, bm)
+  local bits = decode_bits(bm.enc, bm.data, bm.w * bm.h)
+  if not bits then return false end
+  local ops = "C"
+  for r = 1, math.floor(bm.h / 2) do
+    local row = {}
+    for c = 1, bm.w do
+      local top = bits[(2 * r - 2) * bm.w + c] == 1
+      local bot = bits[(2 * r - 1) * bm.w + c] == 1
+      row[c] = (top and bot) and "\u{2588}" or (top and "\u{2580}") or (bot and "\u{2584}") or " "
+    end
+    ops = ops .. frame_pos(r, 1) .. "AF0" .. frame_write_full(table.concat(row))
+  end
+  return api.terminal_frame(term, ops)
 end
 
 -- Message board persists via the script preference store: "from|text" rows
@@ -549,7 +632,8 @@ local function menu(api, s)
     "[3]  Who is online",
     "[4]  Page the sysop",
     "[5]  Hangman door",
-    "[6]  Log off",
+    "[6]  Pic gallery",
+    "[7]  Log off",
   }), "main")
 end
 
@@ -602,6 +686,46 @@ local function page_sysop(api, s)
     "",
     "Press B to return without paging.",
   }), "page-sysop")
+end
+
+local function pics_menu(api, s)
+  s.mode = "pics"
+  local body = {}
+  if not s.supports_bitmap then
+    body[#body + 1] = "Your client does not support bitmap art (caps B1)."
+  else
+    for i, pic in ipairs(PICS) do
+      body[#body + 1] = string.format("[%d]  %-18s %s  %dx%d  1-bit", i, pic.title, pic.enc, pic.w, pic.h)
+    end
+  end
+  body[#body + 1] = ""
+  body[#body + 1] = "Pick a number  ·  B to return"
+  screen(api, s, "CONNECT: " .. server.name .. "  User: " .. s.user, "pics> ",
+    framed("Pic Gallery  ·  1-bit photos over MC DATA", body), "pics")
+end
+
+local function show_pic(api, s, pic)
+  if not s.supports_bitmap then pics_menu(api, s); return end
+  s.mode = "picview"
+  local data = table.concat(pic.data)
+  local hash = frame_hash(data)
+  s.sent_pics = s.sent_pics or {}
+  local sent_key = pic.id .. "|" .. hash
+  if not s.sent_pics[sent_key] then
+    local total = #pic.data
+    for i, chunk in ipairs(pic.data) do
+      send_raw(api, s.nick, "B", pic.id .. " " .. pic.w .. " " .. pic.h .. " " .. hash ..
+               " " .. pic.enc .. " " .. i .. "/" .. total .. " " .. chunk, s.network)
+    end
+    s.sent_pics[sent_key] = true
+  end
+  send_raw(api, s.nick, "I", pic.id .. " " .. hash .. " P0101", s.network)
+  send(api, s.nick, "STATUS", "PIC: " .. pic.title .. "  (" .. pic.enc .. " " ..
+       pic.w .. "x" .. pic.h .. ")  any key returns", s.network)
+  send(api, s.nick, "PROMPT", "pic> ", s.network)
+  -- force STATUS/PROMPT resend on the next screen() after the manual sends
+  s.sent_status = nil
+  s.sent_prompt = nil
 end
 
 local function hangman_word()
@@ -778,6 +902,12 @@ local function handle_session_input(api, s, input)
     return
   end
 
+  -- Any key (including b/q) leaves a picture and returns to the gallery.
+  if s.mode == "picview" then
+    pics_menu(api, s)
+    return
+  end
+
   if low == "b" or low == "back" then menu(api, s); return end
   if low == "q" or low == "quit" or low == "logoff" then logoff(api, s); return end
 
@@ -787,8 +917,15 @@ local function handle_session_input(api, s, input)
     elseif text == "3" or low == "who" then show_who(api, s)
     elseif text == "4" or low == "page" then page_sysop(api, s)
     elseif text == "5" or low == "hangman" then new_hangman(api, s)
-    elseif text == "6" then logoff(api, s)
-    else line(api, s, "Choose 1-6."); prompt(api, s, "bbs> ") end
+    elseif text == "6" or low == "pics" then pics_menu(api, s)
+    elseif text == "7" then logoff(api, s)
+    else line(api, s, "Choose 1-7."); prompt(api, s, "bbs> ") end
+    return
+  end
+
+  if s.mode == "pics" then
+    local pic = PICS[tonumber(text) or 0]
+    if pic then show_pic(api, s, pic) else pics_menu(api, s) end
     return
   end
 
@@ -1042,6 +1179,7 @@ function on_mc_data(api, network, target, nick, service, verb, payload, notice)
       rows = tonumber(kv.rows) or 25,
       profile = kv.profile or DEFAULT_PROFILE,
       supports_static = has_cap(kv.caps, "S"),
+      supports_bitmap = has_cap(kv.caps, "B1"),
       mode = "menu",
       last = { lines = {} }
     }
@@ -1125,6 +1263,40 @@ function on_mc_data(api, network, target, nick, service, verb, payload, notice)
       api.cancel_timer(client.timer)
       client.timer = nil
     end
+  end
+  if verb == "B" then
+    local id, w, h, hash, enc, idx, total, data =
+      payload:match("^(%S+) (%d+) (%d+) (%S+) (%S+) (%d+)/(%d+) (%S+)$")
+    if id then
+      client.bm_parts = client.bm_parts or {}
+      local pkey = id .. "|" .. hash
+      local entry = client.bm_parts[pkey] or { parts = {}, total = tonumber(total) }
+      entry.parts[tonumber(idx)] = data
+      entry.w, entry.h, entry.enc = tonumber(w), tonumber(h), enc
+      client.bm_parts[pkey] = entry
+      local have = 0
+      for _ in pairs(entry.parts) do have = have + 1 end
+      if have >= entry.total then
+        local full = {}
+        for i = 1, entry.total do full[i] = entry.parts[i] or "" end
+        bitmap_cache[bitmap_key(client.bbs_id, id, hash)] =
+          { w = entry.w, h = entry.h, enc = entry.enc, data = table.concat(full) }
+        client.bm_parts[pkey] = nil
+      end
+    end
+    return true
+  end
+  if verb == "I" then
+    local id, hash = payload:match("^(%S+) (%S+)")
+    local bm = id and bitmap_cache[bitmap_key(client.bbs_id, id, hash)]
+    if bm then
+      if not render_bitmap(api, client.term, bm) then
+        api.terminal_write(client.term, "[bbs] bad bitmap data\n")
+      end
+    else
+      api.terminal_write(client.term, "[bbs] missing pic data\n")
+    end
+    return true
   end
   if verb == "WELCOME" then
     client.server_caps = parse_kv(payload).caps or ""
