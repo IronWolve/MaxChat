@@ -229,6 +229,19 @@ local function show_stats(api)
   api.terminal_prompt(SERVER_TERM, "sysop> ")
 end
 
+local function login_screen(api, s)
+  s.mode = "login"
+  screen(api, s, "CONNECT 57600  " .. server.name, "login> ", {
+    "========================================",
+    "        " .. server.name,
+    "  MAXCHAT MC DATA  /  NODE 01  /  ANSI",
+    "  SYSOP: " .. (server.sysop ~= "" and server.sysop or "AVAILABLE"),
+    "  LAST CALL: " .. s.nick,
+    "----------------------------------------",
+    "Enter handle, or press Enter for " .. s.nick .. "."
+  })
+end
+
 local function menu(api, s)
   s.mode = "menu"
   screen(api, s, "CONNECT: " .. server.name .. "  User: " .. s.user, "bbs> ", {
@@ -432,6 +445,17 @@ end
 local function handle_session_input(api, s, input)
   local text = trim(input)
   local low = text:lower()
+
+  if s.mode == "login" then
+    if text ~= "" then
+      s.user = clean_line(text)
+    else
+      s.user = s.nick
+    end
+    menu(api, s)
+    return
+  end
+
   if low == "b" or low == "back" then menu(api, s); return end
   if low == "q" or low == "quit" or low == "logoff" then logoff(api, s); return end
 
@@ -663,7 +687,7 @@ function on_mc_data(api, network, target, nick, service, verb, payload, notice)
     end
     server.connects = server.connects + 1
     server_write(api, "CONNECT " .. nick .. " " .. s.cols .. "x" .. s.rows .. " " .. s.profile)
-    menu(api, s)
+    login_screen(api, s)
     show_stats(api)
     return true
   end
