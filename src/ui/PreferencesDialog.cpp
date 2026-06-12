@@ -31,6 +31,7 @@
 #include <QRegularExpression>
 #include <QSpinBox>
 #include <QStackedWidget>
+#include <QTimer>
 #include <QToolButton>
 #include <QVBoxLayout>
 
@@ -492,7 +493,7 @@ void PreferencesDialog::buildAppearanceTab(QWidget* tab) {
     auto* timestampForm = new QFormLayout(timestampBox);
     showTimestamps_ = new QCheckBox(QString(), tab);
     showTimestamps_->setObjectName(QStringLiteral("showTimestamps"));
-    showTimestamps_->setChecked(settings_.value(QStringLiteral("show_timestamps")).toBool());
+    showTimestamps_->setChecked(settings_.value(QStringLiteral("show_timestamps"), true).toBool());
     timestampFormat_ = new QComboBox(tab);
     timestampFormat_->setObjectName(QStringLiteral("timestampFormat"));
     timestampFormat_->setEditable(true);
@@ -541,7 +542,7 @@ void PreferencesDialog::buildAppearanceTab(QWidget* tab) {
     }
     alignNicks_ = new QCheckBox(QString(), tab);
     alignNicks_->setObjectName(QStringLiteral("alignNicks"));
-    alignNicks_->setChecked(settings_.value(QStringLiteral("align_nicks")).toBool());
+    alignNicks_->setChecked(settings_.value(QStringLiteral("align_nicks"), true).toBool());
     nickWidth_ = new QSpinBox(tab);
     nickWidth_->setObjectName(QStringLiteral("nickWidth"));
     nickWidth_->setRange(4, 24);
@@ -563,7 +564,7 @@ void PreferencesDialog::buildAppearanceTab(QWidget* tab) {
     showFormatting_->setChecked(settings_.value(QStringLiteral("show_formatting"), true).toBool());
     wordWrap_ = new QCheckBox(QString(), tab);
     wordWrap_->setObjectName(QStringLiteral("wordWrap"));
-    wordWrap_->setChecked(settings_.value(QStringLiteral("word_wrap")).toBool());
+    wordWrap_->setChecked(settings_.value(QStringLiteral("word_wrap"), true).toBool());
     indentWrap_ = new QCheckBox(QString(), tab);
     indentWrap_->setObjectName(QStringLiteral("indentWrap"));
     indentWrap_->setChecked(settings_.value(QStringLiteral("indent_wrap"), true).toBool());
@@ -682,7 +683,7 @@ void PreferencesDialog::buildNotificationsTab(QWidget* tab) {
 
     // Beep on highlight / PM
     beepHighlight_ = new QCheckBox(tab);
-    beepHighlight_->setChecked(settings_.value(QStringLiteral("beep_highlight"), false).toBool());
+    beepHighlight_->setChecked(settings_.value(QStringLiteral("beep_highlight"), true).toBool());
 
     // Sound on notification
     notifySound_ = new QCheckBox(tab);
@@ -1977,7 +1978,7 @@ void PreferencesDialog::buildSpellingTab(QWidget* tab) {
 
     spellcheckEnabled_ = new QCheckBox(QStringLiteral("Enable spellcheck"), tab);
     spellcheckEnabled_->setObjectName(QStringLiteral("spellcheckEnabled"));
-    spellcheckEnabled_->setChecked(settings_.value(QStringLiteral("spellcheck_enabled")).toBool());
+    spellcheckEnabled_->setChecked(settings_.value(QStringLiteral("spellcheck_enabled"), true).toBool());
 
     spellBackend_ = new QComboBox(tab);
     spellBackend_->setObjectName(QStringLiteral("spellBackend"));
@@ -2278,12 +2279,25 @@ void PreferencesDialog::buildDataTab(QWidget* tab) {
 
     auto* statsBox = new QGroupBox(QStringLiteral("Storage && stats"), tab);
     auto* statsForm = new QFormLayout(statsBox);
-    statsForm->addRow(QStringLiteral("Config size"),
-                      new QLabel(humanBytes(directorySizeBytes(paths.configDir)), tab));
-    statsForm->addRow(QStringLiteral("Cache size"),
-                      new QLabel(humanBytes(directorySizeBytes(paths.cacheDir)), tab));
-    statsForm->addRow(QStringLiteral("Logs size"),
-                      new QLabel(humanBytes(directorySizeBytes(logsDir)), tab));
+    // The three recursive directory walks are pure blocking I/O and were the
+    // main reason Preferences felt slow to open — defer them past first paint.
+    auto* configSize = new QLabel(QStringLiteral("computing..."), tab);
+    auto* cacheSize = new QLabel(QStringLiteral("computing..."), tab);
+    auto* logsSize = new QLabel(QStringLiteral("computing..."), tab);
+    statsForm->addRow(QStringLiteral("Config size"), configSize);
+    statsForm->addRow(QStringLiteral("Cache size"), cacheSize);
+    statsForm->addRow(QStringLiteral("Logs size"), logsSize);
+    const QString configDir = paths.configDir;
+    const QString cacheDir = paths.cacheDir;
+    QTimer::singleShot(50, this, [configSize, cacheSize, logsSize, configDir, cacheDir,
+                                  logsDir]() {
+        const qint64 logs = directorySizeBytes(logsDir);
+        logsSize->setText(humanBytes(logs));
+        // logsDir lives inside configDir — reuse the walk instead of doubling it.
+        const qint64 config = directorySizeBytes(configDir);
+        configSize->setText(humanBytes(config));
+        cacheSize->setText(humanBytes(directorySizeBytes(cacheDir)));
+    });
     statsForm->addRow(
         QStringLiteral("Saved networks"),
         new QLabel(QString::number(settings_.value(QStringLiteral("networks")).toList().size()),

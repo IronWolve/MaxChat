@@ -16,6 +16,9 @@ struct LinkPreviewRenderOptions {
   bool showTitle       = true;
   bool showDescription = true;
   bool showImage       = true;
+  // The chat background is dark (drives the card overlay/accent: a white
+  // overlay is invisible on light themes).
+  bool darkChat = true;
 };
 
 [[nodiscard]] QString primaryDomainForPreview(const QUrl &url);

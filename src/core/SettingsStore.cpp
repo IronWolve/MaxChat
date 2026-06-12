@@ -412,14 +412,11 @@ QVariantMap SettingsStore::defaultSettings() {
   // so pre-release builds don't poll GitHub). The Notifications pref + Help >
   // Check for Updates already work; only the auto-on-startup default is gated.
   settings.insert(QStringLiteral("update_check"), false);
-  // Lua script capabilities — all off by default (scripts start fully sandboxed).
-  QVariantMap scriptPerms;
-  scriptPerms.insert(QStringLiteral("read"), false);
-  scriptPerms.insert(QStringLiteral("write"), false);
-  scriptPerms.insert(QStringLiteral("exec"), false);
-  scriptPerms.insert(QStringLiteral("modules"), false);
-  scriptPerms.insert(QStringLiteral("network"), false);
-  settings.insert(QStringLiteral("script_perms"), scriptPerms);
+  // Lua script capabilities, keyed by script name — empty means every script
+  // starts fully sandboxed (absent name → all-false perms). The live code key
+  // is "scriptPerms"; an old "script_perms" default with the wrong shape was
+  // dead code and is gone.
+  settings.insert(QStringLiteral("scriptPerms"), QVariantMap());
   settings.insert(QStringLiteral("script_dirs"), QVariantList());
   settings.insert(QStringLiteral("networks"),
                   networkConfigListToVariantList(defaultNetworkConfigs()));

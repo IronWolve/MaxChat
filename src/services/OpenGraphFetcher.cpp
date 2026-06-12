@@ -1,5 +1,7 @@
 #include "services/OpenGraphFetcher.h"
 
+#include <QStringConverter>
+
 #include "services/LinkPreviewClassifier.h"
 
 #include <QNetworkAccessManager>
@@ -107,7 +109,15 @@ void OpenGraphFetcher::issueRequest(const QUrl &url, OpenGraphFetchOptions optio
     }
 
     const QByteArray payload = reply->read(options.maxBytes + 1);
-    const QString html = QString::fromUtf8(payload.left(options.maxBytes));
+    const QByteArray bounded = payload.left(options.maxBytes);
+    // Honour the page's charset (meta/BOM sniff) — fromUtf8 alone garbled
+    // titles on ISO-8859-1 / Shift-JIS pages.
+    QString html;
+    if (const auto encoding = QStringConverter::encodingForHtml(bounded)) {
+      html = QStringDecoder(*encoding).decode(bounded);
+    } else {
+      html = QString::fromUtf8(bounded);
+    }
     const OpenGraphCard card = parseOpenGraphCard(html, reply->url());
     if (card.isEmpty()) {
       emit fetchFailed(url, QStringLiteral("preview metadata was not found"));
