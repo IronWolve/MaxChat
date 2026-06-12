@@ -2995,15 +2995,15 @@ void maxchat::ui::MainWindow::setBufferTabsVisible(const bool visible, const boo
         syncBufferTabs();
         m_bufferTabBar->setVisible(visible);
     }
-    // Buttons-as-tabs is an alternative buffer navigator: when on it replaces the
-    // server-list tree so the same "Server"/buffer rows aren't shown twice. Only act
-    // on a real transition (don't disturb the splitter at startup when tabs are off
-    // and the tree already shows): hide the tree when tabs go on, restore it via the
-    // splitter mechanism (preserving sizing) when tabs go off.
+    // Buttons-as-tabs replaces the server-list tree. When tabs go on, hide the
+    // tree regardless of current visibility (the user may have it open). When
+    // tabs go off, restore per the saved server_list_visible preference.
+    // setSplitterPanelVisible (called by setServerListVisible) now explicitly
+    // calls widget->setVisible(), so restoration is reliable.
     if (m_networkTree != nullptr) {
-        if (visible && m_networkTree->isVisible()) {
+        if (visible) {
             m_networkTree->setVisible(false);
-        } else if (!visible && !m_networkTree->isVisible()) {
+        } else {
             const bool serverListPref = m_settings.loadWithDefaults()
                                             .value(QStringLiteral("server_list_visible"), true)
                                             .toBool();
@@ -3078,6 +3078,12 @@ void maxchat::ui::MainWindow::setSplitterPanelVisible(const int index, const boo
     }
 
     if (m_mainSplitter != nullptr && index >= 0 && index < m_mainSplitter->count()) {
+        QWidget* panel = m_mainSplitter->widget(index);
+        // setVisible is explicit: splitter setSizes alone does not re-show a
+        // widget that was hidden via setVisible(false) (e.g. by setBufferTabsVisible).
+        if (panel != nullptr && panel->isVisible() != visible) {
+            panel->setVisible(visible);
+        }
         QList<int> sizes = m_mainSplitter->sizes();
         if (visible && sizes.at(index) <= 0) {
             const int restored = fallbackWidth;
