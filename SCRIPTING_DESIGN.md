@@ -49,6 +49,10 @@ Status: IN PROGRESS (2026-06-10). Tracked as AUDIT.md FIX BACKLOG #6.
   tab now shows a "Currently loaded" group box and an "Open scripts folder" button
   (populated from `m_lua->loaded()` at dialog-open time via new optional
   constructor args `loadedScripts` / `scriptsDir`).
+- **Step 10 DONE (2026-06-11):** seeding now upgrades unmodified bundled
+  scripts via `.bundled/` snapshots (see §7); root-caused the "6-second `!run`"
+  report — stale seeded run.lua, not the launch backend. Manually refreshed the
+  stale run.lua/memo.lua on the Windows install.
 - **Remaining:** Python parity (additive to the existing scripting.py) — and the
   standing **Windows-build gate** (build.bat with -DMAXCHAT_LUA=ON) before
   shipping enabled.
@@ -201,8 +205,16 @@ install scripts they trust.
 ## 7. Script lifecycle
 
 - Scripts live in `<config>/scripts/*.lua`. Leading `_` = not auto-loaded.
-- On first run, seed the bundled examples from `assets/scripts/` into the config
-  dir (don't overwrite user edits).
+- On startup, seed the bundled examples from `assets/scripts/` into the config
+  dir. **Seeding upgrades, not just first-copy** (since 2026-06-11):
+  `seedBundledScripts` keeps a `.bundled/` snapshot of each script as last
+  seeded. A deployed script that still matches its snapshot (= never edited by
+  the user) is silently upgraded when the bundled version changes; a script that
+  differs from both bundled and snapshot is a user edit and is never touched.
+  Rationale: a bug fixed in a bundled script must actually reach existing
+  installs — the original copy-if-missing seeding left the blocking
+  `os.execute`-based run.lua deployed for hours after the `api.launch` fix
+  shipped (the "6-second `!run`" bug; see DEV_NOTES).
 - Startup: auto-load every non-`_` script.
 - Runtime commands (wire the existing `UserCommandType::Scripts`):
   `/scripts` (list), `/load <name>`, `/unload <name>`, `/reload <name>`.

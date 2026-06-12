@@ -32,6 +32,24 @@ When adding anything that should survive a buffer switch, store it in the model.
 
 ## THINGS I GOT WRONG
 
+- **2026-06-11 — Shipped a script fix that never reached the user's machine
+  (the "6-second `!run calc.exe`" report).** `run.lua` was rewritten to use the
+  non-blocking `api.launch` (ShellExecuteW backend, commits 593a872 + 41b48e4),
+  the C++ was rebuilt and synced — and `!run` was still slow, because the app
+  loads scripts from the user's config dir
+  (`%LOCALAPPDATA%\maxchat\scripts\`), and `seedBundledScripts` only copied a
+  bundled script **if the file didn't already exist** ("never overwrite user
+  edits"). The deployed `run.lua` was still the original `os.execute('start "" …')`
+  version: `system()` blocks the Qt GUI thread for the whole cmd.exe spawn chain
+  (~6 s on that machine). Diagnosis trick: the deployed file was byte-identical
+  to commit 797399f's version, proving it was an unmodified stale seed, not a
+  user edit. Fix: `seedBundledScripts` now keeps a `.bundled/` snapshot of each
+  script as last seeded; on startup, a deployed script that still matches its
+  snapshot (user never edited it) is upgraded when the bundled version changes.
+  Scripts that differ from both bundled and snapshot are never touched.
+  **Lesson: a fix to a *seeded* asset isn't shipped until the seeding mechanism
+  can deliver updates — verify the fix on the deployed copy, not the repo copy.**
+
 - **2026-06-11 — Input focus grab never ported from Python.** The Python original
   installs `app.installEventFilter(self)` (a GLOBAL filter) so keystrokes typed
   anywhere jump to the message box. The C++ port only had per-widget filters on

@@ -2,7 +2,25 @@
 
 Date: 2026-06-09 (audit closeout 2026-06-10; UI polish 2026-06-11)
 
-## Latest Completed Slice (UI polish batch, 2026-06-11)
+## Latest Completed Slice (bundled-script seeding upgrade, 2026-06-11 late)
+
+- **Root-caused the "6-second `!run calc.exe`" report**: the launch backend was
+  already fixed (`api.launch` → ShellExecuteW, commits 593a872 + 41b48e4), but
+  the app loads scripts from `%LOCALAPPDATA%\maxchat\scripts\` and
+  `seedBundledScripts` never overwrote an existing file — so the user's deployed
+  run.lua was still the original blocking `os.execute('start "" …')` version
+  (byte-identical to 797399f). `system()` blocks the GUI thread ~6 s on that
+  machine.
+- **Fix**: `seedBundledScripts` (MainWindow.cpp) now keeps `.bundled/` snapshots
+  and upgrades any deployed script that still matches its snapshot (unmodified);
+  user-edited scripts are never touched. Stale run.lua/memo.lua on the Windows
+  install refreshed by hand (the new mechanism adopts them via the
+  current==bundled branch).
+- Docs: DEV_NOTES "THINGS I GOT WRONG" entry, SCRIPTING_DESIGN §7 + Step 10.
+- **Verify on Windows**: restart MaxChat (or `/reload run`), `!run calc` should
+  be instant.
+
+## Previous Slice (UI polish batch, 2026-06-11)
 
 ### Upload / Image Hosting tab overhaul
 - Tab renamed "Uploads" → "Image Hosting".
