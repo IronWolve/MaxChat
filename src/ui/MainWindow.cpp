@@ -2425,6 +2425,7 @@ void maxchat::ui::MainWindow::openScriptsManager() {
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setWindowTitle(QStringLiteral("Scripts"));
     dialog->resize(460, 380);
+    attachGeometryPersist(dialog, m_settings, QStringLiteral("geom_scripts_manager"));
     auto* root = new QVBoxLayout(dialog);
     root->addWidget(new QLabel(QStringLiteral("Lua scripts in %1").arg(scriptsDir), dialog));
     auto* list = new QListWidget(dialog);
@@ -6762,6 +6763,7 @@ void maxchat::ui::MainWindow::configureDcc() {
 void maxchat::ui::MainWindow::openDccTransfers() {
     configureDcc();
     DccTransfersDialog dialog(m_dccManager, this);
+    attachGeometryPersist(&dialog, m_settings, QStringLiteral("geom_dcc_transfers"));
     dialog.exec();
 }
 
@@ -6853,6 +6855,7 @@ void maxchat::ui::MainWindow::openCharacterGallery() {
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setWindowTitle(QStringLiteral("Comic Characters"));
     dialog->resize(560, 480);
+    attachGeometryPersist(dialog, m_settings, QStringLiteral("geom_char_gallery"));
     auto* layout = new QVBoxLayout(dialog);
     layout->addWidget(new QLabel(
         QStringLiteral("%1 characters - assign them to nicks in Comic Settings.").arg(stems.size()),
