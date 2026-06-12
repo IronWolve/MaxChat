@@ -292,6 +292,10 @@ QVariantMap PreferencesDialog::settings() const {
     out.insert(QStringLiteral("topic_font_family"), topicFontFamily_->currentFont().family());
     out.insert(QStringLiteral("topic_font_size"), topicFontSize_->value());
     out.insert(QStringLiteral("topic_font_bold"), topicFontBold_->isChecked());
+    out.insert(QStringLiteral("terminal_font_family"),
+               terminalFontFamily_->currentFont().family());
+    out.insert(QStringLiteral("terminal_font_size"), terminalFontSize_->value());
+    out.insert(QStringLiteral("terminal_font_bold"), terminalFontBold_->isChecked());
     out.insert(QStringLiteral("show_timestamps"), showTimestamps_->isChecked());
     {
         // Prefer the preset's strftime data; fall back to typed custom text.
@@ -464,19 +468,20 @@ void PreferencesDialog::refillThemeCombo(QComboBox* combo, const bool chat,
 void PreferencesDialog::setAllFonts(const QString& family, int size, bool bold) {
     const QFont font(family);
     for (QFontComboBox* combo : {appFontFamily_, chatFontFamily_, listFontFamily_,
-                                 nickFontFamily_, statusFontFamily_, topicFontFamily_}) {
+                                 nickFontFamily_, statusFontFamily_, topicFontFamily_,
+                                 terminalFontFamily_}) {
         if (combo != nullptr) {
             combo->setCurrentFont(font);
         }
     }
     for (QSpinBox* spin : {appFontSize_, chatFontSize_, listFontSize_, nickFontSize_,
-                           statusFontSize_, topicFontSize_}) {
+                           statusFontSize_, topicFontSize_, terminalFontSize_}) {
         if (spin != nullptr) {
             spin->setValue(size);
         }
     }
     for (QCheckBox* boldBox : {appFontBold_, chatFontBold_, listFontBold_, nickFontBold_,
-                               statusFontBold_, topicFontBold_}) {
+                               statusFontBold_, topicFontBold_, terminalFontBold_}) {
         if (boldBox != nullptr) {
             boldBox->setChecked(bold);
         }
@@ -1165,6 +1170,37 @@ void PreferencesDialog::buildFontsTab(QWidget* tab) {
     topicColor_ = new ColorPick(settings_.value(QStringLiteral("topic_color")).toString(), tab);
     topicForm->addRow(QStringLiteral("Color"), topicColor_);
     rightColumn->addWidget(topicBox);
+
+    // Script / BBS terminals. Size 0 means "use the terminal profile's own size"
+    // (ibm-vga 11, c64 13), so this group can't reuse makeFontGroup (min size 6).
+    auto* terminalBox =
+        new QGroupBox(QString::fromUtf8("Terminal  \xC2\xB7  script / BBS windows"), tab);
+    auto* terminalForm = new QFormLayout(terminalBox);
+    terminalFontFamily_ = new QFontComboBox(terminalBox);
+    terminalFontFamily_->setObjectName(QStringLiteral("terminalFontFamily"));
+    const QString terminalFamily =
+        settings_.value(QStringLiteral("terminal_font_family"), QStringLiteral("JetBrains Mono"))
+            .toString();
+    terminalFontFamily_->setCurrentFont(
+        QFont(terminalFamily.isEmpty() ? QStringLiteral("JetBrains Mono") : terminalFamily));
+    terminalFontSize_ = new QSpinBox(terminalBox);
+    terminalFontSize_->setObjectName(QStringLiteral("terminalFontSize"));
+    terminalFontSize_->setRange(0, 48);
+    terminalFontSize_->setSpecialValueText(QStringLiteral("Profile default"));
+    terminalFontSize_->setValue(settings_.value(QStringLiteral("terminal_font_size"), 0).toInt());
+    terminalFontBold_ = new QCheckBox(QStringLiteral("Bold"), terminalBox);
+    terminalFontBold_->setObjectName(QStringLiteral("terminalFontBold"));
+    terminalFontBold_->setChecked(
+        settings_.value(QStringLiteral("terminal_font_bold"), false).toBool());
+    auto* terminalSizeRow = new QWidget(terminalBox);
+    auto* terminalSizeLayout = new QHBoxLayout(terminalSizeRow);
+    terminalSizeLayout->setContentsMargins(0, 0, 0, 0);
+    terminalSizeLayout->addWidget(terminalFontSize_);
+    terminalSizeLayout->addWidget(terminalFontBold_);
+    terminalSizeLayout->addStretch(1);
+    terminalForm->addRow(QStringLiteral("Font"), terminalFontFamily_);
+    terminalForm->addRow(QStringLiteral("Size"), terminalSizeRow);
+    rightColumn->addWidget(terminalBox);
     rightColumn->addStretch(1);
 
     auto* note = new QLabel(
@@ -1190,6 +1226,9 @@ void PreferencesDialog::buildFontsTab(QWidget* tab) {
         listFontFamily_->setCurrentFont(fixedFont);
         listFontSize_->setValue(fixedSize);
         listFontBold_->setChecked(false);
+        terminalFontFamily_->setCurrentFont(fixedFont);
+        terminalFontSize_->setValue(fixedSize);
+        terminalFontBold_->setChecked(false);
         for (QFontComboBox* combo : {appFontFamily_, nickFontFamily_, statusFontFamily_,
                                      topicFontFamily_}) {
             combo->setCurrentFont(uiFont);

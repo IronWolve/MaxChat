@@ -279,6 +279,14 @@ void ScriptTerminalDialog::setFitMode(const QString& mode) {
     updateFixedGridSize();
 }
 
+void ScriptTerminalDialog::setFontPreferences(const QString& family, const int pointSize,
+                                              const bool bold) {
+    fontFamilyOverride_ = family.trimmed();
+    fontPointSizeOverride_ = pointSize;
+    fontBoldOverride_ = bold;
+    applyProfile();
+}
+
 void ScriptTerminalDialog::closeEvent(QCloseEvent* event) {
     emit terminalClosed(id_);
     QDialog::closeEvent(event);
@@ -290,13 +298,18 @@ void ScriptTerminalDialog::resizeEvent(QResizeEvent* event) {
 }
 
 void ScriptTerminalDialog::applyProfile() {
-    QFont font(profile_.fontFamily);
-    if (!QFontDatabase::families().contains(profile_.fontFamily)) {
+    const QString family =
+        fontFamilyOverride_.isEmpty() ? profile_.fontFamily : fontFamilyOverride_;
+    const int pointSize =
+        fontPointSizeOverride_ > 0 ? fontPointSizeOverride_ : profile_.fontPointSize;
+    QFont font(family);
+    if (!QFontDatabase::families().contains(family)) {
         font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
     }
     font.setStyleHint(QFont::Monospace);
     font.setFixedPitch(true);
-    font.setPointSize(profile_.fontPointSize);
+    font.setBold(fontBoldOverride_);
+    font.setPointSize(pointSize);
     display_->setFont(font);
     input_->setFont(font);
     prompt_->setFont(font);

@@ -30,6 +30,9 @@ class ScriptTerminalDialog final : public QDialog {
     void setPromptText(const QString& text);
     void setProfile(const TerminalProfile& profile);
     void setFitMode(const QString& mode);
+    // User font override from the Fonts preferences. An empty family or a
+    // pointSize <= 0 falls back to the active profile's own font/size.
+    void setFontPreferences(const QString& family, int pointSize, bool bold);
 
   signals:
     void inputSubmitted(const QString& id, const QString& text);
@@ -54,6 +57,9 @@ class ScriptTerminalDialog final : public QDialog {
 
     QString id_;
     TerminalProfile profile_;
+    QString fontFamilyOverride_;
+    int fontPointSizeOverride_ = 0;
+    bool fontBoldOverride_ = false;
     QLabel* status_ = nullptr;
     QTextBrowser* display_ = nullptr;
     QLabel* prompt_ = nullptr;

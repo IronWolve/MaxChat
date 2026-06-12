@@ -9424,6 +9424,15 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
     if (m_channelModesButton != nullptr) {
         m_channelModesButton->setFont(listFont);
     }
+    if (m_scriptTerminals != nullptr) {
+        // Terminal size 0 means "use the per-profile size" (ibm-vga 11, c64 13).
+        m_scriptTerminals->setTerminalFont(
+            settings.value(QStringLiteral("terminal_font_family"),
+                           QStringLiteral("JetBrains Mono"))
+                .toString(),
+            settings.value(QStringLiteral("terminal_font_size"), 0).toInt(),
+            settings.value(QStringLiteral("terminal_font_bold"), false).toBool());
+    }
 
     m_currentTheme = normalizeThemeId(
         settings.value(QStringLiteral("theme"), QStringLiteral("synthwave")).toString());
