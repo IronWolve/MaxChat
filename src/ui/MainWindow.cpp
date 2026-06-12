@@ -1558,6 +1558,8 @@ void maxchat::ui::MainWindow::buildMenus() {
     auto* helpMenu = menuBar()->addMenu(QStringLiteral("&Help"));
     QAction* helpAction = helpMenu->addAction(QStringLiteral("Commands && Shortcuts..."), this,
                                               &MainWindow::openCommandHelp);
+    helpMenu->addAction(QStringLiteral("Comic Chat Guide..."), this,
+                        &MainWindow::openComicHelp);
     helpAction->setShortcut(QKeySequence(Qt::Key_F1));
     helpMenu->addSeparator();
     helpMenu->addAction(QStringLiteral("Check for Updates..."), this,
@@ -2372,14 +2374,36 @@ void maxchat::ui::MainWindow::openCommandHelp() {
             .join(QStringLiteral("\n\n")));
 }
 
+void maxchat::ui::MainWindow::openComicHelp() {
+    QMessageBox::information(
+        this, QStringLiteral("Comic Chat Guide"),
+        QStringList{
+            QStringLiteral("Comic Mode turns the channel into a comic strip. Turn it on per "
+                           "channel from the Comic menu (Ctrl+M), and set your art folder in "
+                           "Comic ▸ Comic Settings."),
+            QStringLiteral("HOW YOUR MESSAGE BECOMES A BALLOON:"),
+            QStringLiteral("• Normal text → a speech balloon."),
+            QStringLiteral("• (text in parentheses) → a thought cloud (the fluffy one)."),
+            QStringLiteral("• ALL CAPS or ending in !! → a jagged shout balloon."),
+            QStringLiteral("• /me action → a narration caption box (e.g. \"/me waves\")."),
+            QStringLiteral("EXPRESSIONS: your character's face is guessed from your text — "
+                           "smileys :) :( ;) :D, emoji, and words like lol/grr/zzz/omg. "
+                           "Set a fixed expression with Comic ▸ Emotion."),
+            QStringLiteral("TIPS: double-click a panel to zoom; right-click to copy or save "
+                           "panels. Balloon font, speaker tinting, and panel count are in "
+                           "Comic Settings."),
+        }
+            .join(QStringLiteral("\n\n")));
+}
+
 void maxchat::ui::MainWindow::openAbout() {
     QMessageBox::about(
         this, QStringLiteral("About %1").arg(app::displayName()),
         QStringLiteral("<b>%1 %2</b><br><br>"
                        "Native C++/Qt port of MaxChat.<br><br>"
-                       "IRC core, server list, link previews, spellcheck, logging, and "
-                       "daily chat tools are in progress. Comic mode, DCC, and media "
-                       "playback are still deferred.")
+                       "A full IRC client: multi-network, server list, link previews, "
+                       "inline media, spellcheck, logging, DCC, scripting, and Comic Chat "
+                       "mode with themeable balloons.")
             .arg(app::displayName().toHtmlEscaped(), app::version().toHtmlEscaped()));
 }
 

@@ -154,6 +154,7 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     void openRawLog();
     void openUrlList();
     void openCommandHelp();
+    void openComicHelp();
     void openAbout();
     // Quiet GitHub Releases check (manual=true also reports "you're up to date").
     void checkForUpdates(bool manual);
