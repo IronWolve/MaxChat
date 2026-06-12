@@ -446,8 +446,8 @@ void drawTail(QPainter& p, int size, int bx, int by, int bw, int bh, double head
     const double tipY = baseY + uy * len;
 
     // Thinner than before (narrower base + lighter stroke) for a daintier tail.
-    const double half = std::min(std::clamp(size * 0.016, 4.0, 9.0), bw / 4.0);
-    const double penW = std::clamp(size / 230.0, 1.2, 1.8);
+    const double half = std::min(std::clamp(size * 0.011, 3.0, 6.0), bw / 5.0);
+    const double penW = std::clamp(size / 300.0, 1.0, 1.5);
     drawTri(p, QPointF(std::max<double>(bx + 2, rootX - half), baseY),
             QPointF(std::min<double>(bx + bw - 2, rootX + half), baseY), QPointF(tipX, tipY), penW);
 }
