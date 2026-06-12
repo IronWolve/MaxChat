@@ -1772,7 +1772,6 @@ void maxchat::ui::MainWindow::openPreferences() {
                         QDir(m_settings.paths().configDir).filePath(QStringLiteral("scripts"));
                     m_lua->load(QDir(scriptsDir).filePath(name + QStringLiteral(".lua")),
                                 buildScriptPermissionsFor(name));
-                    dialog.refreshScriptList(m_lua->loaded());
                 }
             });
     connect(&dialog, &PreferencesDialog::testNotificationRequested, this, [this, &dialog]() {
@@ -1834,7 +1833,16 @@ void maxchat::ui::MainWindow::openPreferences() {
         return;
     }
 
-    if (!m_settings.saveRaw(dialog.settings())) {
+    // Merge geometry keys that attachGeometryPersist just wrote via setValue —
+    // saveRaw replaces the whole file, so reload and preserve any geom_* keys.
+    QVariantMap toSave = dialog.settings();
+    const QVariantMap existing = m_settings.loadRaw();
+    for (auto it = existing.constBegin(); it != existing.constEnd(); ++it) {
+        if (it.key().startsWith(QLatin1String("geom_"))) {
+            toSave.insert(it.key(), it.value());
+        }
+    }
+    if (!m_settings.saveRaw(toSave)) {
         appendSystemLine(QStringLiteral("! Could not save preferences."));
         return;
     }

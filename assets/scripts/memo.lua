@@ -44,6 +44,11 @@ end
 function on_command(api, command, args)
     if command:lower() ~= "memo" then return false end
 
+    if not io or not io.open then
+        api.echo("[memo] needs Read files + Write files permissions — Preferences → Scripts → memo")
+        return true
+    end
+
     local path = memo_file(api)
     local memos = load_memos(path)
 
