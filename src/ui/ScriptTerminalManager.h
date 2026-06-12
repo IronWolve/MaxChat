@@ -73,7 +73,7 @@ class ScriptTerminalManager final : public QObject {
     QList<QString> order_; // creation order of ids
     int nextOrdinal_ = 1;
     QString fontFamily_ = QStringLiteral("JetBrains Mono");
-    int fontPointSize_ = 0;
+    int fontPointSize_ = 12;
     bool fontBold_ = false;
 };
 

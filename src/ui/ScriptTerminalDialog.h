@@ -65,9 +65,16 @@ class ScriptTerminalDialog final : public QDialog {
     // Largest point size for the active family that fits cols x rows into the
     // display viewport, so a fixed-grid terminal's text stretches on resize.
     [[nodiscard]] int fitFontPointForViewport() const;
+    [[nodiscard]] int baseFontPoint() const;
     void applyFitFont();
-    void resizeWindowForFont(int pointSize);
     void syncSettingsMenuChecks();
+
+  public:
+    // Size the window so the full cols x rows grid is visible at the base font.
+    // Uses layout adjustSize() so it works before the window is shown.
+    void sizeToGrid();
+
+  private:
     void ensureFrameGrid();
     void renderFrameGrid();
 

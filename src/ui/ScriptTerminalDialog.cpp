@@ -159,6 +159,11 @@ ScriptTerminalDialog::ScriptTerminalDialog(QString id, QString title, TerminalPr
     connect(input_, &QLineEdit::returnPressed, this, [this]() {
         const QString text = input_->text();
         input_->clear();
+        // Universal escape: /quit closes (kills) the terminal from any script.
+        if (text.trimmed().compare(QLatin1String("/quit"), Qt::CaseInsensitive) == 0) {
+            emit killRequested(id_);
+            return;
+        }
         emit inputSubmitted(id_, text);
     });
 
@@ -166,8 +171,7 @@ ScriptTerminalDialog::ScriptTerminalDialog(QString id, QString title, TerminalPr
     // minimum would block stretching the window smaller.
     display_->setMinimumSize(120, 80);
     applyProfile();
-    resizeWindowForFont(fontPointSizeOverride_ > 0 ? fontPointSizeOverride_
-                                                   : profile_.fontPointSize);
+    sizeToGrid();
 }
 
 QSize ScriptTerminalDialog::terminalSize() const {
@@ -298,8 +302,7 @@ void ScriptTerminalDialog::setGridSize(const int cols, const int rows) {
     profile_.rows = std::max(1, rows);
     profile_.fixedGrid = true;
     syncSettingsMenuChecks();
-    resizeWindowForFont(fontPointSizeOverride_ > 0 ? fontPointSizeOverride_
-                                                   : profile_.fontPointSize);
+    sizeToGrid();
     applyFitFont();
     if (frameMode_) {
         ensureFrameGrid();
@@ -336,8 +339,7 @@ QString ScriptTerminalDialog::activeFamily() const {
 }
 
 void ScriptTerminalDialog::applyProfile() {
-    const int pointSize =
-        fontPointSizeOverride_ > 0 ? fontPointSizeOverride_ : profile_.fontPointSize;
+    const int pointSize = baseFontPoint();
     QFont font(activeFamily());
     font.setStyleHint(QFont::Monospace);
     font.setFixedPitch(true);
@@ -408,27 +410,29 @@ void ScriptTerminalDialog::applyFitFont() {
     }
 }
 
-void ScriptTerminalDialog::resizeWindowForFont(const int pointSize) {
-    if (!profile_.fixedGrid) {
-        return;
+int ScriptTerminalDialog::baseFontPoint() const {
+    if (fontPointSizeOverride_ > 0) {
+        return fontPointSizeOverride_;
     }
+    return profile_.fontPointSize > 0 ? profile_.fontPointSize : 12;
+}
+
+void ScriptTerminalDialog::sizeToGrid() {
     QFont probe(activeFamily());
     probe.setStyleHint(QFont::Monospace);
     probe.setFixedPitch(true);
     probe.setBold(fontBoldOverride_);
-    probe.setPointSize(std::max(4, pointSize));
+    probe.setPointSize(baseFontPoint());
     const QFontMetrics metrics(probe);
-    const int cellW = std::max(1, metrics.horizontalAdvance(QLatin1Char('M')));
-    const int cellH = std::max(1, metrics.lineSpacing());
-    // Grow the window so the display viewport holds the whole grid at this size;
-    // the resize then re-fits the font to whatever the user drags it to.
-    const int wantViewportW = profile_.cols * cellW;
-    const int wantViewportH = profile_.rows * cellH;
-    const int chromeW = width() - display_->viewport()->width();
-    const int chromeH = height() - display_->viewport()->height();
-    const int newW = wantViewportW + std::max(chromeW, 32);
-    const int newH = wantViewportH + std::max(chromeH, 120);
-    resize(newW, newH);
+    const int wantW = std::max(1, metrics.horizontalAdvance(QLatin1Char('M'))) *
+                      std::max(1, profile_.cols);
+    const int wantH = std::max(1, metrics.lineSpacing()) * std::max(1, profile_.rows);
+    // Force the layout to want a viewport that fits the whole grid, let the
+    // dialog size itself around it (incl. menu/status/input/margins), then
+    // restore a small minimum so the user can still shrink it afterwards.
+    display_->setMinimumSize(wantW, wantH);
+    adjustSize();
+    display_->setMinimumSize(120, 80);
 }
 
 void ScriptTerminalDialog::ensureFrameGrid() {
@@ -531,7 +535,8 @@ void ScriptTerminalDialog::buildMenuBar() {
         connect(act, &QAction::triggered, this, [this, pt]() {
             fontPointSizeOverride_ = pt;
             applyProfile();
-            resizeWindowForFont(pt);
+            sizeToGrid();
+            applyFitFont();
             emit fontPreferenceChanged(activeFamily(), pt, fontBoldOverride_);
         });
     }

@@ -52,6 +52,9 @@ ScriptTerminalDialog* ScriptTerminalManager::openTerminal(const QString& id,
             &ScriptTerminalManager::fontPreferenceChanged);
     connect(dlg, &ScriptTerminalDialog::gridSizeChanged, this,
             &ScriptTerminalManager::gridSizeChanged);
+    // Re-size to the grid now that the font preference (family/size) is applied,
+    // so the window opens fitting the whole grid instead of a tiny default.
+    dlg->sizeToGrid();
     dlg->show();
     emit terminalsChanged();
     return dlg;
