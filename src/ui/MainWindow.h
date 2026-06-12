@@ -168,6 +168,7 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     void updateWindowTitle();      // "MaxChat <ver> — <network> / <channel>" (active context)
     void updateNickLabel();        // your-nick label by the input box
     void leaveCurrentChannel();
+    void leaveAllChannels(const QString& network); // empty = active network
     // Seed a buffer's stored line model with dimmed log history + a "Chat ended"
     // divider so resume survives buffer switches (rendered, not painted). Returns
     // true if any history was added.

@@ -9,6 +9,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QScopeGuard>
 #include <QSet>
 #include <QSpinBox>
 #include <QTableWidget>
@@ -239,11 +240,11 @@ void ChannelListDialog::setComplete(bool complete) {
   m_fetching = !complete;
   m_getListButton->setEnabled(true);
   if (complete) {
-    // Enable interactive column sorting, then sort once, then filter.
-    // setSortingEnabled(true) fires its own internal sort; by calling it
-    // before applyFilter we ensure no hidden-row state exists yet to corrupt.
+    // Enable interactive column sorting (this fires ONE sort by the current
+    // indicator — an extra explicit sortItems here doubled the 20k-row stall),
+    // then filter. Sorting before filtering keeps hidden-row state clean.
+    m_table->horizontalHeader()->setSortIndicator(UsersColumn, Qt::DescendingOrder);
     m_table->setSortingEnabled(true);
-    m_table->sortItems(UsersColumn, Qt::DescendingOrder);
     applyFilter();
   }
   updateStatus();
@@ -279,6 +280,9 @@ QString ChannelListDialog::selectedChannel() const {
 }
 
 void ChannelListDialog::applyFilter() {
+  // setRowHidden per row can relayout; batch the whole pass.
+  m_table->setUpdatesEnabled(false);
+  const auto reenable = qScopeGuard([this]() { m_table->setUpdatesEnabled(true); });
   const QString filter = m_filterEdit->text().trimmed();
   const int minUsers = m_minUsers->value();
   int visibleCount = 0;
@@ -298,9 +302,8 @@ void ChannelListDialog::applyFilter() {
       ++visibleCount;
     }
   }
-  Q_UNUSED(visibleCount);
   updateActions();
-  updateStatus();
+  updateStatus(visibleCount);
 }
 
 void ChannelListDialog::copyRowsToClipboard() const {
@@ -332,7 +335,7 @@ void ChannelListDialog::updateActions() {
   m_joinButton->setEnabled(!channel.isEmpty());
 }
 
-void ChannelListDialog::updateStatus() {
+void ChannelListDialog::updateStatus(int knownVisibleCount) {
   if (m_table->rowCount() == 0) {
     if (m_fetching) {
       m_statusLabel->setText(QStringLiteral("Loading channel list..."));
@@ -343,10 +346,13 @@ void ChannelListDialog::updateStatus() {
     return;
   }
 
-  int visibleCount = 0;
-  for (int row = 0; row < m_table->rowCount(); ++row) {
-    if (!m_table->isRowHidden(row)) {
-      ++visibleCount;
+  int visibleCount = knownVisibleCount;
+  if (visibleCount < 0) { // caller didn't just filter — count here
+    visibleCount = 0;
+    for (int row = 0; row < m_table->rowCount(); ++row) {
+      if (!m_table->isRowHidden(row)) {
+        ++visibleCount;
+      }
     }
   }
 

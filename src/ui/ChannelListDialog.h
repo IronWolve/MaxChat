@@ -37,7 +37,7 @@ private:
   void applyFilter();
   void copyRowsToClipboard() const;
   void updateActions();
-  void updateStatus();
+  void updateStatus(int knownVisibleCount = -1);
 
   QLineEdit *m_filterEdit = nullptr;
   QSpinBox *m_minUsers = nullptr;
