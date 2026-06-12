@@ -2560,13 +2560,44 @@ void maxchat::ui::MainWindow::seedBundledScripts(const QString& destDir) {
     if (src.isEmpty()) {
         return;
     }
+    // `.bundled/` keeps a snapshot of each script as it was last seeded. If the
+    // deployed copy still matches its snapshot the user never edited it, so a
+    // newer bundled version may replace it. Without this, shipped script fixes
+    // never reach existing installs (the 6-second `!run` stall: the os.execute
+    // run.lua stayed deployed long after api.launch replaced it in assets).
+    const QString recordDir = QDir(destDir).filePath(QStringLiteral(".bundled"));
+    QDir().mkpath(recordDir);
+    const auto readAll = [](const QString& path) -> QByteArray {
+        QFile f(path);
+        return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray();
+    };
+    const auto copyOver = [](const QString& from, const QString& to) {
+        QFile::remove(to);
+        QFile::copy(from, to);
+    };
     const QFileInfoList examples =
         QDir(src).entryInfoList({QStringLiteral("*.lua")}, QDir::Files, QDir::Name);
     for (const QFileInfo& fi : examples) {
         const QString dest = QDir(destDir).filePath(fi.fileName());
+        const QString record = QDir(recordDir).filePath(fi.fileName());
         if (!QFile::exists(dest)) {
-            QFile::copy(fi.absoluteFilePath(), dest); // never overwrite user edits
+            copyOver(fi.absoluteFilePath(), dest);
+            copyOver(fi.absoluteFilePath(), record);
+            continue;
         }
+        const QByteArray bundled = readAll(fi.absoluteFilePath());
+        const QByteArray deployed = readAll(dest);
+        if (deployed == bundled) {
+            if (!QFile::exists(record)) {
+                copyOver(fi.absoluteFilePath(), record); // adopt pre-record installs
+            }
+            continue;
+        }
+        if (QFile::exists(record) && deployed == readAll(record)) {
+            copyOver(fi.absoluteFilePath(), dest); // unmodified — take the upgrade
+            copyOver(fi.absoluteFilePath(), record);
+        }
+        // deployed differs from both bundled and record: user edit — never touch.
     }
 }
 
