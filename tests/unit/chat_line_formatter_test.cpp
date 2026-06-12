@@ -208,6 +208,19 @@ class ChatLineFormatterTest final : public QObject {
 
         QVERIFY(!line.html.contains(QStringLiteral("#6c84a8")));
     }
+
+    void urlsInBodyAreClickableLinks() {
+        ChatLineFormatOptions options;
+        options.showTimestamp = false;
+
+        const auto line = formatChatLine(
+            QStringLiteral("<alice> check out https://example.com/page today"), options);
+
+        QVERIFY(line.html.contains(QStringLiteral("href=\"https://example.com/page\"")));
+        QVERIFY(line.html.contains(QStringLiteral(">https://example.com/page<")));
+        // URL must not be double-linked (href value itself must not be re-wrapped)
+        QVERIFY(!line.html.contains(QStringLiteral("href=\"https://example.com/page\">https://example.com/page</a>\">https://example.com/page<")));
+    }
 };
 
 QTEST_APPLESS_MAIN(ChatLineFormatterTest)
