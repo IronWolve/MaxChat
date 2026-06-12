@@ -15,13 +15,13 @@ class ComicEmotionTest final : public QObject {
 
         QTest::newRow("plain") << QStringLiteral("see you at 5") << QStringLiteral("neutral");
         QTest::newRow("smile") << QStringLiteral("sounds good :)") << QStringLiteral("happy");
-        QTest::newRow("emoji smile") << QStringLiteral("nice \xF0\x9F\x98\x8A")
+        QTest::newRow("emoji smile") << QString::fromUtf8("nice \xF0\x9F\x98\x8A")
                                      << QStringLiteral("happy");
         QTest::newRow("frown") << QStringLiteral("that broke :(") << QStringLiteral("sad");
-        QTest::newRow("crying emoji") << QStringLiteral("\xF0\x9F\x98\xAD")
+        QTest::newRow("crying emoji") << QString::fromUtf8("\xF0\x9F\x98\xAD")
                                       << QStringLiteral("sad");
         QTest::newRow("lol") << QStringLiteral("lol what") << QStringLiteral("laughing");
-        QTest::newRow("joy emoji") << QStringLiteral("\xF0\x9F\x98\x82")
+        QTest::newRow("joy emoji") << QString::fromUtf8("\xF0\x9F\x98\x82")
                                    << QStringLiteral("laughing");
         QTest::newRow("wink") << QStringLiteral("maybe ;)") << QStringLiteral("coy");
         QTest::newRow("tongue") << QStringLiteral("nope :P") << QStringLiteral("coy");
@@ -35,7 +35,7 @@ class ComicEmotionTest final : public QObject {
         QTest::newRow("grr") << QStringLiteral("grr the printer again")
                              << QStringLiteral("angry");
         QTest::newRow("angry face") << QStringLiteral(">:( fine") << QStringLiteral("angry");
-        QTest::newRow("angry emoji") << QStringLiteral("\xF0\x9F\x98\xA1")
+        QTest::newRow("angry emoji") << QString::fromUtf8("\xF0\x9F\x98\xA1")
                                      << QStringLiteral("angry");
         QTest::newRow("yawn") << QStringLiteral("yawn, meetings") << QStringLiteral("bored");
         QTest::newRow("zzz") << QStringLiteral("zzz this talk") << QStringLiteral("bored");

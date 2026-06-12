@@ -62,6 +62,12 @@ QString escapedText(const QString& text) {
     return out;
 }
 
+QString hotspotHtml(const QString& encodedAction, const QString& encodedLabel) {
+    const QString href = QStringLiteral("mc-term:%1").arg(encodedAction);
+    const QString label = QUrl::fromPercentEncoding(encodedLabel.toUtf8()).toHtmlEscaped();
+    return QStringLiteral("<a href=\"%1\">%2</a>").arg(href, label);
+}
+
 void appendRun(QString& out, const QString& run, const StyleState& style) {
     if (run.isEmpty()) {
         return;
@@ -115,15 +121,38 @@ QString AnsiRenderer::toHtml(const QString& text) {
 
     for (qsizetype i = 0; i < text.size(); ++i) {
         const QChar ch = text.at(i);
-        if (ch == QLatin1Char('\x1b') && i + 1 < text.size() &&
-            text.at(i + 1) == QLatin1Char('[')) {
-            const qsizetype end = text.indexOf(QLatin1Char('m'), i + 2);
-            if (end >= 0) {
+        if (ch == QLatin1Char('\x1b') && i + 1 < text.size()) {
+            if (text.at(i + 1) == QLatin1Char('[')) {
+                const qsizetype end = text.indexOf(QLatin1Char('m'), i + 2);
+                if (end < 0) {
+                    run += ch;
+                    continue;
+                }
                 appendRun(out, run, style);
                 run.clear();
                 applySgr(text.mid(i + 2, end - i - 2), style);
                 i = end;
                 continue;
+            }
+            if (text.at(i + 1) == QLatin1Char(']')) {
+                const qsizetype end = text.indexOf(QLatin1Char('\x07'), i + 2);
+                if (end < 0) {
+                    run += ch;
+                    continue;
+                }
+                const QString payload = text.mid(i + 2, end - i - 2);
+                static const QString prefix = QStringLiteral("MC-HOTSPOT;");
+                if (payload.startsWith(prefix)) {
+                    const QString rest = payload.mid(prefix.size());
+                    const qsizetype sep = rest.indexOf(QLatin1Char(';'));
+                    if (sep > 0) {
+                        appendRun(out, run, style);
+                        run.clear();
+                        out += hotspotHtml(rest.left(sep), rest.mid(sep + 1));
+                        i = end;
+                        continue;
+                    }
+                }
             }
         }
         if (ch == QLatin1Char('\r')) {
@@ -136,9 +165,9 @@ QString AnsiRenderer::toHtml(const QString& text) {
 }
 
 QString AnsiRenderer::hotspot(const QString& actionId, const QString& label) {
-    const QString href =
-        QStringLiteral("mc-term:%1").arg(QString::fromUtf8(QUrl::toPercentEncoding(actionId)));
-    return QStringLiteral("<a href=\"%1\">%2</a>").arg(href, label.toHtmlEscaped());
+    return QStringLiteral("\x1b]MC-HOTSPOT;%1;%2\x07")
+        .arg(QString::fromUtf8(QUrl::toPercentEncoding(actionId)),
+             QString::fromUtf8(QUrl::toPercentEncoding(label)));
 }
 
 } // namespace maxchat::ui

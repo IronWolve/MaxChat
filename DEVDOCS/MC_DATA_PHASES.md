@@ -176,13 +176,13 @@ Exit criteria:
 
 ## Phase 10 - Audit + Polish
 
-- [ ] Run unit tests.
+- [~] Run unit tests.
 - [ ] Run manual two-client MC DATA/BBS test.
-- [ ] Audit flood behavior.
-- [ ] Audit Lua API safety.
-- [ ] Audit CTCP/DCC regressions.
-- [ ] Audit terminal paste behavior.
-- [ ] Update docs with final command/API details.
+- [x] Audit flood behavior.
+- [x] Audit Lua API safety.
+- [x] Audit CTCP/DCC regressions.
+- [x] Audit terminal paste behavior.
+- [x] Update docs with final command/API details.
 - [ ] Build Linux test binary only when the user says implementation is ready.
 
 Exit criteria:
@@ -204,3 +204,13 @@ Exit criteria:
   the MC DATA core commit.
 - Phase 5 profile IDs/sizing are implemented with existing fonts. Real IBM/C64
   font assets remain open until redistribution licenses are checked.
+- Phase 10 targeted MC DATA, Lua, terminal profile, ANSI renderer, and BBS script
+  tests pass.
+- Phase 10 full offscreen CTest is `49/51` passing. Remaining failures are outside
+  the MC DATA/BBS path:
+  `irc_session::commandStatusAndErrorsEmitReadableText` still has the known
+  numeric expectation mismatch, and `main_window_link_preview` has four UI
+  behavior/geometry assertions to handle separately.
+- Initial full CTest without `QT_QPA_PLATFORM=offscreen` also aborts GUI/media
+  tests in this headless environment due missing display/plugin setup; offscreen
+  removes those environment-only aborts.
