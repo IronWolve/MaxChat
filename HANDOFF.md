@@ -2,7 +2,49 @@
 
 Date: 2026-06-09 (audit closeout 2026-06-10; UI polish 2026-06-11)
 
-## Latest Completed Slice (comic cache + zoom + tail geometry, 2026-06-11 late)
+## Latest Completed Slice (IRC stability hardening, 2026-06-12)
+
+Two-agent review of src/irc/ + buffer/memory growth; verdict: protocol layer
+fundamentally solid (no socket races, injection handled, parser fuzz-clean,
+ReconnectPlanner clean) but with real long-session/stability holes — all fixed:
+
+**IrcConnection:**
+- Incoming drain is O(n) per tick (index + single remove, was memmove/line)
+  with a re-entrancy guard (nested event loops from sync script fetches);
+  unconditional 4 MB backlog cap (flood = disconnect, not unbounded memory);
+  line cap raised 8 KB → 10 KB (IRCv3 tags legitimately exceed 8 KB).
+- NEW read-idle watchdog: 90 s silence → PING the server; 30 s more → abort →
+  auto-reconnect takes over. (A black-holed TCP link previously looked
+  connected forever.)
+- `emitTimedFailure` now fully retires the socket (was leaving an aborted
+  corpse in `socket_`).
+
+**IrcSession:**
+- NEW outbound flood queue (ircII penalty model: 12-line burst, then
+  1 line / 2 s) — autojoin bursts/scripts can't trigger Excess Flood kills.
+  PING/PONG bypass the penalty and jump the queue.
+- Short socket writes park the unwritten tail at the queue front and retry
+  (was: error + desynced stream with half a line on the wire).
+- Overlong PRIVMSG/NOTICE split at UTF-8-safe boundaries (was: rejected
+  whole); other long lines still rejected; CTCP never split.
+- SASL AUTHENTICATE chunked at 400 bytes per spec (long credentials no longer
+  stall registration); CAP END sent exactly once (900+903 double-fire fixed);
+  432 erroneous-nick now retries alternates during registration (capped at 9).
+
+**Buffer/memory (MainWindow):**
+- `closeTarget` now actually frees the buffer (`removeBuffer`) + its
+  marker/replayed/comic keys (was: every channel/PM ever opened leaked its
+  scrollback forever; rejoined channels inherited stale unread markers).
+- Chat view QTextDocument capped at scrollback+64 blocks (was unbounded while
+  parked on one buffer).
+- Preview image cache capped at 64 decoded images (was the biggest leak —
+  unbounded QImages); failed-URL set capped at 512.
+
+Tests updated: oversized-PRIVMSG now asserts splitting; partial-write asserts
+queued retry; new oversized-unsplittable case. **SUITE NOT RUN — needs a ctest
+pass before this batch is trusted (ask user).**
+
+## Previous Slice (comic cache + zoom + tail geometry, 2026-06-11 late)
 
 - **Smart balloon tails** (`ComicRenderer::drawTail` rewritten): one geometry
   for all cases — panel-relative base width (no more needle tails on narrow

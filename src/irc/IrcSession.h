@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QElapsedTimer>
+#include <QTimer>
 #include <QHash>
 #include <QObject>
 #include <QRegularExpression>
@@ -99,6 +100,23 @@ private:
   [[nodiscard]] bool isIgnoredPrefix(const QString &prefix) const;
   void handleIsupport(const QStringList &params);
   void handleCap(const QStringList &params, const QString &trailing);
+  void sendCapEndOnce();
+  // Outbound flood protection: lines pass through a token-bucket queue
+  // (classic ircII penalty model) so autojoin bursts / scripts can't get the
+  // client killed for Excess Flood. PING/PONG bypass the penalty.
+  void pumpSendQueue();
+
+  struct PendingLine {
+    QByteArray payload; // framed, \r\n-terminated
+    QString log;        // redacted line for the raw log
+    bool partial = false; // tail of a short write — already logged
+    bool free = false;    // no flood penalty (PING/PONG)
+  };
+  QList<PendingLine> sendQueue_;
+  QTimer sendTimer_;
+  QElapsedTimer sendClock_;
+  qint64 sendPenaltyUntilMs_ = 0;
+  bool capEnded_ = false;
 
   Writer writer_;
   bool socketConnected_ = false;

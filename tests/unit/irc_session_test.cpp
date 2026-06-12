@@ -52,7 +52,10 @@ private slots:
     QCOMPARE(rawLines.count(), 0);
   }
 
-  void sendRawRejectsOversizedWireLine() {
+  void sendRawSplitsOversizedPrivmsg() {
+    // An overlong PRIVMSG is split across several wire lines instead of being
+    // rejected wholesale (2026-06-12); each piece must fit 512 bytes and the
+    // concatenated text must round-trip exactly.
     IrcSession session;
     QList<QByteArray> writes;
     QSignalSpy errors(&session, &IrcSession::errorOccurred);
@@ -62,7 +65,35 @@ private slots:
       return payload.size();
     });
 
-    QVERIFY(!session.sendRaw(QStringLiteral("PRIVMSG #chan :") +
+    const QString text(IrcMaxWireBytes + 100, QLatin1Char('x'));
+    QVERIFY(session.sendRaw(QStringLiteral("PRIVMSG #chan :") + text));
+
+    QVERIFY(writes.size() >= 2);
+    QString joined;
+    for (const QByteArray &w : writes) {
+      QVERIFY(w.size() <= IrcMaxWireBytes);
+      QVERIFY(w.startsWith("PRIVMSG #chan :"));
+      QVERIFY(w.endsWith("\r\n"));
+      joined += QString::fromUtf8(
+          w.mid(static_cast<int>(qstrlen("PRIVMSG #chan :")),
+                w.size() - static_cast<int>(qstrlen("PRIVMSG #chan :")) - 2));
+    }
+    QCOMPARE(joined, text);
+    QCOMPARE(errors.count(), 0);
+  }
+
+  void sendRawRejectsOversizedUnsplittableLine() {
+    // Non-PRIVMSG/NOTICE lines can't be split safely — still rejected.
+    IrcSession session;
+    QList<QByteArray> writes;
+    QSignalSpy errors(&session, &IrcSession::errorOccurred);
+    session.setConnected(true);
+    session.setWriter([&writes](const QByteArray &payload) {
+      writes.append(payload);
+      return payload.size();
+    });
+
+    QVERIFY(!session.sendRaw(QStringLiteral("JOIN #") +
                              QString(IrcMaxWireBytes, QLatin1Char('x'))));
 
     QCOMPARE(writes.size(), 0);
@@ -82,13 +113,20 @@ private slots:
       return 1;
     });
 
-    QVERIFY(!session.sendRaw(QStringLiteral("PING x")));
-
-    QCOMPARE(linesFromWrites(writes), QStringList({QStringLiteral("PING x")}));
-    QCOMPARE(rawLines.count(), 0);
-    QCOMPARE(errors.count(), 1);
-    QVERIFY(errors.takeFirst().at(0).toString().contains(
-        QStringLiteral("Socket write failed")));
+    // A short write is no longer a hard failure: the line is accepted, the
+    // unwritten tail is parked at the queue front and retried on a timer so
+    // the stream never desyncs mid-line (2026-06-12).
+    QVERIFY(session.sendRaw(QStringLiteral("PING x")));
+    QTRY_VERIFY_WITH_TIMEOUT(
+        [&writes]() {
+          qsizetype total = 0;
+          for (const QByteArray &w : writes) {
+            total += w.size();
+          }
+          return total >= qsizetype(qstrlen("PING x") + 2);
+        }(),
+        2000);
+    QCOMPARE(errors.count(), 0);
   }
 
   void helpersBuildExpectedCommands() {

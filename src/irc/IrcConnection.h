@@ -103,6 +103,8 @@ private:
   void onSslErrors(QSslSocket *socket);
   void onConnectTimeout();
   void onRegistrationTimeout();
+  void onIdleTimeout();
+  void onIdleProbeTimeout();
   void queueIncomingLines(QSslSocket *socket);
   void emitTimedFailure(const QString &errorMessage,
                         const QString &disconnectReason);
@@ -112,7 +114,14 @@ private:
   QSslSocket *socket_ = nullptr;
   QTimer connectTimer_;
   QTimer registrationTimer_;
+  // Read-idle watchdog: a black-holed TCP connection (wifi drop, NAT timeout)
+  // never fires disconnected(). After IdleProbeAfterMs of silence we PING the
+  // server ourselves; no data for another IdleAbortAfterMs ends the connection
+  // so auto-reconnect can take over.
+  QTimer idleTimer_;
+  QTimer idleProbeTimer_;
   QByteArray buffer_;
+  bool draining_ = false; // re-entrancy guard for queueIncomingLines
   QString activeHost_;
   int activePort_ = 0;
   int activeRegistrationTimeoutMs_ = 15000;
