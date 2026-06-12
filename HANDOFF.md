@@ -2,7 +2,24 @@
 
 Date: 2026-06-09 (audit closeout 2026-06-10; UI polish 2026-06-11)
 
-## Latest Completed Slice (chat-text deep clean, 2026-06-12)
+## Latest Completed Slice (OG cards + prefs speed, 2026-06-12)
+
+OG card review (escaping/wiring verdict: SOLID — no injection path, og_show_*
+toggles live everywhere) + fixes: og:url/canonical scheme-guarded (crafted
+file://-or-javascript: canonical could hijack the card click); card chrome now
+theme-aware (white overlay was invisible on light themes) via
+LinkPreviewRenderOptions.darkChat; charset-aware page decode
+(QStringConverter::encodingForHtml — ISO-8859-1/Shift-JIS titles no longer
+mojibake); 17 more named entities (&mdash; &hellip; …); dir="auto" on card
+text (RTL); surrogate-safe truncation. NOTE (by design, documented): stored
+cards are baked HTML — og_show_*/theme changes affect only NEW cards.
+Preferences open speed: the 3 recursive dir-size walks on the Data tab were
+the main cost — now deferred past first paint ("computing…" → fill); dialog
+fallback defaults aligned with SettingsStore (show_timestamps, word_wrap,
+align_nicks, spellcheck_enabled, beep_highlight — matters under diff-save);
+dead "script_perms" default renamed to live "scriptPerms" (empty map).
+
+## Previous Slice (chat-text deep clean, 2026-06-12)
 
 Two-agent review of the chat text pipeline (after repeated colour/sizing bugs).
 Fixed: UTC timestamp shift on re-render; dim replay now dims bodies (new
