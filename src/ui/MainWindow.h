@@ -66,6 +66,7 @@ class Notifier;
 class BanListDialog;
 class ChatFindDialog;
 class RawLogDialog;
+class ScriptTerminalManager;
 class SpellTextEdit;
 class UrlListDialog;
 
@@ -83,6 +84,22 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     void scriptNotify(const QString& title, const QString& text) override;
     bool scriptMcData(const QString& network, const QString& target, const QString& service,
                       const QString& verb, const QString& payload, bool notice) override;
+    bool scriptTerminalOpen(const QString& scriptName, const QString& id, const QString& title,
+                            const QString& profile, int cols, int rows) override;
+    void scriptTerminalClose(const QString& scriptName, const QString& id) override;
+    void scriptTerminalClear(const QString& scriptName, const QString& id) override;
+    void scriptTerminalWrite(const QString& scriptName, const QString& id,
+                             const QString& text) override;
+    void scriptTerminalStatus(const QString& scriptName, const QString& id,
+                              const QString& text) override;
+    void scriptTerminalPrompt(const QString& scriptName, const QString& id,
+                              const QString& text) override;
+    QSize scriptTerminalSize(const QString& scriptName, const QString& id) override;
+    void scriptTerminalProfile(const QString& scriptName, const QString& id,
+                               const QString& profile, int cols, int rows) override;
+    void scriptTerminalFit(const QString& scriptName, const QString& id,
+                           const QString& mode) override;
+    QString scriptTerminalHotspot(const QString& actionId, const QString& label) override;
     QString scriptMe(const QString& network) override;
     QString scriptTarget() override;
     QString scriptNetwork() override;
@@ -409,6 +426,7 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     QNetworkAccessManager m_updateNetworkManager;
     SoundPlayer m_soundPlayer;
     maxchat::scripting::LuaEngine* m_lua = nullptr;
+    ScriptTerminalManager* m_scriptTerminals = nullptr;
     maxchat::services::OpenGraphFetcher m_openGraphFetcher;
     maxchat::services::ImageFetcher m_imageFetcher;
     QHash<QString, QImage> m_previewImageCache;  // url -> decoded, scaled image

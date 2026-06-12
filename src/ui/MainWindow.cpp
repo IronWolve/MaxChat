@@ -42,8 +42,11 @@
 #include "ui/QuickConnectDialog.h"
 #include "ui/RawLogDialog.h"
 #include "ui/ServerListDialog.h"
+#include "ui/AnsiRenderer.h"
+#include "ui/ScriptTerminalManager.h"
 #include "ui/SpellTextEdit.h"
 #include "ui/SpellcheckHighlighter.h"
+#include "ui/TerminalProfile.h"
 #include "ui/SystemInfo.h"
 #include "ui/ThemeCatalog.h"
 #include "ui/UrlListDialog.h"
@@ -137,6 +140,7 @@
 #include <algorithm>
 #include <cmath>
 #include <functional>
+#include <optional>
 #include <utility>
 
 namespace maxchat::ui {
@@ -696,6 +700,18 @@ QString labelWithTreeCounts(const QString& label, const int unreadCount, const i
     return QStringLiteral("%1 [%2]").arg(label).arg(unreadCount);
 }
 
+QString terminalScopedId(const QString& scriptName, const QString& id) {
+    return QStringLiteral("%1/%2").arg(scriptName.trimmed(), id.trimmed());
+}
+
+std::optional<std::pair<QString, QString>> splitTerminalScopedId(const QString& scopedId) {
+    const int slash = scopedId.indexOf(QLatin1Char('/'));
+    if (slash <= 0 || slash == scopedId.size() - 1) {
+        return std::nullopt;
+    }
+    return std::make_pair(scopedId.left(slash), scopedId.mid(slash + 1));
+}
+
 class ChatTextView final : public QTextBrowser {
   public:
     using SeparatorMovedHandler = std::function<void(int)>;
@@ -953,6 +969,43 @@ MainWindow::MainWindow(QWidget* parent)
     // Scripting: load the user's Lua scripts (no-op when built without Lua).
     const QString scriptsDir =
         QDir(m_settings.paths().configDir).filePath(QStringLiteral("scripts"));
+    m_scriptTerminals = new ScriptTerminalManager(this);
+    connect(m_scriptTerminals, &ScriptTerminalManager::inputSubmitted, this,
+            [this](const QString& scopedId, const QString& text) {
+                if (m_lua == nullptr) {
+                    return;
+                }
+                const auto split = splitTerminalScopedId(scopedId);
+                if (!split.has_value()) {
+                    return;
+                }
+                m_lua->dispatchToScript(split->first, QStringLiteral("on_terminal_input"),
+                                        activeNetworkName(), {split->second, text});
+            });
+    connect(m_scriptTerminals, &ScriptTerminalManager::linkActivated, this,
+            [this](const QString& scopedId, const QString& actionId) {
+                if (m_lua == nullptr) {
+                    return;
+                }
+                const auto split = splitTerminalScopedId(scopedId);
+                if (!split.has_value()) {
+                    return;
+                }
+                m_lua->dispatchToScript(split->first, QStringLiteral("on_terminal_link"),
+                                        activeNetworkName(), {split->second, actionId});
+            });
+    connect(m_scriptTerminals, &ScriptTerminalManager::terminalClosed, this,
+            [this](const QString& scopedId) {
+                if (m_lua == nullptr) {
+                    return;
+                }
+                const auto split = splitTerminalScopedId(scopedId);
+                if (!split.has_value()) {
+                    return;
+                }
+                m_lua->dispatchToScript(split->first, QStringLiteral("on_terminal_closed"),
+                                        activeNetworkName(), {split->second});
+            });
     m_lua = new maxchat::scripting::LuaEngine(
         this, scriptsDir, QDir(scriptsDir).filePath(QStringLiteral("data")), this);
     if (maxchat::scripting::LuaEngine::available()) {
@@ -2563,6 +2616,77 @@ bool maxchat::ui::MainWindow::scriptMcData(const QString& network, const QString
             QStringLiteral("[scripts] Cannot send MC DATA to %1.").arg(target));
     }
     return ok;
+}
+
+bool maxchat::ui::MainWindow::scriptTerminalOpen(const QString& scriptName, const QString& id,
+                                                 const QString& title, const QString& profile,
+                                                 const int cols, const int rows) {
+    if (m_scriptTerminals == nullptr || scriptName.trimmed().isEmpty() ||
+        id.trimmed().isEmpty()) {
+        return false;
+    }
+    m_scriptTerminals->openTerminal(terminalScopedId(scriptName, id), title,
+                                    terminalProfile(profile, cols, rows));
+    return true;
+}
+
+void maxchat::ui::MainWindow::scriptTerminalClose(const QString& scriptName, const QString& id) {
+    if (m_scriptTerminals != nullptr) {
+        m_scriptTerminals->closeTerminal(terminalScopedId(scriptName, id));
+    }
+}
+
+void maxchat::ui::MainWindow::scriptTerminalClear(const QString& scriptName, const QString& id) {
+    if (m_scriptTerminals != nullptr) {
+        m_scriptTerminals->clear(terminalScopedId(scriptName, id));
+    }
+}
+
+void maxchat::ui::MainWindow::scriptTerminalWrite(const QString& scriptName, const QString& id,
+                                                  const QString& text) {
+    if (m_scriptTerminals != nullptr) {
+        m_scriptTerminals->writeText(terminalScopedId(scriptName, id), text);
+    }
+}
+
+void maxchat::ui::MainWindow::scriptTerminalStatus(const QString& scriptName, const QString& id,
+                                                   const QString& text) {
+    if (m_scriptTerminals != nullptr) {
+        m_scriptTerminals->setStatusText(terminalScopedId(scriptName, id), text);
+    }
+}
+
+void maxchat::ui::MainWindow::scriptTerminalPrompt(const QString& scriptName, const QString& id,
+                                                   const QString& text) {
+    if (m_scriptTerminals != nullptr) {
+        m_scriptTerminals->setPromptText(terminalScopedId(scriptName, id), text);
+    }
+}
+
+QSize maxchat::ui::MainWindow::scriptTerminalSize(const QString& scriptName, const QString& id) {
+    return m_scriptTerminals != nullptr ? m_scriptTerminals->terminalSize(terminalScopedId(scriptName, id))
+                                        : QSize();
+}
+
+void maxchat::ui::MainWindow::scriptTerminalProfile(const QString& scriptName, const QString& id,
+                                                    const QString& profile, const int cols,
+                                                    const int rows) {
+    if (m_scriptTerminals != nullptr) {
+        m_scriptTerminals->setProfile(terminalScopedId(scriptName, id),
+                                      terminalProfile(profile, cols, rows));
+    }
+}
+
+void maxchat::ui::MainWindow::scriptTerminalFit(const QString& scriptName, const QString& id,
+                                                const QString& mode) {
+    if (m_scriptTerminals != nullptr) {
+        m_scriptTerminals->setFitMode(terminalScopedId(scriptName, id), mode);
+    }
+}
+
+QString maxchat::ui::MainWindow::scriptTerminalHotspot(const QString& actionId,
+                                                       const QString& label) {
+    return AnsiRenderer::hotspot(actionId, label);
 }
 
 void maxchat::ui::MainWindow::scriptInsertInput(const QString& text) {

@@ -3,6 +3,8 @@
 #include "scripting/ScriptPermissions.h"
 
 #include <QDir>
+#include <QHash>
+#include <QSize>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -20,6 +22,8 @@ class FakeHost final : public ScriptHost {
     QStringList notifies; // "title|text"
     QStringList raws;
     QStringList mcData;   // "network|target|service|verb|payload|notice"
+    QStringList terminals;
+    QHash<QString, QSize> terminalSizes;
 
     void scriptEcho(const QString&, const QString& text) override { echoes.append(text); }
     void scriptSay(const QString&, const QString& target, const QString& text) override {
@@ -36,6 +40,50 @@ class FakeHost final : public ScriptHost {
                           .arg(network, target, service, verb, payload,
                                notice ? QStringLiteral("notice") : QStringLiteral("privmsg")));
         return !target.isEmpty();
+    }
+    bool scriptTerminalOpen(const QString& scriptName, const QString& id, const QString& title,
+                            const QString& profile, int cols, int rows) override {
+        terminals.append(QStringLiteral("open|%1|%2|%3|%4|%5x%6")
+                             .arg(scriptName, id, title, profile)
+                             .arg(cols)
+                             .arg(rows));
+        terminalSizes.insert(scriptName + QStringLiteral("/") + id, QSize(cols, rows));
+        return true;
+    }
+    void scriptTerminalClose(const QString& scriptName, const QString& id) override {
+        terminals.append(QStringLiteral("close|%1|%2").arg(scriptName, id));
+    }
+    void scriptTerminalClear(const QString& scriptName, const QString& id) override {
+        terminals.append(QStringLiteral("clear|%1|%2").arg(scriptName, id));
+    }
+    void scriptTerminalWrite(const QString& scriptName, const QString& id,
+                             const QString& text) override {
+        terminals.append(QStringLiteral("write|%1|%2|%3").arg(scriptName, id, text));
+    }
+    void scriptTerminalStatus(const QString& scriptName, const QString& id,
+                              const QString& text) override {
+        terminals.append(QStringLiteral("status|%1|%2|%3").arg(scriptName, id, text));
+    }
+    void scriptTerminalPrompt(const QString& scriptName, const QString& id,
+                              const QString& text) override {
+        terminals.append(QStringLiteral("prompt|%1|%2|%3").arg(scriptName, id, text));
+    }
+    QSize scriptTerminalSize(const QString& scriptName, const QString& id) override {
+        return terminalSizes.value(scriptName + QStringLiteral("/") + id, QSize(0, 0));
+    }
+    void scriptTerminalProfile(const QString& scriptName, const QString& id,
+                               const QString& profile, int cols, int rows) override {
+        terminals.append(QStringLiteral("profile|%1|%2|%3|%4x%5")
+                             .arg(scriptName, id, profile)
+                             .arg(cols)
+                             .arg(rows));
+    }
+    void scriptTerminalFit(const QString& scriptName, const QString& id,
+                           const QString& mode) override {
+        terminals.append(QStringLiteral("fit|%1|%2|%3").arg(scriptName, id, mode));
+    }
+    QString scriptTerminalHotspot(const QString& actionId, const QString& label) override {
+        return QStringLiteral("<hotspot action=\"%1\">%2</hotspot>").arg(actionId, label);
     }
     QString scriptMe(const QString&) override { return QStringLiteral("me"); }
     QString scriptTarget() override { return QStringLiteral("#chan"); }
@@ -292,6 +340,74 @@ class LuaEngineTest final : public QObject {
                                  QStringLiteral("STATUS"), QStringLiteral("ok"), true}));
         QCOMPARE(host.echoes,
                  QStringList{QStringLiteral("synIRC|bob|alice|bbs|STATUS|ok|true")});
+    }
+
+    void apiTerminalCallsAreScriptScoped() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString path = writeScript(
+            QDir(dir.path()), QStringLiteral("term.lua"),
+            QStringLiteral("function on_load(api)\n"
+                           "  api.echo(tostring(api.terminal_open('main', 'Retro-BBS', 'free', 100, 30)))\n"
+                           "  api.terminal_status('main', 'CONNECT: Retro-BBS')\n"
+                           "  api.terminal_prompt('main', 'bbs> ')\n"
+                           "  api.terminal_write('main', 'hello')\n"
+                           "  local cols, rows = api.terminal_size('main')\n"
+                           "  api.echo(cols..'x'..rows)\n"
+                           "  api.terminal_profile('main', 'c64')\n"
+                           "  api.terminal_fit('main', 'integer')\n"
+                           "  api.echo(api.terminal_hotspot('menu', 'Menu'))\n"
+                           "  api.terminal_clear('main')\n"
+                           "  api.terminal_close('main')\n"
+                           "end\n"));
+        FakeHost host;
+        LuaEngine engine(&host, dir.path(), dir.path());
+        QVERIFY(engine.load(path));
+        QCOMPARE(host.terminals,
+                 QStringList({
+                     QStringLiteral("open|term|main|Retro-BBS|free|100x30"),
+                     QStringLiteral("status|term|main|CONNECT: Retro-BBS"),
+                     QStringLiteral("prompt|term|main|bbs> "),
+                     QStringLiteral("write|term|main|hello"),
+                     QStringLiteral("profile|term|main|c64|80x25"),
+                     QStringLiteral("fit|term|main|integer"),
+                     QStringLiteral("clear|term|main"),
+                     QStringLiteral("close|term|main"),
+                 }));
+        QCOMPARE(host.echoes,
+                 QStringList({
+                     QStringLiteral("true"),
+                     QStringLiteral("100x30"),
+                     QStringLiteral("<hotspot action=\"menu\">Menu</hotspot>"),
+                 }));
+    }
+
+    void dispatchToScriptRoutesTerminalHooks() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString first =
+            writeScript(QDir(dir.path()), QStringLiteral("first.lua"),
+                        QStringLiteral("function on_terminal_input(api, id, text)\n"
+                                       "  api.echo('first:'..id..':'..text)\n"
+                                       "  return true\n"
+                                       "end\n"));
+        const QString second =
+            writeScript(QDir(dir.path()), QStringLiteral("second.lua"),
+                        QStringLiteral("function on_terminal_input(api, id, text)\n"
+                                       "  api.echo('second:'..id..':'..text)\n"
+                                       "  return true\n"
+                                       "end\n"));
+        FakeHost host;
+        LuaEngine engine(&host, dir.path(), dir.path());
+        QVERIFY(engine.load(first));
+        QVERIFY(engine.load(second));
+
+        QVERIFY(engine.dispatchToScript(QStringLiteral("second"),
+                                        QStringLiteral("on_terminal_input"),
+                                        QStringLiteral("synIRC"),
+                                        {QStringLiteral("main"), QStringLiteral("help")}));
+
+        QCOMPARE(host.echoes, QStringList{QStringLiteral("second:main:help")});
     }
 
     void apiStrip() {
