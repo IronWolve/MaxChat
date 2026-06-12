@@ -631,6 +631,23 @@ class LuaEngineTest final : public QObject {
         QVERIFY(containsTerminalPrefix(
             QStringLiteral("frame|bbs|client:alice:retro-bbs|CP0101AF0W")));
 
+        // Z85 armor: "[BczT" decodes to F0 F0 00 00 (same 4x4 image, padded).
+        // frame_hash("[BczT") = 06949C0E.
+        QVERIFY(engine.dispatch(QStringLiteral("on_mc_data"), QStringLiteral("synIRC"),
+                                {QStringLiteral("synIRC"), QStringLiteral("bob"),
+                                 QStringLiteral("alice"), QStringLiteral("bbs"),
+                                 QStringLiteral("B"),
+                                 QStringLiteral("tz 4 4 06949C0E raw1z 1/1 [BczT"), false}));
+        const int framesBefore = host.terminals.size();
+        QVERIFY(engine.dispatch(QStringLiteral("on_mc_data"), QStringLiteral("synIRC"),
+                                {QStringLiteral("synIRC"), QStringLiteral("bob"),
+                                 QStringLiteral("alice"), QStringLiteral("bbs"),
+                                 QStringLiteral("I"), QStringLiteral("tz 06949C0E P0101"),
+                                 false}));
+        QVERIFY(host.terminals.size() > framesBefore);
+        QVERIFY(host.terminals.last().startsWith(
+            QStringLiteral("frame|bbs|client:alice:retro-bbs|CP0101AF0W")));
+
         QVERIFY(engine.dispatch(QStringLiteral("on_command"), QStringLiteral("synIRC"),
                                 {QStringLiteral("bbscache"), QString()}));
         QVERIFY(!host.echoes.isEmpty());

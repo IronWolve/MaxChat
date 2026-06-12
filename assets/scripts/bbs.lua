@@ -56,23 +56,21 @@ local board = {
 -- half-blocks in 80x25 cells. Public-domain space-agency photos, reduced to
 -- 1-bit: thresholded images compress well with rle1, dithered ones ship raw1.
 local PICS = {
-  { id = "earth", title = "Earth from space", w = 80, h = 50, enc = "rle1",
+  { id = "earth", title = "Earth from space", w = 80, h = 50, enc = "rle1z",
     data = {
-      "103020311E321D341B3619070129020419030627030517030727030615030827020715030827020813040703011D060B13040620090B1204061B0E0B110605190903040C1008020202030112010304040201020B100B04210102020B0F0D0424010C0E0E0324010C0E0E03310D1102300D2B01170D2B02160D22010802160D430D0E01340D0D030702290E0D",
-      "030306290E0C0303062A0F12042B0F13032B0F13041401160E13051202151012051103151012041302151011030E0206080E1120120C121F130C121F0C03040C131D08020206020B151C06030207030A151D0305020C02051731030419300205192F01061C331F302030202F222D2405042212"
+      "5hkjY9X[-)8-wMs0vX6M83p6<0%GFy2pxPT6:1Z?0TxCx2QYVV69FKx0uzvL69FHZ2[4vG1@!3W5E5yR2)gqs5c@ss0S@Do0rSDc0S-ug5dnQ:0rJrg4?eT!0sPCF10^)Q4H@N}4g@T}4j.C}4j.F}4i+/U0U#kj4gSy}4gJyA0X1P*0%n-R4H-Bw1$yb@1s<#@11K(}1qy>L4IG0U0U(mV1Ry?K5e29V0U(mU0$Cwp2O4B?5!2x{6atG}3<cRv6cdtW0TnYl6=WzW0Tw/m6=^wW",
+      "0T]bl7CM0{8889}87#0{95wV<ats]>a$U5z1r[DU"
     } },
-  { id = "moon", title = "The Moon", w = 80, h = 50, enc = "rle1",
+  { id = "moon", title = "The Moon", w = 80, h = 50, enc = "rle1z",
     data = {
-      "1038180C012B1805082C16050A2C15050B2B15030F2A1402102A252C242C242D2409032024080602011C22090A1B0B0214090B1B0B0213090D1A1D01010A0E1A1E0A0E0F030720090E0E050522080E0E060423070E0D070413040B070F0E0507100D02081003020805080F17160705080B020214040301040D08030A0903020E0104050301040E1201020803",
-      "020D0C06111001010904010D0E03120F02010904010D0403060411100D02010D04060306110F0D010209020104101102030A120707101A061207080F1A0604010D07081009020E0604010D08041407070A070301111D06070907040210200208080804020B02032A070905030803032B06090503090204040125050906080A040225040906090A0302320708",
-      "0A04013108080602020302310906060307300A050505082E0C040506072E0C050506062D0E050505062C10050306062C10060206072A09"
+      "5i7Hn0v[#<2Rl.{3m([}3O8}]4>nm{5gO$SbRgh)bNBL}bNsOQ0uro&3l6uO6Btc^3JZ$F4h{k/0sxqP9TSw/0%Y}P4H@TCa{XU*1{udQ4H&TC69FWF4?n:F5dFWD5cz$t1QCRP76+0G3JZwz1oOVc4g04y2)gks0r-Md0r-(B0rJJe0U2Lx5Fa%z2)pnr4G^sO0S-Pg0sYel1{tIH4fuLt1o[@j5F2rK0TO]e1p#dD0$2UC2m}^T5^FWM8u{rB4f)dI2)7Ov1ow@q1qz7C3i{Ul",
+      "5GI5X2)QOm5fI2W2NyLm3JZzW2mgLo2M>eV1{>Cn2)7kj0vm)Q1{+Ls0WN%Q1{>Rs0X%#^3iQw:2NyRo0S@GU2)HOo2quF*1Qbe:3<l.r2qcz*1Qke.4H01t1$Qq?0%O@X5c-gu2pZ2W"
     } },
-  { id = "astro", title = "Moonwalker", w = 80, h = 50, enc = "raw1",
+  { id = "astro", title = "Moonwalker", w = 80, h = 50, enc = "raw1z",
     data = {
-      "12AAAADBBDFFFFFFFFFE24AAAB6CF6B7FFF6F7BB1555B5DBBBFDFFFFDEFD52A4D6EEFD57FDFDFFFE2D537DB2B52BFFDFFFEA05AADFFB76B5FFFFDBBD556DF6EDFA57FDFF6DF52AB6AFFF556AFFFFFFFEB55BFB7BFA7FFFFFFFFF6FFEBFFF5D5FEFFFFFFFBAD7EDFFF5BFFFFFEDFF6FFFBFFEBEFFFFDEF7FEBFBDFFFBFDBFFFFFD0BF7BFFFFFF1BFFFFFEFFEA",
-      "AEEFF6B6AFFBFFFF2F7D7BBBFF5E9DFFFFFFF7F6AF6EDB052FFFFFFFFFFE769BF77557FFFFFFFFFF2B0DFEDAAFEFFFFFFFFF16FFFBBFFFFFFFFFFFFF45B77FFB7777FD7FFFFF22FFFFDDFFEFF757FFFF08DBEF6BBDF3596FFFFF25FEFBB6FFDDFABFFFFF5F57FFFBD6F7F5FFFFFF755AFFDFFFFABB7EFFFFADAADFFFD5A88ADFFFFF52D57FFFFAF557FFFF7D",
-      "0977B7FDD15F82FFDBFF549D7EFFA96D4B77F5F52AD7DBFF513B2FFDDAAC2556FFD485D4BFF7F57756ABAAB80A43775F5FDD2AD56AC42A1DFDEBEBFF55255A20A00BAB5ABEFD554AAC8090ACA89777B629015A010176F401BDFF0AA4540201DB55246F6E2952400004BFED413BFF0448000016DEF6FDDEFF20511000092BDB56DBBF00A80000042BFFFFFFEF",
-      "2058000017157AADD6BF28A000008956D7F7FFDF2AA00000222A501D5ABF09000800000000436FCF0400100100012000152F100000105000800000970000002A8242AB00000500000055401155600000"
+      "5#}$^Z5Ocj%nBpzT8dHs%mVi06&?V@Yz.^f?U*uF/6-Gr@R==}eMm86Wjzpm%lo=/?$}P8%nQ&!rC?D%}D9T}zs]x!UM4Qq%nSb#WoJJP}HwLB%nN3pZYdOD[bJB/Y4uuH]$QLb)F?b8ZY7$E%k9IHZRfWA@Leyj^7:@c%nK5r%nJ5-Uj87)ULXw1fmwhV%6zn@%nR&!UwS7#fAq7L%nEhh{JoNq%nSc0d?hHiUKzI>%nJ(m}[Jgh%nSc0myN^zCx:1n%nKqy%k0.z{Gdy{2&1/-",
+      "Z4kxB%nKzA})MKX}Oi7guSWp8/7X>q%nNjB%ki>MYmf!WT/ypU!U[w.%nM0EFb/xrso5qG33S(S^o?I9*Y7lzE/Dx:olZ74d+ACPq9cDf*n(P3%i#+LZXvzBr&-mg3px2Au!)iZyq.Ox@P&!Hrv7/>PBm/7ZwR57TBMzlSf..pdfiPM0E18oZ5FCnr009Pru#H2dn&zh1I:s&jo2BO000!>{wJ>Faw&WI2}K+h*Ri-!000cL%nSb/axOQz7zRm#/1SSa004<R/z2s5dXD+wa$uzf",
+      "te7vz2MK&807gXJ1on#l00ahx6!Z9#01.%bFb/Oo0000GF<MHr00Ju5098n@rBt!b"
     } },
 }
 
@@ -311,24 +309,69 @@ local function bitmap_key(bbs_id, id, hash)
   return tostring(bbs_id):lower() .. "|" .. tostring(id) .. "|" .. tostring(hash)
 end
 
-local function decode_bits(enc, data, total)
-  local bits = {}
-  if enc == "raw1" then
-    for i = 1, #data do
-      local v = tonumber(data:sub(i, i), 16)
-      if not v then return nil end
-      bits[#bits + 1] = (v >= 8) and 1 or 0; v = v % 8
-      bits[#bits + 1] = (v >= 4) and 1 or 0; v = v % 4
-      bits[#bits + 1] = (v >= 2) and 1 or 0; v = v % 2
-      bits[#bits + 1] = v
+-- Z85 (base85, 5 chars -> 4 bytes): densest IRC-safe text armor that stays
+-- single-byte in UTF-8. ~25% overhead vs binary; hex is 100%.
+local Z85_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz" ..
+                     "ABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#"
+local Z85_VALUE = {}
+for i = 1, #Z85_ALPHABET do
+  Z85_VALUE[Z85_ALPHABET:sub(i, i)] = i - 1
+end
+
+-- Returns a table of byte values, or nil on bad input. Trailing zero padding
+-- (input padded to 4-byte blocks) is harmless to both pixel encodings.
+local function z85_decode(data)
+  if #data % 5 ~= 0 then return nil end
+  local bytes = {}
+  for i = 1, #data, 5 do
+    local v = 0
+    for j = 0, 4 do
+      local d = Z85_VALUE[data:sub(i + j, i + j)]
+      if not d then return nil end
+      v = v * 85 + d
     end
-  elseif enc == "rle1" then
-    -- alternating runs starting with bit 0; one hex byte per run; a 00 run
-    -- flips color without pixels (encodes runs longer than 255)
+    bytes[#bytes + 1] = math.floor(v / 16777216) % 256
+    bytes[#bytes + 1] = math.floor(v / 65536) % 256
+    bytes[#bytes + 1] = math.floor(v / 256) % 256
+    bytes[#bytes + 1] = v % 256
+  end
+  return bytes
+end
+
+local function hex_decode(data)
+  if #data % 2 ~= 0 then return nil end
+  local bytes = {}
+  for i = 1, #data, 2 do
+    local v = tonumber(data:sub(i, i + 1), 16)
+    if not v then return nil end
+    bytes[#bytes + 1] = v
+  end
+  return bytes
+end
+
+-- enc = raw1|rle1 (hex armor) or raw1z|rle1z (Z85 armor).
+local function decode_bits(enc, data, total)
+  local base = enc
+  local bytes
+  if enc:sub(-1) == "z" then
+    base = enc:sub(1, -2)
+    bytes = z85_decode(data)
+  else
+    bytes = hex_decode(data)
+  end
+  if not bytes then return nil end
+  local bits = {}
+  if base == "raw1" then
+    for _, v in ipairs(bytes) do
+      for shift = 7, 0, -1 do
+        bits[#bits + 1] = math.floor(v / 2 ^ shift) % 2
+      end
+    end
+  elseif base == "rle1" then
+    -- alternating runs starting with bit 0; one byte per run; a 0 run flips
+    -- color without pixels (encodes runs longer than 255)
     local cur = 0
-    for i = 1, #data - 1, 2 do
-      local n = tonumber(data:sub(i, i + 1), 16)
-      if not n then return nil end
+    for _, n in ipairs(bytes) do
       for _ = 1, n do bits[#bits + 1] = cur end
       cur = 1 - cur
     end
