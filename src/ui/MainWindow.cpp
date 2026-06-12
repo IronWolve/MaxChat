@@ -1066,8 +1066,9 @@ bool MainWindow::redirectKeyToInput(QKeyEvent* e) {
         QTextCursor c = m_input->textCursor();
         c.movePosition(QTextCursor::End);
         m_input->setTextCursor(c);
+        return true;
     }
-    return true;
+    return false;
 }
 
 void MainWindow::showEvent(QShowEvent* event) {
@@ -1122,14 +1123,19 @@ bool MainWindow::eventFilter(QObject* watched, QEvent* event) {
         showInputContextMenu(contextEvent->pos(), contextEvent->globalPos());
         return true;
     }
-    // After any QMenu closes, restore focus to the input box (deferred so Qt
-    // finishes menu teardown first). Guards: only when this is the active
-    // window, no modal on top, and focus hasn't already landed in a text field.
+    // After a menu-bar dropdown closes, restore focus to the input box.
+    // Guard: only direct children of QMenuBar (not context menus or sub-menus).
+    // Deferred so Qt finishes teardown; activePopupWidget guard handles the
+    // case where a sub-menu closed but the parent menu is still open.
     if (event->type() == QEvent::Hide && qobject_cast<QMenu*>(watched) != nullptr) {
+        if (qobject_cast<QMenuBar*>(static_cast<QMenu*>(watched)->parentWidget()) == nullptr) {
+            return QMainWindow::eventFilter(watched, event);
+        }
         QTimer::singleShot(0, this, [this]() {
             if (m_input == nullptr) return;
             if (QApplication::activeWindow() != this) return;
             if (QApplication::activeModalWidget() != nullptr) return;
+            if (QApplication::activePopupWidget() != nullptr) return;
             if (isTextEntry(QApplication::focusWidget())) return;
             m_input->setFocus();
         });
@@ -1604,8 +1610,23 @@ void maxchat::ui::MainWindow::buildLayout() {
                     menu.addAction(QStringLiteral("Quick Connect..."), this,
                                    &MainWindow::openQuickConnect);
                 } else if (!target.isEmpty()) {
+                    const QString closeTarget = target;
+                    const QString closeNetwork = network;
                     menu.addAction(QStringLiteral("Close"), this,
-                                   [this, index]() { closeBufferTab(index); });
+                                   [this, closeTarget, closeNetwork]() {
+                                       // Re-derive index at close time: tab bar may have
+                                       // shifted during QMenu::exec() event loop.
+                                       for (int i = 0; i < m_bufferTabBar->count(); ++i) {
+                                           QTreeWidgetItem* ti = treeItemForTabIndex(i);
+                                           if (ti == nullptr) continue;
+                                           const QString tiNet = treeItemNetwork(ti).trimmed().isEmpty()
+                                               ? activeNetworkName() : treeItemNetwork(ti).trimmed();
+                                           if (treeItemTarget(ti) == closeTarget && tiNet == closeNetwork) {
+                                               closeBufferTab(i);
+                                               return;
+                                           }
+                                       }
+                                   });
                 }
                 if (!menu.isEmpty()) {
                     menu.exec(m_bufferTabBar->mapToGlobal(pos));
@@ -2992,7 +3013,9 @@ void maxchat::ui::MainWindow::setButtonBarVisible(const bool visible, const bool
 
 void maxchat::ui::MainWindow::setBufferTabsVisible(const bool visible, const bool save) {
     if (m_bufferTabBar != nullptr) {
-        syncBufferTabs();
+        if (visible) {
+            syncBufferTabs();
+        }
         m_bufferTabBar->setVisible(visible);
     }
     // Buttons-as-tabs replaces the server-list tree. When tabs go on, hide the
@@ -7097,13 +7120,27 @@ void maxchat::ui::MainWindow::saveComic() {
 void maxchat::ui::MainWindow::setComicMode(bool enabled) {
     // Comic panels only make sense in channel/query buffers, not the server window.
     if (m_currentTarget.trimmed().isEmpty()) {
-        const QString key = comicKey(activeNetworkName(), m_currentTarget);
-        const bool viewVisible = m_comicMode && !m_comicHiddenBuffers.contains(key);
-        if (m_comicModeAction != nullptr && m_comicModeAction->isChecked() != viewVisible) {
-            const QSignalBlocker blocker(m_comicModeAction);
-            m_comicModeAction->setChecked(viewVisible);
+        if (m_comicMode && !enabled) {
+            // Server buffer: treat as global off — kills the backend entirely.
+            // This is the only way to fully disable comic after first enable.
+            m_comicMode = false;
+            m_comicHiddenBuffers.clear();
+            if (m_comicView != nullptr) m_comicView->setVisible(false);
+            if (m_comicModeAction != nullptr && m_comicModeAction->isChecked()) {
+                const QSignalBlocker blocker(m_comicModeAction);
+                m_comicModeAction->setChecked(false);
+            }
+            statusBar()->showMessage(QStringLiteral("Comic Mode: off."));
+        } else {
+            // Can't enable comic from the server buffer; revert action state.
+            const QString key = comicKey(activeNetworkName(), m_currentTarget);
+            const bool viewVisible = m_comicMode && !m_comicHiddenBuffers.contains(key);
+            if (m_comicModeAction != nullptr && m_comicModeAction->isChecked() != viewVisible) {
+                const QSignalBlocker blocker(m_comicModeAction);
+                m_comicModeAction->setChecked(viewVisible);
+            }
+            statusBar()->showMessage(QStringLiteral("Comic Mode: not available on the server buffer."));
         }
-        statusBar()->showMessage(QStringLiteral("Comic Mode: not available on the server buffer."));
         return;
     }
 
@@ -7616,7 +7653,7 @@ void maxchat::ui::MainWindow::resetAllSettings() {
     if (answer != QMessageBox::Yes) {
         return;
     }
-    if (!m_settings.saveRaw(maxchat::core::SettingsStore::defaultSettings())) {
+    if (!m_settings.saveRaw(maxchat::core::SettingsStore::defaultSettings(), false)) {
         appendSystemLine(QStringLiteral("! Could not reset settings."));
         return;
     }
