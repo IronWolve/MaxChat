@@ -125,6 +125,13 @@ Reason:
   full Block Elements coverage (`32/32`) in both regular and bold weights.
 - Common BBS/ANSI samples are present, including single/double line boxes,
   shade blocks, half blocks, filled blocks, and common geometric markers.
+
+Known-good sample:
+
+```text
+┌┬┐ │ ├┼┤ └┴┘ ═ ║ ╔╗ ╚╝ ╬ ░▒▓ █ ▄▀▌▐ ■ ● ○ ◆ ◇ ▲ ▼ ◄ ►
+```
+
 - It avoids adding another font asset, license file, and packaging path.
 - It keeps the BBS/script terminal visually consistent with the existing chat
   font defaults.
