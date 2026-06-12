@@ -338,8 +338,8 @@ QString ScriptTerminalDialog::activeFamily() const {
                : QFontDatabase::systemFont(QFontDatabase::FixedFont).family();
 }
 
-void ScriptTerminalDialog::applyProfile() {
-    const int pointSize = baseFontPoint();
+void ScriptTerminalDialog::applyWidgetStyles(const int pointSize) {
+    // QFont keeps font() accurate for fit metrics / terminalSize().
     QFont font(activeFamily());
     font.setStyleHint(QFont::Monospace);
     font.setFixedPitch(true);
@@ -350,15 +350,26 @@ void ScriptTerminalDialog::applyProfile() {
     prompt_->setFont(font);
     status_->setFont(font);
 
-    const QString css = QStringLiteral(
-                            "QTextBrowser, QLineEdit, QLabel { color: %1; "
-                            "background-color: %2; }")
-                            .arg(colorCss(profile_.foreground),
-                                 colorCss(profile_.background));
+    // Per-widget stylesheet (font + colors) — beats the application theme
+    // stylesheet, so the terminal stays the terminal font/colors regardless of
+    // theme changes, and the terminal never leaks into or from app chrome.
+    const QString fontDecl = QStringLiteral("font-family: '%1'; font-size: %2pt; %3")
+                                 .arg(activeFamily())
+                                 .arg(pointSize)
+                                 .arg(fontBoldOverride_ ? QStringLiteral("font-weight: bold;")
+                                                        : QString());
+    const QString css = QStringLiteral("QTextBrowser, QLineEdit, QLabel { color: %1; "
+                                       "background-color: %2; %3 }")
+                            .arg(colorCss(profile_.foreground), colorCss(profile_.background),
+                                 fontDecl);
     display_->setStyleSheet(css);
     input_->setStyleSheet(css);
     prompt_->setStyleSheet(css);
     status_->setStyleSheet(css);
+}
+
+void ScriptTerminalDialog::applyProfile() {
+    applyWidgetStyles(baseFontPoint());
     syncSettingsMenuChecks();
     applyFitFont();
 }
@@ -396,15 +407,10 @@ void ScriptTerminalDialog::applyFitFont() {
         return; // free profiles keep the configured point size
     }
     const int point = fitFontPointForViewport();
-    QFont font = display_->font();
-    if (font.pointSize() == point) {
+    if (display_->font().pointSize() == point) {
         return;
     }
-    font.setPointSize(point);
-    display_->setFont(font);
-    input_->setFont(font);
-    prompt_->setFont(font);
-    status_->setFont(font);
+    applyWidgetStyles(point);
     if (frameMode_) {
         renderFrameGrid();
     }
