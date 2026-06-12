@@ -45,7 +45,7 @@ the next `renderActiveBuffer()` wipes it. That is the root cause of every
 | `sourceText` | Raw IRC body (e.g. `<nick> hi`). Preferred render path — re-formatted live so theme/colour changes apply. |
 | `htmlText`   | Pre-rendered HTML (link-preview cards, embedded images). Rendered as-is. |
 | `plainText`  | Fallback plain text. |
-| `systemLine` | Whole-line system tint (joins, notices, dividers). |
+| `systemLine` | **Styling flag only** — selects the system-tint palette for the whole line (joins, notices, dividers, and also ordinary PRIVMSGs which use the system tint by default). **This is NOT a semantic "server event" filter.** Regular `<nick> text` chat lines also carry `systemLine = true` because `appendSystemLineToTarget` defaults `systemStyling = true`. ACTION and NOTICE lines explicitly pass `false`. |
 | `dimmed`     | Replayed history / "Chat ended" divider — rendered in the dim palette. |
 
 `renderActiveBuffer()` chooses per line: `sourceText` → re-format; else `htmlText`
@@ -57,6 +57,20 @@ the next `renderActiveBuffer()` wipes it. That is the root cause of every
 valid. Dimmed lines with no timestamp **clear** the gutter (so the "Chat ended"
 divider, whose date+time is in its *text*, doesn't pick up a misleading current
 time).
+
+### `systemLine` and comic chat
+Because `systemLine` is a styling flag, not a semantic event filter, comic chat
+(`refreshComic()`) cannot use it alone to exclude server events. It uses format
+pattern matching instead:
+
+- `<nick> text` — always a chat message (PRIVMSGs are always in this form).
+- `* nick text` **with `systemLine = false`** — a user `/me` ACTION.
+- `* text` **with `systemLine = true`** — a server event (join/part/quit/mode/nick
+  change). Filtered by the `!line.systemLine` guard on the `* ` branch.
+- Everything else — filtered by `else { continue; }`.
+
+Never add a top-level `if (line.systemLine) continue;` in `refreshComic()` — it
+would discard all `<nick>` speech (which also carry `systemLine = true`).
 
 ---
 
@@ -110,11 +124,11 @@ Marks where you left off reading, per channel (HexChat-style "marker line").
 - It is **not** touched on activate or leave — so it **persists across buffer
   switches** (the user's requirement) and only resets when you actually read new
   activity live.
-- `renderActiveBuffer` draws the marker **before line index `markerCount`** when
-  `0 < markerCount < lines.size()` — computed every render, so it survives
-  re-renders and shows independently in **every** channel with unread activity.
+- `renderActiveBuffer` draws the marker at the replay→live boundary when replay
+  exists, or at `markerIndex` when there is no replay. See the `seenDimmed` /
+  `replayMarkerInserted` logic below.
 - Rendered **centered** via `appendCenteredDivider()`, same as the "Chat ended"
-  resume rule (both dividers are centered dim blocks, not left chat lines).
+  resume divider.
 
 **Wrong (original bug #1):** marker position came from a transient parameter
 computed only at switch time and was painted → vanished on any re-render and only
@@ -123,6 +137,47 @@ showed in the just-activated channel.
 **Wrong (original bug #2):** an early fix updated the boundary "on leave" (to the
 bottom), so tabbing away and back with no new activity wiped the marker. The
 boundary must be tied to *unread arrival*, not to focus changes.
+
+**Wrong (original bug #3 — "marker missing on 2nd channel"):** when a buffer had
+both replay content (dimmed lines) *and* a new-message boundary, the `──── new ────`
+marker was absent. A guard `if (markerIndex < 0)` was on the structural
+replay→live boundary check, preventing it from firing when an explicit count-based
+marker also existed. The two mechanisms were treated as mutually exclusive when
+they should be prioritized: the structural boundary wins whenever replay is present.
+
+**Wrong (original bug #4 — "marker too far down"):** after bug #3's fix (the
+`markerIndex < 0` guard was removed), the marker appeared below the live connection
+messages (Connecting…, joined, etc.) instead of right after "Chat ended". The
+explicit count-based marker (`lineIndex == markerIndex`) fired before the structural
+check, at the line index where the background message arrived — which was already
+after several live system lines had been added, placing the marker too late.
+
+**The fix (both bugs #3 and #4):**
+
+```cpp
+bool seenDimmed = false;
+bool replayMarkerInserted = false;
+for (const maxchat::core::ChatBufferLine& line : snapshot.lines) {
+    // Explicit unread marker — only when no replay content has been seen yet
+    // (if replay exists, the structural check below will handle placement instead)
+    if (lineIndex++ == markerIndex && !seenDimmed) {
+        appendUnreadMarkerLine();
+        replayMarkerInserted = true;
+    }
+    // Structural replay→live boundary: fires at the first live line after dimmed
+    if (m_markerLine && !line.dimmed && seenDimmed && !replayMarkerInserted) {
+        appendUnreadMarkerLine();
+        replayMarkerInserted = true;
+    }
+    if (line.dimmed) seenDimmed = true;
+    // ... render line
+```
+
+Key invariant: replay lines (dimmed) are always seeded BEFORE any live lines arrive
+(guarded by `m_replayedBuffers` + empty-buffer check in `seedReplayForBuffer`), so
+`seenDimmed` is guaranteed true at `markerIndex` whenever replay exists → the
+`!seenDimmed` guard on the explicit marker is safe (it will always be false when
+replay is present, letting the structural check take over).
 
 ---
 
@@ -192,7 +247,7 @@ buffer at *dispatch time*, not at *completion time*.
 
 ---
 
-## 7. Related trap (not the view model, but same area)
+## 8. Related trap (not the view model, but same area)
 
 `m_input` is a `QTextEdit` — a `QAbstractScrollArea`. **Mouse/context-menu events
 go to its `viewport()`, not the widget.** Keyboard events go to the widget.
@@ -202,4 +257,4 @@ right-click spell suggestions were silently broken). See DEV_NOTES.md.
 ---
 
 See also: `UI_SURFACES.md` (what each window surface is responsible for),
-`DEV_NOTES.md` ("THINGS I GOT WRONG"), `AUDIT.md` #29.
+`DEV_NOTES.md` ("THINGS I GOT WRONG").

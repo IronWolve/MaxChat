@@ -12,9 +12,12 @@ line-model gets wiped on the next switch. Anything that must persist has to live
 in the model (or be re-applied inside `renderActiveBuffer`):
 - Inline preview **images** are re-registered as document resources on each
   render (cached by URL) for exactly this reason — see `registerCachedImagesIn`.
-- Log-**resume replay** + the `new` marker currently DON'T follow this rule —
-  they're painted, so they break on switch. Tracked as AUDIT backlog #29 (likely
-  a future tweak): seed replay into the buffer model instead of painting it.
+- Log-**resume replay** (dimmed lines + "Chat ended" divider) is stored in
+  `ChatBufferStore` via `seedReplayForBuffer` (called on first buffer open,
+  guarded by `m_replayedBuffers`). Fixed in AUDIT backlog #29.
+- The `──── new ────` marker is paint-only, BUT the *boundary* it renders from
+  (`m_bufferMarkerCount`) is durable model state — so the marker is correctly
+  reconstructed on every render. See CHAT_VIEW_DESIGN.md §5.
 When adding anything that should survive a buffer switch, store it in the model.
 
 ## UNVERIFIED CODE (needs target-OS build)
