@@ -10,7 +10,12 @@ QString htmlUrl(const QUrl &url) {
 QString cleanedText(QString text, int maxChars) {
   text = text.simplified();
   if (maxChars > 3 && text.size() > maxChars) {
-    return text.left(maxChars - 3).trimmed() + QStringLiteral("...");
+    qsizetype cut = maxChars - 3;
+    // Never split a surrogate pair (emoji at the cut point → broken glyph).
+    if (cut > 0 && text.at(cut - 1).isHighSurrogate()) {
+      --cut;
+    }
+    return text.left(cut).trimmed() + QStringLiteral("...");
   }
   return text;
 }
@@ -68,7 +73,14 @@ QString renderOpenGraphPreviewHtml(const LinkPreviewCandidate &candidate,
   const QUrl targetUrl =
       candidate.kind == LinkPreviewKind::XPost
           ? candidate.originalUrl
-          : (card.canonicalUrl.isValid() ? card.canonicalUrl : candidate.fetchUrl);
+          // og:url is attacker-controlled: only follow it for http(s); a
+          // crafted file:// or javascript: canonical must never become the
+          // card's click target.
+          : ((card.canonicalUrl.isValid() &&
+              (card.canonicalUrl.scheme() == QLatin1String("http") ||
+               card.canonicalUrl.scheme() == QLatin1String("https")))
+                 ? card.canonicalUrl
+                 : candidate.fetchUrl);
   if (!targetUrl.isValid()) {
     return {};
   }
@@ -85,17 +97,25 @@ QString renderOpenGraphPreviewHtml(const LinkPreviewCandidate &candidate,
                              ? cleanedText(card.siteName, 80)
                              : primaryDomainForPreview(targetUrl);
 
-  // Card box: site name + title + description.
+  // Card box: site name + title + description. Overlay + accent flip with the
+  // chat background — the white-on-white overlay used to vanish on light
+  // themes. dir="auto" keeps RTL titles/descriptions readable.
+  const QString overlay = options.darkChat ? QStringLiteral("rgba(255,255,255,0.06)")
+                                           : QStringLiteral("rgba(0,0,0,0.05)");
+  const QString accent =
+      options.darkChat ? QStringLiteral("#6f8cff") : QStringLiteral("#3c5bd1");
   QString html = QStringLiteral(
-      "<div style=\"margin:4px 0 2px 0;padding:6px 8px;border-left:3px solid "
-      "#6f8cff;background:rgba(255,255,255,0.06);\">");
+                     "<div style=\"margin:4px 0 2px 0;padding:6px 8px;border-left:3px solid "
+                     "%1;background:%2;\">")
+                     .arg(accent, overlay);
   if (options.showSiteName && !domain.isEmpty()) {
     html += QStringLiteral(
-                "<div style=\"font-size:small;opacity:0.7;\">%1</div>")
+                "<div dir=\"auto\" style=\"font-size:small;opacity:0.7;\">%1</div>")
                 .arg(domain.toHtmlEscaped());
   }
   if (options.showTitle) {
-    html += QStringLiteral("<div style=\"margin-top:1px;\"><a href=\"%1\"><b>%2</b></a></div>")
+    html += QStringLiteral(
+                "<div dir=\"auto\" style=\"margin-top:1px;\"><a href=\"%1\"><b>%2</b></a></div>")
                 .arg(htmlUrl(targetUrl), title.toHtmlEscaped());
   }
   const bool showDesc =
@@ -103,7 +123,7 @@ QString renderOpenGraphPreviewHtml(const LinkPreviewCandidate &candidate,
       !description.isEmpty() &&
       description.compare(title, Qt::CaseInsensitive) != 0;
   if (showDesc) {
-    html += QStringLiteral("<div style=\"margin-top:2px;\">%1</div>")
+    html += QStringLiteral("<div dir=\"auto\" style=\"margin-top:2px;\">%1</div>")
                 .arg(description.toHtmlEscaped());
   }
   html += QStringLiteral("</div>");

@@ -8,7 +8,7 @@ namespace {
 
 QString decodeHtmlEntities(const QString& text) {
     static const QRegularExpression entityPattern(
-        QStringLiteral(R"(&(#x[0-9A-Fa-f]+|#\d+|amp|lt|gt|quot|apos|nbsp);)"),
+        QStringLiteral(R"(&(#x[0-9A-Fa-f]+|#\d+|[a-z]{2,8});)"),
         QRegularExpression::CaseInsensitiveOption);
 
     QString decoded;
@@ -18,19 +18,34 @@ QString decodeHtmlEntities(const QString& text) {
         const QRegularExpressionMatch match = matches.next();
         decoded += text.mid(last, match.capturedStart() - last);
 
+        // The common named entities seen in real og: titles/descriptions —
+        // unknown names fall through untouched (rendered literally).
+        static const QHash<QString, QString> kNamed = {
+            {QStringLiteral("amp"), QStringLiteral("&")},
+            {QStringLiteral("lt"), QStringLiteral("<")},
+            {QStringLiteral("gt"), QStringLiteral(">")},
+            {QStringLiteral("quot"), QStringLiteral("\"")},
+            {QStringLiteral("apos"), QStringLiteral("'")},
+            {QStringLiteral("nbsp"), QStringLiteral(" ")},
+            {QStringLiteral("mdash"), QString(QChar(0x2014))},
+            {QStringLiteral("ndash"), QString(QChar(0x2013))},
+            {QStringLiteral("hellip"), QString(QChar(0x2026))},
+            {QStringLiteral("rsquo"), QString(QChar(0x2019))},
+            {QStringLiteral("lsquo"), QString(QChar(0x2018))},
+            {QStringLiteral("rdquo"), QString(QChar(0x201D))},
+            {QStringLiteral("ldquo"), QString(QChar(0x201C))},
+            {QStringLiteral("middot"), QString(QChar(0x00B7))},
+            {QStringLiteral("bull"), QString(QChar(0x2022))},
+            {QStringLiteral("copy"), QString(QChar(0x00A9))},
+            {QStringLiteral("reg"), QString(QChar(0x00AE))},
+            {QStringLiteral("trade"), QString(QChar(0x2122))},
+            {QStringLiteral("deg"), QString(QChar(0x00B0))},
+            {QStringLiteral("times"), QString(QChar(0x00D7))},
+            {QStringLiteral("laquo"), QString(QChar(0x00AB))},
+            {QStringLiteral("raquo"), QString(QChar(0x00BB))}};
         const QString entity = match.captured(1).toLower();
-        if (entity == QStringLiteral("amp")) {
-            decoded += QLatin1Char('&');
-        } else if (entity == QStringLiteral("lt")) {
-            decoded += QLatin1Char('<');
-        } else if (entity == QStringLiteral("gt")) {
-            decoded += QLatin1Char('>');
-        } else if (entity == QStringLiteral("quot")) {
-            decoded += QLatin1Char('"');
-        } else if (entity == QStringLiteral("apos")) {
-            decoded += QLatin1Char('\'');
-        } else if (entity == QStringLiteral("nbsp")) {
-            decoded += QLatin1Char(' ');
+        if (const auto it = kNamed.constFind(entity); it != kNamed.constEnd()) {
+            decoded += it.value();
         } else {
             bool ok = false;
             const uint codepoint = entity.startsWith(QStringLiteral("#x"))

@@ -8908,6 +8908,11 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
     m_ogRenderOptions.showTitle       = settings.value(QStringLiteral("og_show_title"),        true).toBool();
     m_ogRenderOptions.showDescription = settings.value(QStringLiteral("og_show_description"),  true).toBool();
     m_ogRenderOptions.showImage       = settings.value(QStringLiteral("og_show_image"),        true).toBool();
+    {
+        const QColor bg = resolvedChatBackground();
+        m_ogRenderOptions.darkChat =
+            (0.299 * bg.red() + 0.587 * bg.green() + 0.114 * bg.blue()) < 150.0;
+    }
     if (m_mainSplitter != nullptr) {
         const QVariantList savedSizes = settings.value(QStringLiteral("splitter_sizes")).toList();
         if (savedSizes.size() >= 3) {
