@@ -95,7 +95,31 @@ local function client_term(nick, bbs_id)
 end
 
 local function send(api, nick, verb, payload)
-  api.mc_reply(nick, SERVICE, verb, clean_line(payload or ""))
+  api.mc_send(nick, SERVICE, verb, clean_line(payload or ""))
+end
+
+local function frame_encode(s)
+  s = clean_line(s or "")
+  s = s:gsub("%%", "%%25")
+  s = s:gsub("|", "%%7C")
+  if s == "" then return "%20" end
+  return s
+end
+
+local function frame_decode(s)
+  if s == "%20" then return "" end
+  s = tostring(s or "")
+  s = s:gsub("%%7[Cc]", "|")
+  s = s:gsub("%%25", "%%")
+  return s
+end
+
+local function frame_parts(payload)
+  local parts = {}
+  for part in (tostring(payload or "") .. "|"):gmatch("([^|]*)|") do
+    parts[#parts + 1] = frame_decode(part)
+  end
+  return parts
 end
 
 local function send_input(api, nick, text)
@@ -148,6 +172,41 @@ local function line(api, s, text) out(api, s, "LINE", text or "") end
 local function prompt(api, s, text) out(api, s, "PROMPT", text or "bbs> ") end
 local function status(api, s, text) out(api, s, "STATUS", text or "") end
 
+local function screen(api, s, status_text, prompt_text, lines)
+  lines = lines or {}
+  s.last = { status = clean_line(status_text or ""), prompt = clean_line(prompt_text or ""), lines = {} }
+  local encoded = { frame_encode(s.last.status), frame_encode(s.last.prompt) }
+  for _, text in ipairs(lines) do
+    local line_text = clean_line(text or "")
+    s.last.lines[#s.last.lines + 1] = line_text
+    encoded[#encoded + 1] = frame_encode(line_text)
+  end
+  local payload = table.concat(encoded, "|")
+  if #payload <= 330 then
+    send(api, s.nick, "FRAME", payload)
+  else
+    clear(api, s)
+    status(api, s, status_text or "")
+    local chunk = {}
+    local chunk_len = 0
+    for _, text in ipairs(lines) do
+      local encoded_line = frame_encode(text)
+      if chunk_len + #encoded_line + 1 > 300 and #chunk > 0 then
+        send(api, s.nick, "LINES", table.concat(chunk, "|"))
+        chunk = {}
+        chunk_len = 0
+      end
+      chunk[#chunk + 1] = encoded_line
+      chunk_len = chunk_len + #encoded_line + 1
+    end
+    if #chunk > 0 then
+      send(api, s.nick, "LINES", table.concat(chunk, "|"))
+    end
+    prompt(api, s, prompt_text or "")
+  end
+  update_mirror(api, s)
+end
+
 local function show_stats(api)
   if not server_running then return end
   local active = 0
@@ -172,67 +231,62 @@ end
 
 local function menu(api, s)
   s.mode = "menu"
-  clear(api, s)
-  status(api, s, "CONNECT: " .. server.name .. "  User: " .. s.user)
-  line(api, s, "========================================")
-  line(api, s, " " .. server.name)
-  line(api, s, " " .. server.welcome)
-  line(api, s, "========================================")
-  line(api, s, " 1  About this BBS")
-  line(api, s, " 2  Message board")
-  line(api, s, " 3  Who is online")
-  line(api, s, " 4  Page the sysop")
-  line(api, s, " 5  Hangman door")
-  line(api, s, " 6  Log off")
-  prompt(api, s, "bbs> ")
+  screen(api, s, "CONNECT: " .. server.name .. "  User: " .. s.user, "bbs> ", {
+    "========================================",
+    " " .. server.name,
+    " " .. server.welcome,
+    "========================================",
+    " 1  About this BBS",
+    " 2  Message board",
+    " 3  Who is online",
+    " 4  Page the sysop",
+    " 5  Hangman door",
+    " 6  Log off"
+  })
 end
 
 local function about(api, s)
   s.mode = "about"
-  clear(api, s)
-  line(api, s, server.name .. " is a small MC DATA demo.")
-  line(api, s, "Traffic uses CTCP MC DATA on the IRC network you are already connected to.")
-  line(api, s, "No secrets, passwords, or private data should be sent here yet.")
-  line(api, s, "Type B to return.")
-  prompt(api, s, "about> ")
+  screen(api, s, "CONNECT: " .. server.name .. "  User: " .. s.user, "about> ", {
+    server.name .. " is a small MC DATA demo.",
+    "Traffic uses CTCP MC DATA on your current IRC network.",
+    "No secrets, passwords, or private data should be sent here yet.",
+    "Type B to return."
+  })
 end
 
 local function show_board(api, s)
   s.mode = "board"
-  clear(api, s)
-  line(api, s, "Message Board")
-  line(api, s, "-------------")
+  local lines = {"Message Board", "-------------"}
   for i, msg in ipairs(board) do
-    line(api, s, i .. ". " .. msg.from .. ": " .. msg.text)
+    lines[#lines + 1] = i .. ". " .. msg.from .. ": " .. msg.text
   end
-  line(api, s, "")
-  line(api, s, "P <message> posts. B returns to menu.")
-  prompt(api, s, "board> ")
+  lines[#lines + 1] = ""
+  lines[#lines + 1] = "P <message> posts. B returns to menu."
+  screen(api, s, "CONNECT: " .. server.name .. "  User: " .. s.user, "board> ", lines)
 end
 
 local function show_who(api, s)
   s.mode = "who"
-  clear(api, s)
-  line(api, s, "Who is online")
-  line(api, s, "-------------")
+  local lines = {"Who is online", "-------------"}
   local count = 0
   for _, other in pairs(sessions) do
     count = count + 1
-    line(api, s, other.nick .. "  (" .. other.mode .. ")")
+    lines[#lines + 1] = other.nick .. "  (" .. other.mode .. ")"
   end
-  if count == 0 then line(api, s, "Nobody. That should not happen, but here we are.") end
-  line(api, s, "")
-  line(api, s, "Type B to return.")
-  prompt(api, s, "who> ")
+  if count == 0 then lines[#lines + 1] = "Nobody. That should not happen, but here we are." end
+  lines[#lines + 1] = ""
+  lines[#lines + 1] = "Type B to return."
+  screen(api, s, "CONNECT: " .. server.name .. "  User: " .. s.user, "who> ", lines)
 end
 
 local function page_sysop(api, s)
   s.mode = "page"
-  clear(api, s)
-  line(api, s, "Page Sysop")
-  line(api, s, "----------")
-  line(api, s, "Type a short message for the sysop, or B to return.")
-  prompt(api, s, "page> ")
+  screen(api, s, "CONNECT: " .. server.name .. "  User: " .. s.user, "page> ", {
+    "Page Sysop",
+    "----------",
+    "Type a short message for the sysop, or B to return."
+  })
 end
 
 local function hangman_word()
@@ -251,15 +305,13 @@ end
 
 local function render_hangman(api, s, note)
   s.mode = "hangman"
-  clear(api, s)
-  line(api, s, "Hangman Door")
-  line(api, s, "------------")
-  if note and note ~= "" then line(api, s, note) end
-  line(api, s, "Word:  " .. hangman_text(s.hangman))
-  line(api, s, "Wrong: " .. table.concat(s.hangman.wrong, " "))
-  line(api, s, "Lives: " .. s.hangman.lives)
-  line(api, s, "Guess a letter, NEW for a new word, or B to return.")
-  prompt(api, s, "hangman> ")
+  local lines = {"Hangman Door", "------------"}
+  if note and note ~= "" then lines[#lines + 1] = note end
+  lines[#lines + 1] = "Word:  " .. hangman_text(s.hangman)
+  lines[#lines + 1] = "Wrong: " .. table.concat(s.hangman.wrong, " ")
+  lines[#lines + 1] = "Lives: " .. s.hangman.lives
+  lines[#lines + 1] = "Guess a letter, NEW for a new word, or B to return."
+  screen(api, s, "CONNECT: " .. server.name .. "  User: " .. s.user, "hangman> ", lines)
 end
 
 local function new_hangman(api, s)
@@ -304,11 +356,10 @@ local function handle_hangman(api, s, input)
 end
 
 local function logoff(api, s)
-  clear(api, s)
-  line(api, s, "Thanks for calling " .. server.name .. ".")
-  line(api, s, "Carrier dropped.")
-  status(api, s, "DISCONNECTED")
-  prompt(api, s, "")
+  screen(api, s, "DISCONNECTED", "", {
+    "Thanks for calling " .. server.name .. ".",
+    "Carrier dropped."
+  })
   sessions[s.key] = nil
   if server.mirror_key == s.key then
     server.mirror_key = nil
@@ -436,11 +487,27 @@ local function connect_client(api, nick, bbs_id, profile)
   api.terminal_open(id, "Retro-BBS - " .. nick, profile, profile == "c64" and 40 or 80, 25)
   api.terminal_status(id, "DIAL: " .. bbs_id .. "  CONNECTING: " .. nick .. "  User: guest")
   api.terminal_clear(id)
-  api.terminal_write(id, "Dialing " .. nick .. " / " .. bbs_id .. "...\n")
+  api.terminal_write(id, "Dialing IRC nick " .. nick .. " / " .. bbs_id .. "...\n")
+  api.terminal_write(id, "That nick must be connected here and running /bbsserve.\n")
   api.terminal_prompt(id, "")
   local cols, rows = api.terminal_size(id)
-  clients[client_key(api.network(), nick, bbs_id)] = { nick = nick, bbs_id = bbs_id, term = id, profile = profile }
-  api.mc_send(nick, SERVICE, "HELLO", "bbs_id=" .. bbs_id .. ";cols=" .. tostring(cols) .. ";rows=" .. tostring(rows) .. ";profile=" .. profile)
+  local key = client_key(api.network(), nick, bbs_id)
+  local client = { nick = nick, bbs_id = bbs_id, term = id, profile = profile, connected = false }
+  clients[key] = client
+  client.timer = api.timer(12000, function()
+    local current = clients[key]
+    if current and not current.connected then
+      api.terminal_status(id, "NO ANSWER: " .. nick .. " / " .. bbs_id)
+      api.terminal_write(id, "\nNo BBS answer received.\n")
+      api.terminal_write(id, "Check the nick spelling and make sure the other client ran /bbsserve.\n")
+      api.terminal_prompt(id, "")
+    end
+  end)
+  local ok = api.mc_send(nick, SERVICE, "HELLO", "bbs_id=" .. bbs_id .. ";cols=" .. tostring(cols) .. ";rows=" .. tostring(rows) .. ";profile=" .. profile)
+  if not ok then
+    api.terminal_status(id, "SEND FAILED: " .. nick)
+    api.terminal_write(id, "\nCould not send MC DATA HELLO. Are you connected to IRC?\n")
+  end
 end
 
 local function book_labels(api)
@@ -588,11 +655,10 @@ function on_mc_data(api, network, target, nick, service, verb, payload, notice)
     }
     sessions[key] = s
     if not server_running then
-      status(api, s, "OFFLINE")
-      clear(api, s)
-      line(api, s, "Retro-BBS is not running here.")
-      line(api, s, "Ask the other user to run /bbsserve.")
-      prompt(api, s, "")
+      screen(api, s, "OFFLINE", "", {
+        "Retro-BBS is not running here.",
+        "Ask the other user to run /bbsserve."
+      })
       return true
     end
     server.connects = server.connects + 1
@@ -625,7 +691,26 @@ function on_mc_data(api, network, target, nick, service, verb, payload, notice)
     if item.nick == nick then client = item; break end
   end
   if not client then return true end
-  if verb == "CLEAR" then api.terminal_clear(client.term)
+  if not client.connected then
+    client.connected = true
+    if client.timer then
+      api.cancel_timer(client.timer)
+      client.timer = nil
+    end
+  end
+  if verb == "FRAME" then
+    local parts = frame_parts(payload)
+    api.terminal_clear(client.term)
+    api.terminal_status(client.term, parts[1] or "")
+    for i = 3, #parts do
+      api.terminal_write(client.term, (parts[i] or "") .. "\n")
+    end
+    api.terminal_prompt(client.term, parts[2] or "")
+  elseif verb == "LINES" then
+    for _, text in ipairs(frame_parts(payload)) do
+      api.terminal_write(client.term, text .. "\n")
+    end
+  elseif verb == "CLEAR" then api.terminal_clear(client.term)
   elseif verb == "LINE" then api.terminal_write(client.term, payload .. "\n")
   elseif verb == "STATUS" then api.terminal_status(client.term, payload)
   elseif verb == "PROMPT" then api.terminal_prompt(client.term, payload)
