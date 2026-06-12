@@ -32,6 +32,25 @@ When adding anything that should survive a buffer switch, store it in the model.
 
 ## THINGS I GOT WRONG
 
+- **2026-06-11 — Replayed log lines lose their metadata flags, and every
+  consumer of the buffer must cope.** Live join/part/quit lines carry
+  `systemLine = true`, so the comic collector's `!line.systemLine` check
+  excluded them — but log REPLAY re-stores those lines as bare text, flag
+  gone, and they re-entered the comic as fake `/me` actions ("* iw_chat joined
+  #trump" panels). Fix: the comic collector also filters action lines by event
+  verb (joined/left/quit/kicked/known as/mode/topic). **Lesson: any flag that
+  exists only in memory is LOST on the disk round-trip — code that filters by
+  such flags needs a content-level fallback for replayed lines.**
+
+- **2026-06-11 — Centered dividers ignored the aligned-nick layout.**
+  `appendCenteredDivider` centered "Chat ended …" / "──── new ────" across the
+  FULL viewport width, so with align-nicks on the divider crossed the
+  nick/message separator bar. Fix: when `m_alignNicks` is set, give the divider
+  the same leftMargin as the message column so it centres within the text
+  area. **Lesson: "centered" elements must centre within the content column
+  the user reads, not the raw widget width.**
+
+
 - **2026-06-11 — Comic balloon tails: per-case ad-hoc geometry instead of one
   rule set.** The original `drawTail` had three separate geometries (tail-to-
   head, stacked-balloon stub, side-exit), each with its own arbitrary numbers:
