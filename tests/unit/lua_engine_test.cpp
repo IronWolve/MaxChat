@@ -518,6 +518,34 @@ class LuaEngineTest final : public QObject {
 #endif
     }
 
+    void bundledBbsScriptStartsAndDials() {
+#ifdef MAXCHAT_EXAMPLE_SCRIPTS_DIR
+        const QString dir = QStringLiteral(MAXCHAT_EXAMPLE_SCRIPTS_DIR);
+        const QString path = QDir(dir).filePath(QStringLiteral("bbs.lua"));
+        QVERIFY2(QFile::exists(path), qPrintable(path));
+
+        QTemporaryDir data;
+        QVERIFY(data.isValid());
+        FakeHost host;
+        LuaEngine engine(&host, dir, data.path());
+        QVERIFY(engine.load(path));
+
+        QVERIFY(engine.dispatch(QStringLiteral("on_command"), QStringLiteral("synIRC"),
+                                {QStringLiteral("bbsserve"), QString()}));
+        QVERIFY(engine.dispatch(QStringLiteral("on_command"), QStringLiteral("synIRC"),
+                                {QStringLiteral("bbs"), QStringLiteral("alice retro-bbs")}));
+
+        QVERIFY(host.terminals.contains(
+            QStringLiteral("open|bbs|server|Retro-BBS Server|free|100x30")));
+        QVERIFY(host.terminals.contains(
+            QStringLiteral("open|bbs|client:alice:retro-bbs|Retro-BBS - alice|ibm-vga|80x25")));
+        QVERIFY(host.mcData.contains(
+            QStringLiteral("synIRC|alice|bbs|HELLO|bbs_id=retro-bbs;cols=80;rows=25;profile=ibm-vga|privmsg")));
+#else
+        QSKIP("example scripts dir not defined");
+#endif
+    }
+
     void permsGateFileExecModules() {
         QTemporaryDir dir;
         QVERIFY(dir.isValid());
