@@ -31,6 +31,18 @@ When adding anything that should survive a buffer switch, store it in the model.
 
 ## THINGS I GOT WRONG
 
+- **2026-06-12 — Spinbox up/down arrows did nothing (Comic Settings, and every
+  spinbox app-wide).** The theme QSS put a `border` on `QSpinBox`, which flips
+  the widget to Qt's stylesheet style (`QStyleSheetStyle`). Once that happens,
+  the up/down sub-buttons need EXPLICIT geometry in the QSS or their click
+  rects collapse — the arrows still paint but clicking does nothing. Fix: add
+  `QSpinBox::up-button`/`down-button` rules (subcontrol-position + width +
+  border) and CSS-triangle arrows. Verified via `subControlRect(SC_SpinBoxUp)`
+  → non-empty (19x15) after the fix. **Lesson: styling ANY complex Qt widget
+  (QSpinBox/QComboBox/QScrollBar) via QSS means you must also style its
+  sub-controls, or interaction silently breaks.**
+
+
 - **2026-06-12 — "Yell garbled the avatar": a non-face cell misclassified as a
   face.** MS Comic Chat .avb files carry a large square self/preview cell
   (e.g. 262x332) alongside the real head cells (~166x190). The art decoder
