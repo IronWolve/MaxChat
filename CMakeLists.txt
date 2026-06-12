@@ -266,6 +266,8 @@ qt_add_executable(maxchat-c
     src/comic/ComicArt.h
     src/comic/ComicCharacter.cpp
     src/comic/ComicCharacter.h
+    src/comic/ComicEmotion.cpp
+    src/comic/ComicEmotion.h
     src/comic/ComicRenderer.cpp
     src/comic/ComicRenderer.h
     src/ui/ComicSettingsDialog.cpp
@@ -658,6 +660,24 @@ target_link_libraries(comic_art_test
 
 add_test(NAME comic_art COMMAND comic_art_test)
 
+qt_add_executable(comic_emotion_test
+    tests/unit/comic_emotion_test.cpp
+    src/comic/ComicEmotion.cpp
+    src/comic/ComicEmotion.h
+)
+
+target_include_directories(comic_emotion_test
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(comic_emotion_test
+    PRIVATE
+        Qt6::Test
+)
+
+add_test(NAME comic_emotion COMMAND comic_emotion_test)
+
 qt_add_executable(default_networks_test
     tests/unit/default_networks_test.cpp
 )
@@ -988,6 +1008,8 @@ qt_add_executable(main_window_link_preview_test
     src/comic/ComicArt.h
     src/comic/ComicCharacter.cpp
     src/comic/ComicCharacter.h
+    src/comic/ComicEmotion.cpp
+    src/comic/ComicEmotion.h
     src/comic/ComicRenderer.cpp
     src/comic/ComicRenderer.h
     src/ui/ComicSettingsDialog.cpp
