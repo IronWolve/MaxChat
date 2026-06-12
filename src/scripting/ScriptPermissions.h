@@ -2,6 +2,7 @@
 
 #include <QString>
 #include <QStringList>
+#include <QVariantMap>
 
 namespace maxchat::scripting {
 
@@ -25,6 +26,26 @@ struct ScriptPermissions {
                network == o.network && allowedDirs == o.allowedDirs;
     }
     bool operator!=(const ScriptPermissions& o) const { return !(*this == o); }
+
+    [[nodiscard]] QVariantMap toMap() const {
+        return QVariantMap{
+            {QStringLiteral("read"),    readFiles},
+            {QStringLiteral("write"),   writeFiles},
+            {QStringLiteral("exec"),    runPrograms},
+            {QStringLiteral("modules"), loadModules},
+            {QStringLiteral("network"), network},
+        };
+    }
+
+    [[nodiscard]] static ScriptPermissions fromMap(const QVariantMap& m) {
+        ScriptPermissions p;
+        p.readFiles   = m.value(QStringLiteral("read"),    false).toBool();
+        p.writeFiles  = m.value(QStringLiteral("write"),   false).toBool();
+        p.runPrograms = m.value(QStringLiteral("exec"),    false).toBool();
+        p.loadModules = m.value(QStringLiteral("modules"), false).toBool();
+        p.network     = m.value(QStringLiteral("network"), false).toBool();
+        return p;
+    }
 };
 
 } // namespace maxchat::scripting

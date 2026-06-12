@@ -914,11 +914,10 @@ MainWindow::MainWindow(QWidget* parent)
         QDir(m_settings.paths().configDir).filePath(QStringLiteral("scripts"));
     m_lua = new maxchat::scripting::LuaEngine(
         this, scriptsDir, QDir(scriptsDir).filePath(QStringLiteral("data")), this);
-    m_lua->setPermissions(buildScriptPermissions());
     if (maxchat::scripting::LuaEngine::available()) {
         QDir().mkpath(scriptsDir);
         seedBundledScripts(scriptsDir);
-        m_lua->loadAll();
+        m_lua->loadAll(buildAllScriptPermsMap());
     }
 }
 
@@ -1761,6 +1760,21 @@ void maxchat::ui::MainWindow::openPreferences() {
             [](const QString& path) {
                 QDesktopServices::openUrl(QUrl::fromLocalFile(path));
             });
+    connect(&dialog, &PreferencesDialog::scriptPermissionChanged, this,
+            [this, &dialog](const QString& name, const QVariantMap& newPerms) {
+                QVariantMap allPerms =
+                    m_settings.loadRaw().value(QStringLiteral("scriptPerms")).toMap();
+                allPerms.insert(name, newPerms);
+                (void)m_settings.setValue(QStringLiteral("scriptPerms"), allPerms);
+                if (maxchat::scripting::LuaEngine::available() &&
+                    m_lua->loaded().contains(name)) {
+                    const QString scriptsDir =
+                        QDir(m_settings.paths().configDir).filePath(QStringLiteral("scripts"));
+                    m_lua->load(QDir(scriptsDir).filePath(name + QStringLiteral(".lua")),
+                                buildScriptPermissionsFor(name));
+                    dialog.refreshScriptList(m_lua->loaded());
+                }
+            });
     connect(&dialog, &PreferencesDialog::testNotificationRequested, this, [this, &dialog]() {
         // Use the dialog's current (unsaved) settings, not the cached m_notify*
         QVariantMap testSettings = dialog.settings();
@@ -2292,15 +2306,13 @@ QString maxchat::ui::MainWindow::scriptHttpGet(const QString& url) {
     return body;
 }
 
-maxchat::scripting::ScriptPermissions maxchat::ui::MainWindow::buildScriptPermissions() const {
+maxchat::scripting::ScriptPermissions
+maxchat::ui::MainWindow::buildScriptPermissionsFor(const QString& name) const {
     const QVariantMap settings = m_settings.loadWithDefaults();
-    const QVariantMap perms = settings.value(QStringLiteral("script_perms")).toMap();
-    maxchat::scripting::ScriptPermissions out;
-    out.readFiles = perms.value(QStringLiteral("read"), false).toBool();
-    out.writeFiles = perms.value(QStringLiteral("write"), false).toBool();
-    out.runPrograms = perms.value(QStringLiteral("exec"), false).toBool();
-    out.loadModules = perms.value(QStringLiteral("modules"), false).toBool();
-    out.network = perms.value(QStringLiteral("network"), false).toBool();
+    const QVariantMap perms =
+        settings.value(QStringLiteral("scriptPerms")).toMap().value(name).toMap();
+    maxchat::scripting::ScriptPermissions out =
+        maxchat::scripting::ScriptPermissions::fromMap(perms);
     for (const QVariant& dir : settings.value(QStringLiteral("script_dirs")).toList()) {
         const QString path = dir.toString().trimmed();
         if (!path.isEmpty()) {
@@ -2310,23 +2322,25 @@ maxchat::scripting::ScriptPermissions maxchat::ui::MainWindow::buildScriptPermis
     return out;
 }
 
-void maxchat::ui::MainWindow::applyScriptPermissions() {
-    if (m_lua == nullptr) {
-        return;
-    }
-    const maxchat::scripting::ScriptPermissions next = buildScriptPermissions();
-    if (next == m_lua->permissions()) {
-        return; // nothing changed — don't disturb running scripts
-    }
-    m_lua->setPermissions(next);
-    if (maxchat::scripting::LuaEngine::available()) {
-        const QStringList loaded = m_lua->loaded();
-        for (const QString& name : loaded) {
-            m_lua->reload(name); // re-sandbox each script under the new capabilities
+QHash<QString, maxchat::scripting::ScriptPermissions>
+maxchat::ui::MainWindow::buildAllScriptPermsMap() const {
+    const QVariantMap settings = m_settings.loadWithDefaults();
+    const QVariantMap allPerms = settings.value(QStringLiteral("scriptPerms")).toMap();
+    QStringList allowedDirs;
+    for (const QVariant& dir : settings.value(QStringLiteral("script_dirs")).toList()) {
+        const QString path = dir.toString().trimmed();
+        if (!path.isEmpty()) {
+            allowedDirs << path;
         }
-        appendSystemLine(QStringLiteral("! Script permissions updated; reloaded %1 script(s).")
-                             .arg(loaded.size()));
     }
+    QHash<QString, maxchat::scripting::ScriptPermissions> result;
+    for (auto it = allPerms.constBegin(); it != allPerms.constEnd(); ++it) {
+        maxchat::scripting::ScriptPermissions p =
+            maxchat::scripting::ScriptPermissions::fromMap(it.value().toMap());
+        p.allowedDirs = allowedDirs;
+        result.insert(it.key(), p);
+    }
+    return result;
 }
 
 void maxchat::ui::MainWindow::handleScriptsCommand(const QString& command, const QString& arg) {
@@ -2353,8 +2367,9 @@ void maxchat::ui::MainWindow::handleScriptsCommand(const QString& command, const
     const QString name = QFileInfo(arg).completeBaseName(); // tolerate "foo" or "foo.lua"
     if (command == QStringLiteral("load")) {
         const QString path = QDir(scriptsDir).filePath(name + QStringLiteral(".lua"));
-        appendSystemLine(m_lua->load(path) ? QStringLiteral("* Loaded %1.").arg(name)
-                                           : QStringLiteral("! Could not load %1.").arg(name));
+        appendSystemLine(m_lua->load(path, buildScriptPermissionsFor(name))
+                             ? QStringLiteral("* Loaded %1.").arg(name)
+                             : QStringLiteral("! Could not load %1.").arg(name));
     } else if (command == QStringLiteral("unload")) {
         appendSystemLine(m_lua->unload(name) ? QStringLiteral("* Unloaded %1.").arg(name)
                                              : QStringLiteral("! %1 is not loaded.").arg(name));
@@ -8432,7 +8447,7 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
     renderActiveBufferMetadata();
     updateNetworkTreeLabels();
     updateChannelModeButton();
-    applyScriptPermissions(); // re-sandbox scripts if the permission prefs changed
+    // Script permissions are updated live via scriptPermissionChanged signal — no batch reload needed.
     }
 void maxchat::ui::MainWindow::notify(const QString& title, const QString& text,
                         const QString& network, const QString& target) {
