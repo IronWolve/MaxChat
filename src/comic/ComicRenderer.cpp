@@ -251,57 +251,69 @@ void drawTri(QPainter& p, QPointF b0, QPointF b1, QPointF apex) {
     p.drawLine(apex, b1);
 }
 
-void drawTail(QPainter& p, int size, int bx, int by, int bw, int bh, double tailX, bool think,
-              bool longTail, int headY, bool toHead) {
-    const double cy = by + bh - 1;
-    const double room = headY - (by + bh);
-    double root;
-    if (tailX < bx + bw * 0.33) {
-        root = bx + std::max(6, static_cast<int>(bw * 0.10));
-    } else if (tailX > bx + bw * 0.67) {
-        root = bx + bw - std::max(6, static_cast<int>(bw * 0.10));
-    } else {
-        root = std::max<double>(bx + 10, std::min<double>(tailX, bx + bw - 10));
+// Tail geometry. One set of rules so every tail in a strip looks like family
+// (the old code mixed balloon-relative widths and arbitrary lean fractions —
+// narrow balloons grew needle tails, stacked balloons grew directionless
+// stubs, and lengths differed between the to-head and stacked cases):
+//  - the base sits on the balloon's bottom edge, centred on the edge point
+//    nearest the speaker's head, inset past the rounded corners;
+//  - base width is PANEL-relative (~2.2%, clamped 5..12 px, never > bw/4) —
+//    never balloon-relative;
+//  - the tip travels along the base→head direction: at least 5% of the panel,
+//    at most 16%, and always stops short of the head line, the balloon below,
+//    and the panel edge. A tail points at its speaker; it doesn't have to
+//    touch them;
+//  - lean is clamped to ~50° from vertical so a far-away speaker can't drag
+//    the tail near-horizontal.
+void drawTail(QPainter& p, int size, int bx, int by, int bw, int bh, double headX, double headY,
+              bool think, double limitY) {
+    const double baseY = by + bh - 1;
+    const double room = limitY - baseY;
+    if (room < 6) {
+        return;
     }
+
+    const double inset = std::min(bw / 2.0 - 2.0, std::max(10.0, bw * 0.10));
+    const double rootX = std::clamp(headX, bx + inset, bx + bw - inset);
+
+    double dx = headX - rootX;
+    const double dy = std::max(8.0, headY - baseY);
+    const double maxLean = 1.19; // tan(~50°) from vertical
+    dx = std::clamp(dx, -dy * maxLean, dy * maxLean);
+    const double norm = std::hypot(dx, dy);
+    const double ux = dx / norm;
+    const double uy = dy / norm;
+
     if (think) {
-        const double span = std::max(5.0, room - 3);
-        const double endX = root + (tailX - root) * 0.6;
-        const double big = std::min(std::max(3.0, size * 0.019), span * 0.5);
-        const int steps = std::max(2, std::min(7, static_cast<int>(span / std::max(4.0, big))));
+        // Shrinking thought puffs along the same direction a speech tail would
+        // take, sized by the panel so chains match across balloons.
+        const double span = std::min({room - 3.0, size * 0.14, norm * 0.8});
+        if (span < 6) {
+            return;
+        }
+        const double big = std::clamp(size * 0.02, 3.0, 8.0);
+        const int steps = std::clamp(static_cast<int>(span / (big * 2.2)) + 1, 2, 5);
         p.setPen(QPen(QColor(0, 0, 0), std::max(1, size / 260)));
         p.setBrush(QColor(255, 255, 255));
         for (int s = 1; s <= steps; ++s) {
             const double t = static_cast<double>(s) / steps;
-            const double r = big * (1.0 - 0.45 * t);
-            p.drawEllipse(QPointF(root + (endX - root) * t, (by + bh) + span * t), r, r * 0.85);
+            const double r = big * (1.0 - 0.4 * t);
+            p.drawEllipse(QPointF(rootX + ux * span * t, baseY + uy * span * t), r, r * 0.85);
         }
         return;
     }
-    if (room < 8) {
+
+    double len = std::clamp(norm * 0.7, size * 0.05, size * 0.16);
+    len = std::min(len, room - 3.0);
+    if (len < 5) {
         return;
     }
-    if (!toHead) {
-        const int cap = longTail ? static_cast<int>(size * 0.09) : static_cast<int>(size * 0.045);
-        const double tipY = by + bh + std::min<double>(room - 3, std::max(8, cap));
-        const double tipX = root + (tailX - root) * 0.55;
-        const double half = std::max(4.0, bw * 0.05);
-        drawTri(p, QPointF(std::max<double>(bx + 2, root - half), cy),
-                QPointF(std::min<double>(bx + bw - 2, root + half), cy), QPointF(tipX, tipY));
-        return;
-    }
-    const double tipY = by + bh + std::max<double>(8, room - std::max(4.0, size * 0.02));
-    const double margin = bw * 0.12;
-    if (tailX < bx - margin || tailX > bx + bw + margin) {
-        const double ex = tailX < bx ? bx + 1 : bx + bw - 1;
-        const double rooty = by + bh * 0.5;
-        const double halfv = std::max(5.0, bh * 0.24);
-        drawTri(p, QPointF(ex, rooty - halfv), QPointF(ex, rooty + halfv), QPointF(tailX, tipY));
-    } else {
-        const double tipX = root + (tailX - root) * 0.82;
-        const double half = std::max(4.0, bw * 0.05);
-        drawTri(p, QPointF(std::max<double>(bx + 2, root - half), cy),
-                QPointF(std::min<double>(bx + bw - 2, root + half), cy), QPointF(tipX, tipY));
-    }
+    const double tipX = std::clamp(rootX + ux * len, 3.0, size - 3.0);
+    const double tipY = baseY + uy * len;
+
+    const double half = std::min(std::clamp(size * 0.022, 5.0, 12.0), bw / 4.0);
+    drawTri(p, QPointF(std::max<double>(bx + 2, rootX - half), baseY),
+            QPointF(std::min<double>(bx + bw - 2, rootX + half), baseY), QPointF(tipX, tipY));
 }
 
 void drawBalloons(QPainter& p, const QVector<Row>& rows, const QFont& font, int size, int charTop,
@@ -309,14 +321,14 @@ void drawBalloons(QPainter& p, const QVector<Row>& rows, const QFont& font, int 
     if (rows.isEmpty()) {
         return;
     }
-    const bool multi = std::max<int>(1, static_cast<int>(cx.size())) >= 2;
     for (const Row& r : rows) {
         if (r.action || !r.isTail) {
             continue;
         }
-        const int floorY = r.tailStop < 0 ? charTop : r.tailStop;
-        drawTail(p, size, r.bx, r.by, r.bw, r.bh, r.col < cx.size() ? cx[r.col] : size / 2.0,
-                 r.think, multi, floorY, r.tailStop < 0);
+        const double headX = r.col < cx.size() ? cx[r.col] : size / 2.0;
+        const double headY = charTop + size * 0.10; // aim at the face, not the hair
+        const double limitY = r.tailStop < 0 ? charTop - 2.0 : r.tailStop - 4.0;
+        drawTail(p, size, r.bx, r.by, r.bw, r.bh, headX, headY, r.think, limitY);
     }
     for (const Row& r : rows) {
         if (r.action) {

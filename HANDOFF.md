@@ -2,7 +2,20 @@
 
 Date: 2026-06-09 (audit closeout 2026-06-10; UI polish 2026-06-11)
 
-## Latest Completed Slice (comic chat polish, 2026-06-11 late)
+## Latest Completed Slice (comic cache + zoom + tail geometry, 2026-06-11 late)
+
+- **Smart balloon tails** (`ComicRenderer::drawTail` rewritten): one geometry
+  for all cases — panel-relative base width (no more needle tails on narrow
+  balloons), tip aims along the base→head direction with length clamped to
+  5–16% of the panel, lean clamped ~50° from vertical, always stops short of
+  the head / balloon below / panel edge. Stacked-balloon stubs now point at
+  their speaker too. Think-puffs follow the same direction, panel-scaled.
+- **Panel cache**: `m_comicPanelCache` — only changed panels re-render on new
+  messages (key = bg + captions + actors + lines); cleared on art reload.
+- **Zoom view**: double-click a panel → lightbox (80% of screen, arrows flip
+  panels, click/Esc closes).
+
+## Previous Slice (comic chat polish, 2026-06-11 late)
 
 - **Visual emotion picker**: Comic ▸ Emotion now shows your character's real
   faces (`Character::faceCell`) in an icon grid — Auto + 9 emotions,

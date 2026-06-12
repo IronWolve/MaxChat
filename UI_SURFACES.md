@@ -98,6 +98,16 @@ hit-testing shares `panelRects()` with painting.
 **Emotion picker (2026-06-11):** Comic ▸ Emotion shows YOUR character's actual
 face per emotion (`faceCell`) in an icon grid — Auto + the 9 emotions;
 double-click applies. Plain text list when no art is loaded.
+**Zoom (2026-06-11):** double-click a panel → lightbox (dark backdrop, ~80% of
+screen, Left/Right flips through the strip, click/Esc closes).
+**Panel cache (2026-06-11):** `m_comicPanelCache` keyed by every visual input
+(bg cacheKey, captions+scale, actors' nick/emotion/pose/caption-color, lines).
+Only changed panels re-render; cleared on art reload; flushed past 96 entries.
+**Tail rules (2026-06-11, ComicRenderer `drawTail`):** base on the bottom edge
+nearest the speaker (inset past corners); base width PANEL-relative (2.2%,
+5–12 px, ≤ bw/4); tip travels along base→head direction, 5–16% of panel,
+stopping short of head/balloon-below/panel edge; lean clamped ~50° from
+vertical. Think-puffs follow the same direction, panel-scaled.
 **Scope (2026-06-11):** Comic Mode is **per channel** — the toggle opts the
 *active* buffer in or out (key = network+target); other channels are unaffected.
 The toggle is **greyed out on the server buffer**. The comic backend runs while

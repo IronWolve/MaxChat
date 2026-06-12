@@ -3,16 +3,83 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QContextMenuEvent>
+#include <QDialog>
 #include <QDir>
 #include <QFileDialog>
+#include <QKeyEvent>
+#include <QLabel>
 #include <QMenu>
+#include <QMouseEvent>
 #include <QPainter>
+#include <QScreen>
+#include <QVBoxLayout>
 
 #include <cmath>
 
 namespace maxchat::ui {
 
 namespace {
+
+// Lightbox for one panel: dark backdrop, panel scaled to ~80% of the screen,
+// Left/Right flip through the strip, click or Esc closes.
+class PanelZoomDialog final : public QDialog {
+  public:
+    PanelZoomDialog(QVector<QPixmap> panels, int index, QWidget* parent)
+        : QDialog(parent, Qt::FramelessWindowHint | Qt::Dialog),
+          panels_(std::move(panels)),
+          index_(index) {
+        setAttribute(Qt::WA_DeleteOnClose);
+        setModal(true);
+        setStyleSheet(QStringLiteral("QDialog { background-color: rgba(12, 12, 12, 235); }"));
+        auto* layout = new QVBoxLayout(this);
+        layout->setContentsMargins(16, 16, 16, 16);
+        label_ = new QLabel(this);
+        label_->setAlignment(Qt::AlignCenter);
+        layout->addWidget(label_, 1);
+        hint_ = new QLabel(this);
+        hint_->setAlignment(Qt::AlignCenter);
+        hint_->setStyleSheet(QStringLiteral("color: #9a9a9a;"));
+        layout->addWidget(hint_);
+        showPanel();
+    }
+
+  protected:
+    void mousePressEvent(QMouseEvent* /*event*/) override { accept(); }
+    void keyPressEvent(QKeyEvent* event) override {
+        if (event->key() == Qt::Key_Left && index_ > 0) {
+            --index_;
+            showPanel();
+            return;
+        }
+        if (event->key() == Qt::Key_Right && index_ < panels_.size() - 1) {
+            ++index_;
+            showPanel();
+            return;
+        }
+        QDialog::keyPressEvent(event); // Esc closes
+    }
+
+  private:
+    void showPanel() {
+        const QSize avail = (screen() != nullptr ? screen()->availableSize()
+                                                 : QSize(1280, 800)) * 0.8;
+        label_->setPixmap(panels_.at(index_).scaled(avail, Qt::KeepAspectRatio,
+                                                    Qt::SmoothTransformation));
+        hint_->setText(QStringLiteral("Panel %1 / %2  -  arrows to flip, click or Esc to close")
+                           .arg(index_ + 1)
+                           .arg(panels_.size()));
+        adjustSize();
+        if (parentWidget() != nullptr) {
+            const QRect host = parentWidget()->window()->frameGeometry();
+            move(host.center() - QPoint(width() / 2, height() / 2));
+        }
+    }
+
+    QVector<QPixmap> panels_;
+    int index_ = 0;
+    QLabel* label_ = nullptr;
+    QLabel* hint_ = nullptr;
+};
 
 // Choose rows/cols that maximise the square panel edge within (w,h).
 void gridFor(int count, int w, int h, int gap, int& rows, int& cols, int& edge) {
@@ -123,6 +190,18 @@ QPixmap ComicView::sheet() const {
     }
     p.end();
     return QPixmap::fromImage(img);
+}
+
+void ComicView::mouseDoubleClickEvent(QMouseEvent* event) {
+    const int index = panelAt(event->pos());
+    if (index >= 0) {
+        showZoom(index);
+    }
+}
+
+void ComicView::showZoom(int index) {
+    auto* dialog = new PanelZoomDialog(panels_, index, this);
+    dialog->show();
 }
 
 void ComicView::contextMenuEvent(QContextMenuEvent* event) {

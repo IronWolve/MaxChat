@@ -27,11 +27,13 @@ class ComicView final : public QWidget {
   protected:
     void paintEvent(QPaintEvent* event) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
+    void mouseDoubleClickEvent(QMouseEvent* event) override;
 
   private:
     // On-screen rect of each panel (shared by painting and hit-testing).
     [[nodiscard]] QVector<QRect> panelRects() const;
     [[nodiscard]] int panelAt(const QPoint& pos) const;
+    void showZoom(int index); // lightbox: click/Esc closes, arrows flip panels
 
     QVector<QPixmap> panels_;
 };

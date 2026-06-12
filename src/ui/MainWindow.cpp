@@ -7407,6 +7407,7 @@ void maxchat::ui::MainWindow::ensureComicArt() {
     m_comicCharacterPaths.clear();
     m_comicBackgroundPaths.clear();
     m_comicAutoChars.clear();
+    m_comicPanelCache.clear(); // new art invalidates every rendered panel
     if (resolved.isEmpty()) {
         return;
     }
@@ -7736,8 +7737,35 @@ void maxchat::ui::MainWindow::refreshComic() {
         if (actors.isEmpty()) {
             continue;
         }
-        rendered.append(maxchat::comic::renderComicPanel(kSize, background, actors, rlines, captions,
-                                                         captionScale, captionColors));
+        // Panel cache: rendering is the hot path (every new message re-renders
+        // the whole strip, but only the LAST panel actually changes). The key
+        // covers every visual input, so settings/theme/art changes simply miss.
+        QString key = QStringLiteral("%1|%2|%3")
+                          .arg(background.cacheKey())
+                          .arg(captions ? captionScale : -1.0)
+                          .arg(kSize);
+        for (const maxchat::comic::ComicActor& a : actors) {
+            key += QStringLiteral("|%1:%2:%3:%4")
+                       .arg(a.nick, a.emotion, QString::number(a.pose),
+                            captionColors.value(a.nick.toLower()));
+        }
+        for (const maxchat::comic::ComicLineItem& li : rlines) {
+            key += QStringLiteral("|%1%2%3")
+                       .arg(li.actorIndex)
+                       .arg(li.think ? QLatin1Char('T')
+                                     : (li.action ? QLatin1Char('A') : QLatin1Char('S')))
+                       .arg(li.text);
+        }
+        QPixmap panelPm = m_comicPanelCache.value(key);
+        if (panelPm.isNull()) {
+            if (m_comicPanelCache.size() > 96) {
+                m_comicPanelCache.clear(); // cheap flush beats LRU bookkeeping here
+            }
+            panelPm = maxchat::comic::renderComicPanel(kSize, background, actors, rlines,
+                                                       captions, captionScale, captionColors);
+            m_comicPanelCache.insert(key, panelPm);
+        }
+        rendered.append(panelPm);
     }
 
     // Always present `panelCount` slots when art is available (Python parity):
@@ -7746,8 +7774,13 @@ void maxchat::ui::MainWindow::refreshComic() {
     // all, leave it empty so ComicView shows its "set an art folder" hint.
     const bool haveArt = !m_comicCharacterPaths.isEmpty() || !background.isNull();
     if (haveArt && rendered.size() < panelCount) {
-        const QPixmap blank =
-            maxchat::comic::renderComicPanel(kSize, background, {}, {}, false, 1.0, {});
+        const QString blankKey =
+            QStringLiteral("blank|%1|%2").arg(background.cacheKey()).arg(kSize);
+        QPixmap blank = m_comicPanelCache.value(blankKey);
+        if (blank.isNull()) {
+            blank = maxchat::comic::renderComicPanel(kSize, background, {}, {}, false, 1.0, {});
+            m_comicPanelCache.insert(blankKey, blank);
+        }
         while (rendered.size() < panelCount) {
             rendered.append(blank);
         }
