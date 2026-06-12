@@ -106,6 +106,71 @@ free      flexible      Any-size script terminal
 - `c64`: integer scaling.
 - `free`: resizable rows/cols.
 
+## Terminal Font Decision
+
+Working choice:
+
+```text
+Spleen OTF
+Primary candidate: Spleen 8x16 for ibm-vga
+Larger options: Spleen 12x24, Spleen 16x32
+License: BSD-2-Clause
+Source: https://github.com/fcambus/spleen
+```
+
+Reason:
+
+- We want a programmer/terminal font, not a strict VGA emulator.
+- Spleen has the blocky old-terminal feel we want for BBS/script terminals.
+- Spleen includes Box Drawing, Block Elements, Braille, Powerline, and CP437
+  support in the larger sizes.
+- BSD-2-Clause is simple to ship with MaxChat.
+- OTF builds are available, so Qt can load the font directly.
+- It keeps normal chat independent: JetBrains Mono remains the default chat/UI
+  monospace font unless the user changes it.
+
+Display rules:
+
+- Use Spleen only for script/BBS terminal profiles by default.
+- Prefer native pixel sizes or integer multiples where practical.
+- Disable or reduce smoothing for this terminal font if Qt/platform rendering
+  gives a blurry result.
+- Keep the terminal renderer Unicode-based; do not emulate VGA hardware text
+  mode just to use the font.
+
+Alternates considered:
+
+```text
+PxPlus IBM VGA 8x16
+```
+
+- Closer to real DOS/VGA, but CC BY-SA 4.0 adds more attribution/share-alike
+  concerns than we need for a bundled app font.
+- Good fallback if we later want a stricter ANSI-art profile.
+
+```text
+Departure Mono
+```
+
+- Modern retro programmer font with SIL OFL licensing.
+- Worth rechecking if we want a softer sci-fi terminal look.
+- Needs box/block glyph coverage verified before bundling.
+
+```text
+Cozette
+```
+
+- MIT-licensed bitmap programming font.
+- Good symbol coverage, but the default feel is smaller/cozier than the BBS
+  terminal target.
+
+```text
+Cascadia Mono
+```
+
+- SIL OFL and broadly available.
+- Safe modern fallback, but not blocky enough for the old BBS look.
+
 ## Lua Terminal API
 
 ```lua

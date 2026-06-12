@@ -200,8 +200,11 @@ Exit criteria:
 - Do not bundle fonts without checking redistribution license.
 - Keep each phase commit-sized so pieces can be reverted cleanly.
 - Phase 2 targeted MC DATA tests passed.
-- Phase 5 profile IDs/sizing are implemented with existing fonts. Real IBM/C64
-  font assets remain open until redistribution licenses are checked.
+- Phase 5 profile IDs/sizing are implemented with existing fonts. The current
+  terminal font candidate is Spleen OTF because it is blocky, terminal-focused,
+  CP437-capable in larger sizes, and BSD-2-Clause licensed. It is documented in
+  `DEVDOCS/MC_DATA.md`; asset bundling remains open until license files and
+  Qt rendering are verified.
 - Compact terminal frame draft is documented in `DEVDOCS/MC_DATA.md`. It uses
   single-letter ops, fixed-width hex fields, and byte-length writes to reduce
   CTCP payload size. Treat it as a working protocol until implementation proves
