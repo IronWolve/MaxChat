@@ -49,7 +49,12 @@ keystrokes typed while the chat is clicked redirect to input. ✓
   arrow keys; sliders and tab bars use arrows. Stealing those breaks keyboard
   navigation completely.
 - **Guard 5 (modifiers)**: Ctrl+F (find), Ctrl+C (copy), Ctrl+Tab (buffer
-  switch) must not be swallowed by the redirect.
+  switch) must not be swallowed by the redirect. **AltGr exception
+  (2026-06-12)**: on Windows AltGr arrives as Ctrl+Alt, and international
+  layouts type printable characters with it (é € @ [ ]). A key that is BOTH
+  Ctrl+Alt AND printable is AltGr, not a shortcut — it falls through to the
+  redirect. Without this, international users typing after clicking chat got
+  nothing.
 - **Guard 6 (printable)**: Arrow keys, F-keys, Tab, Delete, Home/End must not
   be stolen from widgets that rely on them.
 
@@ -66,6 +71,26 @@ qApp->installEventFilter(this);   // ← global redirect
 
 **Do NOT** move this to per-widget installs. The whole point is that the
 filter catches events for every widget without needing to enumerate them.
+
+### Redirect insertion point (2026-06-12)
+
+The redirect moves the input cursor to END before inserting the typed
+character. Inserting at the saved cursor garbled drafts: with "hello world"
+and the cursor parked after "hello", clicking chat and typing "x" produced
+"helloxworld" while the visible cursor sat at the end.
+
+### Known gaps (documented, not yet fixed)
+
+- **IME composition** (CJK, dead keys) arrives as `QEvent::InputMethod`, not
+  KeyPress — the redirect never sees it, so composition typed over the chat
+  view is dropped. Fix would be an InputMethod-event handoff to `m_input`.
+- **Esc is handled before Guard 3** (text-entry): a future writable widget in
+  the main window (e.g. a find bar) would have its Esc stolen. Reorder when
+  that widget arrives.
+- **Keyboard-triggered context menus** (Menu key) hand `pos()` in widget
+  coordinates to `cursorForPosition`, which expects viewport coordinates —
+  spell suggestions can pick a neighbouring word. Mouse-triggered menus are
+  correct.
 
 ### First-show focus
 
