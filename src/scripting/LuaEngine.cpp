@@ -59,6 +59,11 @@ QString dataDirOf(lua_State* L) {
     return QString::fromUtf8(lua_tostring(L, lua_upvalueindex(2)));
 }
 
+QString scriptNameOf(lua_State* L) {
+    const QString name = QFileInfo(dataDirOf(L)).fileName();
+    return name.isEmpty() ? QStringLiteral("script") : name;
+}
+
 // Resolve `name` to a path INSIDE dataDir, basename-only — a script can never
 // escape its own folder (matches SoundPlayer/DCC path rules).
 QString jailedPath(const QString& dataDir, const QString& name) {
@@ -242,6 +247,87 @@ int l_mc_send(lua_State* L) {
 // api.mc_reply(target, service, verb, payload)
 int l_mc_reply(lua_State* L) {
     return l_mc_data(L, true);
+}
+
+int l_terminal_open(lua_State* L) {
+    QString profile = QStringLiteral("ibm-vga");
+    int cols = 80;
+    int rows = 25;
+    if (lua_isnumber(L, 3)) {
+        profile = QStringLiteral("free");
+        cols = static_cast<int>(lua_tointeger(L, 3));
+        rows = static_cast<int>(luaL_optinteger(L, 4, 25));
+    } else if (!lua_isnoneornil(L, 3)) {
+        profile = QString::fromUtf8(luaL_checkstring(L, 3));
+        cols = static_cast<int>(luaL_optinteger(L, 4, 80));
+        rows = static_cast<int>(luaL_optinteger(L, 5, 25));
+    }
+    lua_pushboolean(L,
+                    engineOf(L)->hostTerminalOpen(
+                        scriptNameOf(L), QString::fromUtf8(luaL_checkstring(L, 1)),
+                        QString::fromUtf8(luaL_optstring(L, 2, "")), profile, cols, rows)
+                        ? 1
+                        : 0);
+    return 1;
+}
+
+int l_terminal_close(lua_State* L) {
+    engineOf(L)->hostTerminalClose(scriptNameOf(L), QString::fromUtf8(luaL_checkstring(L, 1)));
+    return 0;
+}
+
+int l_terminal_clear(lua_State* L) {
+    engineOf(L)->hostTerminalClear(scriptNameOf(L), QString::fromUtf8(luaL_checkstring(L, 1)));
+    return 0;
+}
+
+int l_terminal_write(lua_State* L) {
+    engineOf(L)->hostTerminalWrite(scriptNameOf(L), QString::fromUtf8(luaL_checkstring(L, 1)),
+                                   QString::fromUtf8(luaL_checkstring(L, 2)));
+    return 0;
+}
+
+int l_terminal_status(lua_State* L) {
+    engineOf(L)->hostTerminalStatus(scriptNameOf(L), QString::fromUtf8(luaL_checkstring(L, 1)),
+                                    QString::fromUtf8(luaL_checkstring(L, 2)));
+    return 0;
+}
+
+int l_terminal_prompt(lua_State* L) {
+    engineOf(L)->hostTerminalPrompt(scriptNameOf(L), QString::fromUtf8(luaL_checkstring(L, 1)),
+                                    QString::fromUtf8(luaL_checkstring(L, 2)));
+    return 0;
+}
+
+int l_terminal_size(lua_State* L) {
+    const QSize size =
+        engineOf(L)->hostTerminalSize(scriptNameOf(L), QString::fromUtf8(luaL_checkstring(L, 1)));
+    lua_pushinteger(L, size.width());
+    lua_pushinteger(L, size.height());
+    return 2;
+}
+
+int l_terminal_profile(lua_State* L) {
+    engineOf(L)->hostTerminalProfile(
+        scriptNameOf(L), QString::fromUtf8(luaL_checkstring(L, 1)),
+        QString::fromUtf8(luaL_checkstring(L, 2)),
+        static_cast<int>(luaL_optinteger(L, 3, 80)),
+        static_cast<int>(luaL_optinteger(L, 4, 25)));
+    return 0;
+}
+
+int l_terminal_fit(lua_State* L) {
+    engineOf(L)->hostTerminalFit(scriptNameOf(L), QString::fromUtf8(luaL_checkstring(L, 1)),
+                                 QString::fromUtf8(luaL_checkstring(L, 2)));
+    return 0;
+}
+
+int l_terminal_hotspot(lua_State* L) {
+    const QString html = engineOf(L)->hostTerminalHotspot(
+        QString::fromUtf8(luaL_checkstring(L, 1)), QString::fromUtf8(luaL_checkstring(L, 2)));
+    const QByteArray bytes = html.toUtf8();
+    lua_pushlstring(L, bytes.constData(), bytes.size());
+    return 1;
 }
 
 // api.channels()
@@ -556,6 +642,68 @@ bool LuaEngine::hostMcData(const QString& target, const QString& service,
            host_->scriptMcData(currentNetwork_, target, service, verb, payload, notice);
 }
 
+bool LuaEngine::hostTerminalOpen(const QString& scriptName, const QString& id,
+                                 const QString& title, const QString& profile,
+                                 const int cols, const int rows) {
+    return host_ != nullptr &&
+           host_->scriptTerminalOpen(scriptName, id, title, profile, cols, rows);
+}
+
+void LuaEngine::hostTerminalClose(const QString& scriptName, const QString& id) {
+    if (host_ != nullptr) {
+        host_->scriptTerminalClose(scriptName, id);
+    }
+}
+
+void LuaEngine::hostTerminalClear(const QString& scriptName, const QString& id) {
+    if (host_ != nullptr) {
+        host_->scriptTerminalClear(scriptName, id);
+    }
+}
+
+void LuaEngine::hostTerminalWrite(const QString& scriptName, const QString& id,
+                                  const QString& text) {
+    if (host_ != nullptr) {
+        host_->scriptTerminalWrite(scriptName, id, text);
+    }
+}
+
+void LuaEngine::hostTerminalStatus(const QString& scriptName, const QString& id,
+                                   const QString& text) {
+    if (host_ != nullptr) {
+        host_->scriptTerminalStatus(scriptName, id, text);
+    }
+}
+
+void LuaEngine::hostTerminalPrompt(const QString& scriptName, const QString& id,
+                                   const QString& text) {
+    if (host_ != nullptr) {
+        host_->scriptTerminalPrompt(scriptName, id, text);
+    }
+}
+
+QSize LuaEngine::hostTerminalSize(const QString& scriptName, const QString& id) {
+    return host_ != nullptr ? host_->scriptTerminalSize(scriptName, id) : QSize();
+}
+
+void LuaEngine::hostTerminalProfile(const QString& scriptName, const QString& id,
+                                    const QString& profile, const int cols, const int rows) {
+    if (host_ != nullptr) {
+        host_->scriptTerminalProfile(scriptName, id, profile, cols, rows);
+    }
+}
+
+void LuaEngine::hostTerminalFit(const QString& scriptName, const QString& id,
+                                const QString& mode) {
+    if (host_ != nullptr) {
+        host_->scriptTerminalFit(scriptName, id, mode);
+    }
+}
+
+QString LuaEngine::hostTerminalHotspot(const QString& actionId, const QString& label) {
+    return host_ != nullptr ? host_->scriptTerminalHotspot(actionId, label) : label;
+}
+
 QString LuaEngine::hostMe() {
     return host_ != nullptr ? host_->scriptMe(currentNetwork_) : QString();
 }
@@ -687,6 +835,16 @@ static int installApi(lua_State* L, LuaEngine* engine, const QString& dataDir,
     reg("send_raw", l_send_raw);
     reg("mc_send", l_mc_send);
     reg("mc_reply", l_mc_reply);
+    reg("terminal_open", l_terminal_open);
+    reg("terminal_close", l_terminal_close);
+    reg("terminal_clear", l_terminal_clear);
+    reg("terminal_write", l_terminal_write);
+    reg("terminal_status", l_terminal_status);
+    reg("terminal_prompt", l_terminal_prompt);
+    reg("terminal_size", l_terminal_size);
+    reg("terminal_profile", l_terminal_profile);
+    reg("terminal_fit", l_terminal_fit);
+    reg("terminal_hotspot", l_terminal_hotspot);
     reg("channels", l_channels);
     reg("nicks", l_nicks);
     reg("strip", l_strip);
@@ -767,6 +925,17 @@ bool LuaEngine::dispatch(const QString& hook, const QString& network, const QVar
         }
     }
     return consumed;
+}
+
+bool LuaEngine::dispatchToScript(const QString& script, const QString& hook,
+                                 const QString& network, const QVariantList& args) {
+    setCurrentNetwork(network);
+    ScriptState* state = scripts_.value(script);
+    if (state == nullptr) {
+        return false;
+    }
+    const QByteArray hookName = hook.toUtf8();
+    return callHook(state, hookName.constData(), args);
 }
 
 bool LuaEngine::load(const QString& path, const ScriptPermissions& perms) {
@@ -899,6 +1068,23 @@ void LuaEngine::hostSendRaw(const QString&) {}
 bool LuaEngine::hostMcData(const QString&, const QString&, const QString&, const QString&, bool) {
     return false;
 }
+bool LuaEngine::hostTerminalOpen(const QString&, const QString&, const QString&, const QString&,
+                                 int, int) {
+    return false;
+}
+void LuaEngine::hostTerminalClose(const QString&, const QString&) {}
+void LuaEngine::hostTerminalClear(const QString&, const QString&) {}
+void LuaEngine::hostTerminalWrite(const QString&, const QString&, const QString&) {}
+void LuaEngine::hostTerminalStatus(const QString&, const QString&, const QString&) {}
+void LuaEngine::hostTerminalPrompt(const QString&, const QString&, const QString&) {}
+QSize LuaEngine::hostTerminalSize(const QString&, const QString&) {
+    return {};
+}
+void LuaEngine::hostTerminalProfile(const QString&, const QString&, const QString&, int, int) {}
+void LuaEngine::hostTerminalFit(const QString&, const QString&, const QString&) {}
+QString LuaEngine::hostTerminalHotspot(const QString&, const QString& label) {
+    return label;
+}
 QString LuaEngine::hostMe() {
     return {};
 }
@@ -935,6 +1121,11 @@ bool LuaEngine::callHook(ScriptState*, const char*, const QVariantList&) {
 }
 
 bool LuaEngine::dispatch(const QString&, const QString&, const QVariantList&) {
+    return false;
+}
+
+bool LuaEngine::dispatchToScript(const QString&, const QString&, const QString&,
+                                 const QVariantList&) {
     return false;
 }
 

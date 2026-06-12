@@ -1,6 +1,6 @@
 # MC DATA + Script Terminal Phases
 
-Current phase: Phase 5 - Terminal Profiles
+Current phase: Phase 7 - Retro-BBS Demo Script
 
 Status key:
 
@@ -104,20 +104,20 @@ Exit criteria:
 
 ## Phase 6 - Lua Terminal API
 
-- [ ] Add `api.terminal_open(id, title, profile_or_cols, rows)`.
-- [ ] Add `api.terminal_close(id)`.
-- [ ] Add `api.terminal_clear(id)`.
-- [ ] Add `api.terminal_write(id, text)`.
-- [ ] Add `api.terminal_status(id, text)`.
-- [ ] Add `api.terminal_prompt(id, text)`.
-- [ ] Add `api.terminal_size(id)`.
-- [ ] Add `api.terminal_profile(id, profile)`.
-- [ ] Add `api.terminal_fit(id, mode)`.
-- [ ] Add `api.terminal_hotspot(action_id, label)`.
-- [ ] Add `on_terminal_input(api, id, text)`.
-- [ ] Add `on_terminal_link(api, id, action_id)`.
-- [ ] Add `on_terminal_closed(api, id)`.
-- [ ] Add Lua terminal API tests.
+- [x] Add `api.terminal_open(id, title, profile_or_cols, rows)`.
+- [x] Add `api.terminal_close(id)`.
+- [x] Add `api.terminal_clear(id)`.
+- [x] Add `api.terminal_write(id, text)`.
+- [x] Add `api.terminal_status(id, text)`.
+- [x] Add `api.terminal_prompt(id, text)`.
+- [x] Add `api.terminal_size(id)`.
+- [x] Add `api.terminal_profile(id, profile)`.
+- [x] Add `api.terminal_fit(id, mode)`.
+- [x] Add `api.terminal_hotspot(action_id, label)`.
+- [x] Add `on_terminal_input(api, id, text)`.
+- [x] Add `on_terminal_link(api, id, action_id)`.
+- [x] Add `on_terminal_closed(api, id)`.
+- [x] Add Lua terminal API tests.
 
 Exit criteria:
 
@@ -126,7 +126,7 @@ Exit criteria:
 
 ## Phase 7 - Retro-BBS Demo Script
 
-- [ ] Add `bbs.lua`.
+- [~] Add `bbs.lua`.
 - [ ] Add defaults: `bbs_id=retro-bbs`, `bbs_name=Retro-BBS`.
 - [ ] Add `/bbsserve`.
 - [ ] Add `/bbs nick`.
@@ -202,3 +202,5 @@ Exit criteria:
 - Phase 2 targeted tests passed. Full `irc_session` currently has one unrelated
   `commandStatusAndErrorsEmitReadableText` expectation mismatch to handle outside
   the MC DATA core commit.
+- Phase 5 profile IDs/sizing are implemented with existing fonts. Real IBM/C64
+  font assets remain open until redistribution licenses are checked.

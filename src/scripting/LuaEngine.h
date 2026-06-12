@@ -6,6 +6,7 @@
 #include <QObject>
 #include <QString>
 #include <QStringList>
+#include <QSize>
 #include <QVariantList>
 
 struct lua_State; // Lua's opaque state; full type stays in LuaEngine.cpp
@@ -45,6 +46,8 @@ class LuaEngine final : public QObject {
     // `network` scopes api.echo to that network for the duration. Returns true
     // if any script's handler returned true (used by on_command to consume).
     bool dispatch(const QString& hook, const QString& network, const QVariantList& args = {});
+    bool dispatchToScript(const QString& script, const QString& hook,
+                          const QString& network, const QVariantList& args = {});
 
     // Sandbox capabilities. Set before load()/loadAll(); changing them only
     // affects scripts (re)loaded afterwards.
@@ -68,6 +71,19 @@ class LuaEngine final : public QObject {
     [[nodiscard]] bool hostMcData(const QString& target, const QString& service,
                                   const QString& verb, const QString& payload,
                                   bool notice);
+    [[nodiscard]] bool hostTerminalOpen(const QString& scriptName, const QString& id,
+                                        const QString& title, const QString& profile,
+                                        int cols, int rows);
+    void hostTerminalClose(const QString& scriptName, const QString& id);
+    void hostTerminalClear(const QString& scriptName, const QString& id);
+    void hostTerminalWrite(const QString& scriptName, const QString& id, const QString& text);
+    void hostTerminalStatus(const QString& scriptName, const QString& id, const QString& text);
+    void hostTerminalPrompt(const QString& scriptName, const QString& id, const QString& text);
+    [[nodiscard]] QSize hostTerminalSize(const QString& scriptName, const QString& id);
+    void hostTerminalProfile(const QString& scriptName, const QString& id,
+                             const QString& profile, int cols, int rows);
+    void hostTerminalFit(const QString& scriptName, const QString& id, const QString& mode);
+    [[nodiscard]] QString hostTerminalHotspot(const QString& actionId, const QString& label);
     [[nodiscard]] QString hostMe();
     [[nodiscard]] QString hostTarget();
     [[nodiscard]] QString hostNetwork();
