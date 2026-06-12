@@ -28,7 +28,7 @@ class SettingsStore final {
     [[nodiscard]] const SettingsPaths& paths() const;
     [[nodiscard]] QVariantMap loadRaw() const;
     [[nodiscard]] QVariantMap loadWithDefaults() const;
-    [[nodiscard]] bool saveRaw(const QVariantMap& settings) const;
+    [[nodiscard]] bool saveRaw(const QVariantMap& settings, bool preserveGeometry = true) const;
     [[nodiscard]] bool setValue(const QString& key, const QVariant& value) const;
     [[nodiscard]] bool resetServerList() const;
     [[nodiscard]] QVariantMap prepareImportedSettings(const QVariantMap& imported) const;

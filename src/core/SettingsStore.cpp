@@ -133,7 +133,7 @@ QVariantMap SettingsStore::loadWithDefaults() const {
   return settings;
 }
 
-bool SettingsStore::saveRaw(const QVariantMap &settings) const {
+bool SettingsStore::saveRaw(const QVariantMap &settings, const bool preserveGeometry) const {
   if (paths_.settingsPath.isEmpty()) {
     return false;
   }
@@ -143,9 +143,10 @@ bool SettingsStore::saveRaw(const QVariantMap &settings) const {
   // independently (via attachGeometryPersist on QDialog::finished) and must
   // survive saveRaw calls that carry only a subset of settings (e.g. a
   // dialog's own settings() map).  Keys already present in `settings` win.
+  // Pass preserveGeometry=false (e.g. resetAllSettings) to clear them too.
   QVariantMap merged = loadRaw();
   for (auto it = merged.begin(); it != merged.end(); ) {
-    if (it.key().startsWith(QLatin1String("geom_")) && !settings.contains(it.key())) {
+    if (preserveGeometry && it.key().startsWith(QLatin1String("geom_")) && !settings.contains(it.key())) {
       ++it; // keep this geometry key
     } else {
       it = merged.erase(it); // will be replaced by `settings` below
