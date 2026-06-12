@@ -1338,6 +1338,8 @@ void maxchat::ui::MainWindow::buildMenus() {
         serverMenu->addAction(QStringLiteral("Join..."), this, &MainWindow::openJoinDialog);
     joinAction->setShortcut(QKeySequence(QStringLiteral("Ctrl+J")));
     serverMenu->addAction(QStringLiteral("Leave Channel"), this, &MainWindow::leaveCurrentChannel);
+    serverMenu->addAction(QStringLiteral("Leave All Channels"), this,
+                          [this]() { leaveAllChannels(QString()); });
     serverMenu->addSeparator();
     QAction* channelListAction = serverMenu->addAction(QStringLiteral("Channels..."), this,
                                                        [this]() { openChannelList(false); });
@@ -1854,6 +1856,24 @@ void maxchat::ui::MainWindow::openServerList() {
 
     appendSystemLine(
         QStringLiteral("! Server list saved (%1 networks).").arg(dialog.networks().size()));
+    // Networks deleted from the list must not keep zombie IrcConnection
+    // objects (and possibly live sockets) around until app exit.
+    {
+        QSet<QString> keep;
+        for (const auto& net : dialog.networks()) {
+            keep.insert(net.value(QStringLiteral("name")).toString().trimmed().toLower());
+        }
+        for (auto it = m_connectionsByNetwork.begin(); it != m_connectionsByNetwork.end();) {
+            // Map keys are trimmed but case-preserving; compare folded.
+            if (!keep.contains(it.key().toLower()) && it.value() != &m_connection) {
+                it.value()->disconnectFromServer();
+                it.value()->deleteLater();
+                it = m_connectionsByNetwork.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
     if (dialog.connectWasRequested()) {
         if (mergedDefaults) {
             appendSystemLine(QStringLiteral("! Server list was updated with bundled defaults."));
@@ -2830,6 +2850,36 @@ void maxchat::ui::MainWindow::leaveCurrentChannel() {
         return;
     }
     sendCommandOrMessage(QStringLiteral("/part %1").arg(channel));
+}
+
+void maxchat::ui::MainWindow::leaveAllChannels(const QString& network) {
+    const QString net = network.trimmed().isEmpty() ? activeNetworkName() : network.trimmed();
+    maxchat::irc::IrcConnection* irc = connectionForNetwork(net);
+    if (irc == nullptr) {
+        irc = &m_connection;
+    }
+    if (!irc->isConnected()) {
+        appendSystemLine(QStringLiteral("! Not connected."));
+        return;
+    }
+    QStringList channels;
+    for (const maxchat::core::ChatBufferId& id : m_chatBuffers.buffersForNetwork(net)) {
+        if (id.kind != maxchat::core::ChatBufferKind::Channel || !isChannelTarget(id.target)) {
+            continue;
+        }
+        if (m_chatBuffers.snapshot(id).joined) {
+            channels.append(id.target);
+        }
+    }
+    if (channels.isEmpty()) {
+        appendSystemLine(QStringLiteral("! No joined channels on %1.").arg(net));
+        return;
+    }
+    for (const QString& channel : channels) {
+        irc->sendRaw(QStringLiteral("PART %1").arg(channel));
+    }
+    appendSystemLine(
+        QStringLiteral("! Leaving %1 channel(s) on %2.").arg(channels.size()).arg(net));
 }
 
 bool maxchat::ui::MainWindow::seedReplayForBuffer(const QString& network, const QString& target) {
@@ -3824,15 +3874,18 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
         });
     connect(irc, &maxchat::irc::IrcConnection::listReply, this,
             [this, runInContext](const QString& channel, int users, const QString& topic) {
-                runInContext([&]() {
-                    if (m_channelListDialog != nullptr) {
-                        // Buffer — drained every 100ms so the GUI stays responsive.
-                        m_pendingChannels.append({channel, users, topic});
-                        if (!m_channelDrainTimer.isActive()) {
-                            m_channelDrainTimer.start();
-                        }
-                        return;
+                if (m_channelListDialog != nullptr) {
+                    // Buffer directly, WITHOUT runInContext: its epilogue
+                    // re-renders the chat view and rebuilds the tree per call,
+                    // which at 20k /list replies freezes the app for minutes.
+                    // The pending buffer is dialog-global, not per-network.
+                    m_pendingChannels.append({channel, users, topic});
+                    if (!m_channelDrainTimer.isActive()) {
+                        m_channelDrainTimer.start();
                     }
+                    return;
+                }
+                runInContext([&]() {
                     appendSystemLineToTarget(
                         QStringLiteral("server"),
                         topic.trimmed().isEmpty()
@@ -4404,7 +4457,9 @@ void maxchat::ui::MainWindow::reconnectNetwork(const QString& network) {
         m_reconnectRequestedByNetwork.insert(signalNetwork, false);
         m_manualDisconnect = false;
         m_manualDisconnectByNetwork.insert(signalNetwork, false);
-        connectNextServer(signalNetwork, true);
+        // Manual reconnect retries the SAME server (the user is fixing lag, not
+        // asking to move); automatic failover advances on its own.
+        connectNextServer(signalNetwork, false);
     });
 }
 
@@ -4477,7 +4532,7 @@ void maxchat::ui::MainWindow::handleDisconnected(const QString& reason) {
         m_manualDisconnect = false;
         m_reconnectRequestedByNetwork.insert(network, false);
         m_manualDisconnectByNetwork.insert(network, false);
-        connectNextServer(network, true);
+        connectNextServer(network, false); // manual reconnect = same server
         return;
     }
 
@@ -5251,6 +5306,8 @@ void maxchat::ui::MainWindow::showNetworkTreeContextMenu(const QPoint& pos) {
 
     QMenu menu(this);
     if (item->parent() == nullptr || !m_hasConnectionPlan || isTreeStatusTarget(target)) {
+        menu.addAction(QStringLiteral("Leave All Channels"), this,
+                       [this, itemNetwork]() { leaveAllChannels(itemNetwork); });
         menu.addAction(QStringLiteral("Disconnect"), this,
                        [this, itemNetwork]() { disconnectNetwork(itemNetwork); });
         menu.addAction(QStringLiteral("Reconnect Now"), this,
