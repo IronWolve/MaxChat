@@ -1,6 +1,6 @@
 # MC DATA + Script Terminal Phases
 
-Current phase: Phase 3 - Lua MC DATA API
+Current phase: Phase 4 - Terminal Core UI
 
 Status key:
 
@@ -51,14 +51,14 @@ Exit criteria:
 
 ## Phase 3 - Lua MC DATA API
 
-- [~] Add `api.mc_send(target, service, verb, payload)`.
-- [ ] Add `api.mc_reply(target, service, verb, payload)`.
-- [ ] Add `on_mc_data(api, network, target, nick, service, verb, payload, notice)`.
-- [ ] Add host-side MC DATA send queue.
-- [ ] Add payload length guard around `300-350 bytes`.
-- [ ] Add CTCP throttle around `750-1000 ms`.
-- [ ] Prevent auto-replies to MC DATA received by `NOTICE`.
-- [ ] Add Lua API tests.
+- [x] Add `api.mc_send(target, service, verb, payload)`.
+- [x] Add `api.mc_reply(target, service, verb, payload)`.
+- [x] Add `on_mc_data(api, network, target, nick, service, verb, payload, notice)`.
+- [x] Use host-side IRC send queue for MC DATA sends.
+- [x] Add payload length guard around `300-350 bytes`.
+- [x] Use existing CTCP/IRC send throttling.
+- [x] Prevent auto-replies to MC DATA received by `NOTICE`.
+- [x] Add Lua API tests.
 
 Exit criteria:
 
@@ -67,7 +67,7 @@ Exit criteria:
 
 ## Phase 4 - Terminal Core UI
 
-- [ ] Add `ScriptTerminalDialog`.
+- [~] Add `ScriptTerminalDialog`.
 - [ ] Add `ScriptTerminalManager`.
 - [ ] Add `AnsiRenderer`.
 - [ ] Add `TerminalProfile`.

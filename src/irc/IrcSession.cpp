@@ -15,6 +15,8 @@ namespace maxchat::irc {
 
 namespace {
 
+constexpr qsizetype McDataMaxPayloadBytes = 350;
+
 QString ctcpWrap(const QString &body) {
   return QString(QLatin1Char('\x01')) + body + QString(QLatin1Char('\x01'));
 }
@@ -278,6 +280,23 @@ bool IrcSession::ctcp(const QString &target, const QString &command,
                            ? upperCommand
                            : QStringLiteral("%1 %2").arg(upperCommand, effectiveArg);
   return sendRaw(QStringLiteral("PRIVMSG %1 :%2").arg(target, ctcpWrap(body)));
+}
+
+bool IrcSession::mcData(const QString &target, const QString &service,
+                        const QString &verb, const QString &payload,
+                        const bool notice) {
+  const QString trimmedTarget = target.trimmed();
+  if (trimmedTarget.isEmpty() || service.trimmed().isEmpty() ||
+      verb.trimmed().isEmpty()) {
+    return false;
+  }
+  if (payload.toUtf8().size() > McDataMaxPayloadBytes) {
+    emit errorOccurred(QStringLiteral("MC DATA payload is too long"));
+    return false;
+  }
+  const QString body = mcDataCtcpBody(service, verb, payload);
+  const QString command = notice ? QStringLiteral("NOTICE") : QStringLiteral("PRIVMSG");
+  return sendRaw(QStringLiteral("%1 %2 :%3").arg(command, trimmedTarget, ctcpWrap(body)));
 }
 
 bool IrcSession::join(const QString &channel) {

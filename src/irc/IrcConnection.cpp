@@ -234,6 +234,12 @@ bool IrcConnection::ctcp(const QString &target, const QString &command,
   return session_.ctcp(target, command, arg);
 }
 
+bool IrcConnection::mcData(const QString &target, const QString &service,
+                           const QString &verb, const QString &payload,
+                           const bool notice) {
+  return session_.mcData(target, service, verb, payload, notice);
+}
+
 bool IrcConnection::measureLag() { return session_.measureLag(); }
 
 void IrcConnection::retireSocket() {

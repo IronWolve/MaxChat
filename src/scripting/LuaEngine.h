@@ -65,6 +65,9 @@ class LuaEngine final : public QObject {
     void hostInsertInput(const QString& text);
     void hostNotify(const QString& title, const QString& text);
     void hostSendRaw(const QString& line);
+    [[nodiscard]] bool hostMcData(const QString& target, const QString& service,
+                                  const QString& verb, const QString& payload,
+                                  bool notice);
     [[nodiscard]] QString hostMe();
     [[nodiscard]] QString hostTarget();
     [[nodiscard]] QString hostNetwork();

@@ -1995,7 +1995,7 @@ void maxchat::ui::MainWindow::openPreferences() {
     connect(&dialog, &PreferencesDialog::loadScriptRequested, this,
             [this, &dialog](const QString& name) {
                 handleScriptsCommand(QStringLiteral("load"), name);
-                if (maxchat::scripting::LuaEngine::available()) {
+                if (maxchat::scripting::LuaEngine::available() && m_lua != nullptr) {
                     dialog.refreshScriptList(m_lua->loaded());
                 }
             });
@@ -2543,6 +2543,26 @@ void maxchat::ui::MainWindow::scriptSendRaw(const QString& network, const QStrin
     if (maxchat::irc::IrcConnection* conn = connectionForNetwork(net); conn != nullptr) {
         conn->sendRaw(line); // sendRaw already strips CR/LF
     }
+}
+
+bool maxchat::ui::MainWindow::scriptMcData(const QString& network, const QString& target,
+                                           const QString& service, const QString& verb,
+                                           const QString& payload, const bool notice) {
+    const QString net = network.isEmpty() ? activeNetworkName() : network;
+    maxchat::irc::IrcConnection* conn = connectionForNetwork(net);
+    if (conn == nullptr) {
+        appendSystemLineToNetworkTarget(
+            net, QStringLiteral("server"),
+            QStringLiteral("[scripts] Cannot send MC DATA: network is not connected."));
+        return false;
+    }
+    const bool ok = conn->mcData(target, service, verb, payload, notice);
+    if (!ok) {
+        appendSystemLineToNetworkTarget(
+            net, QStringLiteral("server"),
+            QStringLiteral("[scripts] Cannot send MC DATA to %1.").arg(target));
+    }
+    return ok;
 }
 
 void maxchat::ui::MainWindow::scriptInsertInput(const QString& text) {
@@ -4274,6 +4294,15 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
             [this, signalNetwork](const QString& sender, const QString& target, const QString& file,
                                   const QString& text) {
                 handleCtcpSound(signalNetwork, sender, target, file, text);
+            });
+    connect(irc, &maxchat::irc::IrcConnection::mcDataReceived, this,
+            [this, signalNetwork](const QString& sender, const QString& target,
+                                  const QString& service, const QString& verb,
+                                  const QString& payload, const bool notice) {
+                if (maxchat::scripting::LuaEngine::available()) {
+                    m_lua->dispatch(QStringLiteral("on_mc_data"), signalNetwork,
+                                    {signalNetwork, target, sender, service, verb, payload, notice});
+                }
             });
     connect(irc, &maxchat::irc::IrcConnection::invited, this,
             [this, runInContext](const QString& sender, const QString& channel,

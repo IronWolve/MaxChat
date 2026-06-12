@@ -141,6 +141,12 @@ private slots:
     QVERIFY(session.privmsg(QStringLiteral("#chan"), QStringLiteral("hello")));
     QVERIFY(session.action(QStringLiteral("#chan"), QStringLiteral("waves")));
     QVERIFY(session.ctcp(QStringLiteral("nick"), QStringLiteral("VERSION")));
+    QVERIFY(session.mcData(QStringLiteral("nick"), QStringLiteral("bbs"),
+                           QStringLiteral("hello"),
+                           QStringLiteral("cols=80 rows=25")));
+    QVERIFY(session.mcData(QStringLiteral("nick"), QStringLiteral("bbs"),
+                           QStringLiteral("status"),
+                           QStringLiteral("CONNECT: Retro-BBS"), true));
 
     QCOMPARE(linesFromWrites(writes),
              QStringList({
@@ -149,10 +155,33 @@ private slots:
                      ctcpPayload(QStringLiteral("ACTION waves")),
                  QStringLiteral("PRIVMSG nick :") +
                      ctcpPayload(QStringLiteral("VERSION")),
+                 QStringLiteral("PRIVMSG nick :") +
+                     ctcpPayload(QStringLiteral("MC DATA bbs HELLO cols=80 rows=25")),
+                 QStringLiteral("NOTICE nick :") +
+                     ctcpPayload(QStringLiteral("MC DATA bbs STATUS CONNECT: Retro-BBS")),
              }));
 
     session.setConnected(false);
     QVERIFY(!session.privmsg(QStringLiteral("#chan"), QStringLiteral("nope")));
+  }
+
+  void mcDataRejectsOversizedPayload() {
+    IrcSession session;
+    QList<QByteArray> writes;
+    QSignalSpy errors(&session, &IrcSession::errorOccurred);
+    session.setConnected(true);
+    session.setWriter([&writes](const QByteArray &payload) {
+      writes.append(payload);
+      return payload.size();
+    });
+
+    QVERIFY(!session.mcData(QStringLiteral("nick"), QStringLiteral("bbs"),
+                            QStringLiteral("line"),
+                            QString(351, QLatin1Char('x'))));
+
+    QCOMPARE(writes.count(), 0);
+    QCOMPARE(errors.count(), 1);
+    QVERIFY(errors.at(0).at(0).toString().contains(QStringLiteral("MC DATA")));
   }
 
   void measureLagSendsPingAndEmitsOnMatchingPong() {

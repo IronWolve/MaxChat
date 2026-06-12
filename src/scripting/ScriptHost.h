@@ -21,6 +21,9 @@ class ScriptHost {
     virtual void scriptSendRaw(const QString& network, const QString& line) = 0;
     virtual void scriptInsertInput(const QString& text) = 0;
     virtual void scriptNotify(const QString& title, const QString& text) = 0;
+    virtual bool scriptMcData(const QString& network, const QString& target,
+                              const QString& service, const QString& verb,
+                              const QString& payload, bool notice) = 0;
 
     [[nodiscard]] virtual QString scriptMe(const QString& network) = 0;
     [[nodiscard]] virtual QString scriptTarget() = 0;

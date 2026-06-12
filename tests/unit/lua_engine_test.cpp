@@ -19,6 +19,7 @@ class FakeHost final : public ScriptHost {
     QStringList inserts;
     QStringList notifies; // "title|text"
     QStringList raws;
+    QStringList mcData;   // "network|target|service|verb|payload|notice"
 
     void scriptEcho(const QString&, const QString& text) override { echoes.append(text); }
     void scriptSay(const QString&, const QString& target, const QString& text) override {
@@ -28,6 +29,13 @@ class FakeHost final : public ScriptHost {
     void scriptInsertInput(const QString& text) override { inserts.append(text); }
     void scriptNotify(const QString& title, const QString& text) override {
         notifies.append(title + QStringLiteral("|") + text);
+    }
+    bool scriptMcData(const QString& network, const QString& target, const QString& service,
+                      const QString& verb, const QString& payload, bool notice) override {
+        mcData.append(QStringLiteral("%1|%2|%3|%4|%5|%6")
+                          .arg(network, target, service, verb, payload,
+                               notice ? QStringLiteral("notice") : QStringLiteral("privmsg")));
+        return !target.isEmpty();
     }
     QString scriptMe(const QString&) override { return QStringLiteral("me"); }
     QString scriptTarget() override { return QStringLiteral("#chan"); }
@@ -244,6 +252,46 @@ class LuaEngineTest final : public QObject {
         QVERIFY(engine.load(path));
         QCOMPARE(host.raws, QStringList{QStringLiteral("PING xyz")});
         QCOMPARE(host.echoes, QStringList{QStringLiteral("2/alice")});
+    }
+
+    void apiMcDataCalls() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString path = writeScript(
+            QDir(dir.path()), QStringLiteral("mc.lua"),
+            QStringLiteral("function on_load(api)\n"
+                           "  api.echo(tostring(api.mc_send('alice', 'BBS', 'hello', 'hi')))\n"
+                           "  api.echo(tostring(api.mc_reply('alice', 'bbs', 'STATUS', 'ok')))\n"
+                           "end\n"));
+        FakeHost host;
+        LuaEngine engine(&host, dir.path(), dir.path());
+        QVERIFY(engine.load(path));
+        QCOMPARE(host.mcData,
+                 QStringList({
+                     QStringLiteral("|alice|BBS|hello|hi|privmsg"),
+                     QStringLiteral("|alice|bbs|STATUS|ok|notice"),
+                 }));
+        QCOMPARE(host.echoes, QStringList({QStringLiteral("true"), QStringLiteral("true")}));
+    }
+
+    void dispatchPassesMcDataHookArgs() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString path =
+            writeScript(QDir(dir.path()), QStringLiteral("mc_hook.lua"),
+                        QStringLiteral("function on_mc_data(api, network, target, nick, service, verb, payload, notice)\n"
+                                       "  api.echo(network..'|'..target..'|'..nick..'|'..service..'|'..verb..'|'..payload..'|'..tostring(notice))\n"
+                                       "  return true\n"
+                                       "end\n"));
+        FakeHost host;
+        LuaEngine engine(&host, dir.path(), dir.path());
+        QVERIFY(engine.load(path));
+        QVERIFY(engine.dispatch(QStringLiteral("on_mc_data"), QStringLiteral("synIRC"),
+                                {QStringLiteral("synIRC"), QStringLiteral("bob"),
+                                 QStringLiteral("alice"), QStringLiteral("bbs"),
+                                 QStringLiteral("STATUS"), QStringLiteral("ok"), true}));
+        QCOMPARE(host.echoes,
+                 QStringList{QStringLiteral("synIRC|bob|alice|bbs|STATUS|ok|true")});
     }
 
     void apiStrip() {

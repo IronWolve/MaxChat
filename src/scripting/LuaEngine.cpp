@@ -224,6 +224,26 @@ int l_send_raw(lua_State* L) {
     return 0;
 }
 
+int l_mc_data(lua_State* L, const bool notice) {
+    LuaEngine* engine = engineOf(L);
+    const QString target = QString::fromUtf8(luaL_checkstring(L, 1));
+    const QString service = QString::fromUtf8(luaL_checkstring(L, 2));
+    const QString verb = QString::fromUtf8(luaL_checkstring(L, 3));
+    const QString payload = QString::fromUtf8(luaL_optstring(L, 4, ""));
+    lua_pushboolean(L, engine->hostMcData(target, service, verb, payload, notice) ? 1 : 0);
+    return 1;
+}
+
+// api.mc_send(target, service, verb, payload)
+int l_mc_send(lua_State* L) {
+    return l_mc_data(L, false);
+}
+
+// api.mc_reply(target, service, verb, payload)
+int l_mc_reply(lua_State* L) {
+    return l_mc_data(L, true);
+}
+
 // api.channels()
 int l_channels(lua_State* L) {
     pushStringList(L, engineOf(L)->hostChannels());
@@ -529,6 +549,13 @@ void LuaEngine::hostSendRaw(const QString& line) {
     }
 }
 
+bool LuaEngine::hostMcData(const QString& target, const QString& service,
+                           const QString& verb, const QString& payload,
+                           const bool notice) {
+    return host_ != nullptr &&
+           host_->scriptMcData(currentNetwork_, target, service, verb, payload, notice);
+}
+
 QString LuaEngine::hostMe() {
     return host_ != nullptr ? host_->scriptMe(currentNetwork_) : QString();
 }
@@ -658,6 +685,8 @@ static int installApi(lua_State* L, LuaEngine* engine, const QString& dataDir,
     reg("append_file", l_append_file);
     reg("read_file", l_read_file);
     reg("send_raw", l_send_raw);
+    reg("mc_send", l_mc_send);
+    reg("mc_reply", l_mc_reply);
     reg("channels", l_channels);
     reg("nicks", l_nicks);
     reg("strip", l_strip);
@@ -867,6 +896,9 @@ void LuaEngine::hostSay(const QString&, const QString&) {}
 void LuaEngine::hostInsertInput(const QString&) {}
 void LuaEngine::hostNotify(const QString&, const QString&) {}
 void LuaEngine::hostSendRaw(const QString&) {}
+bool LuaEngine::hostMcData(const QString&, const QString&, const QString&, const QString&, bool) {
+    return false;
+}
 QString LuaEngine::hostMe() {
     return {};
 }

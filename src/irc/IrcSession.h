@@ -51,6 +51,8 @@ public:
   bool action(const QString &target, const QString &text);
   bool ctcp(const QString &target, const QString &command,
             const QString &arg = {});
+  bool mcData(const QString &target, const QString &service, const QString &verb,
+              const QString &payload = {}, bool notice = false);
   bool join(const QString &channel);
   bool measureLag();
 
