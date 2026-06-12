@@ -926,11 +926,12 @@ void PreferencesDialog::buildScriptsTab(QWidget* tab) {
         settings_.insert(QStringLiteral("scriptPerms"), allPerms);
         emit scriptPermissionChanged(name, newPerms);
     };
-    connect(scriptRead_,    &QCheckBox::stateChanged, this, onPermChanged);
-    connect(scriptWrite_,   &QCheckBox::stateChanged, this, onPermChanged);
-    connect(scriptExec_,    &QCheckBox::stateChanged, this, onPermChanged);
-    connect(scriptModules_, &QCheckBox::stateChanged, this, onPermChanged);
-    connect(scriptNetwork_, &QCheckBox::stateChanged, this, onPermChanged);
+    const auto onPerm = [onPermChanged](Qt::CheckState) { onPermChanged(); };
+    connect(scriptRead_,    &QCheckBox::checkStateChanged, this, onPerm);
+    connect(scriptWrite_,   &QCheckBox::checkStateChanged, this, onPerm);
+    connect(scriptExec_,    &QCheckBox::checkStateChanged, this, onPerm);
+    connect(scriptModules_, &QCheckBox::checkStateChanged, this, onPerm);
+    connect(scriptNetwork_, &QCheckBox::checkStateChanged, this, onPerm);
 
     auto* dirsLabel =
         new QLabel(QStringLiteral("Folders scripts may read/write (the script's own data folder "
