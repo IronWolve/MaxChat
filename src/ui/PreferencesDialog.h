@@ -23,6 +23,9 @@ class PreferencesDialog final : public QDialog {
 
     [[nodiscard]] QVariantMap settings() const;
 
+  public slots:
+    void refreshScriptList(const QStringList& loaded);
+
   signals:
     void exportSettingsRequested();
     void importSettingsRequested();
@@ -31,6 +34,10 @@ class PreferencesDialog final : public QDialog {
     void testNotificationRequested();
     void openComicSettingsRequested();
     void browseCharactersRequested();
+    void loadScriptRequested(const QString& name);
+    void unloadScriptRequested(const QString& name);
+    void reloadScriptRequested(const QString& name);
+    void editScriptRequested(const QString& path);
 
   private:
     void setAllFonts(const QString& family, int size, bool bold);
@@ -55,6 +62,7 @@ class PreferencesDialog final : public QDialog {
     QStringList loadedScripts_;
     QString scriptsDir_;
     QString soundsDir_;
+    QListWidget* scriptList_ = nullptr;
     QCheckBox* scriptRead_ = nullptr;
     QCheckBox* scriptWrite_ = nullptr;
     QCheckBox* scriptExec_ = nullptr;
