@@ -741,3 +741,11 @@ Implemented in one pass (all compiled debug+release, selftest OK):
 - Z85 is the practical ceiling: base94 would save only ~2% more and needs
   >64-bit block math in Lua. MC DATA terminal frames stay UNARMORED — they
   are already text; any armor would expand them ~25%.
+
+## mcb1_convert.py + docs blurb (2026-06-12)
+
+- tools/mcb1_convert.py: any image -> .mcb / --lua PICS entry. Same pipeline
+  as the gallery (autocontrast/fit/threshold-or-dither, auto rle-vs-raw,
+  Z85 default, --hex legacy). .mcb header: "MCB1 <id> <w> <h> <hash> <enc>".
+- MC_DATA.md gained the compression benchmark table + "state of the art"
+  blurb; HANDOFF updated with the whole BBS slice.

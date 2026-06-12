@@ -2,7 +2,33 @@
 
 Date: 2026-06-09 (audit closeout 2026-06-10; UI polish 2026-06-11)
 
-## Latest Completed Slice (OS nostalgia themes, 2026-06-12)
+## Latest Completed Slice (MC DATA BBS: terminals, MCB1 pics, speed, 2026-06-12)
+
+The mc-data-terminal branch grew from "BBS demo" into a complete subsystem:
+
+- **Terminals**: tree launcher nodes (`Term N - <script>` under their network),
+  hide-vs-kill semantics, File/Settings menu bar (font/size/grid 80x25|80x40),
+  fit-to-window font scaling, /quit, JetBrains Mono 12pt default, font fully
+  isolated from theme QSS (per-widget stylesheets).
+- **Speed**: MC DATA lines pay a 750 ms flood penalty instead of chat's 2 s —
+  the BBS crawl is gone; static frames cache per chunk (page#N) so menus
+  replay locally.
+- **Protocol hardening (audit)**: network+nick+bbs_id routing, NOTICE dropped,
+  HELLO cooldown + session cap, WELCOME caps echo, BYE on shutdown, UTF-8-safe
+  truncation, 32-bit hashes, board persistence (cap 50).
+- **Visuals**: ANSI-Shadow RETRO BBS logo + framed pages, per-row color ops
+  (cyan/magenta scene fade), colored chrome.
+- **MCB1** (named format, "MaxChat Bitmap 1-bit"): pic gallery menu serving
+  three public-domain space photos as 80x50 1-bit half-block art over B/I
+  verbs with content-addressed caching; rle1z/raw1z Z85 armor (37% smaller
+  than hex); `tools/mcb1_convert.py` converts any jpg/png to .mcb or a
+  paste-ready PICS entry. See DEVDOCS/MC_DATA.md "State of the art" blurb
+  for the compression bragging rights (within ~10% of zlib; beats PNG/GIF
+  at this size).
+
+Tests: 53/53 (lua_engine covers the full BBS flow incl. Z85 decode/render).
+
+## Previous Slice (OS nostalgia themes, 2026-06-12)
 
 5 app + 5 chat OS-styled theme pairs: **Windows 95** (battleship grey/navy),
 **Windows XP** (Luna blue + cream), **Windows 11** (light mica) + **Windows 11

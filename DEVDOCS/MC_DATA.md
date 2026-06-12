@@ -535,6 +535,27 @@ Implementation notes:
 
 ## MCB1 Bitmap Cell Art (MaxChat Bitmap, 1-bit)
 
+### State of the art, 1987 edition
+
+Benchmarked on the bundled gallery pics (80x50 1-bit, bytes):
+
+```text
+image    MCB1 wire (z85)  MCB1 binary  zlib  PNG  G4 fax  GIF
+earth          320            255       231  315    238  1128
+moon           420            335       270  353    258  1186
+astro (dither) 625            500       463  561   1102  1392
+```
+
+A run-length coder written in a sandboxed chat-client scripting language
+lands within ~10% of deflate and Group 4 fax on thresholded images, and
+beats PNG and GIF outright at icon sizes (their headers cost more than our
+whole image). The armor is Z85 — the densest single-byte-safe encoding an
+IRC line allows (base94 is the theoretical ceiling; it buys ~2% for
+multi-precision math, so no). And the one column none of those formats
+have: a revisit costs ZERO bytes, because assets are content-addressed
+(id + hash) and replay from cache — registry/git-style addressing bolted
+onto a 1981-style delivery channel. Modem sounds not included.
+
 MCB1 ("MaxChat Bitmap, 1-bit" — the B1 capability token) is the named image
 format for old-school BBS graphics over MC DATA. Implemented in Retro-BBS
 (pic gallery). It rides the same cache idea as static frames because bitmap
