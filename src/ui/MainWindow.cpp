@@ -641,6 +641,9 @@ constexpr int MaxUrlListItems = 1000;
 constexpr int FriendPollIntervalMs = 60000;
 constexpr int TreeTargetRole = Qt::UserRole;
 constexpr int TreeNetworkRole = Qt::UserRole + 1;
+// Set on "Term N" nodes; holds the manager's scoped terminal id. Terminal nodes
+// are launchers (pop the window), not chat buffers, so they carry no target role.
+constexpr int TreeTerminalRole = Qt::UserRole + 2;
 
 QTreeWidgetItem* newTreeItem(const QString& label, const QString& target = {},
                              const QString& network = {}) {
@@ -1005,6 +1008,25 @@ MainWindow::MainWindow(QWidget* parent)
                 }
                 m_lua->dispatchToScript(split->first, QStringLiteral("on_terminal_closed"),
                                         activeNetworkName(), {split->second});
+            });
+    connect(m_scriptTerminals, &ScriptTerminalManager::terminalsChanged, this,
+            [this]() { rebuildNetworkTree(); });
+    connect(m_scriptTerminals, &ScriptTerminalManager::fontPreferenceChanged, this,
+            [this](const QString& family, const int pointSize, const bool bold) {
+                // A terminal's Settings menu changed the global terminal font.
+                QVariantMap settings = m_settings.loadRaw();
+                settings.insert(QStringLiteral("terminal_font_family"), family);
+                settings.insert(QStringLiteral("terminal_font_size"), pointSize);
+                settings.insert(QStringLiteral("terminal_font_bold"), bold);
+                (void)m_settings.saveRaw(settings);
+                m_scriptTerminals->setTerminalFont(family, pointSize, bold);
+            });
+    connect(m_scriptTerminals, &ScriptTerminalManager::gridSizeChanged, this,
+            [this](const QString&, const int, const int rows) {
+                // Remember the chosen grid as the default for new terminals.
+                QVariantMap settings = m_settings.loadRaw();
+                settings.insert(QStringLiteral("terminal_rows"), rows);
+                (void)m_settings.saveRaw(settings);
             });
     m_lua = new maxchat::scripting::LuaEngine(
         this, scriptsDir, QDir(scriptsDir).filePath(QStringLiteral("data")), this);
@@ -1762,6 +1784,21 @@ void maxchat::ui::MainWindow::buildLayout() {
                     return;
                 }
 
+                // Terminal launcher nodes pop their window instead of switching
+                // the chat buffer; the session stays alive when hidden.
+                const QString terminalId = current->data(0, TreeTerminalRole).toString();
+                if (!terminalId.isEmpty()) {
+                    const QString termNetwork = treeItemNetwork(current);
+                    if (!termNetwork.isEmpty() &&
+                        termNetwork.compare(activeNetworkName(), Qt::CaseInsensitive) != 0) {
+                        setActiveNetwork(termNetwork);
+                    }
+                    if (m_scriptTerminals != nullptr) {
+                        m_scriptTerminals->showTerminal(terminalId);
+                    }
+                    return;
+                }
+
                 const QString network = treeItemNetwork(current);
                 const QString target = treeItemTarget(current);
                 if (target.isEmpty()) {
@@ -1783,6 +1820,19 @@ void maxchat::ui::MainWindow::buildLayout() {
                 showConnectionStatus(
                     QStringLiteral("%1 - %2").arg(m_connectionPlan.networkName, target));
                 updateChannelModeButton();
+            });
+
+    // Re-clicking an already-selected Term node re-pops a hidden terminal
+    // (currentItemChanged won't fire when the selection doesn't change).
+    connect(m_networkTree, &QTreeWidget::itemClicked, this,
+            [this](QTreeWidgetItem* item, int) {
+                if (item == nullptr || m_scriptTerminals == nullptr) {
+                    return;
+                }
+                const QString terminalId = item->data(0, TreeTerminalRole).toString();
+                if (!terminalId.isEmpty()) {
+                    m_scriptTerminals->showTerminal(terminalId);
+                }
             });
 
     auto* chatColumn = new QWidget(root);
@@ -2625,14 +2675,23 @@ bool maxchat::ui::MainWindow::scriptTerminalOpen(const QString& scriptName, cons
         id.trimmed().isEmpty()) {
         return false;
     }
-    m_scriptTerminals->openTerminal(terminalScopedId(scriptName, id), title,
-                                    terminalProfile(profile, cols, rows));
+    // Fixed-grid profiles default to the user's preferred rows (80x25 or 80x40).
+    maxchat::ui::TerminalProfile prof = terminalProfile(profile, cols, rows);
+    if (prof.fixedGrid && rows <= 0) {
+        const int defRows = m_settings.loadRaw().value(QStringLiteral("terminal_rows"), 25).toInt();
+        if (defRows == 40 && prof.cols == 80) {
+            prof.rows = 40;
+        }
+    }
+    m_scriptTerminals->openTerminal(terminalScopedId(scriptName, id), title, prof,
+                                    activeNetworkName(), scriptName.trimmed());
     return true;
 }
 
 void maxchat::ui::MainWindow::scriptTerminalClose(const QString& scriptName, const QString& id) {
     if (m_scriptTerminals != nullptr) {
-        m_scriptTerminals->closeTerminal(terminalScopedId(scriptName, id));
+        // A script closing its own terminal ends the session.
+        m_scriptTerminals->killTerminal(terminalScopedId(scriptName, id));
     }
 }
 
@@ -5682,6 +5741,25 @@ void maxchat::ui::MainWindow::showNetworkTreeContextMenu(const QPoint& pos) {
 
     QTreeWidgetItem* item = m_networkTree->itemAt(pos);
     if (item == nullptr) {
+        return;
+    }
+
+    // Terminal launcher nodes: open/raise or master-kill the session.
+    const QString terminalId = item->data(0, TreeTerminalRole).toString();
+    if (!terminalId.isEmpty()) {
+        QMenu termMenu(this);
+        termMenu.addAction(QStringLiteral("Open Terminal"), this, [this, terminalId]() {
+            if (m_scriptTerminals != nullptr) {
+                m_scriptTerminals->showTerminal(terminalId);
+            }
+        });
+        termMenu.addSeparator();
+        termMenu.addAction(QStringLiteral("Kill Terminal"), this, [this, terminalId]() {
+            if (m_scriptTerminals != nullptr) {
+                m_scriptTerminals->killTerminal(terminalId);
+            }
+        });
+        termMenu.exec(m_networkTree->viewport()->mapToGlobal(pos));
         return;
     }
 
@@ -8822,6 +8900,22 @@ void maxchat::ui::MainWindow::rebuildNetworkTree() {
             if (active &&
                 target.compare(currentTargetForNetwork(cleanNetwork), Qt::CaseInsensitive) == 0) {
                 itemToSelect = item;
+            }
+        }
+        // Script/BBS terminal launchers ("Term N") nest under their network.
+        if (m_scriptTerminals != nullptr) {
+            for (const TerminalInfo& term : m_scriptTerminals->terminals()) {
+                if (term.network.compare(cleanNetwork, Qt::CaseInsensitive) != 0) {
+                    continue;
+                }
+                QString label = term.label;
+                if (!term.scriptName.isEmpty()) {
+                    label += QStringLiteral(" - %1").arg(term.scriptName);
+                }
+                auto* item = newTreeItem(label, {}, cleanNetwork);
+                item->setData(0, TreeTerminalRole, term.id);
+                item->setToolTip(0, QStringLiteral("Script terminal (%1)").arg(term.scriptName));
+                rootItem->addChild(item);
             }
         }
         // addTopLevelItem must come before setCurrentItem — calling setCurrentItem

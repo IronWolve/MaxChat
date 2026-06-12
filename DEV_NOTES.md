@@ -646,3 +646,32 @@ Implemented in one pass (all compiled debug+release, selftest OK):
   `connectionPlanFromNetwork()`; only the dialog never exposed them. Added
   with Python's section layout. Still planned (not consumed by the backend):
   per-network autoconnect, perform-on-connect, proxy.
+
+## Terminal: tree integration + menu bar + font preference (2026-06-12)
+
+- Added a Terminal group to the Fonts prefs tab (family/size/bold + default
+  grid 80x25/80x40). Default family JetBrains Mono. Font size 0 = "use the
+  terminal profile's own size" (ibm-vga 11, c64 13); non-zero overrides every
+  profile. Keys: `terminal_font_family/size/bold`, `terminal_rows`.
+  ScriptTerminalManager stores the pref and pushes it to all current + future
+  terminals; MainWindow::applyCurrentSettings feeds it from settings.
+- ScriptTerminalDialog now has a File/Settings menu bar. File: Close (hide),
+  Kill Terminal (emit killRequested). Settings: Font, Font Size, Terminal Size.
+  Menu changes emit fontPreferenceChanged / gridSizeChanged → MainWindow saves
+  them globally (load/insert/saveRaw, NOT a full defaults write, to avoid
+  clobbering the settings.json shared with the Python app).
+- Close semantics CHANGED: closing/minimizing a terminal now only HIDES it
+  (removed WA_DeleteOnClose; closeEvent hides + ignores). The session lives
+  until an explicit Kill (File menu, or tree right-click). Lua `terminal_close`
+  maps to killTerminal (a script closing its own terminal ends the session).
+- Terminals appear in the network tree as `Term N - <script>` launcher nodes
+  under the network the script ran on (active network at open time). New tree
+  role `TreeTerminalRole` (UserRole+2) holds the scoped id and carries NO target
+  role so it's never treated as a chat buffer. currentItemChanged + itemClicked
+  pop/raise the window (itemClicked too, so re-clicking an already-selected node
+  re-pops a hidden terminal). Manager emits terminalsChanged → rebuildNetworkTree.
+- Fixed-grid terminals keep 80x25/80x40 and SCALE THE FONT to fill on resize
+  (binary-search the largest point size that fits cols*rows into the display
+  viewport; recomputed in resizeEvent). Font Size menu sets the base size and
+  re-zooms the window via resizeWindowForFont; dragging then re-fits. "free"
+  profiles (fitMode none, e.g. the BBS sysop console) keep the configured size.

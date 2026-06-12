@@ -296,6 +296,7 @@ QVariantMap PreferencesDialog::settings() const {
                terminalFontFamily_->currentFont().family());
     out.insert(QStringLiteral("terminal_font_size"), terminalFontSize_->value());
     out.insert(QStringLiteral("terminal_font_bold"), terminalFontBold_->isChecked());
+    out.insert(QStringLiteral("terminal_rows"), terminalGrid_->currentData().toInt());
     out.insert(QStringLiteral("show_timestamps"), showTimestamps_->isChecked());
     {
         // Prefer the preset's strftime data; fall back to typed custom text.
@@ -1200,6 +1201,13 @@ void PreferencesDialog::buildFontsTab(QWidget* tab) {
     terminalSizeLayout->addStretch(1);
     terminalForm->addRow(QStringLiteral("Font"), terminalFontFamily_);
     terminalForm->addRow(QStringLiteral("Size"), terminalSizeRow);
+    terminalGrid_ = new QComboBox(terminalBox);
+    terminalGrid_->setObjectName(QStringLiteral("terminalGrid"));
+    terminalGrid_->addItem(QStringLiteral("80 x 25"), 25);
+    terminalGrid_->addItem(QStringLiteral("80 x 40"), 40);
+    terminalGrid_->setCurrentIndex(
+        settings_.value(QStringLiteral("terminal_rows"), 25).toInt() == 40 ? 1 : 0);
+    terminalForm->addRow(QStringLiteral("Default size"), terminalGrid_);
     rightColumn->addWidget(terminalBox);
     rightColumn->addStretch(1);
 

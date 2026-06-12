@@ -89,8 +89,16 @@ Behavior:
 
 - Multiple script-owned terminal windows.
 - Terminal IDs scoped by script name.
-- Pop-out dialogs in v1.
-- No menu bar in v1.
+- Pop-out dialogs, each with a File/Settings menu bar.
+  - File: Close (hide only), Kill Terminal (destroy session).
+  - Settings: Font (curated list + chooser), Font Size, Terminal Size (80x25 / 80x40).
+- Terminals also appear in the network tree as `Term N` launcher nodes under the
+  network the opening script ran on (label shows the script name). Clicking a
+  node pops/raises the window; right-click offers Open / Kill Terminal.
+- Closing or minimizing a window only HIDES it; the session stays alive and is
+  re-shown from its tree node. Only Kill Terminal (menu or tree) destroys it.
+- Fixed-grid profiles (ibm-vga/c64) keep their column/row count; the font scales
+  to fill the window on resize. Font Size sets the base/initial window zoom.
 - Large paste guard over `2 KB` or `20 lines`.
 - Paste inserts only, no auto-send.
 
