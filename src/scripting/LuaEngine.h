@@ -33,10 +33,12 @@ class LuaEngine final : public QObject {
     // True when built with -DMAXCHAT_LUA=ON (i.e. scripting actually works).
     [[nodiscard]] static bool available();
 
-    bool load(const QString& path);     // load one .lua file (reloads if already loaded)
-    int loadAll();                      // auto-load every non-"_" script; returns count
+    // Load one .lua file with explicit per-script permissions. If already loaded, reloads.
+    bool load(const QString& path, const ScriptPermissions& perms = {});
+    int loadAll(const QHash<QString, ScriptPermissions>& permsMap = {});
     bool unload(const QString& name);   // name = filename without .lua
-    bool reload(const QString& name);
+    bool reload(const QString& name);   // reloads with the script's stored permissions
+    [[nodiscard]] ScriptPermissions permsForScript(const QString& name) const;
     [[nodiscard]] QStringList loaded() const;
 
     // Call `hook` on every loaded script, passing `args` after the api table.
@@ -49,11 +51,10 @@ class LuaEngine final : public QObject {
     void setPermissions(const ScriptPermissions& perms);
     [[nodiscard]] const ScriptPermissions& permissions() const { return perms_; }
 
-    // True if a script may open `path` for read/write given the permissions and
-    // allowed dirs (the script's own data dir is always allowed). Used by the
-    // guarded io.open.
+    // True if a script may open `path` for read/write. `L` identifies the calling
+    // script so its per-script permissions are used. Used by the guarded io.open.
     [[nodiscard]] bool fileAccessAllowed(const QString& path, bool write,
-                                         const QString& dataDir) const;
+                                         const QString& dataDir, lua_State* L) const;
 
     // Scopes api.echo (etc.) to a network while a hook runs.
     void setCurrentNetwork(const QString& network);
@@ -75,7 +76,7 @@ class LuaEngine final : public QObject {
     void cancelTimer(int id);
 
   private:
-    lua_State* createState(const QString& dataDir);
+    lua_State* createState(const QString& dataDir, const ScriptPermissions& perms);
     bool callHook(ScriptState* state, const char* hook, const QVariantList& args = {});
     void reportError(const QString& script, const QString& where, const QString& message);
     void fireTimer(int id);
@@ -87,6 +88,7 @@ class LuaEngine final : public QObject {
     QString currentNetwork_;
     ScriptPermissions perms_;
     QHash<QString, ScriptState*> scripts_;
+    QHash<lua_State*, ScriptState*> stateByLua_;
     QHash<int, ScriptTimer*> timers_;
     int nextTimerId_ = 1;
 };

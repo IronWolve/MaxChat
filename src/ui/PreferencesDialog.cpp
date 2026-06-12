@@ -237,14 +237,8 @@ PreferencesDialog::PreferencesDialog(QVariantMap settings, QStringList loadedScr
 
 QVariantMap PreferencesDialog::settings() const {
     QVariantMap out = settings_;
-    if (scriptRead_ != nullptr) {
-        QVariantMap perms;
-        perms.insert(QStringLiteral("read"), scriptRead_->isChecked());
-        perms.insert(QStringLiteral("write"), scriptWrite_->isChecked());
-        perms.insert(QStringLiteral("exec"), scriptExec_->isChecked());
-        perms.insert(QStringLiteral("modules"), scriptModules_->isChecked());
-        perms.insert(QStringLiteral("network"), scriptNetwork_->isChecked());
-        out.insert(QStringLiteral("script_perms"), perms);
+    if (scriptDirs_ != nullptr) {
+        // scriptPerms is maintained live in settings_ via scriptPermissionChanged signals.
         QVariantList dirs;
         for (int i = 0; i < scriptDirs_->count(); ++i) {
             dirs.append(scriptDirs_->item(i)->text());
@@ -844,36 +838,99 @@ void PreferencesDialog::buildScriptsTab(QWidget* tab) {
     });
 
     auto* note = new QLabel(
-        QStringLiteral("Lua scripts run sandboxed by default — they can react to chat, add "
-                       "commands, and use their own private data folder. Grant extra abilities "
-                       "below only for scripts you trust; each one widens what a script can do "
-                       "to your computer. Changes reload your scripts."),
+        QStringLiteral("Lua scripts run sandboxed. Select a script to configure its permissions — "
+                       "each script starts with no access. Grant only what the script needs."),
         tab);
     note->setWordWrap(true);
     root->addWidget(note);
 
-    const QVariantMap perms = settings_.value(QStringLiteral("script_perms")).toMap();
-    const auto makeCheck = [&](const QString& label, const QString& key, const QString& tip) {
-        auto* box = new QCheckBox(label, tab);
-        box->setChecked(perms.value(key, false).toBool());
+    // ── Per-script permissions ───────────────────────────────────────────────
+    auto* permGroup = new QGroupBox(QStringLiteral("Script Permissions"), tab);
+    auto* permLayout = new QVBoxLayout(permGroup);
+
+    permLabel_ = new QLabel(QStringLiteral("Select a script above to configure its permissions."),
+                            permGroup);
+    permLabel_->setWordWrap(true);
+    permLayout->addWidget(permLabel_);
+
+    const auto makeCheck = [&](const QString& label, const QString& tip) {
+        auto* box = new QCheckBox(label, permGroup);
         box->setToolTip(tip);
-        root->addWidget(box);
+        box->setEnabled(false);
+        permLayout->addWidget(box);
         return box;
     };
-    scriptRead_ = makeCheck(QStringLiteral("Read files"), QStringLiteral("read"),
+    scriptRead_ = makeCheck(QStringLiteral("Read files"),
                             QStringLiteral("Allow io.open() to read files inside the allowed "
                                            "folders below."));
-    scriptWrite_ = makeCheck(QStringLiteral("Write files"), QStringLiteral("write"),
+    scriptWrite_ = makeCheck(QStringLiteral("Write files"),
                              QStringLiteral("Allow io.open() to create/modify files inside the "
                                             "allowed folders below."));
-    scriptExec_ = makeCheck(QStringLiteral("Run programs"), QStringLiteral("exec"),
+    scriptExec_ = makeCheck(QStringLiteral("Run programs"),
                             QStringLiteral("Allow os.execute / io.popen — scripts can launch "
                                            "other programs. High risk."));
-    scriptModules_ = makeCheck(QStringLiteral("Load modules"), QStringLiteral("modules"),
+    scriptModules_ = makeCheck(QStringLiteral("Load modules"),
                                QStringLiteral("Allow require()/load() — scripts can pull in other "
                                               "Lua or native libraries."));
-    scriptNetwork_ = makeCheck(QStringLiteral("Network access"), QStringLiteral("network"),
+    scriptNetwork_ = makeCheck(QStringLiteral("Network access"),
                                QStringLiteral("Adds api.http_get(url) for fetching web content."));
+    root->addWidget(permGroup);
+
+    // Update checkboxes when the selected script changes.
+    connect(scriptList_, &QListWidget::currentItemChanged, this,
+            [this](QListWidgetItem* item) {
+                updatingPerms_ = true;
+                const QString name = item ? item->data(Qt::UserRole).toString() : QString();
+                const bool has = !name.isEmpty();
+                scriptRead_->setEnabled(has);
+                scriptWrite_->setEnabled(has);
+                scriptExec_->setEnabled(has);
+                scriptModules_->setEnabled(has);
+                scriptNetwork_->setEnabled(has);
+                permLabel_->setText(
+                    has ? QStringLiteral("Permissions for: ") + name
+                        : QStringLiteral(
+                              "Select a script above to configure its permissions."));
+                if (has) {
+                    const QVariantMap p =
+                        settings_.value(QStringLiteral("scriptPerms")).toMap().value(name).toMap();
+                    scriptRead_->setChecked(p.value(QStringLiteral("read"), false).toBool());
+                    scriptWrite_->setChecked(p.value(QStringLiteral("write"), false).toBool());
+                    scriptExec_->setChecked(p.value(QStringLiteral("exec"), false).toBool());
+                    scriptModules_->setChecked(
+                        p.value(QStringLiteral("modules"), false).toBool());
+                    scriptNetwork_->setChecked(
+                        p.value(QStringLiteral("network"), false).toBool());
+                }
+                updatingPerms_ = false;
+            });
+
+    // Save per-script perms and notify MainWindow to reload when a checkbox changes.
+    const auto onPermChanged = [this]() {
+        if (updatingPerms_) {
+            return;
+        }
+        const QListWidgetItem* item = scriptList_->currentItem();
+        const QString name = item ? item->data(Qt::UserRole).toString() : QString();
+        if (name.isEmpty()) {
+            return;
+        }
+        QVariantMap newPerms;
+        newPerms.insert(QStringLiteral("read"),    scriptRead_->isChecked());
+        newPerms.insert(QStringLiteral("write"),   scriptWrite_->isChecked());
+        newPerms.insert(QStringLiteral("exec"),    scriptExec_->isChecked());
+        newPerms.insert(QStringLiteral("modules"), scriptModules_->isChecked());
+        newPerms.insert(QStringLiteral("network"), scriptNetwork_->isChecked());
+        QVariantMap allPerms = settings_.value(QStringLiteral("scriptPerms")).toMap();
+        allPerms.insert(name, newPerms);
+        settings_.insert(QStringLiteral("scriptPerms"), allPerms);
+        emit scriptPermissionChanged(name, newPerms);
+    };
+    connect(scriptRead_,    &QCheckBox::stateChanged, this, onPermChanged);
+    connect(scriptWrite_,   &QCheckBox::stateChanged, this, onPermChanged);
+    connect(scriptExec_,    &QCheckBox::stateChanged, this, onPermChanged);
+    connect(scriptModules_, &QCheckBox::stateChanged, this, onPermChanged);
+    connect(scriptNetwork_, &QCheckBox::stateChanged, this, onPermChanged);
 
     auto* dirsLabel =
         new QLabel(QStringLiteral("Folders scripts may read/write (the script's own data folder "

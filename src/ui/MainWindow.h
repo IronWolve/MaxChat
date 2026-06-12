@@ -155,8 +155,8 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     void handleScriptsCommand(const QString& command, const QString& arg);
     void openScriptsManager();
     void seedBundledScripts(const QString& destDir); // copy examples on first run
-    [[nodiscard]] maxchat::scripting::ScriptPermissions buildScriptPermissions() const;
-    void applyScriptPermissions(); // re-apply perms + reload scripts if they changed
+    [[nodiscard]] maxchat::scripting::ScriptPermissions buildScriptPermissionsFor(const QString& name) const;
+    [[nodiscard]] QHash<QString, maxchat::scripting::ScriptPermissions> buildAllScriptPermsMap() const;
     void updateWindowTitle();      // "MaxChat <ver> — <network> / <channel>" (active context)
     void updateNickLabel();        // your-nick label by the input box
     void leaveCurrentChannel();

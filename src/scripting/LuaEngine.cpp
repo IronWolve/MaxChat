@@ -33,6 +33,7 @@ struct ScriptState {
     lua_State* L = nullptr;
     int apiRef = LUA_NOREF;
     QString name;
+    ScriptPermissions perms;
 };
 
 struct ScriptTimer {
@@ -287,7 +288,7 @@ int l_guarded_open(lua_State* L) {
     const bool write =
         mode.contains(QLatin1Char('w')) || mode.contains(QLatin1Char('a')) ||
         mode.contains(QLatin1Char('+'));
-    if (engine == nullptr || !engine->fileAccessAllowed(path, write, dataDir)) {
+    if (engine == nullptr || !engine->fileAccessAllowed(path, write, dataDir, L)) {
         lua_pushnil(L);
         lua_pushstring(L, "permission denied (enable file access in Preferences > Scripts)");
         return 2;
@@ -322,8 +323,11 @@ void LuaEngine::setPermissions(const ScriptPermissions& perms) {
     perms_ = perms;
 }
 
-bool LuaEngine::fileAccessAllowed(const QString& path, bool write, const QString& dataDir) const {
-    if (write ? !perms_.writeFiles : !perms_.readFiles) {
+bool LuaEngine::fileAccessAllowed(const QString& path, bool write, const QString& dataDir,
+                                   lua_State* L) const {
+    const ScriptState* state = stateByLua_.value(L, nullptr);
+    const ScriptPermissions& perms = state ? state->perms : ScriptPermissions{};
+    if (write ? !perms.writeFiles : !perms.readFiles) {
         return false;
     }
 #ifdef Q_OS_WIN
@@ -345,7 +349,7 @@ bool LuaEngine::fileAccessAllowed(const QString& path, bool write, const QString
     if (within(dataDir)) {
         return true; // a script's own data dir is always in-bounds
     }
-    for (const QString& dir : perms_.allowedDirs) {
+    for (const QString& dir : perms.allowedDirs) {
         if (within(dir)) {
             return true;
         }
@@ -353,10 +357,10 @@ bool LuaEngine::fileAccessAllowed(const QString& path, bool write, const QString
     return false;
 }
 
-// Open a fresh state with exactly the libraries the current permissions allow.
+// Open a fresh state with exactly the libraries the given permissions allow.
 // The safe core (base/table/string/math/utf8 + a read-only os subset) is always
-// present; io/package/os-danger/load are gated.
-lua_State* LuaEngine::createState(const QString& dataDir) {
+// present; io/package/os-danger/load are gated by per-script permissions.
+lua_State* LuaEngine::createState(const QString& dataDir, const ScriptPermissions& perms) {
     lua_State* L = luaL_newstate();
     if (L == nullptr) {
         return nullptr;
@@ -375,7 +379,7 @@ lua_State* LuaEngine::createState(const QString& dataDir) {
     luaL_requiref(L, LUA_OSLIBNAME, luaopen_os, 1);
     lua_pushnil(L);
     lua_setfield(L, -2, "exit");
-    if (!perms_.runPrograms) {
+    if (!perms.runPrograms) {
         for (const char* fn : {"execute", "getenv", "remove", "rename", "tmpname", "setlocale"}) {
             lua_pushnil(L);
             lua_setfield(L, -2, fn);
@@ -384,7 +388,7 @@ lua_State* LuaEngine::createState(const QString& dataDir) {
     lua_pop(L, 1); // os table
 
     // load/dofile/loadfile + package/require: only with "load modules".
-    if (perms_.loadModules) {
+    if (perms.loadModules) {
         luaL_requiref(L, LUA_LOADLIBNAME, luaopen_package, 1);
         lua_pop(L, 1);
     } else {
@@ -396,7 +400,7 @@ lua_State* LuaEngine::createState(const QString& dataDir) {
 
     // io: only when read or write is granted. io.open is replaced with a guarded
     // version; the unguarded openers are removed, and io.popen needs exec.
-    if (perms_.anyFileAccess()) {
+    if (perms.anyFileAccess()) {
         luaL_requiref(L, LUA_IOLIBNAME, luaopen_io, 1);
         lua_getfield(L, -1, "open"); // save the real io.open in the registry
         lua_setfield(L, LUA_REGISTRYINDEX, "maxchat_io_open");
@@ -409,7 +413,7 @@ lua_State* LuaEngine::createState(const QString& dataDir) {
             lua_pushnil(L);
             lua_setfield(L, -2, fn);
         }
-        if (!perms_.runPrograms) {
+        if (!perms.runPrograms) {
             lua_pushnil(L);
             lua_setfield(L, -2, "popen");
         }
@@ -660,17 +664,17 @@ bool LuaEngine::dispatch(const QString& hook, const QString& network, const QVar
     return consumed;
 }
 
-bool LuaEngine::load(const QString& path) {
+bool LuaEngine::load(const QString& path, const ScriptPermissions& perms) {
     const QString name = QFileInfo(path).completeBaseName();
     if (scripts_.contains(name)) {
         unload(name);
     }
     const QString dataDir = QDir(dataRoot_).filePath(name);
-    lua_State* L = createState(dataDir);
+    lua_State* L = createState(dataDir, perms);
     if (L == nullptr) {
         return false;
     }
-    const int apiRef = installApi(L, this, dataDir, perms_);
+    const int apiRef = installApi(L, this, dataDir, perms);
     if (luaL_loadfile(L, path.toUtf8().constData()) != LUA_OK) {
         reportError(name, QStringLiteral("load"), QString::fromUtf8(lua_tostring(L, -1)));
         lua_close(L);
@@ -681,13 +685,14 @@ bool LuaEngine::load(const QString& path) {
         lua_close(L);
         return false;
     }
-    auto* state = new ScriptState{L, apiRef, name};
+    auto* state = new ScriptState{L, apiRef, name, perms};
     scripts_.insert(name, state);
+    stateByLua_.insert(L, state);
     callHook(state, "on_load");
     return true;
 }
 
-int LuaEngine::loadAll() {
+int LuaEngine::loadAll(const QHash<QString, ScriptPermissions>& permsMap) {
     QDir dir(scriptsDir_);
     int count = 0;
     const QFileInfoList files =
@@ -696,7 +701,8 @@ int LuaEngine::loadAll() {
         if (fi.fileName().startsWith(QLatin1Char('_'))) {
             continue; // leading underscore = manual-load only
         }
-        if (load(fi.absoluteFilePath())) {
+        const QString name = fi.completeBaseName();
+        if (load(fi.absoluteFilePath(), permsMap.value(name))) {
             ++count;
         }
     }
@@ -711,6 +717,7 @@ bool LuaEngine::unload(const QString& name) {
     ScriptState* state = it.value();
     callHook(state, "on_unload");
     cancelTimersFor(state); // stop + unref this script's timers before its state dies
+    stateByLua_.remove(state->L);
     luaL_unref(state->L, LUA_REGISTRYINDEX, state->apiRef);
     lua_close(state->L);
     delete state;
@@ -719,7 +726,18 @@ bool LuaEngine::unload(const QString& name) {
 }
 
 bool LuaEngine::reload(const QString& name) {
-    return load(QDir(scriptsDir_).filePath(name + QStringLiteral(".lua")));
+    // Save perms before unload() destroys the state.
+    ScriptPermissions savedPerms;
+    const auto it = scripts_.constFind(name);
+    if (it != scripts_.constEnd()) {
+        savedPerms = it.value()->perms;
+    }
+    return load(QDir(scriptsDir_).filePath(name + QStringLiteral(".lua")), savedPerms);
+}
+
+ScriptPermissions LuaEngine::permsForScript(const QString& name) const {
+    const ScriptState* state = scripts_.value(name, nullptr);
+    return state ? state->perms : ScriptPermissions{};
 }
 
 } // namespace maxchat::scripting
@@ -740,12 +758,16 @@ bool LuaEngine::available() {
     return false;
 }
 
-bool LuaEngine::load(const QString&) {
+bool LuaEngine::load(const QString&, const ScriptPermissions&) {
     return false;
 }
 
-int LuaEngine::loadAll() {
+int LuaEngine::loadAll(const QHash<QString, ScriptPermissions>&) {
     return 0;
+}
+
+ScriptPermissions LuaEngine::permsForScript(const QString&) const {
+    return {};
 }
 
 bool LuaEngine::unload(const QString&) {
@@ -790,7 +812,7 @@ QString LuaEngine::hostHttpGet(const QString&) {
 void LuaEngine::setPermissions(const ScriptPermissions& perms) {
     perms_ = perms;
 }
-bool LuaEngine::fileAccessAllowed(const QString&, bool, const QString&) const {
+bool LuaEngine::fileAccessAllowed(const QString&, bool, const QString&, lua_State*) const {
     return false;
 }
 int LuaEngine::createTimer(void*, int, int) {

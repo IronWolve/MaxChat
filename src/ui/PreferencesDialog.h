@@ -6,6 +6,7 @@
 class QCheckBox;
 class QComboBox;
 class QFontComboBox;
+class QLabel;
 class QLineEdit;
 class QListWidget;
 class QSpinBox;
@@ -38,6 +39,7 @@ class PreferencesDialog final : public QDialog {
     void unloadScriptRequested(const QString& name);
     void reloadScriptRequested(const QString& name);
     void editScriptRequested(const QString& path);
+    void scriptPermissionChanged(const QString& name, const QVariantMap& perms);
 
   private:
     void setAllFonts(const QString& family, int size, bool bold);
@@ -63,6 +65,8 @@ class PreferencesDialog final : public QDialog {
     QString scriptsDir_;
     QString soundsDir_;
     QListWidget* scriptList_ = nullptr;
+    QLabel* permLabel_ = nullptr;
+    bool updatingPerms_ = false;
     QCheckBox* scriptRead_ = nullptr;
     QCheckBox* scriptWrite_ = nullptr;
     QCheckBox* scriptExec_ = nullptr;

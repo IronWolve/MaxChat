@@ -404,8 +404,7 @@ class LuaEngineTest final : public QObject {
         perms.allowedDirs = {allowed.path()};
         FakeHost host;
         LuaEngine engine(&host, scripts.path(), scripts.path());
-        engine.setPermissions(perms);
-        QVERIFY(engine.load(script));
+        QVERIFY(engine.load(script, perms));
         QCOMPARE(host.echoes, (QStringList{QStringLiteral("yes"), QStringLiteral("DENIED")}));
     }
 
@@ -428,8 +427,7 @@ class LuaEngineTest final : public QObject {
         perms.allowedDirs = {allowed.path()};
         FakeHost host;
         LuaEngine engine(&host, scripts.path(), scripts.path());
-        engine.setPermissions(perms);
-        QVERIFY(engine.load(script));
+        QVERIFY(engine.load(script, perms));
         QCOMPARE(host.echoes, QStringList{QStringLiteral("DENIED")});
         QVERIFY(!QFile::exists(target));
     }
@@ -452,8 +450,7 @@ class LuaEngineTest final : public QObject {
         perms.network = true;
         FakeHost host2;
         LuaEngine engine2(&host2, dir.path(), dir.path());
-        engine2.setPermissions(perms);
-        QVERIFY(engine2.load(script));
+        QVERIFY(engine2.load(script, perms));
         QCOMPARE(host2.echoes, QStringList{QStringLiteral("BODY")});
     }
 
