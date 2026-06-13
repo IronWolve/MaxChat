@@ -9242,32 +9242,43 @@ void maxchat::ui::MainWindow::applyTheme(const QString& theme) {
     const QString styleSheet =
         styleSheetForAppearance(normalized, m_currentChatTheme, m_currentWallpaper,
                                 m_chatOpacity);
+    // Chrome font lives IN the stylesheet: with an app-wide QSS active,
+    // qApp->setFont/menuBar()->setFont are unreliable — any re-polish (theme,
+    // chat theme, wallpaper switch, even later widget churn) silently reverts
+    // the menu bar / toolbar to the system font. A stylesheet rule cannot be
+    // dropped that way.
+    const QVariantMap fontSettings = m_settings.loadWithDefaults();
+    const QString family = fontSettings
+                               .value(QStringLiteral("app_font_family"),
+                                      QStringLiteral("JetBrains Mono"))
+                               .toString();
+    const int pointSize = fontSettings.value(QStringLiteral("app_font_size"), 14).toInt();
+    const bool bold = fontSettings.value(QStringLiteral("app_font_bold"), true).toBool();
+    const QString chromeFontCss =
+        QStringLiteral("\nQMenuBar, QMenu, QToolBar, QToolButton { font-family:'%1'; "
+                       "font-size:%2pt; font-weight:%3; }")
+            .arg(family)
+            .arg(pointSize)
+            .arg(bold ? 700 : 400);
     // Apply palette + stylesheet app-wide so parentless dialogs are themed too,
     // and the OS palette can't bleed into widgets the QSS doesn't cover.
     if (normalized == systemThemeId()) {
         if (QStyle* style = QApplication::style()) {
             qApp->setPalette(style->standardPalette());
         }
-        qApp->setStyleSheet(QString());
+        qApp->setStyleSheet(chromeFontCss);
     } else {
         qApp->setPalette(paletteForAppearance(normalized));
-        qApp->setStyleSheet(styleSheet);
+        qApp->setStyleSheet(styleSheet + chromeFontCss);
     }
     updateTrayIcon();
     setWindowIcon(ui::AppIcon::makeIcon(
         m_settings.loadWithDefaults().value(QStringLiteral("tray_icon"), QStringLiteral("bubble")).toString(),
         appThemeById(normalized).accent));
-    // Setting the global stylesheet re-polishes chrome and DROPS the app font
-    // (menu bar, toolbar, popup menus revert to the system default). Re-assert
-    // it here so every applyTheme caller is covered — setTheme/setChatTheme/
-    // setWallpaper from the View menu used to leave the chrome font reverted
-    // until the next preferences save.
-    const QVariantMap fontSettings = m_settings.loadWithDefaults();
-    QFont appFont(fontSettings.value(QStringLiteral("app_font_family"),
-                                     QStringLiteral("JetBrains Mono"))
-                      .toString(),
-                  fontSettings.value(QStringLiteral("app_font_size"), 14).toInt());
-    appFont.setBold(fontSettings.value(QStringLiteral("app_font_bold"), true).toBool());
+    // Keep the app-font assert for everything else (dialogs, labels) — the
+    // stylesheet rule above covers the chrome that re-polish was reverting.
+    QFont appFont(family, pointSize);
+    appFont.setBold(bold);
     qApp->setFont(appFont);
     if (menuBar() != nullptr) {
         menuBar()->setFont(appFont);
