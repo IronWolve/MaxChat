@@ -804,3 +804,14 @@ Implemented in one pass (all compiled debug+release, selftest OK):
   messages, which fakelag charges the same as N full S messages).
 - First dial: ~12 messages (mostly inside server burst). Cached revisits:
   1 RP message — instant.
+
+## Chrome font revert, round 2 (2026-06-12)
+
+- The qApp->setFont/menuBar()->setFont re-assert inside applyTheme was NOT
+  enough — with an app-wide QSS active, programmatic fonts lose to any later
+  re-polish (Qt's documented stylesheet/setFont conflict). Deterministic fix:
+  the chrome font is now a RULE IN the global stylesheet itself
+  (QMenuBar/QMenu/QToolBar/QToolButton { font-family/size/weight }) appended
+  in applyTheme — a stylesheet rule can't be dropped by re-polish. setFont
+  kept for dialogs/labels. Lesson: if a font must survive under app-wide QSS,
+  put it IN the QSS, don't fight the polish order.
