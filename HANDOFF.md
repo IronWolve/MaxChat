@@ -1,6 +1,7 @@
 # MaxChat C++ Port Handoff
 
-Date: 2026-06-09 (audit closeout 2026-06-10; UI polish 2026-06-11)
+Date: 2026-06-09 (audit closeout 2026-06-10; UI polish 2026-06-11;
+MC DATA BBS subsystem 2026-06-12, branch `mc-data-terminal`)
 
 ## Latest Completed Slice (MC DATA BBS: terminals, MCB1 pics, speed, 2026-06-12)
 
@@ -19,14 +20,31 @@ The mc-data-terminal branch grew from "BBS demo" into a complete subsystem:
 - **Visuals**: ANSI-Shadow RETRO BBS logo + framed pages, per-row color ops
   (cyan/magenta scene fade), colored chrome.
 - **MCB1** (named format, "MaxChat Bitmap 1-bit"): pic gallery menu serving
-  three public-domain space photos as 80x50 1-bit half-block art over B/I
-  verbs with content-addressed caching; rle1z/raw1z Z85 armor (37% smaller
-  than hex); `tools/mcb1_convert.py` converts any jpg/png to .mcb or a
-  paste-ready PICS entry. See DEVDOCS/MC_DATA.md "State of the art" blurb
-  for the compression bragging rights (within ~10% of zlib; beats PNG/GIF
-  at this size).
+  three public-domain space photos as 1-bit art over B/I verbs with
+  content-addressed caching; rle1z/raw1z Z85 armor (37% smaller than hex);
+  `tools/mcb1_convert.py` converts any jpg/png to .mcb or a paste-ready PICS
+  entry. **Bayer (ordered) dithering** + posterize for the clean retro look,
+  and `--quad` quadrant glyphs for **160x50** (2x2 px/cell) — gallery
+  regenerated at 160x50. See DEVDOCS/MC_DATA.md "State of the art" blurb.
+- **Bug-fix tail (post-feedback):**
+  - McDataCodec stripped trailing spaces from payloads (splitFirstToken used
+    .trimmed()) — corrupted frame W byte counts → "bad static frame". Now
+    leading-whitespace-only; payloads are byte-exact. The lua_engine test now
+    runs EVERY outgoing T/S/D chunk through the real TerminalFrame parser.
+  - Terminal re-fits font on showEvent (pre-show viewport lied about size →
+    opened with a tiny font).
+  - **Chrome font revert (menu bar) — final fix:** the app font is now a RULE
+    in the global stylesheet (QMenuBar/QMenu/QToolBar/QToolButton) in
+    applyTheme, not a setFont re-assert. setFont loses to QSS re-polish; a QSS
+    rule cannot be dropped. Confirmed fixed by user.
+- **More speed (round 2):** IRC fakelag (server paces relayed lines ~1/s) is
+  the real budget, so message COUNT matters. Chunk budget 300->330; splash is
+  one combined RETRO BBS banner (13 rows, was 21); new **RP verb** replays a
+  whole cached page in ONE message (was N tiny R messages, which fakelag
+  charges like N full sends). Cached revisits now cost one IRC line.
 
-Tests: 53/53 (lua_engine covers the full BBS flow incl. Z85 decode/render).
+Tests: 53/53 (lua_engine covers the full BBS flow incl. Z85 decode/render and
+now validates every emitted frame chunk against the real parser).
 
 ## Previous Slice (OS nostalgia themes, 2026-06-12)
 
