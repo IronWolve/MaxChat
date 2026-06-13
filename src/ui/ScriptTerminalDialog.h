@@ -57,6 +57,7 @@ class ScriptTerminalDialog final : public QDialog {
   protected:
     void closeEvent(QCloseEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
+    void showEvent(QShowEvent* event) override;
 
   private:
     void buildMenuBar();

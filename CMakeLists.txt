@@ -1285,7 +1285,11 @@ if(MAXCHAT_LUA)
 
     qt_add_executable(lua_engine_test
         tests/unit/lua_engine_test.cpp
+        src/ui/TerminalFrame.cpp
+        src/ui/TerminalFrame.h
     )
+
+    target_include_directories(lua_engine_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
     target_link_libraries(lua_engine_test
         PRIVATE

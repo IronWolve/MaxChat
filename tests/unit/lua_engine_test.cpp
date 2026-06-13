@@ -1,6 +1,7 @@
 #include "scripting/LuaEngine.h"
 #include "scripting/ScriptHost.h"
 #include "scripting/ScriptPermissions.h"
+#include "ui/TerminalFrame.h"
 
 #include <QDir>
 #include <QHash>
@@ -647,6 +648,30 @@ class LuaEngineTest final : public QObject {
         QVERIFY(host.terminals.size() > framesBefore);
         QVERIFY(host.terminals.last().startsWith(
             QStringLiteral("frame|bbs|client:alice:retro-bbs|CP0101AF0W")));
+
+        // Every frame chunk the script ever SENT must parse with the real C++
+        // grid parser — the fake host only records them, so without this a
+        // malformed op stream ships and the client shows "bad static frame".
+        for (const QString& line : host.mcData) {
+            // record format: net|target|service|verb|payload|type — the payload
+            // itself may contain '|', so take everything between the 4th and
+            // the LAST separator.
+            const QString verb = line.section(QLatin1Char('|'), 3, 3);
+            QString ops = line.section(QLatin1Char('|'), 4, -2);
+            if (verb == QStringLiteral("S")) {
+                // "S <part> <hash> <ops>"
+                const qsizetype second =
+                    ops.indexOf(QLatin1Char(' '), ops.indexOf(QLatin1Char(' ')) + 1);
+                ops = second >= 0 ? ops.mid(second + 1) : QString();
+            } else if (verb != QStringLiteral("T") && verb != QStringLiteral("D")) {
+                continue;
+            }
+            QVector<maxchat::ui::TerminalFrame::Op> parsed;
+            QString error;
+            QVERIFY2(maxchat::ui::TerminalFrame::parse(ops, &parsed, &error),
+                     qPrintable(error + QStringLiteral(" len=%1 ops=[").arg(ops.size()) + ops +
+                                QStringLiteral("]")));
+        }
 
         QVERIFY(engine.dispatch(QStringLiteral("on_command"), QStringLiteral("synIRC"),
                                 {QStringLiteral("bbscache"), QString()}));
