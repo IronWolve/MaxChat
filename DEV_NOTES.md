@@ -783,3 +783,12 @@ Implemented in one pass (all compiled debug+release, selftest OK):
   didn't change the size, no resizeEvent fired to correct it → terminal opened
   with a small font in a right-sized window. Fix: showEvent queues one
   applyFitFont after the geometry is real.
+
+## Chrome font revert on theme switch (2026-06-12, user report)
+
+- "Bar font reverts to default" — NOT terminal cross-talk: setTheme/
+  setChatTheme/setWallpaper (View menu) call applyTheme(), whose global
+  qApp->setStyleSheet re-polish DROPS the app font for chrome; only the
+  applyCurrentSettings path re-asserted it. Any theme/wallpaper switch left
+  the menu bar in the system font until the next prefs save. Fix: applyTheme
+  itself re-asserts qApp font + menuBar font, covering every caller.

@@ -9257,6 +9257,21 @@ void maxchat::ui::MainWindow::applyTheme(const QString& theme) {
     setWindowIcon(ui::AppIcon::makeIcon(
         m_settings.loadWithDefaults().value(QStringLiteral("tray_icon"), QStringLiteral("bubble")).toString(),
         appThemeById(normalized).accent));
+    // Setting the global stylesheet re-polishes chrome and DROPS the app font
+    // (menu bar, toolbar, popup menus revert to the system default). Re-assert
+    // it here so every applyTheme caller is covered — setTheme/setChatTheme/
+    // setWallpaper from the View menu used to leave the chrome font reverted
+    // until the next preferences save.
+    const QVariantMap fontSettings = m_settings.loadWithDefaults();
+    QFont appFont(fontSettings.value(QStringLiteral("app_font_family"),
+                                     QStringLiteral("JetBrains Mono"))
+                      .toString(),
+                  fontSettings.value(QStringLiteral("app_font_size"), 14).toInt());
+    appFont.setBold(fontSettings.value(QStringLiteral("app_font_bold"), true).toBool());
+    qApp->setFont(appFont);
+    if (menuBar() != nullptr) {
+        menuBar()->setFont(appFont);
+    }
 }
 
 void maxchat::ui::MainWindow::setTheme(const QString& theme, const bool save) {
