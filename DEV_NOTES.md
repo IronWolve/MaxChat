@@ -792,3 +792,15 @@ Implemented in one pass (all compiled debug+release, selftest OK):
   applyCurrentSettings path re-asserted it. Any theme/wallpaper switch left
   the menu bar in the system font until the next prefs save. Fix: applyTheme
   itself re-asserts qApp font + menuBar font, covering every caller.
+
+## BBS speed round 2: IRC fakelag is the budget (2026-06-12)
+
+- Even with the 750 ms client penalty, the SERVER paces relayed lines
+  (fakelag: small burst then ~1 line/s). Message COUNT is the currency, not
+  bytes. Splash was ~24 messages -> 30% painted in seconds.
+- Fixes: chunk budget 300->330 (pack the cap); splash logo is ONE combined
+  "RETRO BBS" banner (6 rows, was 12; 13 screen rows total, was 21);
+  new RP verb replays a whole cached page in ONE message (was N tiny R
+  messages, which fakelag charges the same as N full S messages).
+- First dial: ~12 messages (mostly inside server burst). Cached revisits:
+  1 RP message — instant.

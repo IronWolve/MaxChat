@@ -263,9 +263,10 @@ local function terminal_frame_chunks(lines)
       local text, fg, bg = row_parts(value)
       op = frame_pos(row, 1) .. "A" .. hex1(fg) .. hex1(bg) .. frame_write(text)
     end
-    -- 300, not the 350 transport cap: static sends prepend "<page#N> <hash> "
-    -- (~20 bytes) and the whole payload must stay under the MC DATA limit.
-    if #current + #op > 300 and #current > 0 then
+    -- 330, not the 350 transport cap: static sends prepend "<page#N> <hash> "
+    -- (~18 bytes). Every IRC message costs server-side fakelag, so chunks are
+    -- packed as full as the cap allows.
+    if #current + #op > 330 and #current > 0 then
       chunks[#chunks + 1] = current
       current = ""
     end
@@ -284,23 +285,38 @@ local function send_terminal_frames(api, s, lines)
 end
 
 -- Multi-chunk pages are cached per chunk: part ids "main#1", "main#2", ...
--- reuse the existing S/R/Q verbs unchanged (each part is its own cached page).
+-- reuse the existing S/R/Q verbs unchanged. When EVERY part of a page is
+-- already cached, a single "RP <page> <h1,h2,...>" replays the whole screen
+-- in one message (each IRC line costs server-side fakelag; N tiny R messages
+-- replay no faster than N full S messages).
 local function send_static_or_terminal_frame(api, s, page_id, lines)
   local chunks = terminal_frame_chunks(lines)
   if s.supports_static then
     s.static_defs = s.static_defs or {}
     s.static_sent = s.static_sent or {}
+    local hashes = {}
+    local all_cached = true
     for i, ops in ipairs(chunks) do
       local part_id = (#chunks == 1) and page_id or (page_id .. "#" .. i)
-      local hash = frame_hash(ops)
-      local sent_key = part_id .. "|" .. hash
+      hashes[i] = frame_hash(ops)
+      local sent_key = part_id .. "|" .. hashes[i]
       s.static_defs[sent_key] = ops
+      if not s.static_sent[sent_key] then all_cached = false end
+    end
+    if all_cached then
+      server.cache_replays = server.cache_replays + 1
+      send_raw(api, s.nick, "RP", page_id .. " " .. table.concat(hashes, ","), s.network)
+      return
+    end
+    for i, ops in ipairs(chunks) do
+      local part_id = (#chunks == 1) and page_id or (page_id .. "#" .. i)
+      local sent_key = part_id .. "|" .. hashes[i]
       if s.static_sent[sent_key] then
         server.cache_replays = server.cache_replays + 1
-        send_raw(api, s.nick, "R", part_id .. " " .. hash, s.network)
+        send_raw(api, s.nick, "R", part_id .. " " .. hashes[i], s.network)
       else
         server.static_sent = server.static_sent + 1
-        send_raw(api, s.nick, "S", part_id .. " " .. hash .. " " .. ops, s.network)
+        send_raw(api, s.nick, "S", part_id .. " " .. hashes[i] .. " " .. ops, s.network)
         s.static_sent[sent_key] = true
       end
     end
@@ -648,31 +664,24 @@ local function seg(text, fg, bg) return { text = text, fg = fg or 7, bg = bg or 
 local function seg_row(...) return { segs = { ... } } end
 
 local function welcome_lines(api, s)
-  local RETRO_FADE = { 11, 11, 15, 15, 11, 3 }
-  local BBS_FADE = { 13, 13, 15, 15, 13, 5 }
+  -- One combined RETRO BBS banner (77 cells) instead of two stacked words:
+  -- every screen row is an IRC message downstream, and fakelag charges each.
+  local FADE = { 11, 11, 15, 15, 13, 13 }
   local L = {}
   L[#L + 1] = colored(star_field(1, 80), 1)
-  local retro = fig("RETRO")
-  local rw = dwidth(retro[1])
-  local lm = math.floor((80 - rw) / 2)
-  for i, rrow in ipairs(retro) do
-    L[#L + 1] = seg_row(seg(star_field(i + 1, lm), 1), seg(rrow, RETRO_FADE[i]),
-                        seg(star_field(i + 30, 80 - lm - rw), 1))
+  L[#L + 1] = colored(star_field(2, 80), 9)
+  local banner = fig("RETRO BBS")
+  local bw = dwidth(banner[1])
+  local lm = math.floor((80 - bw) / 2)
+  for i, row in ipairs(banner) do
+    L[#L + 1] = seg_row(seg(star_field(i + 2, lm), 1), seg(row, FADE[i]),
+                        seg(star_field(i + 32, 80 - lm - bw), 1))
   end
   L[#L + 1] = colored(star_field(9, 80), 9)
-  local bbs = fig("BBS")
-  local bw = dwidth(bbs[1])
-  local bmargin = math.floor((80 - bw) / 2)
-  for i, brow in ipairs(bbs) do
-    L[#L + 1] = seg_row(seg(star_field(i + 10, bmargin), 1), seg(brow, BBS_FADE[i]),
-                        seg(star_field(i + 40, 80 - bmargin - bw), 1))
-  end
-  L[#L + 1] = colored(star_field(17, 80), 1)
   L[#L + 1] = colored(center_in("*  M A X C H A T   *   M C - D A T A   B O A R D  *", 80), 15)
-  L[#L + 1] = ""
   L[#L + 1] = colored(center_in("SYSOP: " .. (server.sysop ~= "" and server.sysop or "AVAILABLE")
                                 .. "   |   LAST CALL: " .. s.nick, 80), 3)
-  L[#L + 1] = colored(star_field(21, 80), 9)
+  L[#L + 1] = colored(star_field(12, 80), 1)
   L[#L + 1] = ""
   L[#L + 1] = colored(center_in("Enter your handle to log in (demo user: " .. DEMO_USER .. ")", 80), 7)
   return L
@@ -1463,6 +1472,24 @@ function on_mc_data(api, network, target, nick, service, verb, payload, notice)
       end
     else
       api.terminal_write(client.term, "[bbs] bad static frame header\n")
+    end
+  elseif verb == "RP" then
+    -- whole-page replay: ordered comma list of part hashes
+    local page_id, list = payload:match("^(%S+)%s+(%S+)$")
+    if page_id and list then
+      local hashes = {}
+      for h in list:gmatch("[^,]+") do hashes[#hashes + 1] = h end
+      for i, hash in ipairs(hashes) do
+        local part_id = (#hashes == 1) and page_id or (page_id .. "#" .. i)
+        local ops = static_cache[static_cache_key(client.bbs_id, part_id, hash)]
+        if ops then
+          api.terminal_frame(client.term, ops)
+        else
+          send_raw(api, client.nick, "Q", part_id .. " " .. hash, client.network)
+        end
+      end
+    else
+      api.terminal_write(client.term, "[bbs] bad page replay header\n")
     end
   elseif verb == "R" then
     local page_id, hash = payload:match("^(%S+)%s+(%S+)$")

@@ -593,7 +593,7 @@ class LuaEngineTest final : public QObject {
                                 {QStringLiteral("synIRC"), QStringLiteral("bob"),
                                  QStringLiteral("alice"), QStringLiteral("bbs"),
                                  QStringLiteral("INPUT"), QStringLiteral("B"), false}));
-        QVERIFY(containsMcDataPrefix(QStringLiteral("synIRC|alice|bbs|R|main")));
+        QVERIFY(containsMcDataPrefix(QStringLiteral("synIRC|alice|bbs|RP|main")));
 
         // Pic gallery: 6 opens it, 1 sends bitmap chunks (B) + insert (I),
         // any key returns to the gallery list.

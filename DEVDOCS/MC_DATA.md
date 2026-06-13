@@ -490,6 +490,8 @@ Verbs:
 T <ops>                 apply transient frame immediately
 S <id> <hash> <ops>     store static frame and apply it
 R <id> <hash>           replay cached static frame if present
+RP <page> <h1,h2,...>   replay a whole multi-part page in ONE message
+                        (part ids page#1..page#N; client Qs missing parts)
 Q <id> <hash>           request static frame resend because cache is missing
 D <ops>                 apply dynamic overlay after static/replayed frame
 ```
