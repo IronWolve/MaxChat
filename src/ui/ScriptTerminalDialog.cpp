@@ -19,6 +19,8 @@
 #include <QMenu>
 #include <QKeyEvent>
 #include <QScrollBar>
+#include <QShowEvent>
+#include <QTimer>
 #include <QTextBrowser>
 #include <QTextCursor>
 #include <QUrl>
@@ -328,6 +330,14 @@ void ScriptTerminalDialog::closeEvent(QCloseEvent* event) {
 void ScriptTerminalDialog::resizeEvent(QResizeEvent* event) {
     QDialog::resizeEvent(event);
     applyFitFont();
+}
+
+void ScriptTerminalDialog::showEvent(QShowEvent* event) {
+    QDialog::showEvent(event);
+    // Fit-font ran against the pre-show viewport, which lies about its size;
+    // if showing does not change the size no resizeEvent fires to correct it.
+    // Re-fit once the window geometry is real.
+    QTimer::singleShot(0, this, [this]() { applyFitFont(); });
 }
 
 QString ScriptTerminalDialog::activeFamily() const {

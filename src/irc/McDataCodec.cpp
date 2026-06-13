@@ -10,13 +10,19 @@ struct SplitToken {
 };
 
 SplitToken splitFirstToken(const QString &text) {
-  const QString trimmed = text.trimmed();
-  const int space = trimmed.indexOf(QLatin1Char(' '));
-  if (space < 0) {
-    return {.first = trimmed, .rest = {}};
+  // Strip LEADING whitespace only. The final `rest` is the payload and must
+  // arrive byte-exact: terminal frame W ops carry a byte count, so trimming
+  // trailing spaces corrupts the op stream ("bad static frame" client-side).
+  qsizetype start = 0;
+  while (start < text.size() && text.at(start).isSpace()) {
+    ++start;
   }
-  return {.first = trimmed.left(space),
-          .rest = trimmed.mid(space + 1).trimmed()};
+  const QString lead = text.mid(start);
+  const int space = lead.indexOf(QLatin1Char(' '));
+  if (space < 0) {
+    return {.first = lead, .rest = {}};
+  }
+  return {.first = lead.left(space), .rest = lead.mid(space + 1)};
 }
 
 bool validToken(const QString &token) {

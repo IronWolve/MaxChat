@@ -766,3 +766,20 @@ Implemented in one pass (all compiled debug+release, selftest OK):
   ({segs={{text,fg,bg},...}} -> P + A/W pairs per row in the chunker;
   clean_seg_line keeps trailing spaces because segment widths position
   the following segment).
+
+## "bad static frame" + wrong startup font (2026-06-12, user report)
+
+- ROOT CAUSE (frames): McDataCodec splitFirstToken .trimmed() the payload at
+  every level — TRAILING SPACES of MC DATA payloads were stripped in the
+  transport. Frame W ops carry byte counts; chunks whose last text ended in
+  spaces (starfield rows of the new splash) lost bytes → parser rejected the
+  whole frame. Fix: strip LEADING whitespace only; payload is byte-exact now.
+- TEST GAP CLOSED: the lua_engine bundled test now parses EVERY outgoing
+  T/S/D chunk with the real TerminalFrame::parse (the FakeHost only recorded
+  them, so malformed op streams shipped invisibly). Gotcha within the gotcha:
+  the FakeHost record format is pipe-separated and the splash SYSOP row
+  contains " | " — extract payload with section('|', 4, -2), not split.
+- ROOT CAUSE (font): fit-font ran against the PRE-SHOW viewport; when show()
+  didn't change the size, no resizeEvent fired to correct it → terminal opened
+  with a small font in a right-sized window. Fix: showEvent queues one
+  applyFitFont after the geometry is real.
