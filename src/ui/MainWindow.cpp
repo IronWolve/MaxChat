@@ -7510,6 +7510,15 @@ void maxchat::ui::MainWindow::handleChatAnchorClicked(const QUrl& url) {
     default:
         break;
     }
+    // Defence in depth before handing a clicked link to the OS: only open web /
+    // mail schemes. A crafted anchor (e.g. file:, javascript:, or an app handler)
+    // must not reach QDesktopServices::openUrl from a chat message.
+    const QString scheme = url.scheme().toLower();
+    if (scheme != QLatin1String("http") && scheme != QLatin1String("https") &&
+        scheme != QLatin1String("ftp") && scheme != QLatin1String("mailto")) {
+        appendSystemLine(QStringLiteral("! Refused to open link with scheme \"%1\".").arg(scheme));
+        return;
+    }
     QDesktopServices::openUrl(url);
 }
 

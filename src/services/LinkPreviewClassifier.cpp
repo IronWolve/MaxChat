@@ -230,6 +230,10 @@ bool isAllowedPreviewFetchUrl(const QUrl &url) {
   if (host.isEmpty() || hostLooksPrivateName(host)) {
     return false;
   }
+  // IPv6 literal hosts are intentionally fail-closed (no preview): classifying
+  // the full IPv6 private/ULA/link-local/mapped-IPv4 space correctly is easy to
+  // get subtly wrong and a mistake here is an SSRF hole. Declining the preview
+  // is the safe default; revisit only with a dedicated, tested IPv6 classifier.
   if (host.contains(QLatin1Char(':'))) {
     return false;
   }

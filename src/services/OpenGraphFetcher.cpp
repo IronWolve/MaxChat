@@ -74,6 +74,18 @@ void OpenGraphFetcher::issueRequest(const QUrl &url, OpenGraphFetchOptions optio
   // internal address, and NoLessSafeRedirectPolicy only blocks downgrades, not
   // redirects to private IPs. Literal private IPs reject synchronously inside
   // the gate; public-domain hops resolve off-thread, then abort if private.
+  // Abort while the body is still streaming once it exceeds the cap — reading
+  // only at finished() lets a hostile server buffer gigabytes of HTML in memory
+  // first (ImageFetcher does the same for image bytes).
+  const qint64 maxBytes = options.maxBytes;
+  connect(reply, &QNetworkReply::downloadProgress, reply,
+          [guardedReply, maxBytes](qint64 received, qint64 /*total*/) {
+            if (guardedReply != nullptr && received > maxBytes && !guardedReply->isFinished()) {
+              guardedReply->setProperty("maxchat_oversize", true);
+              guardedReply->abort();
+            }
+          });
+
   const bool allowPrivate = options.allowPrivateNetwork;
   connect(reply, &QNetworkReply::redirected, this,
           [this, guardedReply, allowPrivate](const QUrl &target) {
@@ -90,7 +102,8 @@ void OpenGraphFetcher::issueRequest(const QUrl &url, OpenGraphFetchOptions optio
   connect(reply, &QNetworkReply::finished, this, [this, reply, url, options]() {
     const auto cleanup = qScopeGuard([reply]() { reply->deleteLater(); });
 
-    if (reply->error() != QNetworkReply::NoError) {
+    const bool oversize = reply->property("maxchat_oversize").toBool();
+    if (reply->error() != QNetworkReply::NoError && !oversize) {
       QString reason = reply->errorString();
       if (reply->property("maxchat_blocked_redirect").toBool()) {
         reason = QStringLiteral("blocked redirect to a private address");
@@ -100,6 +113,8 @@ void OpenGraphFetcher::issueRequest(const QUrl &url, OpenGraphFetchOptions optio
       emit fetchFailed(url, reason);
       return;
     }
+    // An oversize page was aborted mid-stream: the first maxBytes we buffered
+    // almost always hold the <head> OG tags, so parse them best-effort.
 
     const QString contentType =
         reply->header(QNetworkRequest::ContentTypeHeader).toString().toLower();
