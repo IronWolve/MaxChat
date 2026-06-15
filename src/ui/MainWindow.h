@@ -14,6 +14,7 @@
 #include "services/OpenGraphFetcher.h"
 #include "scripting/LuaEngine.h"
 #include "scripting/ScriptHost.h"
+#include "ui/MainWindowHost.h"
 #include "ui/SoundPlayer.h"
 #include "spell/Speller.h" // backend-neutral; OS speller works without Hunspell
 #include "upload/ImageUploader.h"
@@ -73,7 +74,9 @@ class ScriptTerminalManager;
 class SpellTextEdit;
 class UrlListDialog;
 
-class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHost {
+class MainWindow final : public QMainWindow,
+                        public maxchat::scripting::ScriptHost,
+                        public MainWindowHost {
     // White-box test access without `#define private public` (which gives this
     // header a different layout in the test TU than in the app TU — an ODR
     // violation). A friend grants the same access cleanly.
@@ -81,6 +84,17 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
 
   public:
     explicit MainWindow(QWidget* parent = nullptr);
+
+    // MainWindowHost — the seam decomposed controllers call back through.
+    [[nodiscard]] QString activeNetwork() const override { return activeNetworkName(); }
+    [[nodiscard]] QString currentTarget() const override { return m_currentTarget; }
+    void appendSystemLine(const QString& network, const QString& target,
+                          const QString& text) override {
+        appendSystemLineToNetworkTarget(network, target, text);
+    }
+    void insertInput(const QString& text) override { scriptInsertInput(text); }
+    [[nodiscard]] maxchat::core::SettingsStore& settings() override { return m_settings; }
+    [[nodiscard]] QWidget* dialogParent() override { return this; }
 
     bool selfTest() const;
 
