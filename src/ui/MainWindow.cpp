@@ -2875,13 +2875,24 @@ QString maxchat::ui::MainWindow::scriptHttpGet(const QString& url) {
     return body;
 }
 
+QString maxchat::ui::MainWindow::scriptsDirectory() const {
+    return QDir(m_settings.paths().configDir).filePath(QStringLiteral("scripts"));
+}
+
+bool maxchat::ui::MainWindow::isBundledScript(const QString& name) const {
+    // Shipped scripts leave a .bundled/<name>.lua snapshot when seeded.
+    const QString snapshot =
+        QDir(scriptsDirectory()).filePath(QStringLiteral(".bundled/%1.lua").arg(name));
+    return QFile::exists(snapshot);
+}
+
 maxchat::scripting::ScriptPermissions
 maxchat::ui::MainWindow::buildScriptPermissionsFor(const QString& name) const {
     const QVariantMap settings = m_settings.loadWithDefaults();
     const QVariantMap perms =
         settings.value(QStringLiteral("scriptPerms")).toMap().value(name).toMap();
     maxchat::scripting::ScriptPermissions out =
-        maxchat::scripting::ScriptPermissions::fromMap(perms);
+        maxchat::scripting::ScriptPermissions::fromMap(perms, isBundledScript(name));
     for (const QVariant& dir : settings.value(QStringLiteral("script_dirs")).toList()) {
         const QString path = dir.toString().trimmed();
         if (!path.isEmpty()) {
@@ -2902,12 +2913,17 @@ maxchat::ui::MainWindow::buildAllScriptPermsMap() const {
             allowedDirs << path;
         }
     }
+    // Iterate the actual script files (not just saved-perms keys) so a bundled
+    // script with no saved entry still gets its ircSend default at load time.
     QHash<QString, maxchat::scripting::ScriptPermissions> result;
-    for (auto it = allPerms.constBegin(); it != allPerms.constEnd(); ++it) {
-        maxchat::scripting::ScriptPermissions p =
-            maxchat::scripting::ScriptPermissions::fromMap(it.value().toMap());
+    const QFileInfoList files = QDir(scriptsDirectory())
+                                    .entryInfoList({QStringLiteral("*.lua")}, QDir::Files);
+    for (const QFileInfo& fi : files) {
+        const QString name = fi.completeBaseName();
+        maxchat::scripting::ScriptPermissions p = maxchat::scripting::ScriptPermissions::fromMap(
+            allPerms.value(name).toMap(), isBundledScript(name));
         p.allowedDirs = allowedDirs;
-        result.insert(it.key(), p);
+        result.insert(name, p);
     }
     return result;
 }

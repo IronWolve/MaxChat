@@ -16,6 +16,10 @@ struct ScriptPermissions {
     bool runPrograms = false; // os.execute / io.popen / os.remove / os.rename
     bool loadModules = false; // require/package + load/loadfile/dofile
     bool network = false;     // api.http_get
+    bool ircSend = false;     // api.say / send_raw / mc_send / mc_reply
+    // Runtime-only: filled from the global `script_dirs` setting at load time
+    // (see MainWindow::buildScriptPermissionsFor); intentionally NOT serialized
+    // in to/fromMap — it is derived state, not per-script persisted data.
     QStringList allowedDirs;
 
     [[nodiscard]] bool anyFileAccess() const { return readFiles || writeFiles; }
@@ -23,7 +27,7 @@ struct ScriptPermissions {
     bool operator==(const ScriptPermissions& o) const {
         return readFiles == o.readFiles && writeFiles == o.writeFiles &&
                runPrograms == o.runPrograms && loadModules == o.loadModules &&
-               network == o.network && allowedDirs == o.allowedDirs;
+               network == o.network && ircSend == o.ircSend && allowedDirs == o.allowedDirs;
     }
     bool operator!=(const ScriptPermissions& o) const { return !(*this == o); }
 
@@ -34,16 +38,21 @@ struct ScriptPermissions {
             {QStringLiteral("exec"),    runPrograms},
             {QStringLiteral("modules"), loadModules},
             {QStringLiteral("network"), network},
+            {QStringLiteral("irc"),     ircSend},
         };
     }
 
-    [[nodiscard]] static ScriptPermissions fromMap(const QVariantMap& m) {
+    // ircSendDefault: bundled scripts default to allowed (they exist to talk on
+    // IRC); user-added scripts default off until the user grants it.
+    [[nodiscard]] static ScriptPermissions fromMap(const QVariantMap& m,
+                                                   bool ircSendDefault = false) {
         ScriptPermissions p;
         p.readFiles   = m.value(QStringLiteral("read"),    false).toBool();
         p.writeFiles  = m.value(QStringLiteral("write"),   false).toBool();
         p.runPrograms = m.value(QStringLiteral("exec"),    false).toBool();
         p.loadModules = m.value(QStringLiteral("modules"), false).toBool();
         p.network     = m.value(QStringLiteral("network"), false).toBool();
+        p.ircSend     = m.value(QStringLiteral("irc"),     ircSendDefault).toBool();
         return p;
     }
 };

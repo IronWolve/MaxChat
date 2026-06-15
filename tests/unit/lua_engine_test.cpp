@@ -103,6 +103,14 @@ class FakeHost final : public ScriptHost {
     QString scriptHttpGet(const QString&) override { return QStringLiteral("BODY"); }
 };
 
+// Permissions granting IRC send (say/send_raw/mc_send/mc_reply), which is now
+// gated — bundled scripts default on, but test scripts load with defaults off.
+maxchat::scripting::ScriptPermissions ircPerms() {
+    maxchat::scripting::ScriptPermissions p;
+    p.ircSend = true;
+    return p;
+}
+
 QString writeScript(const QDir& dir, const QString& name, const QString& body) {
     const QString path = dir.filePath(name);
     QFile f(path);
@@ -207,7 +215,7 @@ class LuaEngineTest final : public QObject {
                                        "end\n"));
         FakeHost host;
         LuaEngine engine(&host, dir.path(), dir.path());
-        QVERIFY(engine.load(path));
+        QVERIFY(engine.load(path, ircPerms()));
         QCOMPARE(host.says, QStringList{QStringLiteral("#c|hi")});
         QCOMPARE(host.inserts, QStringList{QStringLiteral("draft")});
         QCOMPARE(host.notifies, QStringList{QStringLiteral("T|B")});
@@ -303,9 +311,28 @@ class LuaEngineTest final : public QObject {
                            "end\n"));
         FakeHost host;
         LuaEngine engine(&host, dir.path(), dir.path());
-        QVERIFY(engine.load(path));
+        QVERIFY(engine.load(path, ircPerms()));
         QCOMPARE(host.raws, QStringList{QStringLiteral("PING xyz")});
         QCOMPARE(host.echoes, QStringList{QStringLiteral("2/alice")});
+    }
+
+    void ircSendGatedWithoutPermission() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        // Without the ircSend permission, api.say/send_raw/mc_send must be nil
+        // (not registered) so a script cannot emit onto the network.
+        const QString path =
+            writeScript(QDir(dir.path()), QStringLiteral("gated.lua"),
+                        QStringLiteral("function on_load(api)\n"
+                                       "  api.echo(tostring(api.say)..'/'..tostring(api.send_raw)\n"
+                                       "           ..'/'..tostring(api.mc_send)..'/'\n"
+                                       "           ..tostring(api.mc_reply))\n"
+                                       "end\n"));
+        FakeHost host;
+        LuaEngine engine(&host, dir.path(), dir.path());
+        QVERIFY(engine.load(path)); // default perms: ircSend off
+        QCOMPARE(host.echoes, QStringList{QStringLiteral("nil/nil/nil/nil")});
+        QVERIFY(host.raws.isEmpty());
     }
 
     void apiMcDataCalls() {
@@ -319,7 +346,7 @@ class LuaEngineTest final : public QObject {
                            "end\n"));
         FakeHost host;
         LuaEngine engine(&host, dir.path(), dir.path());
-        QVERIFY(engine.load(path));
+        QVERIFY(engine.load(path, ircPerms()));
         QCOMPARE(host.mcData,
                  QStringList({
                      QStringLiteral("|alice|BBS|hello|hi|privmsg"),
@@ -537,7 +564,7 @@ class LuaEngineTest final : public QObject {
         QVERIFY(data.isValid());
         FakeHost host;
         LuaEngine engine(&host, dir, data.path());
-        QVERIFY(engine.load(path));
+        QVERIFY(engine.load(path, ircPerms()));
 
         QVERIFY(engine.dispatch(QStringLiteral("on_command"), QStringLiteral("synIRC"),
                                 {QStringLiteral("bbsserve"), QString()}));

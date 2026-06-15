@@ -186,6 +186,10 @@ class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHo
     void handleScriptsCommand(const QString& command, const QString& arg);
     void openScriptsManager();
     void seedBundledScripts(const QString& destDir); // copy examples on first run
+    [[nodiscard]] QString scriptsDirectory() const;
+    // A script is "bundled" if it has a .bundled/<name>.lua snapshot (shipped
+    // with the app). Bundled scripts default to the ircSend permission.
+    [[nodiscard]] bool isBundledScript(const QString& name) const;
     [[nodiscard]] maxchat::scripting::ScriptPermissions buildScriptPermissionsFor(const QString& name) const;
     [[nodiscard]] QHash<QString, maxchat::scripting::ScriptPermissions> buildAllScriptPermsMap() const;
     void updateWindowTitle();      // "MaxChat <ver> — <network> / <channel>" (active context)
