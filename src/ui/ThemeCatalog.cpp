@@ -328,7 +328,9 @@ QList<QJsonObject> jsonThemeObjects(const QString& kind) {
 
         const QJsonObject root = document.object();
         const QString fileKind = root.value(QStringLiteral("kind")).toString().trimmed().toLower();
-        if (!fileKind.isEmpty() && !fileKind.contains(kind)) {
+        // Exact kind match: a substring test would let a stray/compound kind
+        // value match the wrong loader ("app" vs "chat").
+        if (!fileKind.isEmpty() && fileKind != kind) {
             continue;
         }
 

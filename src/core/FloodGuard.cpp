@@ -27,12 +27,26 @@ bool FloodGuard::recordMessage(const QString& key, qint64 nowMs) {
         return false;
     }
 
-    QList<qint64>& times = messageTimes_[normalized];
     const qint64 cutoff = nowMs - windowMs_;
+    // A key touched once would otherwise live forever; when the map grows large
+    // sweep out senders whose window has fully expired.
+    if (messageTimes_.size() > 512) {
+        for (auto it = messageTimes_.begin(); it != messageTimes_.end();) {
+            if (it.key() != normalized && (it.value().isEmpty() || it.value().last() < cutoff)) {
+                it = messageTimes_.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
+
+    QList<qint64>& times = messageTimes_[normalized];
     times.erase(std::remove_if(times.begin(), times.end(),
                                [cutoff](qint64 timestamp) { return timestamp < cutoff; }),
                 times.end());
     times.append(nowMs);
+    // Counts the just-added message: allows maxMessages_ in the window, trips on
+    // the next one. (Intentional — not an off-by-one.)
     return times.size() > maxMessages_;
 }
 
