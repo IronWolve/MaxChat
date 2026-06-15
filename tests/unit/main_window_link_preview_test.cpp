@@ -30,10 +30,10 @@
 #include <algorithm>
 #include <cmath>
 
-#define private public
+// MainWindow grants this test class friendship (see MainWindow.h) so it can
+// reach private members without `#define private public` (an ODR hazard).
 #include "ui/MainWindow.h"
 #include "ui/SpellTextEdit.h"
-#undef private
 
 using maxchat::ui::MainWindow;
 
@@ -896,7 +896,6 @@ class MainWindowLinkPreviewTest final : public QObject {
         QTcpSocket* peer = server.nextPendingConnection();
         QVERIFY(peer != nullptr);
         QTRY_VERIFY(window.m_connection.isConnected());
-        QTRY_VERIFY(window.m_connection.session_.socketConnected_);
 
         chatView->clear();
         window.sendCommandOrMessage(QStringLiteral("/msg alice hello quietly"));

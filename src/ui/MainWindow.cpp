@@ -99,7 +99,6 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QListWidgetItem>
-#include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QMimeData>
@@ -125,7 +124,6 @@
 #include <QContextMenuEvent>
 #include <QDragEnterEvent>
 #include <QDropEvent>
-#include <QMimeData>
 #include <QTextCursor>
 #include <QTextDocument>
 #include <QTextEdit>

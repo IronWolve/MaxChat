@@ -54,6 +54,9 @@ class QTreeWidgetItem;
 class QWidget;
 class QSystemTrayIcon;
 class QMenu;
+// White-box unit test (tests/unit/main_window_link_preview_test.cpp) befriended
+// below; forward-declared at global scope so the qualified friend resolves.
+class MainWindowLinkPreviewTest;
 
 namespace maxchat::ui {
 
@@ -71,6 +74,11 @@ class SpellTextEdit;
 class UrlListDialog;
 
 class MainWindow final : public QMainWindow, public maxchat::scripting::ScriptHost {
+    // White-box test access without `#define private public` (which gives this
+    // header a different layout in the test TU than in the app TU — an ODR
+    // violation). A friend grants the same access cleanly.
+    friend class ::MainWindowLinkPreviewTest;
+
   public:
     explicit MainWindow(QWidget* parent = nullptr);
 
