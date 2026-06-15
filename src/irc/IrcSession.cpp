@@ -21,6 +21,20 @@ QString ctcpWrap(const QString &body) {
   return QString(QLatin1Char('\x01')) + body + QString(QLatin1Char('\x01'));
 }
 
+// An IRC target (nick/channel) can never contain whitespace; keep only the
+// first token so a value like "#chan :flood" can't smuggle extra wire
+// parameters or trailing text into PRIVMSG/JOIN/CTCP/MC DATA. CR/LF are already
+// stripped in enqueueLine; this closes the in-line space-splitting vector.
+QString safeIrcTarget(const QString &target) {
+  const QString trimmed = target.trimmed();
+  for (qsizetype i = 0; i < trimmed.size(); ++i) {
+    if (trimmed.at(i).isSpace()) {
+      return trimmed.left(i);
+    }
+  }
+  return trimmed;
+}
+
 struct CtcpMessage {
   bool valid = false;
   QString command;
@@ -264,7 +278,7 @@ void IrcSession::pumpSendQueue() {
 }
 
 bool IrcSession::privmsg(const QString &target, const QString &text) {
-  return sendRaw(QStringLiteral("PRIVMSG %1 :%2").arg(target, text));
+  return sendRaw(QStringLiteral("PRIVMSG %1 :%2").arg(safeIrcTarget(target), text));
 }
 
 bool IrcSession::action(const QString &target, const QString &text) {
@@ -283,13 +297,13 @@ bool IrcSession::ctcp(const QString &target, const QString &command,
   const QString body = effectiveArg.isEmpty()
                            ? upperCommand
                            : QStringLiteral("%1 %2").arg(upperCommand, effectiveArg);
-  return sendRaw(QStringLiteral("PRIVMSG %1 :%2").arg(target, ctcpWrap(body)));
+  return sendRaw(QStringLiteral("PRIVMSG %1 :%2").arg(safeIrcTarget(target), ctcpWrap(body)));
 }
 
 bool IrcSession::mcData(const QString &target, const QString &service,
                         const QString &verb, const QString &payload,
                         const bool notice) {
-  const QString trimmedTarget = target.trimmed();
+  const QString trimmedTarget = safeIrcTarget(target);
   if (trimmedTarget.isEmpty() || service.trimmed().isEmpty() ||
       verb.trimmed().isEmpty()) {
     return false;
@@ -307,7 +321,7 @@ bool IrcSession::mcData(const QString &target, const QString &service,
 }
 
 bool IrcSession::join(const QString &channel) {
-  return sendRaw(QStringLiteral("JOIN %1").arg(channel));
+  return sendRaw(QStringLiteral("JOIN %1").arg(safeIrcTarget(channel)));
 }
 
 bool IrcSession::measureLag() {
