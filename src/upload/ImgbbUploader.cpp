@@ -49,15 +49,18 @@ void ImgbbUploader::upload(const QImage &image) {
     QNetworkRequest request(url);
     auto *reply = manager_->post(request, multipart);
     multipart->setParent(reply);
+    armUploadTimeout(reply);
 
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
         reply->deleteLater();
         if (reply->error() != QNetworkReply::NoError) {
-            emit uploadFailed(reply->errorString());
+            emit uploadFailed(reply->property("maxchat_timeout").toBool()
+                                  ? QStringLiteral("Upload timed out")
+                                  : reply->errorString());
             return;
         }
         const QJsonObject root =
-            QJsonDocument::fromJson(reply->readAll()).object();
+            QJsonDocument::fromJson(readCappedBody(reply)).object();
         if (!root.value(QStringLiteral("success")).toBool()) {
             emit uploadFailed(
                 root.value(QStringLiteral("error"))
@@ -71,8 +74,8 @@ void ImgbbUploader::upload(const QImage &image) {
                 .toObject()
                 .value(QStringLiteral("url"))
                 .toString();
-        if (directUrl.isEmpty()) {
-            emit uploadFailed(QStringLiteral("Empty URL in response"));
+        if (!isHttpsUrl(directUrl)) {
+            emit uploadFailed(QStringLiteral("Upload response had no valid https URL"));
         } else {
             emit uploaded(directUrl);
         }
