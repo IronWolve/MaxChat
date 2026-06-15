@@ -148,6 +148,11 @@ QVariantMap SettingsStore::loadWithDefaults() const {
 }
 
 bool SettingsStore::saveRaw(const QVariantMap &settings, const bool preserveGeometry) const {
+  // CONTRACT: replace-all. `settings` becomes the ENTIRE file (geom_* keys are
+  // the only thing preserved when preserveGeometry is true). Callers MUST pass a
+  // complete map — load loadRaw()/loadWithDefaults(), modify, then save — never a
+  // partial subset, or the omitted keys are deleted. (Replace-all is deliberate:
+  // it is how a key gets removed, e.g. deleting a network or resetAllSettings.)
   if (paths_.settingsPath.isEmpty()) {
     return false;
   }

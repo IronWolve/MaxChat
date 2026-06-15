@@ -105,13 +105,20 @@ QString linkifyUrls(const QString& html, const QString& plainText) {
     QStringList ordered = urls;
     std::sort(ordered.begin(), ordered.end(),
               [](const QString& a, const QString& b) { return a.size() > b.size(); });
+    // True when `pos` falls inside an existing <a ...>...</a> span (the nearest
+    // preceding anchor delimiter is an opener). Skipping these prevents a URL
+    // that is a substring of an already-linked longer URL from nesting anchors.
+    const auto insideAnchor = [](const QString& s, int pos) {
+        const int open = s.lastIndexOf(QStringLiteral("<a "), pos);
+        const int close = s.lastIndexOf(QStringLiteral("</a>"), pos);
+        return open > close;
+    };
     for (const QString& url : ordered) {
         const QString escaped = url.toHtmlEscaped();
-        // Only replace bare URL text — skip anything already inside an href.
-        // Simple guard: don't touch a match that is immediately preceded by '"'.
         int pos = 0;
         while ((pos = result.indexOf(escaped, pos)) != -1) {
-            if (pos > 0 && result.at(pos - 1) == QLatin1Char('"')) {
+            if ((pos > 0 && result.at(pos - 1) == QLatin1Char('"')) ||
+                insideAnchor(result, pos)) {
                 pos += escaped.size();
                 continue;
             }
