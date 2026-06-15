@@ -1,0 +1,125 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Catppuccin Macchiato",
+  "app": {
+    "id": "catppuccin-macchiato",
+    "label": "Catppuccin Macchiato",
+    "name": "Catppuccin Macchiato",
+    "dark": true,
+    "bg": [
+      36,
+      39,
+      58
+    ],
+    "panel": [
+      30,
+      32,
+      48
+    ],
+    "panel2": [
+      54,
+      58,
+      79
+    ],
+    "text": [
+      202,
+      211,
+      245
+    ],
+    "on": [
+      138,
+      173,
+      244
+    ],
+    "on_text": "black",
+    "accent": [
+      198,
+      160,
+      246
+    ],
+    "groove": [
+      24,
+      25,
+      38
+    ],
+    "scroll": [
+      73,
+      77,
+      100
+    ],
+    "scroll_hi": [
+      138,
+      173,
+      244
+    ],
+    "chat_bg": [
+      24,
+      25,
+      38
+    ],
+    "chat_fg": [
+      202,
+      211,
+      245
+    ]
+  },
+  "chat": {
+    "id": "catppuccin-macchiato",
+    "label": "Catppuccin Macchiato",
+    "bg": [
+      24,
+      25,
+      38
+    ],
+    "fg": [
+      202,
+      211,
+      245
+    ],
+    "fixed": true,
+    "ts": [
+      147,
+      154,
+      183
+    ],
+    "bracket": [
+      183,
+      189,
+      248
+    ],
+    "system": [
+      125,
+      196,
+      228
+    ],
+    "nicks": [
+      [
+        138,
+        173,
+        244
+      ],
+      [
+        198,
+        160,
+        246
+      ],
+      [
+        166,
+        218,
+        149
+      ],
+      [
+        238,
+        212,
+        159
+      ],
+      [
+        237,
+        135,
+        150
+      ]
+    ]
+  },
+  "wallpaper": ""
+}

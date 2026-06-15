@@ -1,0 +1,141 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Tank Garage",
+  "app": {
+    "id": "tank-garage",
+    "label": "Tank Garage",
+    "name": "Tank Garage",
+    "dark": true,
+    "bg": [
+      29,
+      33,
+      24
+    ],
+    "panel": [
+      45,
+      53,
+      36
+    ],
+    "panel2": [
+      59,
+      69,
+      47
+    ],
+    "text": [
+      216,
+      221,
+      200
+    ],
+    "on": [
+      138,
+      154,
+      91
+    ],
+    "on_text": "black",
+    "accent": [
+      194,
+      155,
+      84
+    ],
+    "groove": [
+      17,
+      20,
+      13
+    ],
+    "scroll": [
+      86,
+      99,
+      72
+    ],
+    "scroll_hi": [
+      138,
+      154,
+      91
+    ],
+    "scrollHi": [
+      138,
+      154,
+      91
+    ],
+    "chat_bg": [
+      23,
+      27,
+      19
+    ],
+    "chat_fg": [
+      216,
+      221,
+      200
+    ],
+    "bracket": [
+      194,
+      155,
+      84
+    ],
+    "system": [
+      185,
+      196,
+      106
+    ],
+    "wallpaper": "tank-garage.png"
+  },
+  "chat": {
+    "id": "tank-garage",
+    "label": "Tank Garage",
+    "bg": [
+      23,
+      27,
+      19
+    ],
+    "fg": [
+      216,
+      221,
+      200
+    ],
+    "fixed": true,
+    "ts": [
+      135,
+      144,
+      113
+    ],
+    "bracket": [
+      194,
+      155,
+      84
+    ],
+    "system": [
+      185,
+      196,
+      106
+    ],
+    "nicks": [
+      [
+        138,
+        154,
+        91
+      ],
+      [
+        194,
+        155,
+        84
+      ],
+      [
+        185,
+        196,
+        106
+      ],
+      [
+        111,
+        124,
+        82
+      ],
+      [
+        216,
+        221,
+        200
+      ]
+    ]
+  },
+  "wallpaper": "tank-garage.png"
+}

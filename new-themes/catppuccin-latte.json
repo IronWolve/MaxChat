@@ -1,0 +1,125 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Catppuccin Latte",
+  "app": {
+    "id": "catppuccin-latte",
+    "label": "Catppuccin Latte",
+    "name": "Catppuccin Latte",
+    "dark": false,
+    "bg": [
+      239,
+      241,
+      245
+    ],
+    "panel": [
+      230,
+      233,
+      239
+    ],
+    "panel2": [
+      204,
+      208,
+      218
+    ],
+    "text": [
+      76,
+      79,
+      105
+    ],
+    "on": [
+      30,
+      102,
+      245
+    ],
+    "on_text": "white",
+    "accent": [
+      136,
+      57,
+      239
+    ],
+    "groove": [
+      220,
+      224,
+      232
+    ],
+    "scroll": [
+      188,
+      192,
+      204
+    ],
+    "scroll_hi": [
+      30,
+      102,
+      245
+    ],
+    "chat_bg": [
+      239,
+      241,
+      245
+    ],
+    "chat_fg": [
+      76,
+      79,
+      105
+    ]
+  },
+  "chat": {
+    "id": "catppuccin-latte",
+    "label": "Catppuccin Latte",
+    "bg": [
+      239,
+      241,
+      245
+    ],
+    "fg": [
+      76,
+      79,
+      105
+    ],
+    "fixed": true,
+    "ts": [
+      124,
+      127,
+      147
+    ],
+    "bracket": [
+      114,
+      135,
+      253
+    ],
+    "system": [
+      32,
+      159,
+      181
+    ],
+    "nicks": [
+      [
+        30,
+        102,
+        245
+      ],
+      [
+        136,
+        57,
+        239
+      ],
+      [
+        64,
+        160,
+        43
+      ],
+      [
+        223,
+        142,
+        29
+      ],
+      [
+        210,
+        15,
+        57
+      ]
+    ]
+  },
+  "wallpaper": ""
+}

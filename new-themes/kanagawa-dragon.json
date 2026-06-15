@@ -1,0 +1,125 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Kanagawa Dragon",
+  "app": {
+    "id": "kanagawa-dragon",
+    "label": "Kanagawa Dragon",
+    "name": "Kanagawa Dragon",
+    "dark": true,
+    "bg": [
+      24,
+      22,
+      22
+    ],
+    "panel": [
+      36,
+      32,
+      31
+    ],
+    "panel2": [
+      45,
+      41,
+      38
+    ],
+    "text": [
+      197,
+      201,
+      197
+    ],
+    "on": [
+      139,
+      164,
+      176
+    ],
+    "on_text": "black",
+    "accent": [
+      196,
+      116,
+      110
+    ],
+    "groove": [
+      13,
+      12,
+      12
+    ],
+    "scroll": [
+      98,
+      94,
+      90
+    ],
+    "scroll_hi": [
+      139,
+      164,
+      176
+    ],
+    "chat_bg": [
+      13,
+      12,
+      12
+    ],
+    "chat_fg": [
+      197,
+      201,
+      197
+    ]
+  },
+  "chat": {
+    "id": "kanagawa-dragon",
+    "label": "Kanagawa Dragon",
+    "bg": [
+      13,
+      12,
+      12
+    ],
+    "fg": [
+      197,
+      201,
+      197
+    ],
+    "fixed": true,
+    "ts": [
+      122,
+      131,
+      130
+    ],
+    "bracket": [
+      162,
+      146,
+      163
+    ],
+    "system": [
+      142,
+      164,
+      162
+    ],
+    "nicks": [
+      [
+        139,
+        164,
+        176
+      ],
+      [
+        196,
+        116,
+        110
+      ],
+      [
+        135,
+        169,
+        135
+      ],
+      [
+        196,
+        178,
+        138
+      ],
+      [
+        162,
+        146,
+        163
+      ]
+    ]
+  },
+  "wallpaper": ""
+}

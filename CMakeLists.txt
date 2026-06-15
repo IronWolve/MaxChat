@@ -337,7 +337,7 @@ qt_add_executable(maxchat-c
 
 set_target_properties(maxchat-c
     PROPERTIES
-        WIN32_EXECUTABLE TRUE
+        WIN32_EXECUTABLE $<PLATFORM_ID:Windows>
 )
 
 target_link_libraries(maxchat-c

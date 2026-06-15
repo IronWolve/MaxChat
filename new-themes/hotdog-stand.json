@@ -1,0 +1,141 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Hotdog Stand",
+  "app": {
+    "id": "hotdog-stand",
+    "label": "Hotdog Stand",
+    "name": "Hotdog Stand",
+    "dark": false,
+    "bg": [
+      255,
+      0,
+      0
+    ],
+    "panel": [
+      255,
+      255,
+      0
+    ],
+    "panel2": [
+      255,
+      204,
+      0
+    ],
+    "text": [
+      0,
+      0,
+      0
+    ],
+    "on": [
+      0,
+      0,
+      255
+    ],
+    "on_text": "white",
+    "accent": [
+      255,
+      0,
+      0
+    ],
+    "groove": [
+      0,
+      0,
+      0
+    ],
+    "scroll": [
+      208,
+      176,
+      0
+    ],
+    "scroll_hi": [
+      0,
+      0,
+      255
+    ],
+    "scrollHi": [
+      0,
+      0,
+      255
+    ],
+    "chat_bg": [
+      255,
+      255,
+      224
+    ],
+    "chat_fg": [
+      0,
+      0,
+      0
+    ],
+    "bracket": [
+      0,
+      0,
+      255
+    ],
+    "system": [
+      176,
+      0,
+      0
+    ],
+    "wallpaper": "hotdog-stand.png"
+  },
+  "chat": {
+    "id": "hotdog-stand",
+    "label": "Hotdog Stand",
+    "bg": [
+      255,
+      255,
+      224
+    ],
+    "fg": [
+      0,
+      0,
+      0
+    ],
+    "fixed": true,
+    "ts": [
+      122,
+      0,
+      0
+    ],
+    "bracket": [
+      0,
+      0,
+      255
+    ],
+    "system": [
+      176,
+      0,
+      0
+    ],
+    "nicks": [
+      [
+        0,
+        0,
+        255
+      ],
+      [
+        255,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0
+      ],
+      [
+        176,
+        0,
+        0
+      ],
+      [
+        192,
+        128,
+        0
+      ]
+    ]
+  },
+  "wallpaper": "hotdog-stand.png"
+}

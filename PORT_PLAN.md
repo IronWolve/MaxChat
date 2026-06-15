@@ -1,5 +1,12 @@
 # MaxChat C++/Qt Port Plan
 
+> **HISTORIC DOCUMENT** (updated 2026-06-15). All milestones in this plan have
+> been completed. The original plan was written when only 6 milestones existed;
+> milestones 7–10 (DCC, Comic, Scripting, Packaging) were added as the port
+> progressed. Today the C++ port exceeds the Python original in features, test
+> coverage, and security. See `HANDOFF.md` for the current ground truth and
+> `README.md` for build instructions.
+
 Workspace: this C++/Qt port tree.
 
 Reference app: the Python/PySide MaxChat tree is read-only reference material. The port should not

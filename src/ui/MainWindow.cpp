@@ -1456,9 +1456,9 @@ void maxchat::ui::MainWindow::buildMenus() {
     serverMenu->addAction(QStringLiteral("Quick Connect..."), this, &MainWindow::openQuickConnect);
     serverMenu->addAction(QStringLiteral("Disconnect"), this,
                           &MainWindow::disconnectFromCurrentServer);
-    serverMenu->addAction(QStringLiteral("Disconnect All"), this,
+    serverMenu->addAction(QStringLiteral("Disconnect"), this,
                           &MainWindow::disconnectFromCurrentServer);
-    serverMenu->addAction(QStringLiteral("Reconnect All"), this,
+    serverMenu->addAction(QStringLiteral("Reconnect"), this,
                           &MainWindow::reconnectCurrentServer);
     serverMenu->addSeparator();
     QAction* joinAction =
@@ -1501,7 +1501,6 @@ void maxchat::ui::MainWindow::buildMenus() {
     m_chatSeparatorAction->setChecked(true);
     connect(m_chatSeparatorAction, &QAction::toggled, this,
             [this](const bool visible) { setChatSeparatorVisible(visible, true); });
-    viewMenu->addSeparator();
     viewMenu->addSeparator();
     viewMenu->addAction(QStringLiteral("Clear Current Chat"), this, &MainWindow::clearCurrentChat);
     viewMenu->addAction(QStringLiteral("Mark All Read"), this, &MainWindow::markAllRead);
@@ -1863,9 +1862,7 @@ void maxchat::ui::MainWindow::buildLayout() {
     connect(m_chatView, &QTextBrowser::anchorClicked, this,
             &MainWindow::handleChatAnchorClicked);
     m_chatView->setPlainText(
-        QStringLiteral("Not connected - Server > Server List... or Quick Connect...\n\n"
-                       "Native C++/Qt port skeleton is running.\n"
-                       "Server List now loads and saves the native settings store."));
+        QStringLiteral("Not connected. Open Server > Server List... or Quick Connect... to get started."));
 
     m_memberPanel = new QWidget(root);
     m_memberPanel->setObjectName(QStringLiteral("memberPanel"));
@@ -5955,7 +5952,12 @@ void maxchat::ui::MainWindow::showMemberContextMenu(const QPoint& pos) {
             {QStringLiteral("Half-Op"), QStringLiteral("h")},
             {QStringLiteral("Voice"), QStringLiteral("v")},
         };
+        bool first = true;
         for (const auto& modeAction : modeActions) {
+            if (!first) {
+                operatorMenu->addSeparator();
+            }
+            first = false;
             const QString label = modeAction.first;
             const QString mode = modeAction.second;
             operatorMenu->addAction(QStringLiteral("Give %1 (+%2)").arg(label, mode), this,
@@ -5968,7 +5970,6 @@ void maxchat::ui::MainWindow::showMemberContextMenu(const QPoint& pos) {
                                         sendModeChange(channel,
                                                        QStringLiteral("-%1 %2").arg(mode, nick));
                                     });
-            operatorMenu->addSeparator();
         }
 
         QMenu* kickBanMenu = menu.addMenu(QStringLiteral("Kick / Ban"));
@@ -9266,7 +9267,8 @@ void maxchat::ui::MainWindow::applyTheme(const QString& theme) {
         if (QStyle* style = QApplication::style()) {
             qApp->setPalette(style->standardPalette());
         }
-        qApp->setStyleSheet(chromeFontCss);
+        // Themes Off has no app QSS → setFont works reliably (no re-polish).
+        qApp->setStyleSheet(QString());
     } else {
         qApp->setPalette(paletteForAppearance(normalized));
         qApp->setStyleSheet(styleSheet + chromeFontCss);

@@ -1,0 +1,125 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Flexoki Light",
+  "app": {
+    "id": "flexoki-light",
+    "label": "Flexoki Light",
+    "name": "Flexoki Light",
+    "dark": false,
+    "bg": [
+      255,
+      252,
+      240
+    ],
+    "panel": [
+      242,
+      240,
+      229
+    ],
+    "panel2": [
+      230,
+      228,
+      217
+    ],
+    "text": [
+      16,
+      15,
+      15
+    ],
+    "on": [
+      32,
+      94,
+      166
+    ],
+    "on_text": "white",
+    "accent": [
+      175,
+      48,
+      41
+    ],
+    "groove": [
+      218,
+      216,
+      206
+    ],
+    "scroll": [
+      206,
+      205,
+      195
+    ],
+    "scroll_hi": [
+      32,
+      94,
+      166
+    ],
+    "chat_bg": [
+      255,
+      252,
+      240
+    ],
+    "chat_fg": [
+      16,
+      15,
+      15
+    ]
+  },
+  "chat": {
+    "id": "flexoki-light",
+    "label": "Flexoki Light",
+    "bg": [
+      255,
+      252,
+      240
+    ],
+    "fg": [
+      16,
+      15,
+      15
+    ],
+    "fixed": true,
+    "ts": [
+      111,
+      110,
+      105
+    ],
+    "bracket": [
+      94,
+      64,
+      157
+    ],
+    "system": [
+      36,
+      131,
+      123
+    ],
+    "nicks": [
+      [
+        32,
+        94,
+        166
+      ],
+      [
+        175,
+        48,
+        41
+      ],
+      [
+        102,
+        128,
+        11
+      ],
+      [
+        173,
+        131,
+        1
+      ],
+      [
+        94,
+        64,
+        157
+      ]
+    ]
+  },
+  "wallpaper": ""
+}

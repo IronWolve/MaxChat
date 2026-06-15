@@ -1,0 +1,141 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Christmas Lights",
+  "app": {
+    "id": "christmas-lights",
+    "label": "Christmas Lights",
+    "name": "Christmas Lights",
+    "dark": true,
+    "bg": [
+      8,
+      36,
+      21
+    ],
+    "panel": [
+      18,
+      53,
+      34
+    ],
+    "panel2": [
+      31,
+      74,
+      46
+    ],
+    "text": [
+      255,
+      247,
+      230
+    ],
+    "on": [
+      214,
+      40,
+      40
+    ],
+    "on_text": "white",
+    "accent": [
+      252,
+      191,
+      73
+    ],
+    "groove": [
+      4,
+      20,
+      12
+    ],
+    "scroll": [
+      43,
+      96,
+      64
+    ],
+    "scroll_hi": [
+      214,
+      40,
+      40
+    ],
+    "scrollHi": [
+      214,
+      40,
+      40
+    ],
+    "chat_bg": [
+      6,
+      27,
+      16
+    ],
+    "chat_fg": [
+      255,
+      247,
+      230
+    ],
+    "bracket": [
+      252,
+      191,
+      73
+    ],
+    "system": [
+      255,
+      90,
+      95
+    ],
+    "wallpaper": "christmas-lights.png"
+  },
+  "chat": {
+    "id": "christmas-lights",
+    "label": "Christmas Lights",
+    "bg": [
+      6,
+      27,
+      16
+    ],
+    "fg": [
+      255,
+      247,
+      230
+    ],
+    "fixed": true,
+    "ts": [
+      127,
+      191,
+      143
+    ],
+    "bracket": [
+      252,
+      191,
+      73
+    ],
+    "system": [
+      255,
+      90,
+      95
+    ],
+    "nicks": [
+      [
+        255,
+        90,
+        95
+      ],
+      [
+        252,
+        191,
+        73
+      ],
+      [
+        128,
+        237,
+        153
+      ],
+      [
+        255,
+        255,
+        255
+      ],
+      [
+        214,
+        40,
+        40
+      ]
+    ]
+  },
+  "wallpaper": "christmas-lights.png"
+}

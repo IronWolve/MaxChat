@@ -1,0 +1,141 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Alien Terminal",
+  "app": {
+    "id": "alien-terminal",
+    "label": "Alien Terminal",
+    "name": "Alien Terminal",
+    "dark": true,
+    "bg": [
+      2,
+      11,
+      8
+    ],
+    "panel": [
+      6,
+      22,
+      17
+    ],
+    "panel2": [
+      10,
+      36,
+      26
+    ],
+    "text": [
+      204,
+      255,
+      232
+    ],
+    "on": [
+      56,
+      255,
+      122
+    ],
+    "on_text": "black",
+    "accent": [
+      109,
+      247,
+      255
+    ],
+    "groove": [
+      1,
+      4,
+      3
+    ],
+    "scroll": [
+      23,
+      69,
+      50
+    ],
+    "scroll_hi": [
+      56,
+      255,
+      122
+    ],
+    "scrollHi": [
+      56,
+      255,
+      122
+    ],
+    "chat_bg": [
+      0,
+      6,
+      4
+    ],
+    "chat_fg": [
+      204,
+      255,
+      232
+    ],
+    "bracket": [
+      109,
+      247,
+      255
+    ],
+    "system": [
+      186,
+      255,
+      57
+    ],
+    "wallpaper": "alien-terminal.png"
+  },
+  "chat": {
+    "id": "alien-terminal",
+    "label": "Alien Terminal",
+    "bg": [
+      0,
+      6,
+      4
+    ],
+    "fg": [
+      204,
+      255,
+      232
+    ],
+    "fixed": true,
+    "ts": [
+      92,
+      169,
+      138
+    ],
+    "bracket": [
+      109,
+      247,
+      255
+    ],
+    "system": [
+      186,
+      255,
+      57
+    ],
+    "nicks": [
+      [
+        56,
+        255,
+        122
+      ],
+      [
+        109,
+        247,
+        255
+      ],
+      [
+        186,
+        255,
+        57
+      ],
+      [
+        204,
+        255,
+        232
+      ],
+      [
+        92,
+        169,
+        138
+      ]
+    ]
+  },
+  "wallpaper": "alien-terminal.png"
+}

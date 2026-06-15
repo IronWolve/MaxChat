@@ -1,0 +1,125 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Fluent Dark",
+  "app": {
+    "id": "fluent-dark",
+    "label": "Fluent Dark",
+    "name": "Fluent Dark",
+    "dark": true,
+    "bg": [
+      32,
+      32,
+      32
+    ],
+    "panel": [
+      43,
+      43,
+      43
+    ],
+    "panel2": [
+      51,
+      51,
+      51
+    ],
+    "text": [
+      243,
+      243,
+      243
+    ],
+    "on": [
+      0,
+      120,
+      212
+    ],
+    "on_text": "white",
+    "accent": [
+      0,
+      188,
+      242
+    ],
+    "groove": [
+      20,
+      20,
+      20
+    ],
+    "scroll": [
+      74,
+      74,
+      74
+    ],
+    "scroll_hi": [
+      0,
+      120,
+      212
+    ],
+    "chat_bg": [
+      27,
+      27,
+      27
+    ],
+    "chat_fg": [
+      243,
+      243,
+      243
+    ]
+  },
+  "chat": {
+    "id": "fluent-dark",
+    "label": "Fluent Dark",
+    "bg": [
+      27,
+      27,
+      27
+    ],
+    "fg": [
+      243,
+      243,
+      243
+    ],
+    "fixed": true,
+    "ts": [
+      157,
+      157,
+      157
+    ],
+    "bracket": [
+      0,
+      188,
+      242
+    ],
+    "system": [
+      19,
+      161,
+      14
+    ],
+    "nicks": [
+      [
+        0,
+        188,
+        242
+      ],
+      [
+        0,
+        120,
+        212
+      ],
+      [
+        19,
+        161,
+        14
+      ],
+      [
+        252,
+        225,
+        0
+      ],
+      [
+        231,
+        72,
+        86
+      ]
+    ]
+  },
+  "wallpaper": ""
+}

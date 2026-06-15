@@ -1,0 +1,141 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "VHS Horror",
+  "app": {
+    "id": "vhs-horror",
+    "label": "VHS Horror",
+    "name": "VHS Horror",
+    "dark": true,
+    "bg": [
+      9,
+      8,
+      10
+    ],
+    "panel": [
+      21,
+      16,
+      22
+    ],
+    "panel2": [
+      37,
+      19,
+      30
+    ],
+    "text": [
+      244,
+      232,
+      239
+    ],
+    "on": [
+      209,
+      31,
+      60
+    ],
+    "on_text": "white",
+    "accent": [
+      0,
+      212,
+      255
+    ],
+    "groove": [
+      2,
+      1,
+      2
+    ],
+    "scroll": [
+      59,
+      37,
+      51
+    ],
+    "scroll_hi": [
+      209,
+      31,
+      60
+    ],
+    "scrollHi": [
+      209,
+      31,
+      60
+    ],
+    "chat_bg": [
+      7,
+      5,
+      7
+    ],
+    "chat_fg": [
+      244,
+      232,
+      239
+    ],
+    "bracket": [
+      0,
+      212,
+      255
+    ],
+    "system": [
+      255,
+      79,
+      117
+    ],
+    "wallpaper": "vhs-horror.png"
+  },
+  "chat": {
+    "id": "vhs-horror",
+    "label": "VHS Horror",
+    "bg": [
+      7,
+      5,
+      7
+    ],
+    "fg": [
+      244,
+      232,
+      239
+    ],
+    "fixed": true,
+    "ts": [
+      142,
+      117,
+      133
+    ],
+    "bracket": [
+      0,
+      212,
+      255
+    ],
+    "system": [
+      255,
+      79,
+      117
+    ],
+    "nicks": [
+      [
+        209,
+        31,
+        60
+      ],
+      [
+        0,
+        212,
+        255
+      ],
+      [
+        255,
+        79,
+        117
+      ],
+      [
+        177,
+        0,
+        255
+      ],
+      [
+        244,
+        232,
+        239
+      ]
+    ]
+  },
+  "wallpaper": "vhs-horror.png"
+}

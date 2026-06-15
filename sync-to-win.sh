@@ -64,7 +64,7 @@ fi
 # edited assets show up without rerunning build.bat.
 if [[ -d "$TARGET_DIR/dist-win" ]]; then
   mkdir -p "$TARGET_DIR/dist-win/assets"
-  for dir in themes wallpapers; do
+  for dir in themes wallpapers dictionaries scripts; do
     if [[ -d "$SOURCE_DIR/assets/$dir" ]]; then
       rsync -a --delete "$SOURCE_DIR/assets/$dir/" "$TARGET_DIR/dist-win/assets/$dir/"
     fi

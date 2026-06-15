@@ -1,0 +1,141 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Radioactive Slime",
+  "app": {
+    "id": "radioactive-slime",
+    "label": "Radioactive Slime",
+    "name": "Radioactive Slime",
+    "dark": true,
+    "bg": [
+      7,
+      16,
+      6
+    ],
+    "panel": [
+      16,
+      32,
+      11
+    ],
+    "panel2": [
+      29,
+      53,
+      18
+    ],
+    "text": [
+      234,
+      255,
+      209
+    ],
+    "on": [
+      157,
+      255,
+      0
+    ],
+    "on_text": "black",
+    "accent": [
+      228,
+      255,
+      47
+    ],
+    "groove": [
+      2,
+      5,
+      1
+    ],
+    "scroll": [
+      54,
+      89,
+      31
+    ],
+    "scroll_hi": [
+      157,
+      255,
+      0
+    ],
+    "scrollHi": [
+      157,
+      255,
+      0
+    ],
+    "chat_bg": [
+      3,
+      8,
+      3
+    ],
+    "chat_fg": [
+      234,
+      255,
+      209
+    ],
+    "bracket": [
+      228,
+      255,
+      47
+    ],
+    "system": [
+      85,
+      255,
+      85
+    ],
+    "wallpaper": "radioactive-slime.png"
+  },
+  "chat": {
+    "id": "radioactive-slime",
+    "label": "Radioactive Slime",
+    "bg": [
+      3,
+      8,
+      3
+    ],
+    "fg": [
+      234,
+      255,
+      209
+    ],
+    "fixed": true,
+    "ts": [
+      119,
+      164,
+      90
+    ],
+    "bracket": [
+      228,
+      255,
+      47
+    ],
+    "system": [
+      85,
+      255,
+      85
+    ],
+    "nicks": [
+      [
+        157,
+        255,
+        0
+      ],
+      [
+        228,
+        255,
+        47
+      ],
+      [
+        85,
+        255,
+        85
+      ],
+      [
+        111,
+        191,
+        44
+      ],
+      [
+        234,
+        255,
+        209
+      ]
+    ]
+  },
+  "wallpaper": "radioactive-slime.png"
+}

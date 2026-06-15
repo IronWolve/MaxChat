@@ -1,5 +1,91 @@
 # MaxChat C++ Port Status
 
+## 2026-06-15 — Current State Snapshot
+
+### Feature Completeness
+
+Every major Python MaxChat feature has been ported to C++:
+
+- **IRC protocol**: Full IRCv3 support (CAP, SASL PLAIN, away-notify, server-time,
+  ISUPPORT), flood queue (ircII penalty model), read-idle watchdog, UTF-8-safe line
+  splitting, outbound flood queue, overlong-line splitting at UTF-8 boundaries.
+- **Multi-network**: Simultaneous live multi-network sessions with per-network
+  IrcConnection, separate buffers/trees/counters/reconnect state.
+- **Rich chat display**: mIRC control codes 0–98 + hex, colored nick labels,
+  right-aligned nick columns, timestamps, marker line, join/part hiding.
+- **Commands**: Full command parser (60+ commands) — superset of Python's, including
+  channel-op helpers, NickServ-style services, /sound, /ctcp, /list with dialog,
+  aliases with $me/$chan, tab completion cycling, input history.
+- **Link previews**: OpenGraph/X/Twitter/Mastodon cards, direct image thumbnails,
+  audio/video preview rows, async SSRF-safe fetcher with redirect + DNS re-validation.
+- **Image hosting**: Pluggable upload backends (ImgBB, Imgur, Postimages, Imgbox)
+  with paste/drop-to-upload workflow.
+- **Spellcheck**: Vendored Hunspell (all platforms) + Windows ISpellChecker COM backend,
+  underlines misspelled words, right-click suggestions.
+- **DCC**: Active/passive SEND, RESUME/ACCEPT, DCC CHAT, accept policy (ask/trusted/all),
+  port range, transfers dialog with rate/ETA, 64-bit ack tracking, CSPRNG tokens.
+- **Comic mode**: Full .avb/.bgb decoder, character model, emotion guessing (9 emotions),
+  panel rendering with smart balloon tails, panel cache, zoom view, per-buffer opt-in,
+  emotion picker, per-channel overrides, character assignment, copy/save panel PNG.
+- **Themes**: 36 app + 24 chat themes with live preview, OS nostalgia packs (Win95/XP/11,
+  Aqua), wallpapers (8 generated + bundled), theme packs (import/export), theme editor,
+  chat opacity, user themes.
+- **Scripting**: Embedded Lua 5.4 with full sandbox, permissions tab (read/write/run/
+  modules/network), 5 bundled examples, /load/unload/reload, Scripts Manager dialog,
+  script data dir, api table (echo/say/send_raw/insert_input/notify/http_get).
+- **MC DATA / BBS subsystem**: Terminals with ANSI renderer, MCB1 bitmap format
+  (RLE + Z85 armor), BBS gallery, Bayer dithering, 160×50 quadrant glyphs.
+- **Notifications**: Toast widget, OS notifications, DND, tray icon + menu, taskbar
+  flash, beep_highlight, notification sounds (wav playback), CTCP SOUND receive.
+- **Security**: 4 real vulnerabilities found in audit and fixed (DCC unbounded write,
+  comic OOM, two SSRF holes), plus CR/LF injection strip, topic PlainText, CTCP
+  rate-limit, CSPRNG tokens, wallpaper path sanitization.
+
+### Test Suite
+
+- **53 CTest targets** all passing (debug + release).
+  - IRC core: message, format, redaction, session, connection, command parser,
+    reconnect planner, flood guard, chat line formatter
+  - Services: OpenGraph parser/fetcher, link preview classifier/policy/renderer,
+    image fetcher
+  - Upload: image uploader (12 tests, 4 backends)
+  - Dialogs: preferences, server list, alias editor, channel modes, ban list,
+    ignore list, friends/notify, quick connect, chat find, raw log, url list,
+    channel list
+  - Comic: comic art (decoder safety), comic emotion
+  - DCC: dcc manager (pure helper)
+  - Scripting: lua engine (full BBS flow incl. Z85 decode/render), lua smoke
+  - Terminal: terminal frame, terminal profile, script terminal manager
+  - Core: settings store, network import, connection plan, default networks,
+    url detector, chat log store, chat buffer store, app info, spellcheck
+    catalog/highlighter, hunspell, theme catalog
+  - Main window: main window link preview (includes all UI sources)
+  - Sound player, system info, ansi renderer
+
+### Build
+
+- Debug: `cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug` → `cmake --build build`
+- Release: `cmake -S . -B build-release -G Ninja -DCMAKE_BUILD_TYPE=Release`
+- Windows: `build.bat` (MinGW default, MSVC fallback)
+- Lua scripting and OS speller both default ON
+- Vendored Lua 5.4.7 + Hunspell 1.7.2 — no system package dependency
+
+### Known Gaps
+
+- **Update checker** — Help > Check for Updates not yet implemented (#20).
+- **Scripts tab load/unload** — Preferences > Scripts shows loaded scripts only
+  but lacks a full manager UI (#31).
+- **Comic renderer/filter tests** — emotion guessing and bot-filtering logic
+  not yet unit-tested (#19).
+- **OG card selector** — per-field display toggles exist (og_show_site_name etc.)
+  but the full selector UI is pending (#28).
+- **settings.json shared with Python app** — last-writer-wins clobber on keys
+  like `nick_color_mode`; pending user decision on port-specific split.
+- **GPL licensing of Qt Multimedia ffmpeg backend** — needs THIRD_PARTY_NOTICES
+  update before public distribution.
+- **Translations (tr())** — deferred by user decision; loader + Localization page exist.
+- **macOS builds** — not yet targeted.
+
 ## 2026-06-09
 
 ### Current Handoff Snapshot

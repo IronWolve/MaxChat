@@ -1,0 +1,141 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Gothic Cathedral",
+  "app": {
+    "id": "gothic-cathedral",
+    "label": "Gothic Cathedral",
+    "name": "Gothic Cathedral",
+    "dark": true,
+    "bg": [
+      11,
+      7,
+      16
+    ],
+    "panel": [
+      23,
+      16,
+      31
+    ],
+    "panel2": [
+      36,
+      20,
+      47
+    ],
+    "text": [
+      232,
+      221,
+      232
+    ],
+    "on": [
+      127,
+      29,
+      70
+    ],
+    "on_text": "white",
+    "accent": [
+      183,
+      167,
+      216
+    ],
+    "groove": [
+      4,
+      2,
+      6
+    ],
+    "scroll": [
+      58,
+      39,
+      72
+    ],
+    "scroll_hi": [
+      127,
+      29,
+      70
+    ],
+    "scrollHi": [
+      127,
+      29,
+      70
+    ],
+    "chat_bg": [
+      9,
+      5,
+      13
+    ],
+    "chat_fg": [
+      232,
+      221,
+      232
+    ],
+    "bracket": [
+      183,
+      167,
+      216
+    ],
+    "system": [
+      196,
+      59,
+      93
+    ],
+    "wallpaper": "gothic-cathedral.png"
+  },
+  "chat": {
+    "id": "gothic-cathedral",
+    "label": "Gothic Cathedral",
+    "bg": [
+      9,
+      5,
+      13
+    ],
+    "fg": [
+      232,
+      221,
+      232
+    ],
+    "fixed": true,
+    "ts": [
+      141,
+      123,
+      155
+    ],
+    "bracket": [
+      183,
+      167,
+      216
+    ],
+    "system": [
+      196,
+      59,
+      93
+    ],
+    "nicks": [
+      [
+        183,
+        167,
+        216
+      ],
+      [
+        196,
+        59,
+        93
+      ],
+      [
+        127,
+        29,
+        70
+      ],
+      [
+        232,
+        221,
+        232
+      ],
+      [
+        141,
+        123,
+        155
+      ]
+    ]
+  },
+  "wallpaper": "gothic-cathedral.png"
+}

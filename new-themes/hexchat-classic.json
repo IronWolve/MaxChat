@@ -1,0 +1,125 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "HexChat Classic",
+  "app": {
+    "id": "hexchat-classic",
+    "label": "HexChat Classic",
+    "name": "HexChat Classic",
+    "dark": true,
+    "bg": [
+      46,
+      52,
+      54
+    ],
+    "panel": [
+      34,
+      39,
+      41
+    ],
+    "panel2": [
+      58,
+      65,
+      68
+    ],
+    "text": [
+      238,
+      238,
+      236
+    ],
+    "on": [
+      74,
+      144,
+      217
+    ],
+    "on_text": "white",
+    "accent": [
+      138,
+      226,
+      52
+    ],
+    "groove": [
+      23,
+      26,
+      28
+    ],
+    "scroll": [
+      85,
+      93,
+      96
+    ],
+    "scroll_hi": [
+      74,
+      144,
+      217
+    ],
+    "chat_bg": [
+      29,
+      32,
+      33
+    ],
+    "chat_fg": [
+      238,
+      238,
+      236
+    ]
+  },
+  "chat": {
+    "id": "hexchat-classic",
+    "label": "HexChat Classic",
+    "bg": [
+      29,
+      32,
+      33
+    ],
+    "fg": [
+      238,
+      238,
+      236
+    ],
+    "fixed": true,
+    "ts": [
+      136,
+      138,
+      133
+    ],
+    "bracket": [
+      114,
+      159,
+      207
+    ],
+    "system": [
+      252,
+      233,
+      79
+    ],
+    "nicks": [
+      [
+        114,
+        159,
+        207
+      ],
+      [
+        138,
+        226,
+        52
+      ],
+      [
+        252,
+        233,
+        79
+      ],
+      [
+        252,
+        175,
+        62
+      ],
+      [
+        173,
+        127,
+        168
+      ]
+    ]
+  },
+  "wallpaper": ""
+}

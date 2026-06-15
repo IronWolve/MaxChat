@@ -1,0 +1,125 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Catppuccin Frappe",
+  "app": {
+    "id": "catppuccin-frappe",
+    "label": "Catppuccin Frappe",
+    "name": "Catppuccin Frappe",
+    "dark": true,
+    "bg": [
+      48,
+      52,
+      70
+    ],
+    "panel": [
+      41,
+      44,
+      60
+    ],
+    "panel2": [
+      65,
+      69,
+      89
+    ],
+    "text": [
+      198,
+      208,
+      245
+    ],
+    "on": [
+      140,
+      170,
+      238
+    ],
+    "on_text": "black",
+    "accent": [
+      202,
+      158,
+      230
+    ],
+    "groove": [
+      35,
+      38,
+      52
+    ],
+    "scroll": [
+      81,
+      87,
+      109
+    ],
+    "scroll_hi": [
+      140,
+      170,
+      238
+    ],
+    "chat_bg": [
+      35,
+      38,
+      52
+    ],
+    "chat_fg": [
+      198,
+      208,
+      245
+    ]
+  },
+  "chat": {
+    "id": "catppuccin-frappe",
+    "label": "Catppuccin Frappe",
+    "bg": [
+      35,
+      38,
+      52
+    ],
+    "fg": [
+      198,
+      208,
+      245
+    ],
+    "fixed": true,
+    "ts": [
+      148,
+      156,
+      187
+    ],
+    "bracket": [
+      186,
+      187,
+      241
+    ],
+    "system": [
+      133,
+      193,
+      220
+    ],
+    "nicks": [
+      [
+        140,
+        170,
+        238
+      ],
+      [
+        202,
+        158,
+        230
+      ],
+      [
+        166,
+        209,
+        137
+      ],
+      [
+        229,
+        200,
+        144
+      ],
+      [
+        231,
+        130,
+        132
+      ]
+    ]
+  },
+  "wallpaper": ""
+}

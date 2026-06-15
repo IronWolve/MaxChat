@@ -1,0 +1,125 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "PaperColor Light",
+  "app": {
+    "id": "papercolor-light",
+    "label": "PaperColor Light",
+    "name": "PaperColor Light",
+    "dark": false,
+    "bg": [
+      238,
+      238,
+      238
+    ],
+    "panel": [
+      255,
+      255,
+      255
+    ],
+    "panel2": [
+      215,
+      215,
+      215
+    ],
+    "text": [
+      68,
+      68,
+      68
+    ],
+    "on": [
+      0,
+      135,
+      175
+    ],
+    "on_text": "white",
+    "accent": [
+      215,
+      95,
+      0
+    ],
+    "groove": [
+      188,
+      188,
+      188
+    ],
+    "scroll": [
+      198,
+      198,
+      198
+    ],
+    "scroll_hi": [
+      0,
+      135,
+      175
+    ],
+    "chat_bg": [
+      238,
+      238,
+      238
+    ],
+    "chat_fg": [
+      68,
+      68,
+      68
+    ]
+  },
+  "chat": {
+    "id": "papercolor-light",
+    "label": "PaperColor Light",
+    "bg": [
+      238,
+      238,
+      238
+    ],
+    "fg": [
+      68,
+      68,
+      68
+    ],
+    "fixed": true,
+    "ts": [
+      135,
+      135,
+      135
+    ],
+    "bracket": [
+      0,
+      95,
+      135
+    ],
+    "system": [
+      0,
+      135,
+      0
+    ],
+    "nicks": [
+      [
+        0,
+        135,
+        175
+      ],
+      [
+        215,
+        95,
+        0
+      ],
+      [
+        0,
+        135,
+        0
+      ],
+      [
+        175,
+        0,
+        0
+      ],
+      [
+        135,
+        135,
+        175
+      ]
+    ]
+  },
+  "wallpaper": ""
+}

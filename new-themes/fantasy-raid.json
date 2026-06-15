@@ -1,0 +1,141 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Fantasy Raid",
+  "app": {
+    "id": "fantasy-raid",
+    "label": "Fantasy Raid",
+    "name": "Fantasy Raid",
+    "dark": true,
+    "bg": [
+      21,
+      18,
+      12
+    ],
+    "panel": [
+      36,
+      28,
+      16
+    ],
+    "panel2": [
+      52,
+      39,
+      19
+    ],
+    "text": [
+      242,
+      230,
+      201
+    ],
+    "on": [
+      201,
+      149,
+      44
+    ],
+    "on_text": "black",
+    "accent": [
+      74,
+      163,
+      255
+    ],
+    "groove": [
+      11,
+      7,
+      3
+    ],
+    "scroll": [
+      88,
+      65,
+      31
+    ],
+    "scroll_hi": [
+      201,
+      149,
+      44
+    ],
+    "scrollHi": [
+      201,
+      149,
+      44
+    ],
+    "chat_bg": [
+      16,
+      12,
+      7
+    ],
+    "chat_fg": [
+      242,
+      230,
+      201
+    ],
+    "bracket": [
+      74,
+      163,
+      255
+    ],
+    "system": [
+      224,
+      184,
+      74
+    ],
+    "wallpaper": "fantasy-raid.png"
+  },
+  "chat": {
+    "id": "fantasy-raid",
+    "label": "Fantasy Raid",
+    "bg": [
+      16,
+      12,
+      7
+    ],
+    "fg": [
+      242,
+      230,
+      201
+    ],
+    "fixed": true,
+    "ts": [
+      143,
+      125,
+      90
+    ],
+    "bracket": [
+      74,
+      163,
+      255
+    ],
+    "system": [
+      224,
+      184,
+      74
+    ],
+    "nicks": [
+      [
+        201,
+        149,
+        44
+      ],
+      [
+        74,
+        163,
+        255
+      ],
+      [
+        155,
+        229,
+        100
+      ],
+      [
+        216,
+        107,
+        255
+      ],
+      [
+        242,
+        230,
+        201
+      ]
+    ]
+  },
+  "wallpaper": "fantasy-raid.png"
+}

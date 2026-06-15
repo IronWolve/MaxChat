@@ -1,0 +1,141 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Amiga Workbench Grey",
+  "app": {
+    "id": "amiga-workbench-grey",
+    "label": "Amiga Workbench Grey",
+    "name": "Amiga Workbench Grey",
+    "dark": false,
+    "bg": [
+      154,
+      154,
+      154
+    ],
+    "panel": [
+      184,
+      184,
+      184
+    ],
+    "panel2": [
+      215,
+      215,
+      215
+    ],
+    "text": [
+      17,
+      17,
+      17
+    ],
+    "on": [
+      0,
+      74,
+      159
+    ],
+    "on_text": "white",
+    "accent": [
+      242,
+      140,
+      40
+    ],
+    "groove": [
+      101,
+      101,
+      101
+    ],
+    "scroll": [
+      139,
+      139,
+      139
+    ],
+    "scroll_hi": [
+      0,
+      74,
+      159
+    ],
+    "scrollHi": [
+      0,
+      74,
+      159
+    ],
+    "chat_bg": [
+      238,
+      238,
+      238
+    ],
+    "chat_fg": [
+      16,
+      16,
+      16
+    ],
+    "bracket": [
+      0,
+      74,
+      159
+    ],
+    "system": [
+      154,
+      82,
+      0
+    ],
+    "wallpaper": "amiga-workbench-grey.png"
+  },
+  "chat": {
+    "id": "amiga-workbench-grey",
+    "label": "Amiga Workbench Grey",
+    "bg": [
+      238,
+      238,
+      238
+    ],
+    "fg": [
+      16,
+      16,
+      16
+    ],
+    "fixed": true,
+    "ts": [
+      104,
+      104,
+      104
+    ],
+    "bracket": [
+      0,
+      74,
+      159
+    ],
+    "system": [
+      154,
+      82,
+      0
+    ],
+    "nicks": [
+      [
+        0,
+        74,
+        159
+      ],
+      [
+        154,
+        82,
+        0
+      ],
+      [
+        51,
+        51,
+        51
+      ],
+      [
+        242,
+        140,
+        40
+      ],
+      [
+        0,
+        106,
+        175
+      ]
+    ]
+  },
+  "wallpaper": "amiga-workbench-grey.png"
+}

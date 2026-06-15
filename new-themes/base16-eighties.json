@@ -1,0 +1,125 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Base16 Eighties",
+  "app": {
+    "id": "base16-eighties",
+    "label": "Base16 Eighties",
+    "name": "Base16 Eighties",
+    "dark": true,
+    "bg": [
+      45,
+      45,
+      45
+    ],
+    "panel": [
+      57,
+      57,
+      57
+    ],
+    "panel2": [
+      81,
+      81,
+      81
+    ],
+    "text": [
+      211,
+      208,
+      200
+    ],
+    "on": [
+      102,
+      153,
+      204
+    ],
+    "on_text": "white",
+    "accent": [
+      204,
+      153,
+      204
+    ],
+    "groove": [
+      27,
+      27,
+      27
+    ],
+    "scroll": [
+      116,
+      115,
+      105
+    ],
+    "scroll_hi": [
+      102,
+      153,
+      204
+    ],
+    "chat_bg": [
+      45,
+      45,
+      45
+    ],
+    "chat_fg": [
+      211,
+      208,
+      200
+    ]
+  },
+  "chat": {
+    "id": "base16-eighties",
+    "label": "Base16 Eighties",
+    "bg": [
+      45,
+      45,
+      45
+    ],
+    "fg": [
+      211,
+      208,
+      200
+    ],
+    "fixed": true,
+    "ts": [
+      160,
+      159,
+      147
+    ],
+    "bracket": [
+      102,
+      204,
+      204
+    ],
+    "system": [
+      153,
+      204,
+      153
+    ],
+    "nicks": [
+      [
+        102,
+        153,
+        204
+      ],
+      [
+        204,
+        153,
+        204
+      ],
+      [
+        153,
+        204,
+        153
+      ],
+      [
+        255,
+        204,
+        102
+      ],
+      [
+        242,
+        119,
+        122
+      ]
+    ]
+  },
+  "wallpaper": ""
+}

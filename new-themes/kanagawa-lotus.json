@@ -1,0 +1,125 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Kanagawa Lotus",
+  "app": {
+    "id": "kanagawa-lotus",
+    "label": "Kanagawa Lotus",
+    "name": "Kanagawa Lotus",
+    "dark": false,
+    "bg": [
+      242,
+      236,
+      188
+    ],
+    "panel": [
+      247,
+      240,
+      208
+    ],
+    "panel2": [
+      230,
+      221,
+      173
+    ],
+    "text": [
+      84,
+      84,
+      100
+    ],
+    "on": [
+      93,
+      87,
+      163
+    ],
+    "on_text": "white",
+    "accent": [
+      179,
+      91,
+      121
+    ],
+    "groove": [
+      214,
+      207,
+      160
+    ],
+    "scroll": [
+      201,
+      192,
+      147
+    ],
+    "scroll_hi": [
+      93,
+      87,
+      163
+    ],
+    "chat_bg": [
+      255,
+      247,
+      214
+    ],
+    "chat_fg": [
+      84,
+      84,
+      100
+    ]
+  },
+  "chat": {
+    "id": "kanagawa-lotus",
+    "label": "Kanagawa Lotus",
+    "bg": [
+      255,
+      247,
+      214
+    ],
+    "fg": [
+      84,
+      84,
+      100
+    ],
+    "fixed": true,
+    "ts": [
+      138,
+      137,
+      128
+    ],
+    "bracket": [
+      111,
+      95,
+      149
+    ],
+    "system": [
+      77,
+      105,
+      155
+    ],
+    "nicks": [
+      [
+        93,
+        87,
+        163
+      ],
+      [
+        179,
+        91,
+        121
+      ],
+      [
+        102,
+        142,
+        61
+      ],
+      [
+        200,
+        64,
+        83
+      ],
+      [
+        77,
+        105,
+        155
+      ]
+    ]
+  },
+  "wallpaper": ""
+}

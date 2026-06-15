@@ -1,0 +1,125 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "GitHub Dark Dimmed",
+  "app": {
+    "id": "github-dark-dimmed",
+    "label": "GitHub Dark Dimmed",
+    "name": "GitHub Dark Dimmed",
+    "dark": true,
+    "bg": [
+      34,
+      39,
+      46
+    ],
+    "panel": [
+      45,
+      51,
+      59
+    ],
+    "panel2": [
+      55,
+      62,
+      71
+    ],
+    "text": [
+      173,
+      186,
+      199
+    ],
+    "on": [
+      83,
+      155,
+      245
+    ],
+    "on_text": "white",
+    "accent": [
+      87,
+      171,
+      90
+    ],
+    "groove": [
+      28,
+      33,
+      40
+    ],
+    "scroll": [
+      68,
+      76,
+      86
+    ],
+    "scroll_hi": [
+      83,
+      155,
+      245
+    ],
+    "chat_bg": [
+      28,
+      33,
+      40
+    ],
+    "chat_fg": [
+      173,
+      186,
+      199
+    ]
+  },
+  "chat": {
+    "id": "github-dark-dimmed",
+    "label": "GitHub Dark Dimmed",
+    "bg": [
+      28,
+      33,
+      40
+    ],
+    "fg": [
+      173,
+      186,
+      199
+    ],
+    "fixed": true,
+    "ts": [
+      118,
+      131,
+      144
+    ],
+    "bracket": [
+      176,
+      131,
+      240
+    ],
+    "system": [
+      83,
+      155,
+      245
+    ],
+    "nicks": [
+      [
+        83,
+        155,
+        245
+      ],
+      [
+        87,
+        171,
+        90
+      ],
+      [
+        198,
+        144,
+        38
+      ],
+      [
+        229,
+        83,
+        75
+      ],
+      [
+        176,
+        131,
+        240
+      ]
+    ]
+  },
+  "wallpaper": ""
+}

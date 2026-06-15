@@ -112,10 +112,15 @@ bool sameNick(const QString& a, const QString& b) {
 }
 
 QString newToken() {
-    // Use the system CSPRNG (like Python's secrets.token_hex) — the token is the
-    // only barrier stopping a third party from injecting a fake passive reply.
-    return QStringLiteral("%1").arg(QRandomGenerator::system()->generate(), 8, 16,
-                                    QLatin1Char('0'));
+    // Use the system CSPRNG (like Python's secrets.token_hex(16)) — the token is
+    // the only barrier stopping a third party from injecting a fake passive reply,
+    // so use 128 bits (two 64-bit draws). 32 bits is brute-forceable on a LAN
+    // within the offer's lifetime.
+    const quint64 hi = QRandomGenerator::system()->generate64();
+    const quint64 lo = QRandomGenerator::system()->generate64();
+    return QStringLiteral("%1%2")
+        .arg(hi, 16, 16, QLatin1Char('0'))
+        .arg(lo, 16, 16, QLatin1Char('0'));
 }
 
 } // namespace
@@ -322,6 +327,11 @@ void DccManager::offerSend(const QString& peer, const QString& filePath) {
     emitChanged();
 
     connect(server, &QTcpServer::newConnection, this, [this, server, id]() {
+        // Active DCC SEND has no token and the recipient's IP is not known in
+        // advance (we advertise OURS and they dial in), so the connecting peer
+        // cannot be verified here — whoever races to the ephemeral port first
+        // gets the file. The listener is closed after one connection to shrink
+        // the window; passive mode (token-bound) is preferred for untrusted nets.
         QTcpSocket* socket = server->nextPendingConnection();
         server->close();
         DccTransfer* t = findById(id);
@@ -662,7 +672,15 @@ void DccManager::beginReceive(int id, QTcpSocket* socket) {
         if (writable < data.size()) {
             data.truncate(static_cast<int>(writable));
         }
-        rr.file->write(data);
+        // A short/failed write (disk full, quota) must abort — otherwise we ACK
+        // bytes that never hit disk, leaving a silently truncated file.
+        const qint64 written = rr.file->write(data);
+        if (written != data.size()) {
+            emit status(QStringLiteral("DCC: write failed for %1 (disk full?) - aborting.")
+                            .arg(tr->fileName));
+            finishTransfer(id, false);
+            return;
+        }
         tr->transferred += data.size();
         rr.lastProgressMs = clock_.elapsed();
         const quint32 ack = qToBigEndian<quint32>(static_cast<quint32>(tr->transferred & 0xFFFFFFFF));
@@ -864,6 +882,14 @@ void DccManager::offerChat(const QString& peer) {
                                    "chat instead.")
                         .arg(peer));
     }
+    // Re-offering to a peer that already has a session must not orphan the old
+    // ChatRuntime (its server/socket would leak and a stale peer could still be
+    // wired). Tear it down first, same as acceptIncomingChat does.
+    if (ChatRuntime* existing = chats_.value(key); existing != nullptr) {
+        teardownChat(existing);
+        delete chats_.take(key);
+    }
+
     auto* chat = new ChatRuntime();
     chat->info.id = nextId_++;
     chat->info.peer = peer;

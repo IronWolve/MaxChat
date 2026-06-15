@@ -1,0 +1,131 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Kanagawa Wave",
+  "app": {
+    "id": "kanagawa-wave",
+    "label": "Kanagawa Wave",
+    "name": "Kanagawa Wave",
+    "dark": true,
+    "bg": [
+      31,
+      31,
+      40
+    ],
+    "panel": [
+      42,
+      42,
+      55
+    ],
+    "panel2": [
+      54,
+      54,
+      70
+    ],
+    "text": [
+      220,
+      215,
+      186
+    ],
+    "on": [
+      126,
+      156,
+      216
+    ],
+    "on_text": "black",
+    "accent": [
+      255,
+      160,
+      102
+    ],
+    "groove": [
+      22,
+      22,
+      29
+    ],
+    "scroll": [
+      84,
+      84,
+      109
+    ],
+    "scroll_hi": [
+      126,
+      156,
+      216
+    ],
+    "chat_bg": [
+      22,
+      22,
+      29
+    ],
+    "chat_fg": [
+      220,
+      215,
+      186
+    ],
+    "wallpaper": "dusk-peaks.jpg"
+  },
+  "chat": {
+    "id": "kanagawa-wave",
+    "label": "Kanagawa Wave",
+    "bg": [
+      22,
+      22,
+      29
+    ],
+    "fg": [
+      220,
+      215,
+      186
+    ],
+    "fixed": true,
+    "ts": [
+      114,
+      113,
+      105
+    ],
+    "bracket": [
+      149,
+      127,
+      184
+    ],
+    "system": [
+      127,
+      180,
+      202
+    ],
+    "nicks": [
+      [
+        126,
+        156,
+        216
+      ],
+      [
+        255,
+        160,
+        102
+      ],
+      [
+        152,
+        187,
+        108
+      ],
+      [
+        230,
+        195,
+        132
+      ],
+      [
+        149,
+        127,
+        184
+      ],
+      [
+        210,
+        126,
+        153
+      ]
+    ]
+  },
+  "wallpaper": "dusk-peaks.jpg"
+}

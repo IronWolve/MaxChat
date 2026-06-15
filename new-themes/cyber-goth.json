@@ -1,0 +1,141 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Cyber Goth",
+  "app": {
+    "id": "cyber-goth",
+    "label": "Cyber Goth",
+    "name": "Cyber Goth",
+    "dark": true,
+    "bg": [
+      6,
+      6,
+      9
+    ],
+    "panel": [
+      16,
+      16,
+      24
+    ],
+    "panel2": [
+      27,
+      16,
+      36
+    ],
+    "text": [
+      232,
+      255,
+      246
+    ],
+    "on": [
+      0,
+      255,
+      138
+    ],
+    "on_text": "black",
+    "accent": [
+      255,
+      43,
+      214
+    ],
+    "groove": [
+      2,
+      2,
+      4
+    ],
+    "scroll": [
+      58,
+      36,
+      82
+    ],
+    "scroll_hi": [
+      0,
+      255,
+      138
+    ],
+    "scrollHi": [
+      0,
+      255,
+      138
+    ],
+    "chat_bg": [
+      3,
+      3,
+      6
+    ],
+    "chat_fg": [
+      232,
+      255,
+      246
+    ],
+    "bracket": [
+      255,
+      43,
+      214
+    ],
+    "system": [
+      157,
+      255,
+      0
+    ],
+    "wallpaper": "cyber-goth.png"
+  },
+  "chat": {
+    "id": "cyber-goth",
+    "label": "Cyber Goth",
+    "bg": [
+      3,
+      3,
+      6
+    ],
+    "fg": [
+      232,
+      255,
+      246
+    ],
+    "fixed": true,
+    "ts": [
+      111,
+      127,
+      121
+    ],
+    "bracket": [
+      255,
+      43,
+      214
+    ],
+    "system": [
+      157,
+      255,
+      0
+    ],
+    "nicks": [
+      [
+        0,
+        255,
+        138
+      ],
+      [
+        255,
+        43,
+        214
+      ],
+      [
+        157,
+        255,
+        0
+      ],
+      [
+        122,
+        92,
+        255
+      ],
+      [
+        232,
+        255,
+        246
+      ]
+    ]
+  },
+  "wallpaper": "cyber-goth.png"
+}

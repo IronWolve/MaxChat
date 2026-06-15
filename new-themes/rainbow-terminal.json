@@ -1,0 +1,146 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Rainbow Terminal",
+  "app": {
+    "id": "rainbow-terminal",
+    "label": "Rainbow Terminal",
+    "name": "Rainbow Terminal",
+    "dark": true,
+    "bg": [
+      17,
+      17,
+      17
+    ],
+    "panel": [
+      26,
+      26,
+      26
+    ],
+    "panel2": [
+      36,
+      36,
+      36
+    ],
+    "text": [
+      242,
+      242,
+      242
+    ],
+    "on": [
+      0,
+      229,
+      255
+    ],
+    "on_text": "black",
+    "accent": [
+      255,
+      79,
+      216
+    ],
+    "groove": [
+      5,
+      5,
+      5
+    ],
+    "scroll": [
+      68,
+      68,
+      68
+    ],
+    "scroll_hi": [
+      0,
+      229,
+      255
+    ],
+    "scrollHi": [
+      0,
+      229,
+      255
+    ],
+    "chat_bg": [
+      5,
+      5,
+      5
+    ],
+    "chat_fg": [
+      242,
+      242,
+      242
+    ],
+    "bracket": [
+      0,
+      229,
+      255
+    ],
+    "system": [
+      255,
+      244,
+      79
+    ],
+    "wallpaper": "rainbow-terminal.png"
+  },
+  "chat": {
+    "id": "rainbow-terminal",
+    "label": "Rainbow Terminal",
+    "bg": [
+      5,
+      5,
+      5
+    ],
+    "fg": [
+      242,
+      242,
+      242
+    ],
+    "fixed": true,
+    "ts": [
+      136,
+      136,
+      136
+    ],
+    "bracket": [
+      0,
+      229,
+      255
+    ],
+    "system": [
+      255,
+      244,
+      79
+    ],
+    "nicks": [
+      [
+        255,
+        59,
+        48
+      ],
+      [
+        255,
+        149,
+        0
+      ],
+      [
+        255,
+        204,
+        0
+      ],
+      [
+        52,
+        199,
+        89
+      ],
+      [
+        0,
+        199,
+        255
+      ],
+      [
+        175,
+        82,
+        222
+      ]
+    ]
+  },
+  "wallpaper": "rainbow-terminal.png"
+}

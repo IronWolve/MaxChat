@@ -1,0 +1,141 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Punk Zine",
+  "app": {
+    "id": "punk-zine",
+    "label": "Punk Zine",
+    "name": "Punk Zine",
+    "dark": false,
+    "bg": [
+      245,
+      240,
+      223
+    ],
+    "panel": [
+      255,
+      250,
+      240
+    ],
+    "panel2": [
+      240,
+      226,
+      192
+    ],
+    "text": [
+      17,
+      17,
+      17
+    ],
+    "on": [
+      255,
+      0,
+      110
+    ],
+    "on_text": "white",
+    "accent": [
+      255,
+      212,
+      0
+    ],
+    "groove": [
+      17,
+      17,
+      17
+    ],
+    "scroll": [
+      207,
+      194,
+      166
+    ],
+    "scroll_hi": [
+      255,
+      0,
+      110
+    ],
+    "scrollHi": [
+      255,
+      0,
+      110
+    ],
+    "chat_bg": [
+      255,
+      250,
+      240
+    ],
+    "chat_fg": [
+      17,
+      17,
+      17
+    ],
+    "bracket": [
+      17,
+      17,
+      17
+    ],
+    "system": [
+      217,
+      4,
+      41
+    ],
+    "wallpaper": "punk-zine.png"
+  },
+  "chat": {
+    "id": "punk-zine",
+    "label": "Punk Zine",
+    "bg": [
+      255,
+      250,
+      240
+    ],
+    "fg": [
+      17,
+      17,
+      17
+    ],
+    "fixed": true,
+    "ts": [
+      104,
+      98,
+      88
+    ],
+    "bracket": [
+      17,
+      17,
+      17
+    ],
+    "system": [
+      217,
+      4,
+      41
+    ],
+    "nicks": [
+      [
+        255,
+        0,
+        110
+      ],
+      [
+        255,
+        212,
+        0
+      ],
+      [
+        17,
+        17,
+        17
+      ],
+      [
+        0,
+        166,
+        251
+      ],
+      [
+        217,
+        4,
+        41
+      ]
+    ]
+  },
+  "wallpaper": "punk-zine.png"
+}

@@ -61,6 +61,7 @@ first (mirrors the Python `api` first-arg convention).
 | `api.get(key)` | value\|nil | read a persisted pref (string/number/bool) for this script |
 | `api.set(key, value)` | — | persist a pref (string/number/bool) for this script |
 | `api.timer(ms, fn)` | id | call `fn()` every `ms` (floor 50ms); returns a cancel id |
+| `api.http_get(url)` | string\|nil | fetch a URL; requires **Network access** permission; returns page body or nil on failure |
 | `api.cancel_timer(id)` | — | stop a timer (also auto-cancelled when the script unloads) |
 
 Difference from Python: `me`/`target` were **properties** there; here they are

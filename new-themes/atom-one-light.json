@@ -1,0 +1,125 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Atom One Light",
+  "app": {
+    "id": "atom-one-light",
+    "label": "Atom One Light",
+    "name": "Atom One Light",
+    "dark": false,
+    "bg": [
+      250,
+      250,
+      250
+    ],
+    "panel": [
+      240,
+      240,
+      240
+    ],
+    "panel2": [
+      229,
+      229,
+      230
+    ],
+    "text": [
+      56,
+      58,
+      66
+    ],
+    "on": [
+      64,
+      120,
+      242
+    ],
+    "on_text": "white",
+    "accent": [
+      166,
+      38,
+      164
+    ],
+    "groove": [
+      208,
+      208,
+      208
+    ],
+    "scroll": [
+      198,
+      198,
+      198
+    ],
+    "scroll_hi": [
+      64,
+      120,
+      242
+    ],
+    "chat_bg": [
+      250,
+      250,
+      250
+    ],
+    "chat_fg": [
+      56,
+      58,
+      66
+    ]
+  },
+  "chat": {
+    "id": "atom-one-light",
+    "label": "Atom One Light",
+    "bg": [
+      250,
+      250,
+      250
+    ],
+    "fg": [
+      56,
+      58,
+      66
+    ],
+    "fixed": true,
+    "ts": [
+      160,
+      161,
+      167
+    ],
+    "bracket": [
+      1,
+      132,
+      188
+    ],
+    "system": [
+      80,
+      161,
+      79
+    ],
+    "nicks": [
+      [
+        64,
+        120,
+        242
+      ],
+      [
+        166,
+        38,
+        164
+      ],
+      [
+        80,
+        161,
+        79
+      ],
+      [
+        193,
+        132,
+        1
+      ],
+      [
+        228,
+        86,
+        73
+      ]
+    ]
+  },
+  "wallpaper": ""
+}
