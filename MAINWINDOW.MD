@@ -126,87 +126,229 @@ with a fake host.
 
 ---
 
-## 6. Phase order (lowest risk / highest value first)
+## 6. Phases (detailed, executable)
 
 Ordering rationale: start where a clean interface already exists (ScriptHost),
-end with the riskiest, most cross-cutting piece (IRC routing).
+end with the riskiest, most cross-cutting piece (IRC routing). Each phase below
+is a self-contained mini-plan: do it in one sitting, keep tests green, commit.
+Method/member names are the real ones in the current tree.
 
-### Phase 0 — Seam prep (no logic moves)
-- Define `MainWindowHost` interface; make `MainWindow` implement it with thin
-  methods that just call its existing private helpers.
-- Verify nothing changed (compile + tests). One commit.
+---
 
-### Phase 1 — ScriptBridge  ⭐ best first extraction
-- **Why first:** `ScriptHost` is already a clean abstract interface; the script
-  surface is self-contained and currently forces `MainWindow` to carry ~25
-  `scriptX()` overrides + `m_lua` + `m_scriptTerminals`.
-- **Move:** all `scriptX()` overrides, `m_lua`, `m_scriptTerminals`,
-  `seedBundledScripts`, `buildScriptPermissionsFor`, `isBundledScript`,
-  `buildAllScriptPermsMap`, terminal-tree node building hooks.
-- `ScriptBridge` *implements* `ScriptHost` and calls `MainWindowHost` for the
-  few UI things (echo to buffer, insert input, "active network", open a
-  terminal tree node).
-- **Test:** the existing `lua_engine_test` already covers the engine; add a
-  `script_bridge_test` for permission resolution (bundled vs user ircSend) and
-  the MC-DATA network routing using a fake host — logic that's currently
-  untestable inside MainWindow.
+### Phase 0 — `MainWindowHost` seam (no logic moves)
 
-### Phase 2 — PreviewController
-- **Move:** `m_previewImageCache`, the pending-preview maps, `requestPreviewImagesIn`,
-  `handleChatAnchorClicked`, OG/image fetch orchestration, the audio/video/image
-  player ownership (`m_audioBar`, `m_mediaPlayerDialog`, image viewer),
-  `startImageUpload`.
-- Calls back through host for "insert preview HTML into buffer line N".
-- **Test:** anchor-scheme allow-list (P0-6 logic), SSRF gate calls, cache
-  eviction — move/extend the relevant asserts out of `main_window_link_preview_test`.
+**Goal:** introduce the interface controllers will depend on, with zero behavior
+change, so later phases just *move* code behind it.
 
-### Phase 3 — AppearanceController
-- **Move:** `applyTheme` / `setTheme` / `setChatTheme` / `setWallpaper` /
-  chrome-font QSS / `m_currentTheme` / `m_currentChatTheme` / `m_currentWallpaper`
-  / `m_chatOpacity`. Small, self-contained, low risk.
-- **Test:** the themes-off / chrome-font-stays behavior (already in the link
-  preview test) moves here as `appearance_controller_test`.
+- **New files:** `src/ui/MainWindowHost.h` (pure abstract, no .cpp).
+- **Define** the minimum surface (grow it per phase, don't front-load):
+  ```cpp
+  class MainWindowHost {
+  public:
+    virtual ~MainWindowHost() = default;
+    virtual QString activeNetwork() const = 0;
+    virtual QString currentTarget() const = 0;
+    virtual void appendSystemLine(const QString& network, const QString& target,
+                                  const QString& text) = 0;
+    virtual void insertInput(const QString& text) = 0;
+    virtual maxchat::core::SettingsStore& settings() = 0;
+    virtual QWidget* dialogParent() = 0;
+  };
+  ```
+- **Steps:**
+  1. Add the header; make `MainWindow` inherit `public MainWindowHost`.
+  2. Implement each method as a one-liner over an existing private helper
+     (`activeNetwork()` → `activeNetworkName()`, etc.).
+  3. Build + full `ctest`. No test changes.
+- **Done:** compiles, suite green, no diff in behavior.
+- **Commit:** `ui: add MainWindowHost interface (decomp phase 0)`
 
-### Phase 4 — NotificationController
-- **Move:** `m_notifier`, tray, toast, DND, CTCP-SOUND handling, `notify*`.
-- Mostly wiring; Notifier already exists. Thin.
+---
 
-### Phase 5 — ComicController
-- **Move:** `m_comic*`, `m_comicEnabledBuffers`, `m_comicPanelCache`,
-  `refreshComic`, `comicCharacterForNick`, per-channel comic toggle, ComicView
-  wiring.
-- **Test:** comic-enabled-per-buffer resolution, panel cache keying.
+### Phase 1 — `ScriptBridge`  ⭐ best first extraction
 
-### Phase 6 — DccController (thin)
-- **Move:** the DccManager wiring, `/dcc` command handling, CTCP `dccRequest`
-  routing to the correct network. DccManager already does the heavy lifting.
+**Goal:** lift the entire script surface out of `MainWindow`.
 
-### Phase 7 — NetworkController / IrcRouter  ⚠️ riskiest, do last
-- **Move:** per-network `IrcConnection` lifecycle (`connectToServer`,
-  `connectConfigFor`, disconnect/reconnect/close), the per-network `QHash`es
-  (`m_connectionPlansByNetwork`, `m_registeredByNetwork`,
-  `m_currentTargetByNetwork`, `m_openTargetsByNetwork`,
-  `m_manualDisconnectByNetwork`, `m_initialConnectAttemptsByNetwork`), the
-  reconnect/idle-watchdog, and the **big signal-routing block** (messageReceived,
-  userJoined/Parted/Quit, namesReceived, modeChanged, topicChanged, mcDataReceived,
-  ctcpSound, dccRequest, numerics) translating IRC events → ChatBufferStore +
-  tree updates via the host.
-- **Why last:** it touches the most state and every other controller subscribes
-  to its events. By now the others are extracted, so the router's surface is
-  clearer. Consider exposing controller-facing signals
-  (`messageForBuffer`, `membershipChanged`, `mcData`) the others connect to.
-- **Test:** `network_controller_test` — feed raw IRC lines (reuse the
-  `irc_session_test` harness pattern) and assert buffer/tree mutations on a fake
-  host. High value: the routing logic is currently the least-tested, most-bug-
-  prone area.
+- **New files:** `src/ui/ScriptBridge.{h,cpp}` + `tests/unit/script_bridge_test.cpp`.
+- **Move — state:** `m_lua`, `m_scriptTerminals`, the `m_comicEnabledBuffers`?
+  (no — that's comic), the scripts dir bits.
+- **Move — methods:** the 23 `ScriptHost` overrides (`scriptEcho`, `scriptSay`,
+  `scriptSendRaw`, `scriptMcData`, `scriptMe`, `scriptTarget`, `scriptNetwork`,
+  `scriptChannels`, `scriptNicks`, `scriptNotify`, `scriptInsertInput`,
+  `scriptHttpGet`, and all `scriptTerminal*`), plus `seedBundledScripts`,
+  `scriptsDirectory`, `isBundledScript`, `buildScriptPermissionsFor`,
+  `buildAllScriptPermsMap`, and the terminal→tree-node wiring + the
+  `inputSubmitted/linkActivated/terminalClosed/terminalsChanged/
+  fontPreferenceChanged/gridSizeChanged` connections.
+- **Design:** `ScriptBridge` *implements* `ScriptHost` (LuaEngine talks to it
+  directly). It takes a `MainWindowHost&` for echo/insert/active-network and a
+  couple of script-specific callbacks the host still owns (e.g. "the terminal
+  list changed → rebuild tree", "send MC DATA / raw on network N" → goes through
+  the NetworkController later; for now via host).
+- **Host additions:** `scriptEcho`-style buffer append, `terminalsChanged()`
+  notification hook, and access to the IRC send path (temporary host method
+  `sendRawOn(network, line)` / `sendMcData(...)` until Phase 7 owns it).
+- **Steps:**
+  1. Create `ScriptBridge` implementing `ScriptHost`; give it `m_lua` +
+     `m_scriptTerminals` ownership.
+  2. Move the methods; replace MainWindow widget access with `host_` calls.
+  3. In `MainWindow` ctor, construct `ScriptBridge` and pass it where `this`
+     (as ScriptHost) was passed to `LuaEngine`.
+  4. Move the terminal-tree node building (`rebuildNetworkTree`'s terminal
+     section reads `m_scriptTerminals->terminals()`) behind a host query.
+  5. Delete the moved members/methods from `MainWindow`.
+- **Test (`script_bridge_test`):** drive `ScriptBridge` with a fake host +
+  fake LuaEngine perms: bundled-vs-user `ircSend` default resolution, MC-DATA
+  routing to the dispatch network — logic untestable while embedded in MainWindow.
+- **Done:** `MainWindow` no longer names `LuaEngine`/`ScriptTerminalManager`;
+  suite green incl. `lua_engine` + new `script_bridge`.
+- **Commit:** `ui: extract ScriptBridge from MainWindow (decomp phase 1)`
 
-### Phase 8 — Residual cleanup
-- Friends/away poller → `PresenceController` (or fold into NetworkController).
-- Settings/prefs glue stays in MainWindow (it's view-adjacent) but
-  `applyCurrentSettings` becomes a fan-out that calls each controller's
-  `applySettings(map)`.
-- Final pass: MainWindow.h should be mostly widget pointers + the controller
-  unique_ptrs + the `MainWindowHost` overrides.
+---
+
+### Phase 2 — `PreviewController`
+
+**Goal:** own link-preview fetch/cache + media playback + image upload.
+
+- **New files:** `src/ui/PreviewController.{h,cpp}` + `tests/unit/preview_controller_test.cpp`.
+- **Move — state:** `m_previewImageCache`, `m_pendingPreviewCandidates`,
+  `m_audioBar`, `m_mediaPlayerDialog` (+ image viewer ownership), the image
+  uploader handle.
+- **Move — methods:** `requestPreviewImagesIn`, `handleChatAnchorClicked`,
+  `startImageUpload`, `configureImageUploader`, and the OG/image fetch
+  orchestration + SSRF-gated callbacks.
+- **Host additions:** "replace preview placeholder in buffer line" + "append
+  system line"; reuse the existing SSRF helper (`resolvePreviewUrlPublicAsync`)
+  directly (it's free-standing in `services/`).
+- **Steps:** standard recipe; the anchor-scheme allow-list (P0-6) and SSRF
+  re-checks move verbatim.
+- **Test:** scheme allow-list refuses `file:`/`javascript:`; cache eviction at
+  64; SSRF gate is consulted before playback. Migrate the relevant asserts out
+  of `main_window_link_preview_test`.
+- **Done:** suite green; preview asserts now live in `preview_controller_test`.
+- **Commit:** `ui: extract PreviewController (decomp phase 2)`
+
+---
+
+### Phase 3 — `AppearanceController`
+
+**Goal:** own theme / chat-theme / wallpaper / chrome-font / opacity.
+
+- **New files:** `src/ui/AppearanceController.{h,cpp}` +
+  `tests/unit/appearance_controller_test.cpp`.
+- **Move — state:** `m_currentTheme`, `m_currentChatTheme`, `m_currentWallpaper`,
+  `m_chatOpacity`.
+- **Move — methods:** `applyTheme`, `setTheme`, `setChatTheme`, `setWallpaper`,
+  `syncThemeActions`, `syncChatThemeActions`, `syncWallpaperActions`, and the
+  chrome-font QSS assembly.
+- **Host additions:** `qApp` is global (no host needed); needs "re-render active
+  buffer" + "the menu action groups" (pass the `QActionGroup*`s in, or expose a
+  `syncMenus()` callback).
+- **Test:** Themes-Off leaves an empty stylesheet **and** keeps the chrome-font
+  rule on themed paths (the exact behavior we just fixed); wallpaper/opacity in
+  the QSS. This is the cleanest controller to test.
+- **Done:** suite green; the themes asserts move here from the link-preview test.
+- **Commit:** `ui: extract AppearanceController (decomp phase 3)`
+
+---
+
+### Phase 4 — `NotificationController`
+
+**Goal:** own notifications / tray / toast / DND / CTCP SOUND.
+
+- **New files:** `src/ui/NotificationController.{h,cpp}` (+ test if logic warrants).
+- **Move — state:** `m_notifier`, `m_tray`, DND/last-notify bookkeeping.
+- **Move — methods:** `notify`, `updateTrayIcon`, `handleCtcpSound`, tray
+  `messageClicked` wiring, DND window checks.
+- **Host additions:** "raise/activate the relevant buffer" on tray click.
+- **Test:** DND suppression window; "don't notify for self/active buffer" rules.
+- **Commit:** `ui: extract NotificationController (decomp phase 4)`
+
+---
+
+### Phase 5 — `ComicController`
+
+**Goal:** own comic state + render orchestration.
+
+- **New files:** `src/ui/ComicController.{h,cpp}` + `tests/unit/comic_controller_test.cpp`.
+- **Move — state:** the `m_comic*` members, `m_comicEnabledBuffers`,
+  `m_comicPanelCache`.
+- **Move — methods:** `refreshComic`, `comicCharacterForNick`, `setComicMode`,
+  `saveComic`, `openComicSettings`, `openComicHelp`, ComicView wiring.
+- **Host additions:** access to the active buffer's lines + the ComicView widget
+  (passed in), and settings.
+- **Test:** per-buffer comic-enabled resolution; panel-cache key includes all
+  visual inputs (font, tint, size) — guards the cache-staleness class of bug.
+- **Commit:** `ui: extract ComicController (decomp phase 5)`
+
+---
+
+### Phase 6 — `DccController` (thin)
+
+**Goal:** own the DccManager wiring (DccManager already does the work).
+
+- **New files:** `src/ui/DccController.{h,cpp}`.
+- **Move — state:** `m_dccManager` + the transfers/chat dialogs it owns.
+- **Move — methods:** the `dccRequest` CTCP routing to the right network, the
+  `/dcc` command handling, accept-policy prompts, dialog wiring.
+- **Host additions:** "which network did this CTCP arrive on" (the routing fix
+  from the audit — preserve it), append-system-line, dialog parent.
+- **Test:** thin; rely on the existing `dcc_manager_test`. Optionally assert the
+  CTCP→network routing on a fake host.
+- **Commit:** `ui: extract DccController (decomp phase 6)`
+
+---
+
+### Phase 7 — `NetworkController` / IrcRouter  ⚠️ riskiest, do last
+
+**Goal:** own per-network `IrcConnection` lifecycle + the IRC-event→buffer/tree
+routing. This is the heart of the app and the least-tested code; doing it last
+means every consumer is already a clean controller.
+
+- **New files:** `src/ui/NetworkController.{h,cpp}` + `tests/unit/network_controller_test.cpp`.
+- **Move — state:** `m_connections`, `m_connectionPlansByNetwork`,
+  `m_registeredByNetwork`, `m_currentTargetByNetwork`, `m_openTargetsByNetwork`,
+  `m_manualDisconnectByNetwork`, `m_initialConnectAttemptsByNetwork`,
+  `m_pendingNamesByChannel`, `m_channelDrainTimer`, reconnect/watchdog state.
+- **Move — methods:** `connectToServer`/`connectConfigFor`,
+  `connectionForNetwork`, `activeNetworkName`, `disconnectNetwork`,
+  `reconnectNetwork`, `closeNetwork`, `setupConnectionSignals`, and the entire
+  per-connection signal→buffer routing (`messageReceived`, `userJoined/Parted/
+  Quit`, `namesReceived`/`namesEnd`, `modeChanged`, `topicChanged`,
+  `mcDataReceived`, `ctcpSound`, `dccRequest`, numerics).
+- **Design:** expose controller-facing **signals** the already-extracted
+  controllers connect to instead of MainWindow reaching in:
+  `messageForBuffer(buffer, line)`, `membershipChanged(buffer)`,
+  `mcData(network, …)`, `ctcpSound(...)`, `dccRequest(network, …)`,
+  `registeredChanged(network)`. ScriptBridge/Dcc/Notification subscribe.
+- **Host additions:** buffer append/ensure, tree rebuild, member-list refresh —
+  whatever the routing currently calls; keep buffer-key formats identical.
+- **Steps:** move lifecycle first (connect/disconnect/reconnect), verify; then
+  move the signal-routing block in one piece; then convert MainWindow's direct
+  calls into signal subscriptions. Preserve the per-network `signalNetwork`
+  captures **exactly** — that's where the multi-network routing fixes live.
+- **Test (`network_controller_test`):** feed raw IRC lines (reuse the
+  `irc_session_test` line-injection harness) through a connection into the
+  controller and assert ChatBufferStore/tree mutations on a fake host — the
+  highest-value new coverage in the whole effort.
+- **Done:** MainWindow no longer wires IRC signals directly; suite green.
+- **Commit:** `ui: extract NetworkController (decomp phase 7)`
+
+---
+
+### Phase 8 — Residual cleanup + final shrink
+
+- Friends/away poller (`pollFriends`, `triggerAutoAway`, `noteUserActivity`,
+  `m_friend*`/`m_away*`/timers) → `PresenceController`, or fold into
+  NetworkController if small.
+- Turn `applyCurrentSettings` into a fan-out: build the settings map **once**
+  (also fixes the P2 repeated-parse note) and call each controller's
+  `applySettings(const QVariantMap&)`.
+- Shrink the `main_window_link_preview_test` friend surface as asserts have moved
+  to controller tests; ideally drop the friendship entirely.
+- **Final state check:** `MainWindow.h` is mostly widget pointers + controller
+  `unique_ptr`s + the `MainWindowHost` overrides; `MainWindow.cpp` ≤ ~2.5k lines.
+- **Commit:** `ui: residual MainWindow cleanup + settings fan-out (decomp phase 8)`
 
 ---
 
