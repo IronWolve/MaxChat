@@ -60,13 +60,21 @@ bool readUtf8Text(const QString& ops, qsizetype* pos, const int byteLength, QStr
     }
     QByteArray bytes;
     while (*pos < ops.size() && bytes.size() < byteLength) {
-        const QByteArray next = QString(ops.at(*pos)).toUtf8();
+        // Consume a whole codepoint per step: a non-BMP char is two QChars (a
+        // surrogate pair) and 4 UTF-8 bytes. Encoding one QChar at a time turns
+        // a lone high surrogate into U+FFFD (3 bytes) and desyncs the byte count.
+        qsizetype units = 1;
+        if (ops.at(*pos).isHighSurrogate() && *pos + 1 < ops.size() &&
+            ops.at(*pos + 1).isLowSurrogate()) {
+            units = 2;
+        }
+        const QByteArray next = ops.mid(*pos, units).toUtf8();
         if (bytes.size() + next.size() > byteLength) {
             setError(error, QStringLiteral("text length splits a UTF-8 character"));
             return false;
         }
         bytes.append(next);
-        ++(*pos);
+        *pos += units;
     }
     if (bytes.size() != byteLength) {
         setError(error, QStringLiteral("truncated text payload"));

@@ -54,20 +54,24 @@ AudioPlayerBar::AudioPlayerBar(QWidget* parent) : QWidget(parent) {
         }
     });
     connect(close, &QToolButton::clicked, this, &AudioPlayerBar::stopAndHide);
-    connect(player_, &QMediaPlayer::durationChanged, this, [this](const qint64 duration) {
-        seek_->setRange(0, static_cast<int>(duration));
+    // Fixed 0..1000 fractional range: raw millisecond positions overflow an int
+    // slider for media longer than ~24 days (INT_MAX ms).
+    seek_->setRange(0, 1000);
+    connect(player_, &QMediaPlayer::durationChanged, this, [this](qint64) {
         refreshTimeLabel();
     });
     connect(player_, &QMediaPlayer::positionChanged, this, [this](const qint64 position) {
-        if (!seeking_) {
-            seek_->setValue(static_cast<int>(position));
+        const qint64 duration = player_->duration();
+        if (!seeking_ && duration > 0) {
+            seek_->setValue(static_cast<int>(position * 1000 / duration));
         }
         refreshTimeLabel();
     });
     connect(seek_, &QSlider::sliderPressed, this, [this]() { seeking_ = true; });
     connect(seek_, &QSlider::sliderReleased, this, [this]() {
         seeking_ = false;
-        player_->setPosition(seek_->value());
+        const qint64 duration = player_->duration();
+        player_->setPosition(static_cast<qint64>(seek_->value()) * duration / 1000);
     });
     connect(player_, &QMediaPlayer::errorOccurred, this,
             [this](QMediaPlayer::Error, const QString& errorString) {

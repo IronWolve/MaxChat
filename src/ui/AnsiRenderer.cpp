@@ -104,8 +104,9 @@ void applySgr(const QString& params, StyleState& style) {
         } else if (code == 39) {
             style.fg.clear();
         } else if ((code >= 40 && code <= 47) || (code >= 100 && code <= 107)) {
-            const int fgCode = code >= 100 ? code - 10 : code - 10;
-            style.bg = colorForCode(fgCode);
+            // Background SGR maps to the matching foreground color code: 40-47 ->
+            // 30-37 (normal), 100-107 -> 90-97 (bright). Both are simply code-10.
+            style.bg = colorForCode(code - 10);
         } else if (code == 49) {
             style.bg.clear();
         }

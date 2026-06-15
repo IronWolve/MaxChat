@@ -168,7 +168,9 @@ ChannelModesDialog::ChannelModesDialog(const QString& channel, const QString& ne
     layout->addWidget(note);
 
     auto* buttons = new QDialogButtonBox(QDialogButtonBox::Close, this);
-    connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::accept);
+    // A Close-only dialog: dismissing it is a reject, not an accept (changes
+    // already applied live via the callback, so the result code is cosmetic).
+    connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
     layout->addWidget(buttons);
 }
 
@@ -189,6 +191,12 @@ void ChannelModesDialog::setKeyMode(bool enabled) {
 void ChannelModesDialog::applyKeyValue() {
     const QString key = keyEdit_ == nullptr ? QString() : keyEdit_->text().trimmed();
     if (key.isEmpty()) {
+        // Clearing the field with a key already set must tell the server to drop
+        // it (-k), otherwise the UI shows "no key" while the channel stays +k.
+        if (!key_.isEmpty()) {
+            applyMode(QStringLiteral("-k %1").arg(key_));
+            key_.clear();
+        }
         if (keyEnabled_ != nullptr) {
             keyEnabled_->blockSignals(true);
             keyEnabled_->setChecked(false);
