@@ -84,6 +84,7 @@ class PreferencesDialog final : public QDialog {
     QCheckBox* scriptExec_ = nullptr;
     QCheckBox* scriptModules_ = nullptr;
     QCheckBox* scriptNetwork_ = nullptr;
+    QCheckBox* scriptIrc_ = nullptr;
     QListWidget* scriptDirs_ = nullptr;
     QComboBox* theme_ = nullptr;
     QComboBox* chatTheme_ = nullptr;

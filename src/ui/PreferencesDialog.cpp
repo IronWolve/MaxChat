@@ -930,6 +930,10 @@ void PreferencesDialog::buildScriptsTab(QWidget* tab) {
                                               "Lua or native libraries."));
     scriptNetwork_ = makeCheck(QStringLiteral("Network access"),
                                QStringLiteral("Adds api.http_get(url) for fetching web content."));
+    scriptIrc_ = makeCheck(QStringLiteral("IRC send"),
+                           QStringLiteral("Allow api.say / send_raw / mc_send — the script can "
+                                          "emit messages onto your IRC connection. Bundled "
+                                          "scripts default on; new scripts off."));
     root->addWidget(permGroup);
 
     // Update checkboxes when the selected script changes.
@@ -943,6 +947,7 @@ void PreferencesDialog::buildScriptsTab(QWidget* tab) {
                 scriptExec_->setEnabled(has);
                 scriptModules_->setEnabled(has);
                 scriptNetwork_->setEnabled(has);
+                scriptIrc_->setEnabled(has);
                 permLabel_->setText(
                     has ? QStringLiteral("Permissions for: ") + name
                         : QStringLiteral(
@@ -957,6 +962,11 @@ void PreferencesDialog::buildScriptsTab(QWidget* tab) {
                         p.value(QStringLiteral("modules"), false).toBool());
                     scriptNetwork_->setChecked(
                         p.value(QStringLiteral("network"), false).toBool());
+                    // ircSend defaults on for bundled scripts (a .bundled
+                    // snapshot exists), off for user scripts.
+                    const bool bundled = QFile::exists(
+                        QDir(scriptsDir_).filePath(QStringLiteral(".bundled/%1.lua").arg(name)));
+                    scriptIrc_->setChecked(p.value(QStringLiteral("irc"), bundled).toBool());
                 }
                 updatingPerms_ = false;
             });
@@ -977,6 +987,7 @@ void PreferencesDialog::buildScriptsTab(QWidget* tab) {
         newPerms.insert(QStringLiteral("exec"),    scriptExec_->isChecked());
         newPerms.insert(QStringLiteral("modules"), scriptModules_->isChecked());
         newPerms.insert(QStringLiteral("network"), scriptNetwork_->isChecked());
+        newPerms.insert(QStringLiteral("irc"),     scriptIrc_->isChecked());
         QVariantMap allPerms = settings_.value(QStringLiteral("scriptPerms")).toMap();
         allPerms.insert(name, newPerms);
         settings_.insert(QStringLiteral("scriptPerms"), allPerms);
@@ -988,6 +999,7 @@ void PreferencesDialog::buildScriptsTab(QWidget* tab) {
     connect(scriptExec_,    &QCheckBox::checkStateChanged, this, onPerm);
     connect(scriptModules_, &QCheckBox::checkStateChanged, this, onPerm);
     connect(scriptNetwork_, &QCheckBox::checkStateChanged, this, onPerm);
+    connect(scriptIrc_,     &QCheckBox::checkStateChanged, this, onPerm);
 
     auto* dirsLabel =
         new QLabel(QStringLiteral("Folders scripts may read/write (the script's own data folder "

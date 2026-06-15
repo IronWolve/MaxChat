@@ -843,7 +843,6 @@ static int installApi(lua_State* L, LuaEngine* engine, const QString& dataDir,
         lua_setfield(L, -2, name);
     };
     reg("echo", l_echo);
-    reg("say", l_say);
     reg("insert_input", l_insert_input);
     reg("notify", l_notify);
     reg("me", l_me);
@@ -853,9 +852,14 @@ static int installApi(lua_State* L, LuaEngine* engine, const QString& dataDir,
     reg("data_dir", l_data_dir);
     reg("append_file", l_append_file);
     reg("read_file", l_read_file);
-    reg("send_raw", l_send_raw);
-    reg("mc_send", l_mc_send);
-    reg("mc_reply", l_mc_reply);
+    // IRC-send APIs are gated: a script must hold the ircSend permission to emit
+    // anything onto the network (bundled scripts default on, user scripts off).
+    if (perms.ircSend) {
+        reg("say", l_say);
+        reg("send_raw", l_send_raw);
+        reg("mc_send", l_mc_send);
+        reg("mc_reply", l_mc_reply);
+    }
     reg("terminal_open", l_terminal_open);
     reg("terminal_close", l_terminal_close);
     reg("terminal_clear", l_terminal_clear);
