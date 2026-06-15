@@ -569,13 +569,21 @@ void IrcSession::handleLine(const QString &line) {
         return;
       }
 
-      // Rate-limit CTCP auto-replies to ~1/sec so we can't be used as a CTCP
-      // flood reflector (Python throttles identically). NOTICE replies, ACTION
-      // and DCC are handled above and are not subject to this throttle.
-      if (ctcpReplyTimer_.isValid() && ctcpReplyTimer_.elapsed() < 1000) {
+      // Rate-limit CTCP auto-replies to ~1/sec PER SENDER so we can't be used as
+      // a CTCP flood reflector, while one flooder can't mute auto-replies to
+      // everyone else. NOTICE/ACTION/DCC above are not subject to this throttle.
+      const QString ctcpFrom = msg.nick();
+      const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+      if (const qint64 last = ctcpReplyMsByNick_.value(ctcpFrom, 0); nowMs - last < 1000) {
         return;
       }
-      ctcpReplyTimer_.restart();
+      // Bound the map against a nick-rotating flooder: drop entries idle >10 s.
+      if (ctcpReplyMsByNick_.size() > 512) {
+        for (auto it = ctcpReplyMsByNick_.begin(); it != ctcpReplyMsByNick_.end();) {
+          it = (nowMs - it.value() > 10000) ? ctcpReplyMsByNick_.erase(it) : std::next(it);
+        }
+      }
+      ctcpReplyMsByNick_.insert(ctcpFrom, nowMs);
 
       if (ctcp.command == QStringLiteral("SOUND")) {
         // "SOUND <file> [text]" — split on whitespace into file + optional text.

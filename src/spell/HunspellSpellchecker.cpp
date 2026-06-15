@@ -71,7 +71,10 @@ QString HunspellSpellchecker::dicPath() const { return dicPath_; }
 
 bool HunspellSpellchecker::isCorrect(const QString &word) const {
   if (hunspell_ == nullptr) {
-    return false;
+    // Fail OPEN when no dictionary is loaded: treat every word as correct so the
+    // input isn't drowned in red underlines (matches WindowsSpeller's behaviour
+    // on API failure — both spell engines must agree).
+    return true;
   }
   const QString cleaned = normalizedWord(word);
   if (cleaned.isEmpty()) {

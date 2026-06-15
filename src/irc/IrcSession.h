@@ -154,6 +154,9 @@ private:
   QString lagToken_;
   QElapsedTimer lagTimer_;
   QElapsedTimer ctcpReplyTimer_;
+  // Per-sender CTCP auto-reply throttle (last reply time, ms-since-epoch). A
+  // single flooder must not suppress auto-replies to everyone else.
+  QHash<QString, qint64> ctcpReplyMsByNick_;
   QList<QRegularExpression> ignorePatterns_;
 };
 
