@@ -31,6 +31,41 @@ When adding anything that should survive a buffer switch, store it in the model.
 
 ## THINGS I GOT WRONG
 
+- **2026-06-15 — Inlined a host override that touched an incomplete type.** During
+  the MainWindowHost extraction I wrote `insertInput()` inline in MainWindow.h as
+  `m_input->textCursor()…`, but `m_input` is a forward-declared `SpellTextEdit*` in
+  the header → "invalid use of incomplete type". Fix: declare the override and
+  define it out-of-line in MainWindow.cpp (where SpellTextEdit.h is included).
+  **Lesson: header-inline host overrides may only touch types complete in the
+  header; anything reaching into a forward-declared member goes in the .cpp.**
+
+## MainWindow decomposition — Phase 1: ScriptBridge (2026-06-15)
+
+Extracted the entire scripting subsystem out of MainWindow into
+`src/ui/ScriptBridge.{h,cpp}` (per MAINWINDOW.MD). ScriptBridge owns the
+`LuaEngine` + `ScriptTerminalManager`, implements `ScriptHost` (the 23 `api`
+callbacks), and holds the perms/seeding helpers (`buildScriptPermissionsFor`,
+`buildAllScriptPermsMap`, `isBundledScript`, `scriptsDirectory`,
+`seedBundledScripts`). MainWindow now holds a `ScriptBridge* m_scripts` and
+forwards: `/load|/unload|/reload`, the prefs Scripts tab, the scripts manager,
+the terminal tree double-clicks, and the IRC-event `dispatch()` calls.
+
+The bridge talks back to the window only through `MainWindowHost&` (extended this
+phase with `nickFor/channelsFor/nicksFor/appendActiveSystemLine/echoOutbound/
+notifyUser/connectionFor/scriptNetworkManager/rebuildTree`). That seam made the
+routing/permission logic unit-testable for the first time — `script_bridge_test`
+drives ScriptBridge against a fake host: bundled-vs-user `ircSend` default,
+explicit-permission override, and MC-DATA network routing (empty → active,
+explicit → that network). MainWindow.h no longer includes `LuaEngine.h` or
+declares `ScriptHost`/the 23 overrides.
+
+**Residual (intentional, not a bug):** `ScriptTerminalManager` is constructed with
+`host.dialogParent()` (the window) as its QWidget parent, because it parents real
+terminal dialog widgets. So ScriptBridge *owns the logic* but the terminal
+manager's widget-lifetime still tracks the window. Full relocation (and replacing
+the temporary `connectionFor()` host hook with a real `NetworkController` send
+path) lands in Phase 7. Build + 54/54 ctest green.
+
 - **2026-06-12 — Spinbox up/down arrows did nothing (Comic Settings, and every
   spinbox app-wide).** The theme QSS put a `border` on `QSpinBox`, which flips
   the widget to Qt's stylesheet style (`QStyleSheetStyle`). Once that happens,

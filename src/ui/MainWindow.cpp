@@ -43,6 +43,7 @@
 #include "ui/RawLogDialog.h"
 #include "ui/ServerListDialog.h"
 #include "ui/AnsiRenderer.h"
+#include "ui/ScriptBridge.h"
 #include "ui/ScriptTerminalManager.h"
 #include "ui/SpellTextEdit.h"
 #include "ui/SpellcheckHighlighter.h"
@@ -701,18 +702,6 @@ QString labelWithTreeCounts(const QString& label, const int unreadCount, const i
     return QStringLiteral("%1 [%2]").arg(label).arg(unreadCount);
 }
 
-QString terminalScopedId(const QString& scriptName, const QString& id) {
-    return QStringLiteral("%1/%2").arg(scriptName.trimmed(), id.trimmed());
-}
-
-std::optional<std::pair<QString, QString>> splitTerminalScopedId(const QString& scopedId) {
-    const int slash = scopedId.indexOf(QLatin1Char('/'));
-    if (slash <= 0 || slash == scopedId.size() - 1) {
-        return std::nullopt;
-    }
-    return std::make_pair(scopedId.left(slash), scopedId.mid(slash + 1));
-}
-
 class ChatTextView final : public QTextBrowser {
   public:
     using SeparatorMovedHandler = std::function<void(int)>;
@@ -967,84 +956,15 @@ MainWindow::MainWindow(QWidget* parent)
         QTimer::singleShot(3500, this, [this]() { checkForUpdates(/*manual=*/false); });
     }
 
-    // Scripting: load the user's Lua scripts (no-op when built without Lua).
+    // Scripting: the whole subsystem (LuaEngine + terminal manager + ScriptHost
+    // callbacks) lives in ScriptBridge now; MainWindow just owns it and forwards.
     const QString scriptsDir =
         QDir(m_settings.paths().configDir).filePath(QStringLiteral("scripts"));
-    m_scriptTerminals = new ScriptTerminalManager(this);
-    // Terminal hooks run in the network context the terminal was OPENED on,
-    // not whatever network is active now — a BBS session must keep sending to
-    // the network it dialed on even if the user switches buffers.
-    const auto terminalContext = [this](const QString& scopedId) {
-        const QString network =
-            m_scriptTerminals != nullptr ? m_scriptTerminals->terminalNetwork(scopedId) : QString();
-        return network.isEmpty() ? activeNetworkName() : network;
-    };
-    connect(m_scriptTerminals, &ScriptTerminalManager::inputSubmitted, this,
-            [this, terminalContext](const QString& scopedId, const QString& text) {
-                if (m_lua == nullptr) {
-                    return;
-                }
-                const auto split = splitTerminalScopedId(scopedId);
-                if (!split.has_value()) {
-                    return;
-                }
-                m_lua->dispatchToScript(split->first, QStringLiteral("on_terminal_input"),
-                                        terminalContext(scopedId), {split->second, text});
-            });
-    connect(m_scriptTerminals, &ScriptTerminalManager::linkActivated, this,
-            [this, terminalContext](const QString& scopedId, const QString& actionId) {
-                if (m_lua == nullptr) {
-                    return;
-                }
-                const auto split = splitTerminalScopedId(scopedId);
-                if (!split.has_value()) {
-                    return;
-                }
-                m_lua->dispatchToScript(split->first, QStringLiteral("on_terminal_link"),
-                                        terminalContext(scopedId), {split->second, actionId});
-            });
-    connect(m_scriptTerminals, &ScriptTerminalManager::terminalClosed, this,
-            [this](const QString& scopedId, const QString& network) {
-                if (m_lua == nullptr) {
-                    return;
-                }
-                const auto split = splitTerminalScopedId(scopedId);
-                if (!split.has_value()) {
-                    return;
-                }
-                m_lua->dispatchToScript(split->first, QStringLiteral("on_terminal_closed"),
-                                        network.isEmpty() ? activeNetworkName() : network,
-                                        {split->second});
-            });
-    connect(m_scriptTerminals, &ScriptTerminalManager::terminalsChanged, this,
-            [this]() { rebuildNetworkTree(); });
-    connect(m_scriptTerminals, &ScriptTerminalManager::fontPreferenceChanged, this,
-            [this](const QString& family, const int pointSize, const bool bold) {
-                // A terminal's Settings menu changed the global terminal font.
-                QVariantMap settings = m_settings.loadRaw();
-                settings.insert(QStringLiteral("terminal_font_family"), family);
-                settings.insert(QStringLiteral("terminal_font_size"), pointSize);
-                settings.insert(QStringLiteral("terminal_font_bold"), bold);
-                (void)m_settings.saveRaw(settings);
-                m_scriptTerminals->setTerminalFont(family, pointSize, bold);
-            });
-    connect(m_scriptTerminals, &ScriptTerminalManager::gridSizeChanged, this,
-            [this](const QString&, const int, const int rows) {
-                // Remember the chosen grid as the default for new terminals.
-                QVariantMap settings = m_settings.loadRaw();
-                settings.insert(QStringLiteral("terminal_rows"), rows);
-                (void)m_settings.saveRaw(settings);
-            });
-    m_lua = new maxchat::scripting::LuaEngine(
-        this, scriptsDir, QDir(scriptsDir).filePath(QStringLiteral("data")), this);
-    if (maxchat::scripting::LuaEngine::available()) {
+    m_scripts = new ScriptBridge(*this, scriptsDir, this);
+    if (ScriptBridge::scriptingAvailable()) {
         // Deferred so the window paints before any script's top-level code
         // runs (a slow or dialog-popping script must not block first paint).
-        QTimer::singleShot(0, this, [this, scriptsDir]() {
-            QDir().mkpath(scriptsDir);
-            seedBundledScripts(scriptsDir);
-            m_lua->loadAll(buildAllScriptPermsMap());
-        });
+        QTimer::singleShot(0, this, [this]() { m_scripts->seedAndLoadAll(); });
     }
 }
 
@@ -1799,8 +1719,8 @@ void maxchat::ui::MainWindow::buildLayout() {
                         termNetwork.compare(activeNetworkName(), Qt::CaseInsensitive) != 0) {
                         setActiveNetwork(termNetwork);
                     }
-                    if (m_scriptTerminals != nullptr) {
-                        m_scriptTerminals->showTerminal(terminalId);
+                    if (m_scripts != nullptr) {
+                        m_scripts->showTerminal(terminalId);
                     }
                     return;
                 }
@@ -1832,12 +1752,12 @@ void maxchat::ui::MainWindow::buildLayout() {
     // (currentItemChanged won't fire when the selection doesn't change).
     connect(m_networkTree, &QTreeWidget::itemClicked, this,
             [this](QTreeWidgetItem* item, int) {
-                if (item == nullptr || m_scriptTerminals == nullptr) {
+                if (item == nullptr || m_scripts == nullptr) {
                     return;
                 }
                 const QString terminalId = item->data(0, TreeTerminalRole).toString();
                 if (!terminalId.isEmpty()) {
-                    m_scriptTerminals->showTerminal(terminalId);
+                    m_scripts->showTerminal(terminalId);
                 }
             });
 
@@ -2075,8 +1995,7 @@ void maxchat::ui::MainWindow::openJoinDialog() {
 void maxchat::ui::MainWindow::openPreferences() {
     const QString scriptsDir =
         QDir(m_settings.paths().configDir).filePath(QStringLiteral("scripts"));
-    const QStringList loadedScripts =
-        maxchat::scripting::LuaEngine::available() ? m_lua->loaded() : QStringList{};
+    const QStringList loadedScripts = m_scripts->loadedScripts();
     const QString soundsDir =
         QDir(m_settings.paths().configDir).filePath(QStringLiteral("sounds"));
     PreferencesDialog dialog(m_settings.loadWithDefaults(), loadedScripts, scriptsDir, soundsDir, this);
@@ -2102,23 +2021,17 @@ void maxchat::ui::MainWindow::openPreferences() {
     connect(&dialog, &PreferencesDialog::loadScriptRequested, this,
             [this, &dialog](const QString& name) {
                 handleScriptsCommand(QStringLiteral("load"), name);
-                if (maxchat::scripting::LuaEngine::available() && m_lua != nullptr) {
-                    dialog.refreshScriptList(m_lua->loaded());
-                }
+                dialog.refreshScriptList(m_scripts->loadedScripts());
             });
     connect(&dialog, &PreferencesDialog::unloadScriptRequested, this,
             [this, &dialog](const QString& name) {
                 handleScriptsCommand(QStringLiteral("unload"), name);
-                if (maxchat::scripting::LuaEngine::available()) {
-                    dialog.refreshScriptList(m_lua->loaded());
-                }
+                dialog.refreshScriptList(m_scripts->loadedScripts());
             });
     connect(&dialog, &PreferencesDialog::reloadScriptRequested, this,
             [this, &dialog](const QString& name) {
                 handleScriptsCommand(QStringLiteral("reload"), name);
-                if (maxchat::scripting::LuaEngine::available()) {
-                    dialog.refreshScriptList(m_lua->loaded());
-                }
+                dialog.refreshScriptList(m_scripts->loadedScripts());
             });
     connect(&dialog, &PreferencesDialog::editScriptRequested, this,
             [](const QString& path) {
@@ -2130,13 +2043,8 @@ void maxchat::ui::MainWindow::openPreferences() {
                     m_settings.loadRaw().value(QStringLiteral("scriptPerms")).toMap();
                 allPerms.insert(name, newPerms);
                 (void)m_settings.setValue(QStringLiteral("scriptPerms"), allPerms);
-                if (maxchat::scripting::LuaEngine::available() &&
-                    m_lua->loaded().contains(name)) {
-                    const QString scriptsDir =
-                        QDir(m_settings.paths().configDir).filePath(QStringLiteral("scripts"));
-                    m_lua->load(QDir(scriptsDir).filePath(name + QStringLiteral(".lua")),
-                                buildScriptPermissionsFor(name));
-                }
+                // A loaded script picks up the new permissions immediately.
+                m_scripts->reapplyPermissions(name);
             });
     connect(&dialog, &PreferencesDialog::testNotificationRequested, this, [this, &dialog]() {
         // Use the dialog's current (unsaved) settings, not the cached m_notify*
@@ -2622,320 +2530,32 @@ void maxchat::ui::MainWindow::handleCtcpSound(const QString& network, const QStr
     }
 }
 
-// --- maxchat::scripting::ScriptHost -----------------------------------------
-
-void maxchat::ui::MainWindow::scriptEcho(const QString& network, const QString& text) {
-    if (network.isEmpty() || network.compare(activeNetworkName(), Qt::CaseInsensitive) == 0) {
-        appendSystemLine(text);
-    } else {
-        appendSystemLineToNetworkTarget(network, QStringLiteral("server"), text);
-    }
-}
-
-void maxchat::ui::MainWindow::scriptSay(const QString& network, const QString& target,
-                                        const QString& text) {
-    const QString net = network.isEmpty() ? activeNetworkName() : network;
-    maxchat::irc::IrcConnection* conn = connectionForNetwork(net);
-    if (conn == nullptr || target.trimmed().isEmpty() || text.isEmpty()) {
-        return;
-    }
-    if (conn->privmsg(target, text)) {
-        appendSystemLineToNetworkTarget(
-            net, target, QStringLiteral("<%1> %2").arg(currentNickForNetwork(net), text), true, true);
-    }
-}
-
-void maxchat::ui::MainWindow::scriptSendRaw(const QString& network, const QString& line) {
-    const QString net = network.isEmpty() ? activeNetworkName() : network;
-    if (maxchat::irc::IrcConnection* conn = connectionForNetwork(net); conn != nullptr) {
-        conn->sendRaw(line); // sendRaw already strips CR/LF
-    }
-}
-
-bool maxchat::ui::MainWindow::scriptMcData(const QString& network, const QString& target,
-                                           const QString& service, const QString& verb,
-                                           const QString& payload, const bool notice) {
-    const QString net = network.isEmpty() ? activeNetworkName() : network;
-    maxchat::irc::IrcConnection* conn = connectionForNetwork(net);
-    if (conn == nullptr) {
-        appendSystemLineToNetworkTarget(
-            net, QStringLiteral("server"),
-            QStringLiteral("[scripts] Cannot send MC DATA: network is not connected."));
-        return false;
-    }
-    const bool ok = conn->mcData(target, service, verb, payload, notice);
-    if (!ok) {
-        appendSystemLineToNetworkTarget(
-            net, QStringLiteral("server"),
-            QStringLiteral("[scripts] Cannot send MC DATA to %1.").arg(target));
-    }
-    return ok;
-}
-
-bool maxchat::ui::MainWindow::scriptTerminalOpen(const QString& scriptName, const QString& id,
-                                                 const QString& title, const QString& profile,
-                                                 const int cols, const int rows) {
-    if (m_scriptTerminals == nullptr || scriptName.trimmed().isEmpty() ||
-        id.trimmed().isEmpty()) {
-        return false;
-    }
-    // Fixed-grid profiles default to the user's preferred rows (80x25 or 80x40).
-    maxchat::ui::TerminalProfile prof = terminalProfile(profile, cols, rows);
-    if (prof.fixedGrid && rows <= 0) {
-        const int defRows = m_settings.loadRaw().value(QStringLiteral("terminal_rows"), 25).toInt();
-        if (defRows == 40 && prof.cols == 80) {
-            prof.rows = 40;
-        }
-    }
-    m_scriptTerminals->openTerminal(terminalScopedId(scriptName, id), title, prof,
-                                    activeNetworkName(), scriptName.trimmed());
-    return true;
-}
-
-void maxchat::ui::MainWindow::scriptTerminalClose(const QString& scriptName, const QString& id) {
-    if (m_scriptTerminals != nullptr) {
-        // A script closing its own terminal ends the session.
-        m_scriptTerminals->killTerminal(terminalScopedId(scriptName, id));
-    }
-}
-
-void maxchat::ui::MainWindow::scriptTerminalClear(const QString& scriptName, const QString& id) {
-    if (m_scriptTerminals != nullptr) {
-        m_scriptTerminals->clear(terminalScopedId(scriptName, id));
-    }
-}
-
-void maxchat::ui::MainWindow::scriptTerminalWrite(const QString& scriptName, const QString& id,
-                                                  const QString& text) {
-    if (m_scriptTerminals != nullptr) {
-        m_scriptTerminals->writeText(terminalScopedId(scriptName, id), text);
-    }
-}
-
-bool maxchat::ui::MainWindow::scriptTerminalFrame(const QString& scriptName, const QString& id,
-                                                  const QString& ops) {
-    if (m_scriptTerminals == nullptr) {
-        return false;
-    }
-    QString error;
-    const bool ok = m_scriptTerminals->applyFrame(terminalScopedId(scriptName, id), ops, &error);
-    if (!ok) {
-        appendSystemLine(QStringLiteral("[scripts] Terminal frame rejected: %1").arg(error));
-    }
-    return ok;
-}
-
-void maxchat::ui::MainWindow::scriptTerminalStatus(const QString& scriptName, const QString& id,
-                                                   const QString& text) {
-    if (m_scriptTerminals != nullptr) {
-        m_scriptTerminals->setStatusText(terminalScopedId(scriptName, id), text);
-    }
-}
-
-void maxchat::ui::MainWindow::scriptTerminalPrompt(const QString& scriptName, const QString& id,
-                                                   const QString& text) {
-    if (m_scriptTerminals != nullptr) {
-        m_scriptTerminals->setPromptText(terminalScopedId(scriptName, id), text);
-    }
-}
-
-QSize maxchat::ui::MainWindow::scriptTerminalSize(const QString& scriptName, const QString& id) {
-    return m_scriptTerminals != nullptr ? m_scriptTerminals->terminalSize(terminalScopedId(scriptName, id))
-                                        : QSize();
-}
-
-void maxchat::ui::MainWindow::scriptTerminalProfile(const QString& scriptName, const QString& id,
-                                                    const QString& profile, const int cols,
-                                                    const int rows) {
-    if (m_scriptTerminals != nullptr) {
-        m_scriptTerminals->setProfile(terminalScopedId(scriptName, id),
-                                      terminalProfile(profile, cols, rows));
-    }
-}
-
-void maxchat::ui::MainWindow::scriptTerminalFit(const QString& scriptName, const QString& id,
-                                                const QString& mode) {
-    if (m_scriptTerminals != nullptr) {
-        m_scriptTerminals->setFitMode(terminalScopedId(scriptName, id), mode);
-    }
-}
-
-QString maxchat::ui::MainWindow::scriptTerminalHotspot(const QString& actionId,
-                                                       const QString& label) {
-    return AnsiRenderer::hotspot(actionId, label);
-}
-
-void maxchat::ui::MainWindow::scriptInsertInput(const QString& text) {
+void maxchat::ui::MainWindow::insertInput(const QString& text) {
     if (m_input != nullptr) {
         m_input->textCursor().insertText(text);
     }
 }
 
-void maxchat::ui::MainWindow::scriptNotify(const QString& title, const QString& text) {
-    notify(title, text, activeNetworkName(), m_currentTarget);
-}
-
-QString maxchat::ui::MainWindow::scriptMe(const QString& network) {
-    return currentNickForNetwork(network.isEmpty() ? activeNetworkName() : network);
-}
-
-QString maxchat::ui::MainWindow::scriptTarget() {
-    return m_currentTarget.trimmed().isEmpty() ? QStringLiteral("(server)") : m_currentTarget;
-}
-
-QString maxchat::ui::MainWindow::scriptNetwork() {
-    return activeNetworkName();
-}
-
-QStringList maxchat::ui::MainWindow::scriptChannels(const QString& network) {
-    const QString net = network.isEmpty() ? activeNetworkName() : network;
+QStringList maxchat::ui::MainWindow::channelsFor(const QString& network) {
     QStringList channels;
     for (const maxchat::core::ChatBufferId& id : m_chatBuffers.buffers()) {
         if (id.kind == maxchat::core::ChatBufferKind::Channel &&
-            id.network.compare(net, Qt::CaseInsensitive) == 0) {
+            id.network.compare(network, Qt::CaseInsensitive) == 0) {
             channels.append(id.target);
         }
     }
     return channels;
 }
 
-QStringList maxchat::ui::MainWindow::scriptNicks(const QString& network, const QString& target) {
-    const QString net = network.isEmpty() ? activeNetworkName() : network;
-    const QString tgt = target.trimmed().isEmpty() ? m_currentTarget : target;
-    return m_chatBuffers.snapshot(bufferIdForNetworkTarget(net, tgt)).members;
-}
-
-QString maxchat::ui::MainWindow::scriptHttpGet(const QString& url) {
-    const QUrl parsed(url);
-    if (!parsed.isValid() || (parsed.scheme() != QLatin1String("http") &&
-                              parsed.scheme() != QLatin1String("https"))) {
-        return {};
-    }
-
-    // SSRF gate (same one the link-preview fetcher uses): a script must not be
-    // able to reach loopback/link-local/private hosts — that's localhost
-    // services and cloud metadata endpoints. Checked up front and on every
-    // redirect hop below.
-    bool allowed = false;
-    {
-        QEventLoop gateLoop;
-        maxchat::services::resolvePreviewUrlPublicAsync(
-            parsed, /*allowPrivateNetwork=*/false, this, [&](bool ok) {
-                allowed = ok;
-                gateLoop.quit();
-            });
-        gateLoop.exec();
-    }
-    if (!allowed) {
-        return {};
-    }
-
-    QNetworkRequest request(parsed);
-    request.setRawHeader("User-Agent", "MaxChat-script");
-    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
-                         QNetworkRequest::NoLessSafeRedirectPolicy);
-    QNetworkReply* reply = m_updateNetworkManager.get(request);
-
-    constexpr qint64 kMaxBodyBytes = 2 * 1024 * 1024; // scripts get text, not blobs
-    connect(reply, &QNetworkReply::redirected, this,
-            [reply](const QUrl& target) {
-                maxchat::services::resolvePreviewUrlPublicAsync(
-                    target, /*allowPrivateNetwork=*/false, reply, [reply](bool ok) {
-                        if (!ok) {
-                            reply->abort();
-                        }
-                    });
-            });
-    connect(reply, &QNetworkReply::downloadProgress, this,
-            [reply](qint64 received, qint64 /*total*/) {
-                if (received > kMaxBodyBytes) {
-                    reply->abort(); // unbounded body = memory DoS
-                }
-            });
-
-    // Block (with a timeout) until the request finishes — scripts opt into this
-    // by enabling the network permission, and accept the synchronous wait.
-    QEventLoop loop;
-    QTimer timeout;
-    timeout.setSingleShot(true);
-    connect(&timeout, &QTimer::timeout, &loop, &QEventLoop::quit);
-    connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
-    timeout.start(10000);
-    loop.exec();
-
-    QString body;
-    if (reply->isFinished() && reply->error() == QNetworkReply::NoError) {
-        body = QString::fromUtf8(reply->read(kMaxBodyBytes));
-    } else if (!reply->isFinished()) {
-        reply->abort();
-    }
-    reply->deleteLater();
-    return body;
-}
-
-QString maxchat::ui::MainWindow::scriptsDirectory() const {
-    return QDir(m_settings.paths().configDir).filePath(QStringLiteral("scripts"));
-}
-
-bool maxchat::ui::MainWindow::isBundledScript(const QString& name) const {
-    // Shipped scripts leave a .bundled/<name>.lua snapshot when seeded.
-    const QString snapshot =
-        QDir(scriptsDirectory()).filePath(QStringLiteral(".bundled/%1.lua").arg(name));
-    return QFile::exists(snapshot);
-}
-
-maxchat::scripting::ScriptPermissions
-maxchat::ui::MainWindow::buildScriptPermissionsFor(const QString& name) const {
-    const QVariantMap settings = m_settings.loadWithDefaults();
-    const QVariantMap perms =
-        settings.value(QStringLiteral("scriptPerms")).toMap().value(name).toMap();
-    maxchat::scripting::ScriptPermissions out =
-        maxchat::scripting::ScriptPermissions::fromMap(perms, isBundledScript(name));
-    for (const QVariant& dir : settings.value(QStringLiteral("script_dirs")).toList()) {
-        const QString path = dir.toString().trimmed();
-        if (!path.isEmpty()) {
-            out.allowedDirs << path;
-        }
-    }
-    return out;
-}
-
-QHash<QString, maxchat::scripting::ScriptPermissions>
-maxchat::ui::MainWindow::buildAllScriptPermsMap() const {
-    const QVariantMap settings = m_settings.loadWithDefaults();
-    const QVariantMap allPerms = settings.value(QStringLiteral("scriptPerms")).toMap();
-    QStringList allowedDirs;
-    for (const QVariant& dir : settings.value(QStringLiteral("script_dirs")).toList()) {
-        const QString path = dir.toString().trimmed();
-        if (!path.isEmpty()) {
-            allowedDirs << path;
-        }
-    }
-    // Iterate the actual script files (not just saved-perms keys) so a bundled
-    // script with no saved entry still gets its ircSend default at load time.
-    QHash<QString, maxchat::scripting::ScriptPermissions> result;
-    const QFileInfoList files = QDir(scriptsDirectory())
-                                    .entryInfoList({QStringLiteral("*.lua")}, QDir::Files);
-    for (const QFileInfo& fi : files) {
-        const QString name = fi.completeBaseName();
-        maxchat::scripting::ScriptPermissions p = maxchat::scripting::ScriptPermissions::fromMap(
-            allPerms.value(name).toMap(), isBundledScript(name));
-        p.allowedDirs = allowedDirs;
-        result.insert(name, p);
-    }
-    return result;
-}
-
 void maxchat::ui::MainWindow::handleScriptsCommand(const QString& command, const QString& arg) {
-    if (!maxchat::scripting::LuaEngine::available()) {
+    if (!ScriptBridge::scriptingAvailable()) {
         appendSystemLine(QStringLiteral("! This build has no scripting support."));
         return;
     }
-    const QString scriptsDir =
-        QDir(m_settings.paths().configDir).filePath(QStringLiteral("scripts"));
+    const QString scriptsDir = m_scripts->scriptsDirectory();
 
     if (command == QStringLiteral("scripts")) {
-        const QStringList names = m_lua->loaded();
+        const QStringList names = m_scripts->loadedScripts();
         appendSystemLine(names.isEmpty()
                              ? QStringLiteral("* No scripts loaded.")
                              : QStringLiteral("* Loaded scripts: %1").arg(names.join(QStringLiteral(", "))));
@@ -2949,100 +2569,25 @@ void maxchat::ui::MainWindow::handleScriptsCommand(const QString& command, const
     }
     const QString name = QFileInfo(arg).completeBaseName(); // tolerate "foo" or "foo.lua"
     if (command == QStringLiteral("load")) {
-        const QString path = QDir(scriptsDir).filePath(name + QStringLiteral(".lua"));
-        appendSystemLine(m_lua->load(path, buildScriptPermissionsFor(name))
+        appendSystemLine(m_scripts->loadByName(name)
                              ? QStringLiteral("* Loaded %1.").arg(name)
                              : QStringLiteral("! Could not load %1.").arg(name));
     } else if (command == QStringLiteral("unload")) {
-        appendSystemLine(m_lua->unload(name) ? QStringLiteral("* Unloaded %1.").arg(name)
-                                             : QStringLiteral("! %1 is not loaded.").arg(name));
+        appendSystemLine(m_scripts->unloadByName(name) ? QStringLiteral("* Unloaded %1.").arg(name)
+                                                       : QStringLiteral("! %1 is not loaded.").arg(name));
     } else if (command == QStringLiteral("reload")) {
-        appendSystemLine(m_lua->reload(name) ? QStringLiteral("* Reloaded %1.").arg(name)
-                                             : QStringLiteral("! Could not reload %1.").arg(name));
-    }
-}
-
-void maxchat::ui::MainWindow::seedBundledScripts(const QString& destDir) {
-    const QString appDir = QCoreApplication::applicationDirPath();
-    const QStringList candidates = {QDir(appDir).filePath(QStringLiteral("assets/scripts")),
-                                    QDir(appDir).filePath(QStringLiteral("../assets/scripts")),
-                                    QDir::current().filePath(QStringLiteral("assets/scripts"))};
-    QString src;
-    for (const QString& candidate : candidates) {
-        if (QDir(candidate).exists()) {
-            src = candidate;
-            break;
-        }
-    }
-    if (src.isEmpty()) {
-        return;
-    }
-    // `.bundled/` keeps a snapshot of each script as it was last seeded. If the
-    // deployed copy still matches its snapshot the user never edited it, so a
-    // newer bundled version may replace it. Without this, shipped script fixes
-    // never reach existing installs (the 6-second `!run` stall: the os.execute
-    // run.lua stayed deployed long after api.launch replaced it in assets).
-    const QString recordDir = QDir(destDir).filePath(QStringLiteral(".bundled"));
-    QDir().mkpath(recordDir);
-    // A failed read must never feed an overwrite decision: an unreadable
-    // (locked) file would compare equal to another unreadable file as "" == ""
-    // and a user edit could be clobbered as "unmodified".
-    const auto readAll = [](const QString& path, bool* ok) -> QByteArray {
-        QFile f(path);
-        *ok = f.open(QIODevice::ReadOnly);
-        return *ok ? f.readAll() : QByteArray();
-    };
-    const auto copyOver = [](const QString& from, const QString& to) -> bool {
-        QFile::remove(to);
-        return QFile::copy(from, to);
-    };
-    const QFileInfoList examples =
-        QDir(src).entryInfoList({QStringLiteral("*.lua")}, QDir::Files, QDir::Name);
-    for (const QFileInfo& fi : examples) {
-        const QString dest = QDir(destDir).filePath(fi.fileName());
-        const QString record = QDir(recordDir).filePath(fi.fileName());
-        if (!QFile::exists(dest)) {
-            // The record only updates when the deployed copy actually landed,
-            // otherwise the file would look user-edited forever (deployed
-            // matching neither bundled nor record) and never upgrade again.
-            if (copyOver(fi.absoluteFilePath(), dest)) {
-                copyOver(fi.absoluteFilePath(), record);
-            }
-            continue;
-        }
-        bool bundledOk = false;
-        bool deployedOk = false;
-        const QByteArray bundled = readAll(fi.absoluteFilePath(), &bundledOk);
-        const QByteArray deployed = readAll(dest, &deployedOk);
-        if (!bundledOk || !deployedOk) {
-            continue; // can't tell what's deployed — try again next startup
-        }
-        if (deployed == bundled) {
-            if (!QFile::exists(record)) {
-                copyOver(fi.absoluteFilePath(), record); // adopt pre-record installs
-            }
-            continue;
-        }
-        bool recordOk = false;
-        const QByteArray recorded = readAll(record, &recordOk);
-        if (recordOk && deployed == recorded) {
-            // unmodified — take the upgrade (record after dest, see above)
-            if (copyOver(fi.absoluteFilePath(), dest)) {
-                copyOver(fi.absoluteFilePath(), record);
-            }
-        }
-        // deployed differs from both bundled and record: user edit — never touch.
+        appendSystemLine(m_scripts->reloadByName(name) ? QStringLiteral("* Reloaded %1.").arg(name)
+                                                       : QStringLiteral("! Could not reload %1.").arg(name));
     }
 }
 
 void maxchat::ui::MainWindow::openScriptsManager() {
-    if (!maxchat::scripting::LuaEngine::available()) {
+    if (!ScriptBridge::scriptingAvailable()) {
         appendSystemLine(QStringLiteral(
             "! Scripts are unavailable: this build was compiled without scripting support."));
         return;
     }
-    const QString scriptsDir =
-        QDir(m_settings.paths().configDir).filePath(QStringLiteral("scripts"));
+    const QString scriptsDir = m_scripts->scriptsDirectory();
 
     auto* dialog = new QDialog(this);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
@@ -3056,7 +2601,7 @@ void maxchat::ui::MainWindow::openScriptsManager() {
 
     const auto refresh = [this, list, scriptsDir]() {
         list->clear();
-        const QStringList loaded = m_lua->loaded();
+        const QStringList loaded = m_scripts->loadedScripts();
         const QFileInfoList files =
             QDir(scriptsDir).entryInfoList({QStringLiteral("*.lua")}, QDir::Files, QDir::Name);
         for (const QFileInfo& fi : files) {
@@ -3147,7 +2692,7 @@ void maxchat::ui::MainWindow::openScriptsManager() {
         auto* pathLabel = new QLabel(path, info);
         pathLabel->setWordWrap(true);
         form->addRow(QStringLiteral("File:"), pathLabel);
-        const bool isLoaded = m_lua->loaded().contains(name);
+        const bool isLoaded = m_scripts->loadedScripts().contains(name);
         form->addRow(QStringLiteral("Status:"),
                      new QLabel(isLoaded ? QStringLiteral("Loaded") : QStringLiteral("Not loaded"),
                                 info));
@@ -4324,7 +3869,7 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
                     }
 
                     if (!action) {
-                        m_lua->dispatch(notice ? QStringLiteral("on_notice")
+                        m_scripts->dispatch(notice ? QStringLiteral("on_notice")
                                                : QStringLiteral("on_message"),
                                         signalNetwork, {signalNetwork, target, sender, text});
                     }
@@ -4333,7 +3878,7 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
     connect(irc, &maxchat::irc::IrcConnection::nickChanged, this,
             [this, runInContext, signalNetwork](const QString& oldNick, const QString& newNick) {
                 runInContext([&]() {
-                    m_lua->dispatch(QStringLiteral("on_nick"), signalNetwork,
+                    m_scripts->dispatch(QStringLiteral("on_nick"), signalNetwork,
                                     {signalNetwork, oldNick, newNick});
                     updateNickLabel(); // refresh in case it was your own nick that changed
                     const QStringList affectedChannels = channelTargetsContainingMember(oldNick);
@@ -4358,7 +3903,7 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
     connect(irc, &maxchat::irc::IrcConnection::userJoined, this,
             [this, runInContext, signalNetwork](const QString& channel, const QString& nick) {
                 runInContext([&]() {
-                    m_lua->dispatch(QStringLiteral("on_join"), signalNetwork,
+                    m_scripts->dispatch(QStringLiteral("on_join"), signalNetwork,
                                     {signalNetwork, channel, nick});
                     const QString currentNick =
                         connection().nick().isEmpty() ? m_connectionPlan.nick : connection().nick();
@@ -4393,7 +3938,7 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
         [this, runInContext, signalNetwork](const QString& channel, const QString& nick,
                                             const QString& reason) {
             runInContext([&]() {
-                m_lua->dispatch(QStringLiteral("on_part"), signalNetwork,
+                m_scripts->dispatch(QStringLiteral("on_part"), signalNetwork,
                                 {signalNetwork, channel, nick});
                 const QString currentNick =
                     connection().nick().isEmpty() ? m_connectionPlan.nick : connection().nick();
@@ -4432,7 +3977,7 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
     connect(irc, &maxchat::irc::IrcConnection::userQuit, this,
             [this, runInContext, signalNetwork](const QString& nick, const QString& reason) {
                 runInContext([&]() {
-                    m_lua->dispatch(QStringLiteral("on_quit"), signalNetwork, {signalNetwork, nick});
+                    m_scripts->dispatch(QStringLiteral("on_quit"), signalNetwork, {signalNetwork, nick});
                     const QStringList affectedChannels = channelTargetsContainingMember(nick);
                     removeMemberFromChannelBuffers(nick);
                     removeMember(m_memberList, nick);
@@ -4515,8 +4060,8 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
             [this, signalNetwork](const QString& sender, const QString& target,
                                   const QString& service, const QString& verb,
                                   const QString& payload, const bool notice) {
-                if (maxchat::scripting::LuaEngine::available()) {
-                    m_lua->dispatch(QStringLiteral("on_mc_data"), signalNetwork,
+                if (ScriptBridge::scriptingAvailable()) {
+                    m_scripts->dispatch(QStringLiteral("on_mc_data"), signalNetwork,
                                     {signalNetwork, target, sender, service, verb, payload, notice});
                 }
             });
@@ -5147,7 +4692,7 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
             const QString cmd  = space >= 0 ? rest.left(space) : rest;
             const QString args = space >= 0 ? rest.mid(space + 1) : QString();
             if (!cmd.isEmpty() &&
-                m_lua->dispatch(QStringLiteral("on_command"), activeNetworkName(), {cmd, args})) {
+                m_scripts->dispatch(QStringLiteral("on_command"), activeNetworkName(), {cmd, args})) {
                 return;
             }
         }
@@ -5769,14 +5314,14 @@ void maxchat::ui::MainWindow::showNetworkTreeContextMenu(const QPoint& pos) {
     if (!terminalId.isEmpty()) {
         QMenu termMenu(this);
         termMenu.addAction(QStringLiteral("Open Terminal"), this, [this, terminalId]() {
-            if (m_scriptTerminals != nullptr) {
-                m_scriptTerminals->showTerminal(terminalId);
+            if (m_scripts != nullptr) {
+                m_scripts->showTerminal(terminalId);
             }
         });
         termMenu.addSeparator();
         termMenu.addAction(QStringLiteral("Kill Terminal"), this, [this, terminalId]() {
-            if (m_scriptTerminals != nullptr) {
-                m_scriptTerminals->killTerminal(terminalId);
+            if (m_scripts != nullptr) {
+                m_scripts->killTerminal(terminalId);
             }
         });
         termMenu.exec(m_networkTree->viewport()->mapToGlobal(pos));
@@ -8936,8 +8481,8 @@ void maxchat::ui::MainWindow::rebuildNetworkTree() {
             }
         }
         // Script/BBS terminal launchers ("Term N") nest under their network.
-        if (m_scriptTerminals != nullptr) {
-            for (const TerminalInfo& term : m_scriptTerminals->terminals()) {
+        if (m_scripts != nullptr) {
+            for (const TerminalInfo& term : m_scripts->terminals()) {
                 if (term.network.compare(cleanNetwork, Qt::CaseInsensitive) != 0) {
                     continue;
                 }
@@ -9578,9 +9123,9 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
     if (m_channelModesButton != nullptr) {
         m_channelModesButton->setFont(listFont);
     }
-    if (m_scriptTerminals != nullptr) {
+    if (m_scripts != nullptr) {
         // Terminal size 0 means "use the per-profile size" (ibm-vga 11, c64 13).
-        m_scriptTerminals->setTerminalFont(
+        m_scripts->setTerminalFont(
             settings.value(QStringLiteral("terminal_font_family"),
                            QStringLiteral("JetBrains Mono"))
                 .toString(),

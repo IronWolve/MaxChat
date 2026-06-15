@@ -12,8 +12,6 @@
 #include "services/LinkPreviewRenderer.h"
 #include "services/ImageFetcher.h"
 #include "services/OpenGraphFetcher.h"
-#include "scripting/LuaEngine.h"
-#include "scripting/ScriptHost.h"
 #include "ui/MainWindowHost.h"
 #include "ui/SoundPlayer.h"
 #include "spell/Speller.h" // backend-neutral; OS speller works without Hunspell
@@ -70,13 +68,11 @@ class Notifier;
 class BanListDialog;
 class ChatFindDialog;
 class RawLogDialog;
-class ScriptTerminalManager;
+class ScriptBridge;
 class SpellTextEdit;
 class UrlListDialog;
 
-class MainWindow final : public QMainWindow,
-                        public maxchat::scripting::ScriptHost,
-                        public MainWindowHost {
+class MainWindow final : public QMainWindow, public MainWindowHost {
     // White-box test access without `#define private public` (which gives this
     // header a different layout in the test TU than in the app TU — an ODR
     // violation). A friend grants the same access cleanly.
@@ -85,51 +81,40 @@ class MainWindow final : public QMainWindow,
   public:
     explicit MainWindow(QWidget* parent = nullptr);
 
-    // MainWindowHost — the seam decomposed controllers call back through.
+    // --- MainWindowHost — the seam decomposed controllers call back through ---
     [[nodiscard]] QString activeNetwork() const override { return activeNetworkName(); }
     [[nodiscard]] QString currentTarget() const override { return m_currentTarget; }
+    [[nodiscard]] QString nickFor(const QString& network) override {
+        return currentNickForNetwork(network);
+    }
+    [[nodiscard]] QStringList channelsFor(const QString& network) override;
+    [[nodiscard]] QStringList nicksFor(const QString& network, const QString& target) override {
+        return m_chatBuffers.snapshot(bufferIdForNetworkTarget(network, target)).members;
+    }
+    void appendActiveSystemLine(const QString& text) override { appendSystemLine(text); }
     void appendSystemLine(const QString& network, const QString& target,
                           const QString& text) override {
         appendSystemLineToNetworkTarget(network, target, text);
     }
-    void insertInput(const QString& text) override { scriptInsertInput(text); }
+    void echoOutbound(const QString& network, const QString& target,
+                      const QString& text) override {
+        appendSystemLineToNetworkTarget(network, target, text, true, true);
+    }
+    void insertInput(const QString& text) override; // m_input type incomplete here
+    void notifyUser(const QString& title, const QString& text) override {
+        notify(title, text, activeNetworkName(), m_currentTarget);
+    }
+    [[nodiscard]] maxchat::irc::IrcConnection* connectionFor(const QString& network) override {
+        return connectionForNetwork(network);
+    }
+    [[nodiscard]] QNetworkAccessManager& scriptNetworkManager() override {
+        return m_updateNetworkManager;
+    }
     [[nodiscard]] maxchat::core::SettingsStore& settings() override { return m_settings; }
     [[nodiscard]] QWidget* dialogParent() override { return this; }
+    void rebuildTree() override { rebuildNetworkTree(); }
 
     bool selfTest() const;
-
-    // --- maxchat::scripting::ScriptHost ---
-    void scriptEcho(const QString& network, const QString& text) override;
-    void scriptSay(const QString& network, const QString& target, const QString& text) override;
-    void scriptSendRaw(const QString& network, const QString& line) override;
-    void scriptInsertInput(const QString& text) override;
-    void scriptNotify(const QString& title, const QString& text) override;
-    bool scriptMcData(const QString& network, const QString& target, const QString& service,
-                      const QString& verb, const QString& payload, bool notice) override;
-    bool scriptTerminalOpen(const QString& scriptName, const QString& id, const QString& title,
-                            const QString& profile, int cols, int rows) override;
-    void scriptTerminalClose(const QString& scriptName, const QString& id) override;
-    void scriptTerminalClear(const QString& scriptName, const QString& id) override;
-    void scriptTerminalWrite(const QString& scriptName, const QString& id,
-                             const QString& text) override;
-    bool scriptTerminalFrame(const QString& scriptName, const QString& id,
-                             const QString& ops) override;
-    void scriptTerminalStatus(const QString& scriptName, const QString& id,
-                              const QString& text) override;
-    void scriptTerminalPrompt(const QString& scriptName, const QString& id,
-                              const QString& text) override;
-    QSize scriptTerminalSize(const QString& scriptName, const QString& id) override;
-    void scriptTerminalProfile(const QString& scriptName, const QString& id,
-                               const QString& profile, int cols, int rows) override;
-    void scriptTerminalFit(const QString& scriptName, const QString& id,
-                           const QString& mode) override;
-    QString scriptTerminalHotspot(const QString& actionId, const QString& label) override;
-    QString scriptMe(const QString& network) override;
-    QString scriptTarget() override;
-    QString scriptNetwork() override;
-    QStringList scriptChannels(const QString& network) override;
-    QStringList scriptNicks(const QString& network, const QString& target) override;
-    QString scriptHttpGet(const QString& url) override;
 
   private:
     bool eventFilter(QObject* watched, QEvent* event) override;
@@ -204,16 +189,10 @@ class MainWindow final : public QMainWindow,
     // Play a received CTCP SOUND if enabled and the .wav is one the user owns.
     void handleCtcpSound(const QString& network, const QString& sender, const QString& target,
                          const QString& file, const QString& text);
-    // /scripts (list) and /load /unload /reload <name>.
+    // /scripts (list) and /load /unload /reload <name>. The scripting subsystem
+    // itself lives in ScriptBridge (m_scripts); these just forward.
     void handleScriptsCommand(const QString& command, const QString& arg);
     void openScriptsManager();
-    void seedBundledScripts(const QString& destDir); // copy examples on first run
-    [[nodiscard]] QString scriptsDirectory() const;
-    // A script is "bundled" if it has a .bundled/<name>.lua snapshot (shipped
-    // with the app). Bundled scripts default to the ircSend permission.
-    [[nodiscard]] bool isBundledScript(const QString& name) const;
-    [[nodiscard]] maxchat::scripting::ScriptPermissions buildScriptPermissionsFor(const QString& name) const;
-    [[nodiscard]] QHash<QString, maxchat::scripting::ScriptPermissions> buildAllScriptPermsMap() const;
     void updateWindowTitle();      // "MaxChat <ver> — <network> / <channel>" (active context)
     void updateNickLabel();        // your-nick label by the input box
     void leaveCurrentChannel();
@@ -453,8 +432,7 @@ class MainWindow final : public QMainWindow,
     QNetworkAccessManager m_previewNetworkManager;
     QNetworkAccessManager m_updateNetworkManager;
     SoundPlayer m_soundPlayer;
-    maxchat::scripting::LuaEngine* m_lua = nullptr;
-    ScriptTerminalManager* m_scriptTerminals = nullptr;
+    ScriptBridge* m_scripts = nullptr; // owns LuaEngine + ScriptTerminalManager
     maxchat::services::OpenGraphFetcher m_openGraphFetcher;
     maxchat::services::ImageFetcher m_imageFetcher;
     QHash<QString, QImage> m_previewImageCache;  // url -> decoded, scaled image

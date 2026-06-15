@@ -388,8 +388,12 @@ means every consumer is already a clean controller.
 
 ## 9. Progress
 
-- [ ] Phase 0 — MainWindowHost seam
-- [ ] Phase 1 — ScriptBridge
+- [x] Phase 0 — MainWindowHost seam  *(commit ed38832)*
+- [x] Phase 1 — ScriptBridge  *(LuaEngine + ScriptTerminalManager + 23 ScriptHost
+      overrides + perms/seeding moved out; MainWindow forwards via `m_scripts`.
+      `script_bridge_test` covers bundled-vs-user ircSend + MC-DATA routing.
+      Residual: terminal manager takes the window as its QWidget parent — full
+      relocation waits on Phase 2+, see DEV_NOTES.)*
 - [ ] Phase 2 — PreviewController
 - [ ] Phase 3 — AppearanceController
 - [ ] Phase 4 — NotificationController
