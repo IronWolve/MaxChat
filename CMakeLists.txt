@@ -302,6 +302,8 @@ qt_add_executable(maxchat-c
     src/ui/MainWindow.cpp
     src/ui/MainWindow.h
     src/ui/MainWindowHost.h
+    src/ui/ScriptBridge.cpp
+    src/ui/ScriptBridge.h
     src/ui/PreferencesDialog.cpp
     src/ui/PreferencesDialog.h
     src/ui/ThemeEditorDialog.cpp
@@ -1140,6 +1142,8 @@ qt_add_executable(main_window_link_preview_test
     src/ui/MainWindow.cpp
     src/ui/MainWindow.h
     src/ui/MainWindowHost.h
+    src/ui/ScriptBridge.cpp
+    src/ui/ScriptBridge.h
     src/ui/PreferencesDialog.cpp
     src/ui/PreferencesDialog.h
     src/ui/ThemeEditorDialog.cpp
@@ -1210,6 +1214,37 @@ endif()
 
 add_test(NAME main_window_link_preview COMMAND main_window_link_preview_test)
 set_tests_properties(main_window_link_preview PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+# ScriptBridge (decomp phase 1) — its routing/permission logic is testable in
+# isolation now, against a fake MainWindowHost. Compiles only the terminal
+# subsystem ScriptBridge pulls in, not the whole window.
+qt_add_executable(script_bridge_test
+    tests/unit/script_bridge_test.cpp
+    src/ui/ScriptBridge.cpp
+    src/ui/ScriptBridge.h
+    src/ui/MainWindowHost.h
+    src/ui/AnsiRenderer.cpp
+    src/ui/AnsiRenderer.h
+    src/ui/ScriptTerminalDialog.cpp
+    src/ui/ScriptTerminalDialog.h
+    src/ui/ScriptTerminalManager.cpp
+    src/ui/ScriptTerminalManager.h
+    src/ui/TerminalFrame.cpp
+    src/ui/TerminalFrame.h
+    src/ui/TerminalProfile.cpp
+    src/ui/TerminalProfile.h
+)
+target_link_libraries(script_bridge_test
+    PRIVATE
+        maxchat_core
+        maxchat_network
+        maxchat_services
+        maxchat_scripting
+        Qt6::Widgets
+        Qt6::Test
+)
+add_test(NAME script_bridge COMMAND script_bridge_test)
+set_tests_properties(script_bridge PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 qt_add_executable(quick_connect_dialog_test
     tests/unit/quick_connect_dialog_test.cpp
