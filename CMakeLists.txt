@@ -301,6 +301,7 @@ qt_add_executable(maxchat-c
     src/ui/IgnoreListDialog.h
     src/ui/MainWindow.cpp
     src/ui/MainWindow.h
+    src/ui/MainWindowHost.h
     src/ui/PreferencesDialog.cpp
     src/ui/PreferencesDialog.h
     src/ui/ThemeEditorDialog.cpp
@@ -1138,6 +1139,7 @@ qt_add_executable(main_window_link_preview_test
     src/ui/IgnoreListDialog.h
     src/ui/MainWindow.cpp
     src/ui/MainWindow.h
+    src/ui/MainWindowHost.h
     src/ui/PreferencesDialog.cpp
     src/ui/PreferencesDialog.h
     src/ui/ThemeEditorDialog.cpp
