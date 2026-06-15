@@ -3,6 +3,26 @@
 Date: 2026-06-09 (audit closeout 2026-06-10; UI polish 2026-06-11;
 MC DATA BBS subsystem 2026-06-12, branch `mc-data-terminal`)
 
+## MainWindow decomposition (2026-06-15) — Phases 0/1/2a done, rest deferred
+
+Strangler/extract-class pass per [MAINWINDOW.MD](MAINWINDOW.MD). Suite 53 → 55.
+
+- **Phase 0** — `MainWindowHost` seam (the callback interface controllers use).
+- **Phase 1** — `ScriptBridge`: the whole scripting subsystem (LuaEngine +
+  ScriptTerminalManager + 23 ScriptHost callbacks + perms/seeding) lifted out;
+  MainWindow forwards via `m_scripts`. `script_bridge_test` added.
+- **Phase 2a** — `MediaController`: inline media playback (clicked image/audio/
+  video links + scheme allow-list + SSRF gate) and image upload. `media_controller_test` added.
+- **Phase 6** — already satisfied: DCC lives in `DccManager`.
+
+**Stopped deliberately after the clean wins.** An assessment of the remaining
+phases (Appearance, Notification, Comic, link-preview, IRC router) shows they are
+all welded to the chat-render pipeline and/or window/qApp/theme state — extracting
+them as controllers yields glue-heavy, mostly-host-callback classes while churning
+regression-prone render/theming code. **Recommendation: fold them into one future
+render-pipeline refactor**, not separate controller phases. See MAINWINDOW.MD §9
+"Separability conclusion" and DEV_NOTES. The `MainWindowHost` seam is ready for it.
+
 ## Latest Completed Slice (Peer-audit fix pass P0-P4, 2026-06-15)
 
 Worked the consolidated 10-model audit (AUDIT-PLAN.MD) top-down, committing per

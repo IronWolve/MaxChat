@@ -404,9 +404,38 @@ means every consumer is already a clean controller.
         straight to the chat document during render; `registerCachedImagesIn` /
         `requestPreviewImagesIn` run mid-render). Migrates when the render
         pipeline is addressed, not as a standalone controller. See DEV_NOTES.
-- [ ] Phase 3 — AppearanceController
-- [ ] Phase 4 — NotificationController
-- [ ] Phase 5 — ComicController
-- [ ] Phase 6 — DccController
-- [ ] Phase 7 — NetworkController / IrcRouter
-- [ ] Phase 8 — residual cleanup + final shrink
+- [—] Phase 3 — AppearanceController — **deferred (render/window-welded).**
+      `applyTheme` drives `qApp` palette/stylesheet + tray + window icon + menu
+      font, and `m_currentTheme`/`m_currentChatTheme` are read in ~8 render/paint
+      sites. A controller is ~half host-callbacks and touches the
+      regression-prone theming path. Fold into the render-pipeline pass.
+- [—] Phase 4 — NotificationController — **deferred (window/theme-welded).**
+      `notify()` depends on window active-state, taskbar flash, click-to-focus
+      + activate-buffer, the theme accent, and 6+ `m_notify*` config members; the
+      tray also drives minimize-to-tray window behaviour. The only fully clean
+      slice (CTCP-SOUND playback) is too small to be its own controller.
+- [—] Phase 5 — ComicController — **deferred (render-welded).** Comic view
+      swaps in per-buffer inside the chat-render path.
+- [x] Phase 6 — DccController — **already done:** DCC logic lives in `DccManager`
+      (its own class); MainWindow only wires signals + dispatches `/dcc`. No
+      god-object code to extract.
+- [—] Phase 7 — NetworkController / IrcRouter — **deferred (core-welded).** The
+      IRC event router is the heart of MainWindow; splitting it is the largest,
+      riskiest change and belongs with the render-pipeline pass.
+- [—] Phase 8 — residual cleanup — folds into the render-pipeline pass.
+
+### Separability conclusion (2026-06-15)
+
+After landing Phases 0/1/2a, an assessment of every remaining phase shows the
+clean, high-value extractions are **done**: scripting (`ScriptBridge`) and inline
+media + upload (`MediaController`) were genuinely self-contained; DCC was already
+a class. Everything left — theme/appearance, notifications, comic, link-preview,
+the IRC router — is **welded to the chat-render pipeline and/or window/qApp/theme
+state**. Extracting those as standalone controllers would produce glue-heavy
+classes that are mostly host-callbacks while repeatedly touching the
+regression-prone render/theming code, for marginal structural gain.
+
+**Recommendation:** treat the remaining items as a single future **render-pipeline
+refactor** (extract a chat-render component first, then the preview/appearance/
+comic/notification state can move with it), rather than as separate controller
+phases. The `MainWindowHost` seam is in place to support that when it happens.
