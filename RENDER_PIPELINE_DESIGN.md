@@ -209,10 +209,11 @@ Once `ChatPane` exists, the previously-welded phases become small:
 
 Behaviour-preserving, one reviewable commit per step, full `ctest` after each.
 
-1. **R0 — Extract `ChatRenderTheme` value type.** Pull the body of
-   `chatLineFormatOptions()` into a function that takes a `ChatRenderTheme` struct;
-   MainWindow builds the struct from its theme members. No behaviour change, no new
-   class. Unblocks testing render formatting without a window.
+1. **R0 — Extract `ChatRenderTheme` value type. ✅ DONE.** `src/ui/ChatRenderTheme.{h,cpp}`
+   holds the resolved colour struct + a pure `resolveChatRenderTheme(...)`; the
+   theme→colour logic (dark-chat luminance, `"follow"` resolution, fg fallback,
+   event-colour override) moved out of `chatLineFormatOptions()` verbatim. New
+   headless `chat_render_theme_test` (10 cases). Behaviour-preserving; 56/56 green.
 2. **R1 — Create `ChatPane` owning the chat view + append helpers.** Move
    `m_chatView`, `ChatTextView`, and the `append*ChatLine` family into `ChatPane`.
    MainWindow delegates through the new API. Anchor-click + separator signals route

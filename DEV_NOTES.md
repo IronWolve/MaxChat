@@ -39,6 +39,28 @@ When adding anything that should survive a buffer switch, store it in the model.
   **Lesson: header-inline host overrides may only touch types complete in the
   header; anything reaching into a forward-declared member goes in the .cpp.**
 
+## Render-pipeline R0: ChatRenderTheme (2026-06-15)
+
+First step of RENDER_PIPELINE_DESIGN.md. Extracted the chat-theme → render-colour
+resolution out of `MainWindow::chatLineFormatOptions()` into a pure free function
+`resolveChatRenderTheme()` returning a `ChatRenderTheme` value struct
+(`src/ui/ChatRenderTheme.{h,cpp}`). The window method now only sets the user-pref
+toggles + per-nick overrides + live timestamp, then calls the resolver. Pure +
+headless → new `chat_render_theme_test` (10 cases: follow-resolution, dark/light
+timestamp pick, event-colour override, fg fallback chain, mono passthrough). This
+is the "the chat theme is just data" seam — later `AppearanceController` hands a
+`ChatRenderTheme` to the chat pane instead of render code reaching live members.
+Behaviour-preserving; 56/56 green.
+
+- **Gotcha (mine):** a broad `perl -0pi` to add the new sources after every
+  `AnsiRenderer.cpp/.h` pair matched **5 targets**, not the 2 that compile
+  `MainWindow.cpp`. Three were Core/Test-only test exes (no `Qt6::Gui`), so
+  compiling `ChatRenderTheme.cpp` → `#include <QColor>` → `fatal error: QColor:
+  No such file`. **Lesson: a CMake source list isn't unique by a neighbouring
+  filename — scope source-adding edits to the intended target, and a green
+  `ctest` can still hide a target that failed to *build* (the others' tests
+  still pass).** Fixed by trimming the 3 spurious targets.
+
 ## MainWindow decomposition — Phase 2: MediaController (2026-06-15)
 
 Extracted inline-media playback + image upload into `src/ui/MediaController.{h,cpp}`.

@@ -261,6 +261,8 @@ qt_add_executable(maxchat-c
     src/ui/AliasEditorDialog.h
     src/ui/AnsiRenderer.cpp
     src/ui/AnsiRenderer.h
+    src/ui/ChatRenderTheme.cpp
+    src/ui/ChatRenderTheme.h
     src/ui/BanListDialog.cpp
     src/ui/BanListDialog.h
     src/ui/ChannelListDialog.cpp
@@ -1158,6 +1160,8 @@ qt_add_executable(main_window_link_preview_test
     src/ui/RawLogDialog.h
     src/ui/AnsiRenderer.cpp
     src/ui/AnsiRenderer.h
+    src/ui/ChatRenderTheme.cpp
+    src/ui/ChatRenderTheme.h
     src/ui/ServerListDialog.cpp
     src/ui/ServerListDialog.h
     src/ui/ScriptTerminalDialog.cpp
@@ -1277,6 +1281,22 @@ target_link_libraries(media_controller_test
 )
 add_test(NAME media_controller COMMAND media_controller_test)
 set_tests_properties(media_controller PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+# resolveChatRenderTheme (RENDER_PIPELINE_DESIGN.md R0) — pure chat-theme → render
+# colour resolution, no widget/window, so a plain appless test suffices.
+qt_add_executable(chat_render_theme_test
+    tests/unit/chat_render_theme_test.cpp
+    src/ui/ChatRenderTheme.cpp
+    src/ui/ChatRenderTheme.h
+)
+target_link_libraries(chat_render_theme_test
+    PRIVATE
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Test
+)
+target_include_directories(chat_render_theme_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+add_test(NAME chat_render_theme COMMAND chat_render_theme_test)
 
 qt_add_executable(quick_connect_dialog_test
     tests/unit/quick_connect_dialog_test.cpp
