@@ -7,6 +7,7 @@
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
+#include <QSaveFile>
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -407,11 +408,16 @@ int l_set(lua_State* L) {
         obj.insert(key, QString::fromUtf8(luaL_checkstring(L, 2)));
     }
     QDir().mkpath(dataDir);
-    QFile f(prefsPath(dataDir));
+    // QSaveFile: write to a temp + atomic rename so a crash mid-write can't
+    // truncate/corrupt the script's prefs (plain QFile::Truncate did).
+    QSaveFile f(prefsPath(dataDir));
     if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         return luaL_error(L, "cannot write prefs");
     }
     f.write(QJsonDocument(obj).toJson(QJsonDocument::Compact));
+    if (!f.commit()) {
+        return luaL_error(L, "cannot write prefs");
+    }
     return 0;
 }
 
@@ -761,6 +767,16 @@ int LuaEngine::createTimer(void* luaState, int intervalMs, int funcRef) {
     if (owner == nullptr) {
         luaL_unref(L, LUA_REGISTRYINDEX, funcRef);
         return 0;
+    }
+    // Cap timers per script so a buggy/hostile script can't exhaust QTimer/handle
+    // resources by spawning thousands.
+    constexpr int kMaxTimersPerScript = 64;
+    int owned = 0;
+    for (const ScriptTimer* t : timers_) {
+        if (t->state == owner && ++owned >= kMaxTimersPerScript) {
+            luaL_unref(L, LUA_REGISTRYINDEX, funcRef);
+            return 0;
+        }
     }
     auto* entry = new ScriptTimer{};
     entry->timer = new QTimer(this);

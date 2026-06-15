@@ -819,6 +819,10 @@ void DccManager::finishTransfer(int id, bool ok) {
     for (const QString& k : resuming_.keys(id)) {
         resuming_.remove(k);
     }
+    // Drop the (now empty) runtime entry — sockets/server/file were freed above,
+    // and later signals early-return on the terminal state, so they won't touch
+    // it. Leaving it accumulates one map slot per transfer over a long session.
+    runtimes_.remove(id);
     emitChanged();
     emit status(ok ? QStringLiteral("DCC: %1 %2")
                          .arg(t->direction == DccTransfer::Direction::Send
@@ -862,6 +866,7 @@ void DccManager::cancelTransfer(int id) {
     for (const QString& k : resuming_.keys(id)) {
         resuming_.remove(k);
     }
+    runtimes_.remove(id); // empty after the cleanup above; don't accumulate
     emitChanged();
 }
 
