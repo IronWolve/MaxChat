@@ -71,7 +71,12 @@ Dib inflateDib(const QByteArray& data, int j) {
     out.bitCount = u16(data, j + 14);
     const quint32 origLen = u32(data, j + 40);
     const quint32 cmprLen = u32(data, j + 44);
-    if (cmprLen == 0 || j + 48 + static_cast<int>(cmprLen) > data.size()) {
+    // 64-bit arithmetic throughout: cmprLen is an attacker-controlled quint32, so
+    // `static_cast<int>(cmprLen)` could wrap NEGATIVE and slip past the bounds
+    // check (and then feed a negative length to append). Compare/append in qint64.
+    const qint64 dataLen = data.size();
+    const qint64 cmprLen64 = static_cast<qint64>(cmprLen);
+    if (cmprLen64 == 0 || static_cast<qint64>(j) + 48 + cmprLen64 > dataLen) {
         return out;
     }
     // qUncompress allocates the prefixed length up front, so an attacker-set
@@ -82,7 +87,7 @@ Dib inflateDib(const QByteArray& data, int j) {
     QByteArray packed;
     packed.resize(4);
     qToBigEndian<quint32>(origLen, reinterpret_cast<uchar*>(packed.data()));
-    packed.append(data.constData() + j + 48, static_cast<int>(cmprLen));
+    packed.append(data.constData() + j + 48, cmprLen64);
     out.pixels = qUncompress(packed);
     out.ok = !out.pixels.isEmpty();
     return out;
