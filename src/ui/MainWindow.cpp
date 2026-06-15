@@ -1,7 +1,5 @@
 #include "ui/MainWindow.h"
 
-#include "upload/ImageUploaderFactory.h"
-
 #include "app/AppInfo.h"
 #include "core/CommandAlias.h"
 #include "core/ConnectionPlan.h"
@@ -43,6 +41,7 @@
 #include "ui/RawLogDialog.h"
 #include "ui/ServerListDialog.h"
 #include "ui/AnsiRenderer.h"
+#include "ui/MediaController.h"
 #include "ui/ScriptBridge.h"
 #include "ui/ScriptTerminalManager.h"
 #include "ui/SpellTextEdit.h"
@@ -839,6 +838,9 @@ MainWindow::MainWindow(QWidget* parent)
       m_imageFetcher(&m_previewNetworkManager),
       m_osNotifyAvailable(false) {
     m_appUptime.start();
+    // Inline media + image upload controller. Constructed before buildLayout()
+    // because the chat view's anchor-click handler and the audio bar wire into it.
+    m_media = new MediaController(*this, this);
     loadFonts();
     buildMenus();
     buildLayout();
@@ -984,7 +986,7 @@ void MainWindow::changeEvent(QEvent* event) {
 }
 
 void MainWindow::dragEnterEvent(QDragEnterEvent* event) {
-    if (m_imageUploader != nullptr && event->mimeData() != nullptr &&
+    if (m_media->isConfigured() && event->mimeData() != nullptr &&
         (event->mimeData()->hasImage() || event->mimeData()->hasUrls())) {
         event->acceptProposedAction();
     } else {
@@ -993,7 +995,7 @@ void MainWindow::dragEnterEvent(QDragEnterEvent* event) {
 }
 
 void MainWindow::dropEvent(QDropEvent* event) {
-    if (m_imageUploader == nullptr || event->mimeData() == nullptr) {
+    if (!m_media->isConfigured() || event->mimeData() == nullptr) {
         QMainWindow::dropEvent(event);
         return;
     }
@@ -1002,7 +1004,7 @@ void MainWindow::dropEvent(QDropEvent* event) {
         const QImage img = qvariant_cast<QImage>(event->mimeData()->imageData());
         if (!img.isNull()) {
             event->acceptProposedAction();
-            startImageUpload(img);
+            m_media->uploadImage(img);
             return;
         }
     }
@@ -1013,7 +1015,7 @@ void MainWindow::dropEvent(QDropEvent* event) {
         const QImage img(url.toLocalFile());
         if (!img.isNull()) {
             event->acceptProposedAction();
-            startImageUpload(img);
+            m_media->uploadImage(img);
             return; // upload the first valid image
         }
     }
@@ -1778,7 +1780,7 @@ void maxchat::ui::MainWindow::buildLayout() {
     m_chatView->setOpenExternalLinks(false);
     m_chatView->setOpenLinks(false);
     connect(m_chatView, &QTextBrowser::anchorClicked, this,
-            &MainWindow::handleChatAnchorClicked);
+            [this](const QUrl& url) { m_media->handleAnchorClicked(url); });
     m_chatView->setPlainText(
         QStringLiteral("Not connected. Open Server > Server List... or Quick Connect... to get started."));
 
@@ -1833,7 +1835,8 @@ void maxchat::ui::MainWindow::buildLayout() {
     // window's hierarchy is covered (see redirectKeyToInput for the guards
     // that keep menus, dialogs, and interactive widgets unaffected).
     qApp->installEventFilter(this);
-    connect(m_input, &SpellTextEdit::imageReceived, this, &MainWindow::startImageUpload);
+    connect(m_input, &SpellTextEdit::imageReceived, this,
+            [this](const QImage& image) { m_media->uploadImage(image); });
 
     // mIRC formatting: Ctrl+B/I/U insert the control codes, Ctrl+K opens the
     // colour picker. Widget-scoped so they only fire while typing.
@@ -1889,6 +1892,7 @@ void maxchat::ui::MainWindow::buildLayout() {
     chatLayout->addWidget(m_chatSplitter, 1);
     m_audioBar = new AudioPlayerBar(chatColumn);
     chatLayout->addWidget(m_audioBar);
+    m_media->setAudioBar(m_audioBar);
     auto* inputRow = new QWidget(chatColumn);
     auto* inputRowLayout = new QHBoxLayout(inputRow);
     inputRowLayout->setContentsMargins(0, 0, 0, 0);
@@ -6999,72 +7003,6 @@ const QStringList& savedLookKeys() {
 
 } // namespace
 
-void maxchat::ui::MainWindow::handleChatAnchorClicked(const QUrl& url) {
-    if (!url.isValid()) {
-        return;
-    }
-
-    using maxchat::services::LinkPreviewKind;
-    const auto candidate = maxchat::services::classifyLinkPreview(url);
-    switch (candidate.kind) {
-    case LinkPreviewKind::DirectImage: {
-        auto* viewer = new ImageViewerDialog(
-            candidate.fetchUrl.isValid() ? candidate.fetchUrl : url, this);
-        viewer->show();
-        return;
-    }
-    case LinkPreviewKind::DirectAudio: {
-        if (m_audioBar == nullptr) {
-            break;
-        }
-        // Same SSRF gate as previews: the static check can't catch a public
-        // hostname that resolves to a LAN/metadata address, and the media
-        // backend follows redirects we can't intercept.
-        const QUrl mediaUrl = candidate.fetchUrl.isValid() ? candidate.fetchUrl : url;
-        maxchat::services::resolvePreviewUrlPublicAsync(
-            mediaUrl, /*allowPrivateNetwork=*/false, this, [this, mediaUrl](bool allowed) {
-                if (allowed && m_audioBar != nullptr) {
-                    m_audioBar->playUrl(mediaUrl);
-                } else if (!allowed) {
-                    appendSystemLine(QStringLiteral("! Blocked audio URL (private address)."));
-                }
-            });
-        return;
-    }
-    case LinkPreviewKind::DirectVideo: {
-        const QUrl mediaUrl = candidate.fetchUrl.isValid() ? candidate.fetchUrl : url;
-        maxchat::services::resolvePreviewUrlPublicAsync(
-            mediaUrl, /*allowPrivateNetwork=*/false, this, [this, mediaUrl](bool allowed) {
-                if (!allowed) {
-                    appendSystemLine(QStringLiteral("! Blocked video URL (private address)."));
-                    return;
-                }
-                // One player at a time: clicking links repeatedly used to
-                // stack dialogs all playing audio simultaneously.
-                if (m_mediaPlayerDialog != nullptr) {
-                    m_mediaPlayerDialog->close();
-                }
-                auto* player = new MediaPlayerDialog(mediaUrl, this);
-                m_mediaPlayerDialog = player;
-                player->show();
-            });
-        return;
-    }
-    default:
-        break;
-    }
-    // Defence in depth before handing a clicked link to the OS: only open web /
-    // mail schemes. A crafted anchor (e.g. file:, javascript:, or an app handler)
-    // must not reach QDesktopServices::openUrl from a chat message.
-    const QString scheme = url.scheme().toLower();
-    if (scheme != QLatin1String("http") && scheme != QLatin1String("https") &&
-        scheme != QLatin1String("ftp") && scheme != QLatin1String("mailto")) {
-        appendSystemLine(QStringLiteral("! Refused to open link with scheme \"%1\".").arg(scheme));
-        return;
-    }
-    QDesktopServices::openUrl(url);
-}
-
 void maxchat::ui::MainWindow::setupNavShortcuts() {
     for (const NavShortcutSpec& spec : navShortcutSpecs()) {
         auto* shortcut = new QShortcut(QKeySequence(spec.defaultKey), this);
@@ -8752,42 +8690,26 @@ void maxchat::ui::MainWindow::configureSpellcheck(const QVariantMap& settings) {
 #endif
 }
 
-void maxchat::ui::MainWindow::configureImageUploader(const QVariantMap& settings) {
-    m_imageUploader = maxchat::upload::makeImageUploader(settings, &m_previewNetworkManager, this);
-    setAcceptDrops(m_imageUploader != nullptr);
+void maxchat::ui::MainWindow::showStatus(const QString& text, int timeoutMs) {
+    statusBar()->showMessage(text, timeoutMs);
 }
 
-void maxchat::ui::MainWindow::startImageUpload(const QImage& image) {
-    if (m_imageUploader == nullptr) {
-        appendSystemLine(QStringLiteral(
-            "! Image paste ignored: no image hosting service is configured "
-            "(Preferences > Image Hosting)."));
+void maxchat::ui::MainWindow::clearStatus() {
+    statusBar()->clearMessage();
+}
+
+void maxchat::ui::MainWindow::appendInputUrl(const QString& url) {
+    if (m_input == nullptr) {
         return;
     }
-    if (image.isNull()) {
-        return;
-    }
-    statusBar()->showMessage(QStringLiteral("Uploading image…"));
-    // Reconnect fresh each call so there's only one active upload at a time.
-    disconnect(m_imageUploader.get(), nullptr, this, nullptr);
-    connect(m_imageUploader.get(), &maxchat::upload::ImageUploader::uploaded,
-            this, [this](const QString& url) {
-                statusBar()->clearMessage();
-                if (m_input != nullptr) {
-                    // Insert URL at current cursor; add a space if the input isn't empty.
-                    const QString existing = m_input->toPlainText();
-                    const QString text =
-                        existing.isEmpty() ? url : (existing.endsWith(QLatin1Char(' ')) ? url : QStringLiteral(" ") + url);
-                    m_input->moveCursor(QTextCursor::End);
-                    m_input->insertPlainText(text);
-                    m_input->setFocus();
-                }
-            });
-    connect(m_imageUploader.get(), &maxchat::upload::ImageUploader::uploadFailed,
-            this, [this](const QString& reason) {
-                statusBar()->showMessage(QStringLiteral("Image upload failed: ") + reason, 6000);
-            });
-    m_imageUploader->upload(image);
+    // Append at end; add a leading space if the input isn't empty / already spaced.
+    const QString existing = m_input->toPlainText();
+    const QString text =
+        existing.isEmpty() ? url
+                           : (existing.endsWith(QLatin1Char(' ')) ? url : QStringLiteral(" ") + url);
+    m_input->moveCursor(QTextCursor::End);
+    m_input->insertPlainText(text);
+    m_input->setFocus();
 }
 
 void maxchat::ui::MainWindow::resizeMessageInput() {
@@ -9071,7 +8993,8 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
                            settings.value(QStringLiteral("flood_msgs"), 10).toInt(),
                            settings.value(QStringLiteral("flood_secs"), 4).toInt());
     configureSpellcheck(settings);
-    configureImageUploader(settings);
+    m_media->configure(settings);
+    setAcceptDrops(m_media->isConfigured());
     m_connection.setIgnoreMasks(m_ignoreMasks);
     for (auto* irc : std::as_const(m_connectionsByNetwork)) {
         if (irc != nullptr) {
