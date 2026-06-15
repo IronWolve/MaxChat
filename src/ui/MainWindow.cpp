@@ -41,6 +41,7 @@
 #include "ui/RawLogDialog.h"
 #include "ui/ServerListDialog.h"
 #include "ui/AnsiRenderer.h"
+#include "ui/ChatRenderTheme.h"
 #include "ui/MediaController.h"
 #include "ui/ScriptBridge.h"
 #include "ui/ScriptTerminalManager.h"
@@ -6178,45 +6179,25 @@ maxchat::core::ChatLineFormatOptions MainWindow::chatLineFormatOptions() const {
     options.nickColumnWidth = m_nickColumnWidth;
     options.timestamp = timestampText();
 
-    const maxchat::ui::ChatThemeDefinition chatTheme = chatThemeById(m_currentChatTheme);
-    if (chatTheme.timestamp.isValid()) {
-        options.timestampColor = chatTheme.timestamp.name();
-    } else {
-        QColor chatBg = chatTheme.bg;
-        if (chatTheme.id == QStringLiteral("follow")) {
-            const maxchat::ui::AppThemeDefinition appTheme = appThemeById(m_currentTheme);
-            chatBg = appTheme.chatBg.isValid() ? appTheme.chatBg : appTheme.panel;
-        }
-        const bool darkChat =
-            !chatBg.isValid() ||
-            (0.299 * chatBg.red() + 0.587 * chatBg.green() + 0.114 * chatBg.blue()) < 150.0;
-        options.timestampColor =
-            darkChat ? QStringLiteral("#8a8a8a") : QStringLiteral("#6f6f6f");
-    }
-    if (chatTheme.bracket.isValid()) {
-        options.bracketColor = chatTheme.bracket.name();
-    }
-    if (chatTheme.system.isValid()) {
-        options.systemColor = chatTheme.system.name();
-    }
-    if (!m_eventColor.isEmpty()) {
-        options.systemColor = m_eventColor; // Fonts-page override wins
-    }
+    // All theme-derived colour resolution lives in the pure resolveChatRenderTheme
+    // (RENDER_PIPELINE_DESIGN.md R0). This method keeps only the user-pref toggles
+    // above, the per-nick overrides below, and the live timestamp.
     bool monoNicks = false;
-    options.nickPalette = effectiveNickPalette(&monoNicks);
-    options.monoNicks = monoNicks;
-    // Reverse-video (\x16) and dim-replay derive from the REAL chat colours,
-    // not the hardcoded dark-theme pair the struct defaults to.
-    {
-        const QColor bg = resolvedChatBackground();
-        QColor fg = chatTheme.fg;
-        if (!fg.isValid()) {
-            const maxchat::ui::AppThemeDefinition appTheme = appThemeById(m_currentTheme);
-            fg = appTheme.chatFg.isValid() ? appTheme.chatFg : appTheme.text;
-        }
-        options.defaultBackground = bg.name();
-        options.defaultForeground = fg.isValid() ? fg.name() : QStringLiteral("#cfcfcf");
+    const QStringList nickPalette = effectiveNickPalette(&monoNicks);
+    const maxchat::ui::ChatRenderTheme rt = maxchat::ui::resolveChatRenderTheme(
+        chatThemeById(m_currentChatTheme), appThemeById(m_currentTheme), resolvedChatBackground(),
+        nickPalette, monoNicks, m_eventColor);
+    options.timestampColor = rt.timestampColor;
+    if (!rt.bracketColor.isEmpty()) {
+        options.bracketColor = rt.bracketColor;
     }
+    if (!rt.systemColor.isEmpty()) {
+        options.systemColor = rt.systemColor;
+    }
+    options.defaultBackground = rt.defaultBackground;
+    options.defaultForeground = rt.defaultForeground;
+    options.nickPalette = rt.nickPalette;
+    options.monoNicks = rt.monoNicks;
     for (auto it = m_nickColorOverrides.constBegin(); it != m_nickColorOverrides.constEnd();
          ++it) {
         options.nickColorOverrides.insert(it.key(), it.value().toString());
