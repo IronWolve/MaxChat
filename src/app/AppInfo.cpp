@@ -1,5 +1,7 @@
 #include "app/AppInfo.h"
 
+#include "maxchat_version.h" // generated from CMake project(VERSION) — see Version.h.in
+
 namespace maxchat::app {
 
 QString applicationName() {
@@ -11,7 +13,7 @@ QString organizationName() {
 }
 
 QString version() {
-    return QStringLiteral("0.9.1");
+    return QStringLiteral(MAXCHAT_VERSION);
 }
 
 QString displayName() {

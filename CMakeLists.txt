@@ -52,6 +52,11 @@ set(HUNSPELL_LIBRARIES maxchat_hunspell)
 
 qt_standard_project_setup()
 
+# Single source of truth for the app version: project(VERSION ...) above flows
+# into a generated header that AppInfo.cpp reads (no more hand-syncing strings).
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/app/Version.h.in
+               ${CMAKE_CURRENT_BINARY_DIR}/generated/maxchat_version.h @ONLY)
+
 if(MAXCHAT_LUA)
     # Lua is C; enable it only when scripting is requested so a C compiler isn't
     # required for the default build.
@@ -124,6 +129,8 @@ add_library(maxchat_core STATIC
 target_include_directories(maxchat_core
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/src
+    PRIVATE
+        ${CMAKE_CURRENT_BINARY_DIR}/generated  # generated maxchat_version.h (AppInfo.cpp)
 )
 
 target_link_libraries(maxchat_core
