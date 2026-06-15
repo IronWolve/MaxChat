@@ -73,7 +73,9 @@ private slots:
     QVERIFY(!checker.loadDictionary(QStringLiteral("/tmp/missing.aff"),
                                     QStringLiteral("/tmp/missing.dic")));
     QVERIFY(!checker.isLoaded());
-    QVERIFY(!checker.isCorrect(QStringLiteral("hello")));
+    // Fail OPEN with no dictionary: every word is "correct" so the input isn't
+    // flooded with underlines (consistent with WindowsSpeller on failure).
+    QVERIFY(checker.isCorrect(QStringLiteral("hello")));
     QVERIFY(checker.suggestions(QStringLiteral("hello")).isEmpty());
   }
 };

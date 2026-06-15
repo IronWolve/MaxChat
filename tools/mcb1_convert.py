@@ -123,11 +123,14 @@ def rle_bytes(bits):
 
 
 def raw_bytes(bits):
+    # Pad to a whole byte so a grid whose width*height isn't a multiple of 8
+    # (custom --size) doesn't index past the end.
+    padded = bits + [0] * ((-len(bits)) % 8)
     out = bytearray()
-    for i in range(0, len(bits), 8):
+    for i in range(0, len(padded), 8):
         v = 0
         for j in range(8):
-            v = (v << 1) | bits[i + j]
+            v = (v << 1) | padded[i + j]
         out.append(v)
     return bytes(out)
 

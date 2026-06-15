@@ -995,8 +995,10 @@ private slots:
     QCOMPARE(status.at(0).at(0).toString(), QStringLiteral("are supported"));
   }
 
-  void ctcpAutoRepliesAreRateLimited() {
-    // A burst of CTCP requests must not produce a 1:1 flood of replies.
+  void ctcpAutoRepliesAreRateLimitedPerSender() {
+    // The throttle is PER SENDER: each distinct nick draws at most one auto-reply
+    // per 1s window (a flooder can't be a reflector), but one flooder must not
+    // mute auto-replies to everyone else.
     IrcSession session;
     QList<QByteArray> writes;
     session.setConnected(true);
@@ -1007,15 +1009,16 @@ private slots:
 
     session.handleLine(QStringLiteral(":alice!u@h PRIVMSG bob :") +
                        ctcpPayload(QStringLiteral("VERSION")));
+    // A second request from alice within the window is throttled (no 1:1 flood).
+    session.handleLine(QStringLiteral(":alice!u@h PRIVMSG bob :") +
+                       ctcpPayload(QStringLiteral("TIME")));
+    // A different sender still gets its own reply (not suppressed by alice).
     session.handleLine(QStringLiteral(":mallory!u@h PRIVMSG bob :") +
                        ctcpPayload(QStringLiteral("VERSION")));
-    session.handleLine(QStringLiteral(":mallory!u@h PRIVMSG bob :") +
-                       ctcpPayload(QStringLiteral("TIME")));
 
-    // Only the first request inside the 1s window draws an auto-reply.
-    QCOMPARE(writes.size(), 1);
-    QVERIFY(QString::fromUtf8(writes.first()).startsWith(
-        QStringLiteral("NOTICE alice :")));
+    QCOMPARE(writes.size(), 2);
+    QVERIFY(QString::fromUtf8(writes.at(0)).startsWith(QStringLiteral("NOTICE alice :")));
+    QVERIFY(QString::fromUtf8(writes.at(1)).startsWith(QStringLiteral("NOTICE mallory :")));
   }
 };
 
