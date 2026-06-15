@@ -44,18 +44,20 @@ MediaPlayerDialog::MediaPlayerDialog(const QUrl& mediaUrl, QWidget* parent) : QD
             player_->pause();
         }
     });
-    connect(player_, &QMediaPlayer::durationChanged, this, [this](const qint64 duration) {
-        seek_->setRange(0, static_cast<int>(duration));
-    });
+    // Fixed 0..1000 fractional range: feeding raw millisecond positions into an
+    // int slider overflows for media longer than ~24 days (INT_MAX ms).
+    seek_->setRange(0, 1000);
     connect(player_, &QMediaPlayer::positionChanged, this, [this](const qint64 position) {
-        if (!seeking_) {
-            seek_->setValue(static_cast<int>(position));
+        const qint64 duration = player_->duration();
+        if (!seeking_ && duration > 0) {
+            seek_->setValue(static_cast<int>(position * 1000 / duration));
         }
     });
     connect(seek_, &QSlider::sliderPressed, this, [this]() { seeking_ = true; });
     connect(seek_, &QSlider::sliderReleased, this, [this]() {
         seeking_ = false;
-        player_->setPosition(seek_->value());
+        const qint64 duration = player_->duration();
+        player_->setPosition(static_cast<qint64>(seek_->value()) * duration / 1000);
     });
     // A 404 / unsupported codec / dropped stream used to leave a silent black
     // dialog claiming it was playing.
