@@ -27,6 +27,20 @@ class IrcRedactionTest final : public QObject {
                  QStringLiteral("PRIVMSG NickServ :GHOST ****"));
     }
 
+    void operPasswordMasked() {
+        QCOMPARE(redactLine(QStringLiteral("OPER admin s3cret")),
+                 QStringLiteral("OPER admin ****"));
+    }
+
+    void serviceAliasPasswordsMasked() {
+        QCOMPARE(redactLine(QStringLiteral("NICKSERV IDENTIFY hunter2")),
+                 QStringLiteral("NICKSERV IDENTIFY ****"));
+        QCOMPARE(redactLine(QStringLiteral("NS IDENTIFY hunter2")),
+                 QStringLiteral("NS IDENTIFY ****"));
+        QCOMPARE(redactLine(QStringLiteral("CS REGISTER #chan pass desc")),
+                 QStringLiteral("CS REGISTER ****"));
+    }
+
     void normalTrafficUntouched() {
         QCOMPARE(redactLine(QStringLiteral("PRIVMSG #chan :hello there")),
                  QStringLiteral("PRIVMSG #chan :hello there"));

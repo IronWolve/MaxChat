@@ -23,6 +23,11 @@ local DEFAULT_BBS_NAME = "Retro-BBS"
 local DEFAULT_PROFILE = "ibm-vga"
 local SERVER_TERM = "server"
 local MAX_LINE = 220
+-- DEMO ONLY. This is a protocol/UI demo, not real authentication: the
+-- "password" is a hardcoded shared string compared in plaintext over MC DATA
+-- (which is itself plaintext). Do NOT model real accounts on this until a
+-- reviewed MC SEC layer exists. The handle is matched case-insensitively (like
+-- IRC nicks); the password stays case-sensitive on purpose.
 local DEMO_USER = "sir_iw"
 local DEMO_PASSWORD = "bbsiscool"
 local CLIENT_CAPS = "T,S,B1"
