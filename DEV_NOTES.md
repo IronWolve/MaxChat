@@ -815,3 +815,33 @@ Implemented in one pass (all compiled debug+release, selftest OK):
   in applyTheme — a stylesheet rule can't be dropped by re-polish. setFont
   kept for dialogs/labels. Lesson: if a font must survive under app-wide QSS,
   put it IN the QSS, don't fight the polish order.
+
+## Peer-audit fix pass P0-P4 (2026-06-15)
+
+Consolidated 10 model audits into AUDIT-PLAN.MD (kept in repo), verified the
+high-severity findings against HEAD, then implemented P0->P4 (16 commits,
+a2d724d..4e70c80). 53/53 green.
+
+THINGS I GOT WRONG / lessons:
+- **Auditors ran a STALE commit.** Every model reported main_window_link_preview
+  FAILING ("themes-off leaves chrome QSS") — already fixed at HEAD. Also false at
+  HEAD: Disconnect/Reconnect-All, WHO 352 off-by-one, AppInfo.h guard, colorSpan
+  XSS, ThemeCatalog traversal, doc staleness. ALWAYS verify audit findings
+  against current code before fixing — a third were already done or wrong.
+- **Stale test binary hid a real regression earlier** (the chrome-font change):
+  `cmake --build maxchat-c` does NOT rebuild test targets; they relink their own
+  sources. Rebuild the affected test target explicitly before trusting ctest.
+- ScriptPermissions.allowedDirs is runtime-derived from the global script_dirs
+  setting, NOT per-script persisted — its absence from to/fromMap is intentional,
+  not the reported "perms lost on restart" bug.
+- api.timer is genuinely periodic (impl repeats; reminder.lua cancels for
+  one-shot) — the SCRIPTING.md "every ms" doc was already correct.
+- m_previewImageCache already caps at 64; mircColors already a lazy static —
+  the audit's "unbounded"/"rebuilt" notes were stale.
+
+Key behavioural decisions (user-approved or documented):
+- Lua ircSend permission ADDED (gate say/send_raw/mc_send/mc_reply; bundled
+  scripts default on via .bundled snapshot, user scripts off).
+- Secrets at rest: hardened (password fields, OPER+alias redaction), encryption
+  DEFERRED to Backlog (parity with the shared Python settings.json).
+- Unknown /command -> raw IRC KEPT (mIRC passthrough convention).

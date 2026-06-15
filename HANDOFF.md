@@ -3,7 +3,42 @@
 Date: 2026-06-09 (audit closeout 2026-06-10; UI polish 2026-06-11;
 MC DATA BBS subsystem 2026-06-12, branch `mc-data-terminal`)
 
-## Latest Completed Slice (MC DATA BBS: terminals, MCB1 pics, speed, 2026-06-12)
+## Latest Completed Slice (Peer-audit fix pass P0-P4, 2026-06-15)
+
+Worked the consolidated 10-model audit (AUDIT-PLAN.MD) top-down, committing per
+subsystem; full suite 53/53 green throughout.
+
+- **P0 security:** DCC 128-bit token + offerChat teardown + write-fail abort;
+  new **Lua ircSend permission** gating say/send_raw/mc_send/mc_reply (bundled
+  default-on, user off); clicked-link scheme allow-list; OpenGraph in-flight
+  size cap; uploader timeouts + capped reads + https-only result URLs; ComicArt
+  64-bit length guard; IRC target-injection guard (safeIrcTarget); terminal
+  frame/output DoS caps; OPER + service-alias raw-log redaction.
+- **P1 correctness:** separate registration timeout; IPv6-safe parseServerSpec;
+  AnsiRenderer bg simplify; TerminalFrame surrogate handling; ChannelModes
+  reject()/-k; media seek 0..1000 fractional range; per-sender CTCP throttle;
+  no nested link anchors; rename preserves @/+; fail-open speller; mcb1 byte pad.
+- **P2 perf:** O(n) member dedup (QSet), bulk line-trim, cached defaultSettings,
+  static-const regexes.
+- **P3 robustness:** prune DCC runtimes, FloodGuard key sweep, exact theme-kind
+  match, atomic Lua prefs (QSaveFile), per-script timer cap.
+- **P4 hygiene:** gitignore Testing/ + untrack CTest temps; friend-class test
+  instead of `#define private public` (ODR fix); dedup includes.
+
+**Auditors tested a stale commit** — several "release blockers" (themes-off test
+failure, Disconnect-All, WHO off-by-one, AppInfo guard, doc staleness) were
+already fixed/false at HEAD; verified before acting. See AUDIT-PLAN.MD "Already
+fixed / false" and the per-finding verdicts.
+
+**Deliberately NOT changed (rationale in commits/AUDIT-PLAN):** unknown
+`/command` → raw IRC (standard mIRC passthrough); plaintext secrets at rest
+(parity, hardened around — encryption is Backlog); comic mutable render globals,
+GeometryPersist/writer_ lifetime captures, MainWindow God-object (single-GUI-
+thread, work as-is — Backlog). Release-packaging items (version 0.1.0-dev,
+update_check default, build.bat RUN_TESTS, CMake Test/Multimedia conditionals)
+left for the release pass.
+
+## Previous Slice (MC DATA BBS: terminals, MCB1 pics, speed, 2026-06-12)
 
 The mc-data-terminal branch grew from "BBS demo" into a complete subsystem:
 

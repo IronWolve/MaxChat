@@ -1,5 +1,10 @@
 # maxchat-c — Consolidated Audit Fix Plan (peer audits, 2026-06-15)
 
+> **STATUS: P0–P4 IMPLEMENTED (2026-06-15), 16 commits a2d724d..4e70c80, 53/53
+> green.** Remaining = the Backlog section (God-object decomposition, secrets
+> encryption, settings.json split, MC SEC, uploader base class) + release-
+> packaging items. See HANDOFF "Latest Completed Slice" and DEV_NOTES.
+
 ## Context
 
 Ten peer model-audits of the `mc-data-terminal` branch were collected
