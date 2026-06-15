@@ -22,6 +22,22 @@ Relevant deployed files include:
 Qt license files are included under `licenses/qt/` when `build.bat` prepares
 the Windows deployment folder.
 
+### Qt Multimedia and ffmpeg
+
+MaxChat links `Qt6::Multimedia` and `Qt6::MultimediaWidgets` for audio/video
+playback and notification sounds. On Windows, the Qt Multimedia ffmpeg backend
+(`multimedia_ffmpeg`) is deployed by `windeployqt` and is licensed under the
+**GNU General Public License v2.0 or later** (GPL-2.0-or-later).
+
+If this GPL licensing is not acceptable for your distribution, you can:
+- Switch to the Windows Media Foundation backend at Qt configure time
+  (`-DFFMPEG_DIR=OFF` upstream, or use a Qt build without the ffmpeg plugin).
+- Or disable multimedia entirely by removing Qt6::Multimedia and
+  Qt6::MultimediaWidgets from the CMake link list (no audio/video playback).
+
+On Linux, Qt Multimedia typically uses GStreamer (LGPL-licensed plugins) and
+does not deploy the ffmpeg backend unless explicitly configured.
+
 ## MinGW Runtime
 
 The MinGW Windows build deploys runtime DLLs needed by the compiler toolchain:

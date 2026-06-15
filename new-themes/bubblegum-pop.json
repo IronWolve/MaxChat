@@ -1,0 +1,141 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Bubblegum Pop",
+  "app": {
+    "id": "bubblegum-pop",
+    "label": "Bubblegum Pop",
+    "name": "Bubblegum Pop",
+    "dark": false,
+    "bg": [
+      255,
+      214,
+      239
+    ],
+    "panel": [
+      255,
+      232,
+      246
+    ],
+    "panel2": [
+      255,
+      179,
+      221
+    ],
+    "text": [
+      81,
+      38,
+      61
+    ],
+    "on": [
+      255,
+      95,
+      183
+    ],
+    "on_text": "white",
+    "accent": [
+      120,
+      223,
+      255
+    ],
+    "groove": [
+      229,
+      143,
+      197
+    ],
+    "scroll": [
+      243,
+      172,
+      210
+    ],
+    "scroll_hi": [
+      255,
+      95,
+      183
+    ],
+    "scrollHi": [
+      255,
+      95,
+      183
+    ],
+    "chat_bg": [
+      255,
+      243,
+      251
+    ],
+    "chat_fg": [
+      81,
+      38,
+      61
+    ],
+    "bracket": [
+      0,
+      167,
+      207
+    ],
+    "system": [
+      214,
+      51,
+      132
+    ],
+    "wallpaper": "bubblegum-pop.png"
+  },
+  "chat": {
+    "id": "bubblegum-pop",
+    "label": "Bubblegum Pop",
+    "bg": [
+      255,
+      243,
+      251
+    ],
+    "fg": [
+      81,
+      38,
+      61
+    ],
+    "fixed": true,
+    "ts": [
+      159,
+      113,
+      144
+    ],
+    "bracket": [
+      0,
+      167,
+      207
+    ],
+    "system": [
+      214,
+      51,
+      132
+    ],
+    "nicks": [
+      [
+        255,
+        95,
+        183
+      ],
+      [
+        120,
+        223,
+        255
+      ],
+      [
+        183,
+        121,
+        255
+      ],
+      [
+        255,
+        158,
+        216
+      ],
+      [
+        81,
+        38,
+        61
+      ]
+    ]
+  },
+  "wallpaper": "bubblegum-pop.png"
+}

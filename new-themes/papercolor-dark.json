@@ -1,0 +1,125 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "PaperColor Dark",
+  "app": {
+    "id": "papercolor-dark",
+    "label": "PaperColor Dark",
+    "name": "PaperColor Dark",
+    "dark": true,
+    "bg": [
+      28,
+      28,
+      28
+    ],
+    "panel": [
+      38,
+      38,
+      38
+    ],
+    "panel2": [
+      48,
+      48,
+      48
+    ],
+    "text": [
+      208,
+      208,
+      208
+    ],
+    "on": [
+      95,
+      175,
+      175
+    ],
+    "on_text": "black",
+    "accent": [
+      255,
+      175,
+      0
+    ],
+    "groove": [
+      18,
+      18,
+      18
+    ],
+    "scroll": [
+      68,
+      68,
+      68
+    ],
+    "scroll_hi": [
+      95,
+      175,
+      175
+    ],
+    "chat_bg": [
+      28,
+      28,
+      28
+    ],
+    "chat_fg": [
+      208,
+      208,
+      208
+    ]
+  },
+  "chat": {
+    "id": "papercolor-dark",
+    "label": "PaperColor Dark",
+    "bg": [
+      28,
+      28,
+      28
+    ],
+    "fg": [
+      208,
+      208,
+      208
+    ],
+    "fixed": true,
+    "ts": [
+      128,
+      128,
+      128
+    ],
+    "bracket": [
+      95,
+      175,
+      215
+    ],
+    "system": [
+      175,
+      215,
+      0
+    ],
+    "nicks": [
+      [
+        95,
+        175,
+        175
+      ],
+      [
+        255,
+        175,
+        0
+      ],
+      [
+        175,
+        215,
+        0
+      ],
+      [
+        215,
+        95,
+        95
+      ],
+      [
+        175,
+        135,
+        215
+      ]
+    ]
+  },
+  "wallpaper": ""
+}

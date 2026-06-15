@@ -1,0 +1,141 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Dark Academia",
+  "app": {
+    "id": "dark-academia",
+    "label": "Dark Academia",
+    "name": "Dark Academia",
+    "dark": true,
+    "bg": [
+      24,
+      18,
+      12
+    ],
+    "panel": [
+      36,
+      27,
+      18
+    ],
+    "panel2": [
+      53,
+      39,
+      25
+    ],
+    "text": [
+      234,
+      223,
+      200
+    ],
+    "on": [
+      155,
+      107,
+      47
+    ],
+    "on_text": "black",
+    "accent": [
+      201,
+      168,
+      106
+    ],
+    "groove": [
+      11,
+      7,
+      4
+    ],
+    "scroll": [
+      92,
+      67,
+      40
+    ],
+    "scroll_hi": [
+      155,
+      107,
+      47
+    ],
+    "scrollHi": [
+      155,
+      107,
+      47
+    ],
+    "chat_bg": [
+      18,
+      13,
+      8
+    ],
+    "chat_fg": [
+      234,
+      223,
+      200
+    ],
+    "bracket": [
+      201,
+      168,
+      106
+    ],
+    "system": [
+      214,
+      168,
+      90
+    ],
+    "wallpaper": "dark-academia.png"
+  },
+  "chat": {
+    "id": "dark-academia",
+    "label": "Dark Academia",
+    "bg": [
+      18,
+      13,
+      8
+    ],
+    "fg": [
+      234,
+      223,
+      200
+    ],
+    "fixed": true,
+    "ts": [
+      136,
+      121,
+      97
+    ],
+    "bracket": [
+      201,
+      168,
+      106
+    ],
+    "system": [
+      214,
+      168,
+      90
+    ],
+    "nicks": [
+      [
+        201,
+        168,
+        106
+      ],
+      [
+        155,
+        107,
+        47
+      ],
+      [
+        234,
+        223,
+        200
+      ],
+      [
+        124,
+        63,
+        43
+      ],
+      [
+        136,
+        121,
+        97
+      ]
+    ]
+  },
+  "wallpaper": "dark-academia.png"
+}

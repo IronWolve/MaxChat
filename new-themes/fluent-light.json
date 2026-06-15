@@ -1,0 +1,125 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Fluent Light",
+  "app": {
+    "id": "fluent-light",
+    "label": "Fluent Light",
+    "name": "Fluent Light",
+    "dark": false,
+    "bg": [
+      243,
+      243,
+      243
+    ],
+    "panel": [
+      255,
+      255,
+      255
+    ],
+    "panel2": [
+      229,
+      229,
+      229
+    ],
+    "text": [
+      32,
+      32,
+      32
+    ],
+    "on": [
+      0,
+      120,
+      212
+    ],
+    "on_text": "white",
+    "accent": [
+      0,
+      90,
+      158
+    ],
+    "groove": [
+      208,
+      208,
+      208
+    ],
+    "scroll": [
+      200,
+      200,
+      200
+    ],
+    "scroll_hi": [
+      0,
+      120,
+      212
+    ],
+    "chat_bg": [
+      255,
+      255,
+      255
+    ],
+    "chat_fg": [
+      32,
+      32,
+      32
+    ]
+  },
+  "chat": {
+    "id": "fluent-light",
+    "label": "Fluent Light",
+    "bg": [
+      255,
+      255,
+      255
+    ],
+    "fg": [
+      32,
+      32,
+      32
+    ],
+    "fixed": true,
+    "ts": [
+      102,
+      102,
+      102
+    ],
+    "bracket": [
+      0,
+      90,
+      158
+    ],
+    "system": [
+      16,
+      124,
+      16
+    ],
+    "nicks": [
+      [
+        0,
+        90,
+        158
+      ],
+      [
+        16,
+        124,
+        16
+      ],
+      [
+        193,
+        156,
+        0
+      ],
+      [
+        209,
+        52,
+        56
+      ],
+      [
+        135,
+        100,
+        184
+      ]
+    ]
+  },
+  "wallpaper": ""
+}

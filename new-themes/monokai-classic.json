@@ -1,0 +1,125 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Monokai Classic",
+  "app": {
+    "id": "monokai-classic",
+    "label": "Monokai Classic",
+    "name": "Monokai Classic",
+    "dark": true,
+    "bg": [
+      39,
+      40,
+      34
+    ],
+    "panel": [
+      31,
+      32,
+      27
+    ],
+    "panel2": [
+      52,
+      53,
+      47
+    ],
+    "text": [
+      248,
+      248,
+      242
+    ],
+    "on": [
+      166,
+      226,
+      46
+    ],
+    "on_text": "black",
+    "accent": [
+      249,
+      38,
+      114
+    ],
+    "groove": [
+      23,
+      24,
+      18
+    ],
+    "scroll": [
+      73,
+      72,
+      62
+    ],
+    "scroll_hi": [
+      166,
+      226,
+      46
+    ],
+    "chat_bg": [
+      31,
+      32,
+      27
+    ],
+    "chat_fg": [
+      248,
+      248,
+      242
+    ]
+  },
+  "chat": {
+    "id": "monokai-classic",
+    "label": "Monokai Classic",
+    "bg": [
+      31,
+      32,
+      27
+    ],
+    "fg": [
+      248,
+      248,
+      242
+    ],
+    "fixed": true,
+    "ts": [
+      117,
+      113,
+      94
+    ],
+    "bracket": [
+      102,
+      217,
+      239
+    ],
+    "system": [
+      230,
+      219,
+      116
+    ],
+    "nicks": [
+      [
+        249,
+        38,
+        114
+      ],
+      [
+        166,
+        226,
+        46
+      ],
+      [
+        102,
+        217,
+        239
+      ],
+      [
+        253,
+        151,
+        31
+      ],
+      [
+        174,
+        129,
+        255
+      ]
+    ]
+  },
+  "wallpaper": ""
+}

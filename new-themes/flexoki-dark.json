@@ -1,0 +1,125 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Flexoki Dark",
+  "app": {
+    "id": "flexoki-dark",
+    "label": "Flexoki Dark",
+    "name": "Flexoki Dark",
+    "dark": true,
+    "bg": [
+      16,
+      15,
+      15
+    ],
+    "panel": [
+      28,
+      27,
+      26
+    ],
+    "panel2": [
+      40,
+      39,
+      38
+    ],
+    "text": [
+      206,
+      205,
+      195
+    ],
+    "on": [
+      67,
+      133,
+      190
+    ],
+    "on_text": "white",
+    "accent": [
+      209,
+      77,
+      65
+    ],
+    "groove": [
+      10,
+      9,
+      9
+    ],
+    "scroll": [
+      52,
+      51,
+      49
+    ],
+    "scroll_hi": [
+      67,
+      133,
+      190
+    ],
+    "chat_bg": [
+      16,
+      15,
+      15
+    ],
+    "chat_fg": [
+      206,
+      205,
+      195
+    ]
+  },
+  "chat": {
+    "id": "flexoki-dark",
+    "label": "Flexoki Dark",
+    "bg": [
+      16,
+      15,
+      15
+    ],
+    "fg": [
+      206,
+      205,
+      195
+    ],
+    "fixed": true,
+    "ts": [
+      135,
+      133,
+      128
+    ],
+    "bracket": [
+      139,
+      126,
+      200
+    ],
+    "system": [
+      102,
+      128,
+      11
+    ],
+    "nicks": [
+      [
+        67,
+        133,
+        190
+      ],
+      [
+        209,
+        77,
+        65
+      ],
+      [
+        102,
+        128,
+        11
+      ],
+      [
+        173,
+        131,
+        1
+      ],
+      [
+        139,
+        126,
+        200
+      ]
+    ]
+  },
+  "wallpaper": ""
+}

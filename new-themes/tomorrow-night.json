@@ -1,0 +1,125 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Tomorrow Night",
+  "app": {
+    "id": "tomorrow-night",
+    "label": "Tomorrow Night",
+    "name": "Tomorrow Night",
+    "dark": true,
+    "bg": [
+      29,
+      31,
+      33
+    ],
+    "panel": [
+      40,
+      42,
+      46
+    ],
+    "panel2": [
+      55,
+      59,
+      65
+    ],
+    "text": [
+      197,
+      200,
+      198
+    ],
+    "on": [
+      129,
+      162,
+      190
+    ],
+    "on_text": "black",
+    "accent": [
+      178,
+      148,
+      187
+    ],
+    "groove": [
+      17,
+      18,
+      20
+    ],
+    "scroll": [
+      55,
+      59,
+      65
+    ],
+    "scroll_hi": [
+      129,
+      162,
+      190
+    ],
+    "chat_bg": [
+      29,
+      31,
+      33
+    ],
+    "chat_fg": [
+      197,
+      200,
+      198
+    ]
+  },
+  "chat": {
+    "id": "tomorrow-night",
+    "label": "Tomorrow Night",
+    "bg": [
+      29,
+      31,
+      33
+    ],
+    "fg": [
+      197,
+      200,
+      198
+    ],
+    "fixed": true,
+    "ts": [
+      150,
+      152,
+      150
+    ],
+    "bracket": [
+      138,
+      190,
+      183
+    ],
+    "system": [
+      181,
+      189,
+      104
+    ],
+    "nicks": [
+      [
+        129,
+        162,
+        190
+      ],
+      [
+        178,
+        148,
+        187
+      ],
+      [
+        181,
+        189,
+        104
+      ],
+      [
+        240,
+        198,
+        116
+      ],
+      [
+        204,
+        102,
+        102
+      ]
+    ]
+  },
+  "wallpaper": ""
+}

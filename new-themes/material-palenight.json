@@ -1,0 +1,125 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Material Palenight",
+  "app": {
+    "id": "material-palenight",
+    "label": "Material Palenight",
+    "name": "Material Palenight",
+    "dark": true,
+    "bg": [
+      41,
+      45,
+      62
+    ],
+    "panel": [
+      32,
+      35,
+      49
+    ],
+    "panel2": [
+      52,
+      57,
+      79
+    ],
+    "text": [
+      166,
+      172,
+      205
+    ],
+    "on": [
+      130,
+      170,
+      255
+    ],
+    "on_text": "black",
+    "accent": [
+      199,
+      146,
+      234
+    ],
+    "groove": [
+      27,
+      30,
+      43
+    ],
+    "scroll": [
+      68,
+      75,
+      106
+    ],
+    "scroll_hi": [
+      130,
+      170,
+      255
+    ],
+    "chat_bg": [
+      30,
+      34,
+      48
+    ],
+    "chat_fg": [
+      166,
+      172,
+      205
+    ]
+  },
+  "chat": {
+    "id": "material-palenight",
+    "label": "Material Palenight",
+    "bg": [
+      30,
+      34,
+      48
+    ],
+    "fg": [
+      166,
+      172,
+      205
+    ],
+    "fixed": true,
+    "ts": [
+      103,
+      110,
+      149
+    ],
+    "bracket": [
+      137,
+      221,
+      255
+    ],
+    "system": [
+      195,
+      232,
+      141
+    ],
+    "nicks": [
+      [
+        130,
+        170,
+        255
+      ],
+      [
+        199,
+        146,
+        234
+      ],
+      [
+        195,
+        232,
+        141
+      ],
+      [
+        255,
+        203,
+        107
+      ],
+      [
+        240,
+        113,
+        120
+      ]
+    ]
+  },
+  "wallpaper": ""
+}

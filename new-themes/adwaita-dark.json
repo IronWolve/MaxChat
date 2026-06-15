@@ -1,0 +1,125 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Adwaita Dark",
+  "app": {
+    "id": "adwaita-dark",
+    "label": "Adwaita Dark",
+    "name": "Adwaita Dark",
+    "dark": true,
+    "bg": [
+      30,
+      30,
+      30
+    ],
+    "panel": [
+      36,
+      36,
+      36
+    ],
+    "panel2": [
+      48,
+      48,
+      48
+    ],
+    "text": [
+      238,
+      238,
+      236
+    ],
+    "on": [
+      53,
+      132,
+      228
+    ],
+    "on_text": "white",
+    "accent": [
+      51,
+      209,
+      122
+    ],
+    "groove": [
+      21,
+      21,
+      21
+    ],
+    "scroll": [
+      74,
+      74,
+      74
+    ],
+    "scroll_hi": [
+      53,
+      132,
+      228
+    ],
+    "chat_bg": [
+      30,
+      30,
+      30
+    ],
+    "chat_fg": [
+      238,
+      238,
+      236
+    ]
+  },
+  "chat": {
+    "id": "adwaita-dark",
+    "label": "Adwaita Dark",
+    "bg": [
+      30,
+      30,
+      30
+    ],
+    "fg": [
+      238,
+      238,
+      236
+    ],
+    "fixed": true,
+    "ts": [
+      154,
+      153,
+      150
+    ],
+    "bracket": [
+      98,
+      160,
+      234
+    ],
+    "system": [
+      51,
+      209,
+      122
+    ],
+    "nicks": [
+      [
+        98,
+        160,
+        234
+      ],
+      [
+        51,
+        209,
+        122
+      ],
+      [
+        246,
+        211,
+        45
+      ],
+      [
+        224,
+        27,
+        36
+      ],
+      [
+        220,
+        138,
+        221
+      ]
+    ]
+  },
+  "wallpaper": ""
+}

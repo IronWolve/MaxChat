@@ -1,0 +1,141 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Industrial Rust",
+  "app": {
+    "id": "industrial-rust",
+    "label": "Industrial Rust",
+    "name": "Industrial Rust",
+    "dark": true,
+    "bg": [
+      20,
+      20,
+      20
+    ],
+    "panel": [
+      34,
+      32,
+      29
+    ],
+    "panel2": [
+      56,
+      51,
+      44
+    ],
+    "text": [
+      225,
+      216,
+      200
+    ],
+    "on": [
+      184,
+      95,
+      33
+    ],
+    "on_text": "black",
+    "accent": [
+      240,
+      163,
+      64
+    ],
+    "groove": [
+      7,
+      7,
+      7
+    ],
+    "scroll": [
+      91,
+      81,
+      66
+    ],
+    "scroll_hi": [
+      184,
+      95,
+      33
+    ],
+    "scrollHi": [
+      184,
+      95,
+      33
+    ],
+    "chat_bg": [
+      16,
+      16,
+      15
+    ],
+    "chat_fg": [
+      225,
+      216,
+      200
+    ],
+    "bracket": [
+      240,
+      163,
+      64
+    ],
+    "system": [
+      201,
+      121,
+      58
+    ],
+    "wallpaper": "industrial-rust.png"
+  },
+  "chat": {
+    "id": "industrial-rust",
+    "label": "Industrial Rust",
+    "bg": [
+      16,
+      16,
+      15
+    ],
+    "fg": [
+      225,
+      216,
+      200
+    ],
+    "fixed": true,
+    "ts": [
+      139,
+      129,
+      116
+    ],
+    "bracket": [
+      240,
+      163,
+      64
+    ],
+    "system": [
+      201,
+      121,
+      58
+    ],
+    "nicks": [
+      [
+        184,
+        95,
+        33
+      ],
+      [
+        240,
+        163,
+        64
+      ],
+      [
+        125,
+        111,
+        89
+      ],
+      [
+        225,
+        216,
+        200
+      ],
+      [
+        91,
+        81,
+        66
+      ]
+    ]
+  },
+  "wallpaper": "industrial-rust.png"
+}

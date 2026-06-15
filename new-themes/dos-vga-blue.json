@@ -1,0 +1,125 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "DOS VGA Blue",
+  "app": {
+    "id": "dos-vga-blue",
+    "label": "DOS VGA Blue",
+    "name": "DOS VGA Blue",
+    "dark": true,
+    "bg": [
+      0,
+      0,
+      170
+    ],
+    "panel": [
+      0,
+      0,
+      128
+    ],
+    "panel2": [
+      0,
+      0,
+      204
+    ],
+    "text": [
+      255,
+      255,
+      255
+    ],
+    "on": [
+      255,
+      255,
+      85
+    ],
+    "on_text": "black",
+    "accent": [
+      85,
+      255,
+      255
+    ],
+    "groove": [
+      0,
+      0,
+      85
+    ],
+    "scroll": [
+      85,
+      85,
+      255
+    ],
+    "scroll_hi": [
+      255,
+      255,
+      85
+    ],
+    "chat_bg": [
+      0,
+      0,
+      128
+    ],
+    "chat_fg": [
+      255,
+      255,
+      255
+    ]
+  },
+  "chat": {
+    "id": "dos-vga-blue",
+    "label": "DOS VGA Blue",
+    "bg": [
+      0,
+      0,
+      128
+    ],
+    "fg": [
+      255,
+      255,
+      255
+    ],
+    "fixed": true,
+    "ts": [
+      170,
+      170,
+      170
+    ],
+    "bracket": [
+      85,
+      255,
+      255
+    ],
+    "system": [
+      85,
+      255,
+      85
+    ],
+    "nicks": [
+      [
+        85,
+        255,
+        255
+      ],
+      [
+        255,
+        255,
+        85
+      ],
+      [
+        85,
+        255,
+        85
+      ],
+      [
+        255,
+        85,
+        255
+      ],
+      [
+        255,
+        85,
+        85
+      ]
+    ]
+  },
+  "wallpaper": ""
+}

@@ -1,0 +1,141 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Amiga Workbench Blue",
+  "app": {
+    "id": "amiga-workbench-blue",
+    "label": "Amiga Workbench Blue",
+    "name": "Amiga Workbench Blue",
+    "dark": true,
+    "bg": [
+      0,
+      80,
+      164
+    ],
+    "panel": [
+      27,
+      114,
+      201
+    ],
+    "panel2": [
+      245,
+      139,
+      47
+    ],
+    "text": [
+      255,
+      255,
+      255
+    ],
+    "on": [
+      255,
+      179,
+      71
+    ],
+    "on_text": "black",
+    "accent": [
+      255,
+      255,
+      255
+    ],
+    "groove": [
+      0,
+      45,
+      93
+    ],
+    "scroll": [
+      106,
+      167,
+      226
+    ],
+    "scroll_hi": [
+      255,
+      179,
+      71
+    ],
+    "scrollHi": [
+      255,
+      179,
+      71
+    ],
+    "chat_bg": [
+      6,
+      63,
+      126
+    ],
+    "chat_fg": [
+      255,
+      255,
+      255
+    ],
+    "bracket": [
+      255,
+      179,
+      71
+    ],
+    "system": [
+      255,
+      211,
+      124
+    ],
+    "wallpaper": "amiga-workbench-blue.png"
+  },
+  "chat": {
+    "id": "amiga-workbench-blue",
+    "label": "Amiga Workbench Blue",
+    "bg": [
+      6,
+      63,
+      126
+    ],
+    "fg": [
+      255,
+      255,
+      255
+    ],
+    "fixed": true,
+    "ts": [
+      172,
+      211,
+      255
+    ],
+    "bracket": [
+      255,
+      179,
+      71
+    ],
+    "system": [
+      255,
+      211,
+      124
+    ],
+    "nicks": [
+      [
+        255,
+        255,
+        255
+      ],
+      [
+        255,
+        179,
+        71
+      ],
+      [
+        172,
+        211,
+        255
+      ],
+      [
+        245,
+        139,
+        47
+      ],
+      [
+        213,
+        234,
+        255
+      ]
+    ]
+  },
+  "wallpaper": "amiga-workbench-blue.png"
+}

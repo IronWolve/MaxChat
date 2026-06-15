@@ -1,0 +1,1475 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MaxChat Theme Builder</title>
+  <style>
+    :root {
+      --page-bg: #111318;
+      --page-panel: #1b1f29;
+      --page-panel-2: #252b36;
+      --page-text: #e8edf6;
+      --page-dim: #9ca8b8;
+      --page-accent: #5eead4;
+      --page-border: #394150;
+      --radius: 8px;
+      --mono: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+      --ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--page-bg);
+      color: var(--page-text);
+      font-family: var(--ui);
+      font-size: 14px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--page-border);
+      background: #0d1016;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.2;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    button, select, input[type="text"], input[type="number"] {
+      background: var(--page-panel-2);
+      color: var(--page-text);
+      border: 1px solid var(--page-border);
+      border-radius: 6px;
+      min-height: 34px;
+      padding: 6px 10px;
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      font-weight: 650;
+    }
+
+    button:hover, select:hover {
+      border-color: var(--page-accent);
+    }
+
+    button.primary {
+      background: #16685f;
+      border-color: #31c7b3;
+      color: white;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(360px, 560px) minmax(420px, 1fr);
+      gap: 16px;
+      padding: 16px;
+    }
+
+    section {
+      background: var(--page-panel);
+      border: 1px solid var(--page-border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    section > h2 {
+      margin: 0;
+      padding: 12px 14px;
+      font-size: 15px;
+      background: var(--page-panel-2);
+      border-bottom: 1px solid var(--page-border);
+    }
+
+    .panel-body {
+      padding: 14px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    .field.full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      color: var(--page-dim);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .02em;
+      text-transform: uppercase;
+    }
+
+    .color-row {
+      display: grid;
+      grid-template-columns: 44px 1fr;
+      gap: 7px;
+      align-items: center;
+    }
+
+    input[type="color"] {
+      width: 44px;
+      height: 34px;
+      padding: 0;
+      border: 1px solid var(--page-border);
+      border-radius: 6px;
+      background: transparent;
+    }
+
+    .muted {
+      color: var(--page-dim);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .font-grid {
+      display: grid;
+      gap: 8px;
+    }
+
+    .font-row {
+      display: grid;
+      grid-template-columns: 76px minmax(130px, 1fr) 76px 96px;
+      gap: 7px;
+      align-items: center;
+    }
+
+    .font-row strong {
+      color: var(--page-text);
+      font-size: 12px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 4px;
+      padding: 8px;
+      background: #10141c;
+      border-bottom: 1px solid var(--page-border);
+    }
+
+    .tab {
+      flex: 1;
+      border-radius: 6px;
+      background: transparent;
+    }
+
+    .tab.active {
+      background: #263344;
+      border-color: #4b6078;
+    }
+
+    .tab-page {
+      display: none;
+    }
+
+    .tab-page.active {
+      display: block;
+    }
+
+    .preview-wrap {
+      position: sticky;
+      top: 84px;
+    }
+
+    .preview {
+      min-height: 620px;
+      border-radius: var(--radius);
+      overflow: hidden;
+      background-color: var(--app-bg);
+      background-image: var(--wallpaper-image), var(--wallpaper-pattern);
+      background-size: cover, auto;
+      background-position: center, center;
+      color: var(--app-text);
+      border: 1px solid var(--app-groove);
+      font-family: var(--font-app-family), var(--mono);
+      font-size: var(--font-app-size);
+      font-weight: var(--font-app-weight);
+    }
+
+    .preview-title {
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--app-panel-2);
+      border-bottom: 1px solid var(--app-groove);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .has-wallpaper .preview-title,
+    .has-wallpaper .preview-menu,
+    .has-wallpaper .preview-buttons,
+    .has-wallpaper .preview-topic,
+    .has-wallpaper .side,
+    .has-wallpaper .members,
+    .has-wallpaper .input-row {
+      backdrop-filter: blur(1px);
+    }
+
+    .has-wallpaper .preview-title,
+    .has-wallpaper .preview-menu,
+    .has-wallpaper .preview-topic {
+      background: color-mix(in srgb, var(--app-panel-2) 78%, transparent);
+    }
+
+    .has-wallpaper .preview-buttons,
+    .has-wallpaper .side,
+    .has-wallpaper .members,
+    .has-wallpaper .input-row {
+      background: color-mix(in srgb, var(--app-panel) 72%, transparent);
+    }
+
+    .has-wallpaper .chat {
+      background: color-mix(in srgb, var(--chat-bg) 86%, transparent);
+    }
+
+    .preview-menu {
+      display: flex;
+      gap: 18px;
+      align-items: center;
+      height: 40px;
+      padding: 0 14px;
+      background: var(--app-panel-2);
+      border-bottom: 1px solid var(--app-groove);
+      font-weight: 700;
+    }
+
+    .preview-buttons {
+      display: flex;
+      gap: 6px;
+      padding: 8px;
+      background: var(--app-panel);
+      border-bottom: 1px solid var(--app-groove);
+    }
+
+    .preview-button {
+      padding: 6px 14px;
+      border: 1px solid var(--app-groove);
+      background: var(--app-panel-2);
+      border-radius: 4px;
+    }
+
+    .preview-button.active {
+      background: var(--app-on);
+      color: var(--app-on-text);
+    }
+
+    .preview-topic {
+      margin: 8px;
+      padding: 7px 10px;
+      background: var(--app-panel-2);
+      border: 1px solid var(--app-groove);
+      font-family: var(--font-topic-family), var(--font-app-family), var(--mono);
+      font-size: var(--font-topic-size);
+      font-weight: var(--font-topic-weight);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .preview-layout {
+      display: grid;
+      grid-template-columns: 170px 1fr 180px;
+      gap: 8px;
+      padding: 0 8px 8px;
+      min-height: 444px;
+    }
+
+    .side, .members {
+      background: var(--app-panel);
+      border: 1px solid var(--app-groove);
+      padding: 8px;
+      overflow: hidden;
+      font-family: var(--font-list-family), var(--font-app-family), var(--mono);
+      font-size: var(--font-list-size);
+      font-weight: var(--font-list-weight);
+    }
+
+    .tree-head, .members-head {
+      color: var(--app-text);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .tree-item {
+      padding: 5px 8px;
+      margin: 2px 0;
+      border-radius: 3px;
+    }
+
+    .tree-item.active {
+      background: var(--app-on);
+      color: var(--app-on-text);
+    }
+
+    .chat {
+      background: var(--chat-bg);
+      color: var(--chat-fg);
+      border: 1px solid var(--app-groove);
+      display: grid;
+      grid-template-rows: 1fr 39px;
+      min-width: 0;
+      font-family: var(--font-chat-family), var(--mono);
+      font-size: var(--font-chat-size);
+      font-weight: var(--font-chat-weight);
+    }
+
+    .chat-lines {
+      padding: 10px;
+      overflow: hidden;
+    }
+
+    .chat-line {
+      display: grid;
+      grid-template-columns: 64px 118px 12px minmax(0, 1fr);
+      gap: 7px;
+      align-items: baseline;
+      min-height: 23px;
+      white-space: nowrap;
+    }
+
+    .time { color: var(--chat-ts); }
+    .nick {
+      color: var(--nick-1);
+      text-align: right;
+      font-family: var(--font-nick-family), var(--font-chat-family), var(--mono);
+      font-size: var(--font-nick-size);
+      font-weight: var(--font-nick-weight);
+    }
+    .nick.n2 { color: var(--nick-2); }
+    .nick.n3 { color: var(--nick-3); }
+    .bar { color: var(--chat-bracket); }
+    .msg { overflow: hidden; text-overflow: ellipsis; }
+    .system { color: var(--chat-system); }
+
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px;
+      background: var(--app-panel);
+      border-top: 1px solid var(--app-groove);
+      font-family: var(--font-status-family), var(--font-app-family), var(--mono);
+      font-size: var(--font-status-size);
+      font-weight: var(--font-status-weight);
+    }
+
+    .fake-input {
+      flex: 1;
+      min-width: 0;
+      padding: 5px 8px;
+      background: var(--chat-bg);
+      color: var(--chat-fg);
+      border: 1px solid var(--app-groove);
+    }
+
+    .member-line {
+      margin: 8px 0;
+      white-space: nowrap;
+    }
+
+    .json-box {
+      width: 100%;
+      min-height: 180px;
+      resize: vertical;
+      background: #0b0e13;
+      color: #d7e2f0;
+      border: 1px solid var(--page-border);
+      border-radius: 6px;
+      padding: 10px;
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+
+    .status {
+      min-height: 22px;
+      color: var(--page-accent);
+      font-size: 12px;
+    }
+
+    @media (max-width: 980px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+
+      .preview-wrap {
+        position: static;
+      }
+
+      .preview-layout {
+        grid-template-columns: 140px 1fr;
+      }
+
+      .members {
+        display: none;
+      }
+
+      .font-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>MaxChat Theme Builder</h1>
+      <div class="muted">Build paired app + chat theme-pack JSON files.</div>
+    </div>
+    <div class="toolbar">
+      <select id="presetSelect" title="Preset">
+        <option value="">Preset...</option>
+      </select>
+      <button id="loadButton">Load JSON</button>
+      <input id="fileInput" type="file" accept=".json,application/json">
+      <button id="copyButton">Copy JSON</button>
+      <button id="saveButton" class="primary">Save Theme Pack</button>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <div class="tabs">
+        <button class="tab active" data-tab="meta">Meta</button>
+        <button class="tab" data-tab="app">App</button>
+        <button class="tab" data-tab="chat">Chat</button>
+        <button class="tab" data-tab="json">JSON</button>
+      </div>
+      <div class="panel-body">
+        <div id="tab-meta" class="tab-page active">
+          <div class="grid">
+            <div class="field full">
+              <label for="themeName">Theme name</label>
+              <input id="themeName" type="text" value="My MaxChat Theme">
+            </div>
+            <div class="field">
+              <label for="themeId">Theme ID</label>
+              <input id="themeId" type="text" value="my-maxchat-theme">
+            </div>
+            <div class="field">
+              <label for="wallpaper">Wallpaper</label>
+              <select id="wallpaper">
+                <option value="">None</option>
+                <option value="Theme Default">Theme Default</option>
+                <option value="Off">Off</option>
+                <option value="alien-terminal.png">alien-terminal.png</option>
+                <option value="amiga-workbench-blue.png">amiga-workbench-blue.png</option>
+                <option value="amiga-workbench-grey.png">amiga-workbench-grey.png</option>
+                <option value="aqua-glass.png">aqua-glass.png</option>
+                <option value="aurora.jpg">aurora.jpg</option>
+                <option value="bubblegum-pop.png">bubblegum-pop.png</option>
+                <option value="christmas-lights.png">christmas-lights.png</option>
+                <option value="circuit.png">circuit.png</option>
+                <option value="cyber-goth.png">cyber-goth.png</option>
+                <option value="dark-academia.png">dark-academia.png</option>
+                <option value="deep-waves.jpg">deep-waves.jpg</option>
+                <option value="dusk-peaks.jpg">dusk-peaks.jpg</option>
+                <option value="ember-bokeh.jpg">ember-bokeh.jpg</option>
+                <option value="fantasy-raid.png">fantasy-raid.png</option>
+                <option value="gothic-cathedral.png">gothic-cathedral.png</option>
+                <option value="halloween-midnight.png">halloween-midnight.png</option>
+                <option value="hex-mesh.png">hex-mesh.png</option>
+                <option value="hotdog-stand.png">hotdog-stand.png</option>
+                <option value="industrial-rust.png">industrial-rust.png</option>
+                <option value="matrix-rain.jpg">matrix-rain.jpg</option>
+                <option value="nebula.jpg">nebula.jpg</option>
+                <option value="noir-detective.png">noir-detective.png</option>
+                <option value="punk-zine.png">punk-zine.png</option>
+                <option value="radioactive-slime.png">radioactive-slime.png</option>
+                <option value="rainbow-terminal.png">rainbow-terminal.png</option>
+                <option value="synthwave.png">synthwave.png</option>
+                <option value="tank-garage.png">tank-garage.png</option>
+                <option value="vaporwave-1.jpg">vaporwave-1.jpg</option>
+                <option value="vaporwave-2.jpg">vaporwave-2.jpg</option>
+                <option value="vhs-horror.png">vhs-horror.png</option>
+                <option value="__custom__">Custom...</option>
+              </select>
+            </div>
+            <div class="field hidden" id="wallpaperCustomField">
+              <label for="wallpaperCustom">Custom wallpaper value</label>
+              <input id="wallpaperCustom" type="text" placeholder="filename.jpg or full path">
+            </div>
+            <div class="field">
+              <label for="darkMode">Theme type</label>
+              <select id="darkMode">
+                <option value="true">Dark</option>
+                <option value="false">Light</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="fixedFont">Chat font mode</label>
+              <select id="fixedFont">
+                <option value="true">Fixed / terminal</option>
+                <option value="false">Proportional</option>
+              </select>
+            </div>
+            <div class="field full">
+              <label for="fontPreset">Font preset</label>
+              <select id="fontPreset"></select>
+            </div>
+            <div class="field full">
+              <label>Font fields</label>
+              <div id="fontFields" class="font-grid"></div>
+            </div>
+            <p class="field full muted">
+              Save exports a MaxChat theme pack with both <code>app</code> and <code>chat</code> sections.
+              Load accepts theme packs, bare app themes, or bare chat themes.
+            </p>
+          </div>
+        </div>
+
+        <div id="tab-app" class="tab-page">
+          <div id="appFields" class="grid"></div>
+        </div>
+
+        <div id="tab-chat" class="tab-page">
+          <div id="chatFields" class="grid"></div>
+        </div>
+
+        <div id="tab-json" class="tab-page">
+          <div class="field">
+            <label for="jsonOutput">Generated JSON</label>
+            <textarea id="jsonOutput" class="json-box" spellcheck="false"></textarea>
+          </div>
+          <p class="muted">You can edit colors on the other tabs, or paste JSON here and use Load JSON from a file.</p>
+        </div>
+        <div id="status" class="status"></div>
+      </div>
+    </section>
+
+    <section class="preview-wrap">
+      <h2>Live Preview</h2>
+      <div class="preview" id="preview">
+        <div class="preview-title" id="previewTitle">MaxChat - Theme Preview</div>
+        <div class="preview-menu">
+          <span>Server</span><span>View</span><span>Tools</span><span>Settings</span><span>Comic</span><span>Help</span>
+        </div>
+        <div class="preview-buttons">
+          <div class="preview-button">Servers</div>
+          <div class="preview-button">Members</div>
+          <div class="preview-button">Channels</div>
+          <div class="preview-button active">Comic</div>
+          <div class="preview-button">Prefs</div>
+        </div>
+        <div class="preview-topic">Welcome to MaxChat - theme preview topic text and URL https://example.net/image.png</div>
+        <div class="preview-layout">
+          <div class="side">
+            <div class="tree-head">synIRC</div>
+            <div class="tree-item active">#maxchat</div>
+            <div class="tree-item">#retro</div>
+            <div class="tree-item">Status</div>
+          </div>
+          <div class="chat">
+            <div class="chat-lines">
+              <div class="chat-line"><span class="time">08:52</span><span class="nick">system</span><span class="bar">|</span><span class="msg system">Connected to network as Ada</span></div>
+              <div class="chat-line"><span class="time">08:53</span><span class="nick n2">Curie</span><span class="bar">|</span><span class="msg">this theme has matching app and chat colors</span></div>
+              <div class="chat-line"><span class="time">08:54</span><span class="nick n3">Einstein</span><span class="bar">|</span><span class="msg">preview checks menus, panels, chat, nicks, and status</span></div>
+              <div class="chat-line"><span class="time">08:55</span><span class="nick">Turing</span><span class="bar">|</span><span class="msg">save it as a MaxChat theme pack JSON</span></div>
+              <div class="chat-line"><span class="time">08:56</span><span class="nick n2">system</span><span class="bar">|</span><span class="msg system">Topic set by MaxChat Theme Builder</span></div>
+              <div class="chat-line"><span class="time">08:57</span><span class="nick n3">Noether</span><span class="bar">|</span><span class="msg">ANSI colors should still be readable here</span></div>
+              <div class="chat-line"><span class="time">08:58</span><span class="nick">Feynman</span><span class="bar">|</span><span class="msg">long chat lines should look comfortable and not muddy</span></div>
+            </div>
+            <div class="input-row">
+              <span>Ada</span>
+              <div class="fake-input">Message...</div>
+            </div>
+          </div>
+          <div class="members">
+            <div class="members-head">25 users</div>
+            <div class="member-line" style="color:var(--nick-1)">@Hopper</div>
+            <div class="member-line" style="color:var(--nick-2)">&amp;Lovelace</div>
+            <div class="member-line" style="color:var(--nick-3)">+Newton</div>
+            <div class="member-line" style="color:var(--app-accent)">Galileo</div>
+            <div class="member-line">Tesla</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const appFields = [
+      ["bg", "Window background"], ["panel", "Panel"], ["panel2", "Toolbar / menu"],
+      ["text", "Text"], ["on", "Selection"], ["on_text", "Selection text"],
+      ["accent", "Accent"], ["groove", "Borders"], ["scroll", "Scrollbar"],
+      ["scroll_hi", "Scrollbar hover"], ["chat_bg", "Default chat bg"], ["chat_fg", "Default chat text"]
+    ];
+
+    const chatFields = [
+      ["bg", "Chat background"], ["fg", "Chat text"], ["ts", "Timestamp"],
+      ["bracket", "Separator"], ["system", "System lines"],
+      ["nick1", "Nick color 1"], ["nick2", "Nick color 2"], ["nick3", "Nick color 3"],
+      ["nick4", "Nick color 4"], ["nick5", "Nick color 5"], ["nick6", "Nick color 6"]
+    ];
+
+    const presets = {
+      "Adwaita Dark": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#1e1e1e", panel:"#242424", panel2:"#303030", text:"#eeeeec", on:"#3584e4", on_text:"#ffffff", accent:"#33d17a", groove:"#151515", scroll:"#4a4a4a", scroll_hi:"#3584e4", chat_bg:"#1e1e1e", chat_fg:"#eeeeec" },
+        chat: { bg:"#1e1e1e", fg:"#eeeeec", ts:"#9a9996", bracket:"#62a0ea", system:"#33d17a", nick1:"#62a0ea", nick2:"#33d17a", nick3:"#f6d32d", nick4:"#e01b24", nick5:"#dc8add", nick6:"#000000" }
+      },
+      "Adwaita Light": {
+        dark: false,
+        wallpaper: "",
+        app: { bg:"#fafafa", panel:"#ffffff", panel2:"#ebebeb", text:"#2e3436", on:"#1c71d8", on_text:"#ffffff", accent:"#2ec27e", groove:"#d5d5d5", scroll:"#c0c0c0", scroll_hi:"#1c71d8", chat_bg:"#ffffff", chat_fg:"#2e3436" },
+        chat: { bg:"#ffffff", fg:"#2e3436", ts:"#77767b", bracket:"#1a5fb4", system:"#26a269", nick1:"#1a5fb4", nick2:"#26a269", nick3:"#f5c211", nick4:"#c01c28", nick5:"#9141ac", nick6:"#000000" }
+      },
+      "Alien Terminal": {
+        dark: true,
+        wallpaper: "alien-terminal.png",
+        app: { bg:"#020b08", panel:"#061611", panel2:"#0a241a", text:"#ccffe8", on:"#38ff7a", on_text:"#000000", accent:"#6df7ff", groove:"#010403", scroll:"#174532", scroll_hi:"#38ff7a", chat_bg:"#000604", chat_fg:"#ccffe8" },
+        chat: { bg:"#000604", fg:"#ccffe8", ts:"#5ca98a", bracket:"#6df7ff", system:"#baff39", nick1:"#38ff7a", nick2:"#6df7ff", nick3:"#baff39", nick4:"#ccffe8", nick5:"#5ca98a", nick6:"#000000" }
+      },
+      "Amiga Workbench Blue": {
+        dark: true,
+        wallpaper: "amiga-workbench-blue.png",
+        app: { bg:"#0050a4", panel:"#1b72c9", panel2:"#f58b2f", text:"#ffffff", on:"#ffb347", on_text:"#000000", accent:"#ffffff", groove:"#002d5d", scroll:"#6aa7e2", scroll_hi:"#ffb347", chat_bg:"#063f7e", chat_fg:"#ffffff" },
+        chat: { bg:"#063f7e", fg:"#ffffff", ts:"#acd3ff", bracket:"#ffb347", system:"#ffd37c", nick1:"#ffffff", nick2:"#ffb347", nick3:"#acd3ff", nick4:"#f58b2f", nick5:"#d5eaff", nick6:"#000000" }
+      },
+      "Amiga Workbench Grey": {
+        dark: false,
+        wallpaper: "amiga-workbench-grey.png",
+        app: { bg:"#9a9a9a", panel:"#b8b8b8", panel2:"#d7d7d7", text:"#111111", on:"#004a9f", on_text:"#ffffff", accent:"#f28c28", groove:"#656565", scroll:"#8b8b8b", scroll_hi:"#004a9f", chat_bg:"#eeeeee", chat_fg:"#101010" },
+        chat: { bg:"#eeeeee", fg:"#101010", ts:"#686868", bracket:"#004a9f", system:"#9a5200", nick1:"#004a9f", nick2:"#9a5200", nick3:"#333333", nick4:"#f28c28", nick5:"#006aaf", nick6:"#000000" }
+      },
+      "Aqua Glass": {
+        dark: false,
+        wallpaper: "aqua-glass.png",
+        app: { bg:"#d9f6ff", panel:"#eefcff", panel2:"#b8eaff", text:"#12313d", on:"#2aa7ff", on_text:"#000000", accent:"#00c2d7", groove:"#77cde9", scroll:"#9eddf0", scroll_hi:"#2aa7ff", chat_bg:"#f7feff", chat_fg:"#12313d" },
+        chat: { bg:"#f7feff", fg:"#12313d", ts:"#5a8fa0", bracket:"#008fc7", system:"#1b74b9", nick1:"#008fc7", nick2:"#00c2d7", nick3:"#2aa7ff", nick4:"#2673a6", nick5:"#12313d", nick6:"#000000" }
+      },
+      "Arc Dark": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#2f343f", panel:"#383c4a", panel2:"#404552", text:"#d3dae3", on:"#5294e2", on_text:"#ffffff", accent:"#73d0ff", groove:"#262a33", scroll:"#4b5162", scroll_hi:"#5294e2", chat_bg:"#2f343f", chat_fg:"#d3dae3" },
+        chat: { bg:"#2f343f", fg:"#d3dae3", ts:"#8b93a2", bracket:"#73d0ff", system:"#7bd88f", nick1:"#5294e2", nick2:"#73d0ff", nick3:"#7bd88f", nick4:"#f9c859", nick5:"#fc5d7c", nick6:"#000000" }
+      },
+      "Arc Light": {
+        dark: false,
+        wallpaper: "",
+        app: { bg:"#f5f6f7", panel:"#ffffff", panel2:"#e7e8eb", text:"#2f343f", on:"#5294e2", on_text:"#ffffff", accent:"#2679db", groove:"#d0d2d6", scroll:"#c2c5cc", scroll_hi:"#5294e2", chat_bg:"#ffffff", chat_fg:"#2f343f" },
+        chat: { bg:"#ffffff", fg:"#2f343f", ts:"#6f7785", bracket:"#2679db", system:"#2d936c", nick1:"#2679db", nick2:"#2d936c", nick3:"#b57900", nick4:"#c6262e", nick5:"#7a3e9d", nick6:"#000000" }
+      },
+      "Atom One Light": {
+        dark: false,
+        wallpaper: "",
+        app: { bg:"#fafafa", panel:"#f0f0f0", panel2:"#e5e5e6", text:"#383a42", on:"#4078f2", on_text:"#ffffff", accent:"#a626a4", groove:"#d0d0d0", scroll:"#c6c6c6", scroll_hi:"#4078f2", chat_bg:"#fafafa", chat_fg:"#383a42" },
+        chat: { bg:"#fafafa", fg:"#383a42", ts:"#a0a1a7", bracket:"#0184bc", system:"#50a14f", nick1:"#4078f2", nick2:"#a626a4", nick3:"#50a14f", nick4:"#c18401", nick5:"#e45649", nick6:"#000000" }
+      },
+      "Ayu Dark": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#0f1419", panel:"#151a20", panel2:"#1f2430", text:"#b3b1ad", on:"#ffb454", on_text:"#000000", accent:"#59c2ff", groove:"#090d12", scroll:"#2d3640", scroll_hi:"#ffb454", chat_bg:"#0b0f14", chat_fg:"#b3b1ad" },
+        chat: { bg:"#0b0f14", fg:"#b3b1ad", ts:"#5c6773", bracket:"#d2a6ff", system:"#aad94c", nick1:"#ffb454", nick2:"#59c2ff", nick3:"#aad94c", nick4:"#f07178", nick5:"#d2a6ff", nick6:"#000000" }
+      },
+      "Ayu Mirage": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#1f2430", panel:"#242936", panel2:"#2f3545", text:"#cbccc6", on:"#ffcc66", on_text:"#000000", accent:"#5ccfe6", groove:"#171b24", scroll:"#3a4357", scroll_hi:"#ffcc66", chat_bg:"#1a1f29", chat_fg:"#cbccc6" },
+        chat: { bg:"#1a1f29", fg:"#cbccc6", ts:"#707a8c", bracket:"#d4bfff", system:"#bae67e", nick1:"#ffcc66", nick2:"#5ccfe6", nick3:"#bae67e", nick4:"#f28779", nick5:"#d4bfff", nick6:"#000000" }
+      },
+      "Base16 Eighties": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#2d2d2d", panel:"#393939", panel2:"#515151", text:"#d3d0c8", on:"#6699cc", on_text:"#ffffff", accent:"#cc99cc", groove:"#1b1b1b", scroll:"#747369", scroll_hi:"#6699cc", chat_bg:"#2d2d2d", chat_fg:"#d3d0c8" },
+        chat: { bg:"#2d2d2d", fg:"#d3d0c8", ts:"#a09f93", bracket:"#66cccc", system:"#99cc99", nick1:"#6699cc", nick2:"#cc99cc", nick3:"#99cc99", nick4:"#ffcc66", nick5:"#f2777a", nick6:"#000000" }
+      },
+      "Base16 Ocean": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#2b303b", panel:"#343d46", panel2:"#4f5b66", text:"#c0c5ce", on:"#8fa1b3", on_text:"#000000", accent:"#b48ead", groove:"#1b1f27", scroll:"#65737e", scroll_hi:"#8fa1b3", chat_bg:"#2b303b", chat_fg:"#c0c5ce" },
+        chat: { bg:"#2b303b", fg:"#c0c5ce", ts:"#a7adba", bracket:"#96b5b4", system:"#a3be8c", nick1:"#8fa1b3", nick2:"#b48ead", nick3:"#a3be8c", nick4:"#ebcb8b", nick5:"#bf616a", nick6:"#000000" }
+      },
+      "Bubblegum Pop": {
+        dark: false,
+        wallpaper: "bubblegum-pop.png",
+        app: { bg:"#ffd6ef", panel:"#ffe8f6", panel2:"#ffb3dd", text:"#51263d", on:"#ff5fb7", on_text:"#ffffff", accent:"#78dfff", groove:"#e58fc5", scroll:"#f3acd2", scroll_hi:"#ff5fb7", chat_bg:"#fff3fb", chat_fg:"#51263d" },
+        chat: { bg:"#fff3fb", fg:"#51263d", ts:"#9f7190", bracket:"#00a7cf", system:"#d63384", nick1:"#ff5fb7", nick2:"#78dfff", nick3:"#b779ff", nick4:"#ff9ed8", nick5:"#51263d", nick6:"#000000" }
+      },
+      "Catppuccin Frappe": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#303446", panel:"#292c3c", panel2:"#414559", text:"#c6d0f5", on:"#8caaee", on_text:"#000000", accent:"#ca9ee6", groove:"#232634", scroll:"#51576d", scroll_hi:"#8caaee", chat_bg:"#232634", chat_fg:"#c6d0f5" },
+        chat: { bg:"#232634", fg:"#c6d0f5", ts:"#949cbb", bracket:"#babbf1", system:"#85c1dc", nick1:"#8caaee", nick2:"#ca9ee6", nick3:"#a6d189", nick4:"#e5c890", nick5:"#e78284", nick6:"#000000" }
+      },
+      "Catppuccin Latte": {
+        dark: false,
+        wallpaper: "",
+        app: { bg:"#eff1f5", panel:"#e6e9ef", panel2:"#ccd0da", text:"#4c4f69", on:"#1e66f5", on_text:"#ffffff", accent:"#8839ef", groove:"#dce0e8", scroll:"#bcc0cc", scroll_hi:"#1e66f5", chat_bg:"#eff1f5", chat_fg:"#4c4f69" },
+        chat: { bg:"#eff1f5", fg:"#4c4f69", ts:"#7c7f93", bracket:"#7287fd", system:"#209fb5", nick1:"#1e66f5", nick2:"#8839ef", nick3:"#40a02b", nick4:"#df8e1d", nick5:"#d20f39", nick6:"#000000" }
+      },
+      "Catppuccin Macchiato": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#24273a", panel:"#1e2030", panel2:"#363a4f", text:"#cad3f5", on:"#8aadf4", on_text:"#000000", accent:"#c6a0f6", groove:"#181926", scroll:"#494d64", scroll_hi:"#8aadf4", chat_bg:"#181926", chat_fg:"#cad3f5" },
+        chat: { bg:"#181926", fg:"#cad3f5", ts:"#939ab7", bracket:"#b7bdf8", system:"#7dc4e4", nick1:"#8aadf4", nick2:"#c6a0f6", nick3:"#a6da95", nick4:"#eed49f", nick5:"#ed8796", nick6:"#000000" }
+      },
+      "Christmas Lights": {
+        dark: true,
+        wallpaper: "christmas-lights.png",
+        app: { bg:"#082415", panel:"#123522", panel2:"#1f4a2e", text:"#fff7e6", on:"#d62828", on_text:"#ffffff", accent:"#fcbf49", groove:"#04140c", scroll:"#2b6040", scroll_hi:"#d62828", chat_bg:"#061b10", chat_fg:"#fff7e6" },
+        chat: { bg:"#061b10", fg:"#fff7e6", ts:"#7fbf8f", bracket:"#fcbf49", system:"#ff5a5f", nick1:"#ff5a5f", nick2:"#fcbf49", nick3:"#80ed99", nick4:"#ffffff", nick5:"#d62828", nick6:"#000000" }
+      },
+      "Cobalt2": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#193549", panel:"#122738", panel2:"#1f4662", text:"#ffffff", on:"#ffc600", on_text:"#000000", accent:"#00ff9c", groove:"#0d1f2d", scroll:"#2d5a78", scroll_hi:"#ffc600", chat_bg:"#0f2433", chat_fg:"#ffffff" },
+        chat: { bg:"#0f2433", fg:"#ffffff", ts:"#80a8c2", bracket:"#ff9d00", system:"#00ff9c", nick1:"#ffc600", nick2:"#00ff9c", nick3:"#ff628c", nick4:"#9effff", nick5:"#ff9d00", nick6:"#000000" }
+      },
+      "Commodore 64": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#40318d", panel:"#352879", panel2:"#4b3aa4", text:"#a59eff", on:"#8b7cff", on_text:"#ffffff", accent:"#ffffff", groove:"#211650", scroll:"#5a4bbb", scroll_hi:"#8b7cff", chat_bg:"#40318d", chat_fg:"#a59eff" },
+        chat: { bg:"#40318d", fg:"#a59eff", ts:"#7c71da", bracket:"#ffffff", system:"#6bd6ff", nick1:"#a59eff", nick2:"#ffffff", nick3:"#6bd6ff", nick4:"#ffb870", nick5:"#80ff80", nick6:"#000000" }
+      },
+      "Cyber Goth": {
+        dark: true,
+        wallpaper: "cyber-goth.png",
+        app: { bg:"#060609", panel:"#101018", panel2:"#1b1024", text:"#e8fff6", on:"#00ff8a", on_text:"#000000", accent:"#ff2bd6", groove:"#020204", scroll:"#3a2452", scroll_hi:"#00ff8a", chat_bg:"#030306", chat_fg:"#e8fff6" },
+        chat: { bg:"#030306", fg:"#e8fff6", ts:"#6f7f79", bracket:"#ff2bd6", system:"#9dff00", nick1:"#00ff8a", nick2:"#ff2bd6", nick3:"#9dff00", nick4:"#7a5cff", nick5:"#e8fff6", nick6:"#000000" }
+      },
+      "Dark Academia": {
+        dark: true,
+        wallpaper: "dark-academia.png",
+        app: { bg:"#18120c", panel:"#241b12", panel2:"#352719", text:"#eadfc8", on:"#9b6b2f", on_text:"#000000", accent:"#c9a86a", groove:"#0b0704", scroll:"#5c4328", scroll_hi:"#9b6b2f", chat_bg:"#120d08", chat_fg:"#eadfc8" },
+        chat: { bg:"#120d08", fg:"#eadfc8", ts:"#887961", bracket:"#c9a86a", system:"#d6a85a", nick1:"#c9a86a", nick2:"#9b6b2f", nick3:"#eadfc8", nick4:"#7c3f2b", nick5:"#887961", nick6:"#000000" }
+      },
+      "DOS VGA Blue": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#0000aa", panel:"#000080", panel2:"#0000cc", text:"#ffffff", on:"#ffff55", on_text:"#000000", accent:"#55ffff", groove:"#000055", scroll:"#5555ff", scroll_hi:"#ffff55", chat_bg:"#000080", chat_fg:"#ffffff" },
+        chat: { bg:"#000080", fg:"#ffffff", ts:"#aaaaaa", bracket:"#55ffff", system:"#55ff55", nick1:"#55ffff", nick2:"#ffff55", nick3:"#55ff55", nick4:"#ff55ff", nick5:"#ff5555", nick6:"#000000" }
+      },
+      "Fantasy Raid": {
+        dark: true,
+        wallpaper: "fantasy-raid.png",
+        app: { bg:"#15120c", panel:"#241c10", panel2:"#342713", text:"#f2e6c9", on:"#c9952c", on_text:"#000000", accent:"#4aa3ff", groove:"#0b0703", scroll:"#58411f", scroll_hi:"#c9952c", chat_bg:"#100c07", chat_fg:"#f2e6c9" },
+        chat: { bg:"#100c07", fg:"#f2e6c9", ts:"#8f7d5a", bracket:"#4aa3ff", system:"#e0b84a", nick1:"#c9952c", nick2:"#4aa3ff", nick3:"#9be564", nick4:"#d86bff", nick5:"#f2e6c9", nick6:"#000000" }
+      },
+      "Flexoki Dark": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#100f0f", panel:"#1c1b1a", panel2:"#282726", text:"#cecdc3", on:"#4385be", on_text:"#ffffff", accent:"#d14d41", groove:"#0a0909", scroll:"#343331", scroll_hi:"#4385be", chat_bg:"#100f0f", chat_fg:"#cecdc3" },
+        chat: { bg:"#100f0f", fg:"#cecdc3", ts:"#878580", bracket:"#8b7ec8", system:"#66800b", nick1:"#4385be", nick2:"#d14d41", nick3:"#66800b", nick4:"#ad8301", nick5:"#8b7ec8", nick6:"#000000" }
+      },
+      "Flexoki Light": {
+        dark: false,
+        wallpaper: "",
+        app: { bg:"#fffcf0", panel:"#f2f0e5", panel2:"#e6e4d9", text:"#100f0f", on:"#205ea6", on_text:"#ffffff", accent:"#af3029", groove:"#dad8ce", scroll:"#cecdc3", scroll_hi:"#205ea6", chat_bg:"#fffcf0", chat_fg:"#100f0f" },
+        chat: { bg:"#fffcf0", fg:"#100f0f", ts:"#6f6e69", bracket:"#5e409d", system:"#24837b", nick1:"#205ea6", nick2:"#af3029", nick3:"#66800b", nick4:"#ad8301", nick5:"#5e409d", nick6:"#000000" }
+      },
+      "Fluent Dark": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#202020", panel:"#2b2b2b", panel2:"#333333", text:"#f3f3f3", on:"#0078d4", on_text:"#ffffff", accent:"#00bcf2", groove:"#141414", scroll:"#4a4a4a", scroll_hi:"#0078d4", chat_bg:"#1b1b1b", chat_fg:"#f3f3f3" },
+        chat: { bg:"#1b1b1b", fg:"#f3f3f3", ts:"#9d9d9d", bracket:"#00bcf2", system:"#13a10e", nick1:"#00bcf2", nick2:"#0078d4", nick3:"#13a10e", nick4:"#fce100", nick5:"#e74856", nick6:"#000000" }
+      },
+      "Fluent Light": {
+        dark: false,
+        wallpaper: "",
+        app: { bg:"#f3f3f3", panel:"#ffffff", panel2:"#e5e5e5", text:"#202020", on:"#0078d4", on_text:"#ffffff", accent:"#005a9e", groove:"#d0d0d0", scroll:"#c8c8c8", scroll_hi:"#0078d4", chat_bg:"#ffffff", chat_fg:"#202020" },
+        chat: { bg:"#ffffff", fg:"#202020", ts:"#666666", bracket:"#005a9e", system:"#107c10", nick1:"#005a9e", nick2:"#107c10", nick3:"#c19c00", nick4:"#d13438", nick5:"#8764b8", nick6:"#000000" }
+      },
+      "GitHub Dark Dimmed": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#22272e", panel:"#2d333b", panel2:"#373e47", text:"#adbac7", on:"#539bf5", on_text:"#ffffff", accent:"#57ab5a", groove:"#1c2128", scroll:"#444c56", scroll_hi:"#539bf5", chat_bg:"#1c2128", chat_fg:"#adbac7" },
+        chat: { bg:"#1c2128", fg:"#adbac7", ts:"#768390", bracket:"#b083f0", system:"#539bf5", nick1:"#539bf5", nick2:"#57ab5a", nick3:"#c69026", nick4:"#e5534b", nick5:"#b083f0", nick6:"#000000" }
+      },
+      "GitHub Dark": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#0d1117", panel:"#161b22", panel2:"#21262d", text:"#c9d1d9", on:"#1f6feb", on_text:"#ffffff", accent:"#238636", groove:"#30363d", scroll:"#30363d", scroll_hi:"#58a6ff", chat_bg:"#0d1117", chat_fg:"#c9d1d9" },
+        chat: { bg:"#0d1117", fg:"#c9d1d9", ts:"#8b949e", bracket:"#a371f7", system:"#58a6ff", nick1:"#58a6ff", nick2:"#3fb950", nick3:"#d29922", nick4:"#f85149", nick5:"#bc8cff", nick6:"#000000" }
+      },
+      "GitHub Light": {
+        dark: false,
+        wallpaper: "",
+        app: { bg:"#ffffff", panel:"#f6f8fa", panel2:"#eaeef2", text:"#24292f", on:"#0969da", on_text:"#ffffff", accent:"#2da44e", groove:"#d0d7de", scroll:"#afb8c1", scroll_hi:"#0969da", chat_bg:"#ffffff", chat_fg:"#24292f" },
+        chat: { bg:"#ffffff", fg:"#24292f", ts:"#57606a", bracket:"#6f42c1", system:"#0969da", nick1:"#0969da", nick2:"#2da44e", nick3:"#bf8700", nick4:"#cf222e", nick5:"#8250df", nick6:"#000000" }
+      },
+      "Gothic Cathedral": {
+        dark: true,
+        wallpaper: "gothic-cathedral.png",
+        app: { bg:"#0b0710", panel:"#17101f", panel2:"#24142f", text:"#e8dde8", on:"#7f1d46", on_text:"#ffffff", accent:"#b7a7d8", groove:"#040206", scroll:"#3a2748", scroll_hi:"#7f1d46", chat_bg:"#09050d", chat_fg:"#e8dde8" },
+        chat: { bg:"#09050d", fg:"#e8dde8", ts:"#8d7b9b", bracket:"#b7a7d8", system:"#c43b5d", nick1:"#b7a7d8", nick2:"#c43b5d", nick3:"#7f1d46", nick4:"#e8dde8", nick5:"#8d7b9b", nick6:"#000000" }
+      },
+      "Halloween Midnight": {
+        dark: true,
+        wallpaper: "halloween-midnight.png",
+        app: { bg:"#14091f", panel:"#231130", panel2:"#35184a", text:"#f8efe4", on:"#ff7a00", on_text:"#000000", accent:"#b455ff", groove:"#07030d", scroll:"#4b2865", scroll_hi:"#ff7a00", chat_bg:"#100718", chat_fg:"#f8efe4" },
+        chat: { bg:"#100718", fg:"#f8efe4", ts:"#9676aa", bracket:"#ff7a00", system:"#7be36c", nick1:"#ff7a00", nick2:"#b455ff", nick3:"#7be36c", nick4:"#f8efe4", nick5:"#d65aff", nick6:"#000000" }
+      },
+      "HexChat Classic": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#2e3436", panel:"#222729", panel2:"#3a4144", text:"#eeeeec", on:"#4a90d9", on_text:"#ffffff", accent:"#8ae234", groove:"#171a1c", scroll:"#555d60", scroll_hi:"#4a90d9", chat_bg:"#1d2021", chat_fg:"#eeeeec" },
+        chat: { bg:"#1d2021", fg:"#eeeeec", ts:"#888a85", bracket:"#729fcf", system:"#fce94f", nick1:"#729fcf", nick2:"#8ae234", nick3:"#fce94f", nick4:"#fcaf3e", nick5:"#ad7fa8", nick6:"#000000" }
+      },
+      "Hotdog Stand": {
+        dark: false,
+        wallpaper: "hotdog-stand.png",
+        app: { bg:"#ff0000", panel:"#ffff00", panel2:"#ffcc00", text:"#000000", on:"#0000ff", on_text:"#ffffff", accent:"#ff0000", groove:"#000000", scroll:"#d0b000", scroll_hi:"#0000ff", chat_bg:"#ffffe0", chat_fg:"#000000" },
+        chat: { bg:"#ffffe0", fg:"#000000", ts:"#7a0000", bracket:"#0000ff", system:"#b00000", nick1:"#0000ff", nick2:"#ff0000", nick3:"#000000", nick4:"#b00000", nick5:"#c08000", nick6:"#000000" }
+      },
+      "Industrial Rust": {
+        dark: true,
+        wallpaper: "industrial-rust.png",
+        app: { bg:"#141414", panel:"#22201d", panel2:"#38332c", text:"#e1d8c8", on:"#b85f21", on_text:"#000000", accent:"#f0a340", groove:"#070707", scroll:"#5b5142", scroll_hi:"#b85f21", chat_bg:"#10100f", chat_fg:"#e1d8c8" },
+        chat: { bg:"#10100f", fg:"#e1d8c8", ts:"#8b8174", bracket:"#f0a340", system:"#c9793a", nick1:"#b85f21", nick2:"#f0a340", nick3:"#7d6f59", nick4:"#e1d8c8", nick5:"#5b5142", nick6:"#000000" }
+      },
+      "IRCCloud Dark": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#182026", panel:"#202a31", panel2:"#2b3740", text:"#d7dee4", on:"#3d8bfd", on_text:"#ffffff", accent:"#2ecc71", groove:"#10161a", scroll:"#3a4954", scroll_hi:"#3d8bfd", chat_bg:"#141b20", chat_fg:"#d7dee4" },
+        chat: { bg:"#141b20", fg:"#d7dee4", ts:"#8795a1", bracket:"#6fb1ff", system:"#f1c40f", nick1:"#3d8bfd", nick2:"#2ecc71", nick3:"#f1c40f", nick4:"#e67e22", nick5:"#9b59b6", nick6:"#000000" }
+      },
+      "Jellybeans": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#151515", panel:"#1c1c1c", panel2:"#303030", text:"#e8e8d3", on:"#8197bf", on_text:"#000000", accent:"#fad07a", groove:"#0f0f0f", scroll:"#404040", scroll_hi:"#8197bf", chat_bg:"#151515", chat_fg:"#e8e8d3" },
+        chat: { bg:"#151515", fg:"#e8e8d3", ts:"#888888", bracket:"#8fbfdc", system:"#99ad6a", nick1:"#8197bf", nick2:"#fad07a", nick3:"#99ad6a", nick4:"#cf6a4c", nick5:"#c6b6ee", nick6:"#000000" }
+      },
+      "Kanagawa Dragon": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#181616", panel:"#24201f", panel2:"#2d2926", text:"#c5c9c5", on:"#8ba4b0", on_text:"#000000", accent:"#c4746e", groove:"#0d0c0c", scroll:"#625e5a", scroll_hi:"#8ba4b0", chat_bg:"#0d0c0c", chat_fg:"#c5c9c5" },
+        chat: { bg:"#0d0c0c", fg:"#c5c9c5", ts:"#7a8382", bracket:"#a292a3", system:"#8ea4a2", nick1:"#8ba4b0", nick2:"#c4746e", nick3:"#87a987", nick4:"#c4b28a", nick5:"#a292a3", nick6:"#000000" }
+      },
+      "Kanagawa Lotus": {
+        dark: false,
+        wallpaper: "",
+        app: { bg:"#f2ecbc", panel:"#f7f0d0", panel2:"#e6ddad", text:"#545464", on:"#5d57a3", on_text:"#ffffff", accent:"#b35b79", groove:"#d6cfa0", scroll:"#c9c093", scroll_hi:"#5d57a3", chat_bg:"#fff7d6", chat_fg:"#545464" },
+        chat: { bg:"#fff7d6", fg:"#545464", ts:"#8a8980", bracket:"#6f5f95", system:"#4d699b", nick1:"#5d57a3", nick2:"#b35b79", nick3:"#668e3d", nick4:"#c84053", nick5:"#4d699b", nick6:"#000000" }
+      },
+      "Kanagawa Wave": {
+        dark: true,
+        wallpaper: "dusk-peaks.jpg",
+        app: { bg:"#1f1f28", panel:"#2a2a37", panel2:"#363646", text:"#dcd7ba", on:"#7e9cd8", on_text:"#000000", accent:"#ffa066", groove:"#16161d", scroll:"#54546d", scroll_hi:"#7e9cd8", chat_bg:"#16161d", chat_fg:"#dcd7ba" },
+        chat: { bg:"#16161d", fg:"#dcd7ba", ts:"#727169", bracket:"#957fb8", system:"#7fb4ca", nick1:"#7e9cd8", nick2:"#ffa066", nick3:"#98bb6c", nick4:"#e6c384", nick5:"#957fb8", nick6:"#d27e99" }
+      },
+      "Material Ocean": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#0f111a", panel:"#141824", panel2:"#1f2233", text:"#a6accd", on:"#84ffff", on_text:"#000000", accent:"#c792ea", groove:"#090b10", scroll:"#2b3045", scroll_hi:"#84ffff", chat_bg:"#0b0e14", chat_fg:"#a6accd" },
+        chat: { bg:"#0b0e14", fg:"#a6accd", ts:"#676e95", bracket:"#89ddff", system:"#c3e88d", nick1:"#84ffff", nick2:"#c792ea", nick3:"#c3e88d", nick4:"#ffcb6b", nick5:"#f07178", nick6:"#000000" }
+      },
+      "Material Palenight": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#292d3e", panel:"#202331", panel2:"#34394f", text:"#a6accd", on:"#82aaff", on_text:"#000000", accent:"#c792ea", groove:"#1b1e2b", scroll:"#444b6a", scroll_hi:"#82aaff", chat_bg:"#1e2230", chat_fg:"#a6accd" },
+        chat: { bg:"#1e2230", fg:"#a6accd", ts:"#676e95", bracket:"#89ddff", system:"#c3e88d", nick1:"#82aaff", nick2:"#c792ea", nick3:"#c3e88d", nick4:"#ffcb6b", nick5:"#f07178", nick6:"#000000" }
+      },
+      "mIRC Classic": {
+        dark: false,
+        wallpaper: "",
+        app: { bg:"#d4d0c8", panel:"#ffffff", panel2:"#ece9d8", text:"#000000", on:"#0a246a", on_text:"#ffffff", accent:"#000080", groove:"#808080", scroll:"#c0c0c0", scroll_hi:"#0a246a", chat_bg:"#ffffff", chat_fg:"#000000" },
+        chat: { bg:"#ffffff", fg:"#000000", ts:"#808080", bracket:"#000080", system:"#008000", nick1:"#000080", nick2:"#008000", nick3:"#800000", nick4:"#800080", nick5:"#ff8000", nick6:"#000000" }
+      },
+      "Monokai Classic": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#272822", panel:"#1f201b", panel2:"#34352f", text:"#f8f8f2", on:"#a6e22e", on_text:"#000000", accent:"#f92672", groove:"#171812", scroll:"#49483e", scroll_hi:"#a6e22e", chat_bg:"#1f201b", chat_fg:"#f8f8f2" },
+        chat: { bg:"#1f201b", fg:"#f8f8f2", ts:"#75715e", bracket:"#66d9ef", system:"#e6db74", nick1:"#f92672", nick2:"#a6e22e", nick3:"#66d9ef", nick4:"#fd971f", nick5:"#ae81ff", nick6:"#000000" }
+      },
+      "Night Owl": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#011627", panel:"#0b253a", panel2:"#102a43", text:"#d6deeb", on:"#82aaff", on_text:"#000000", accent:"#c792ea", groove:"#00111f", scroll:"#1d3b53", scroll_hi:"#82aaff", chat_bg:"#01111f", chat_fg:"#d6deeb" },
+        chat: { bg:"#01111f", fg:"#d6deeb", ts:"#637777", bracket:"#7fdbca", system:"#addb67", nick1:"#82aaff", nick2:"#c792ea", nick3:"#addb67", nick4:"#ffcb8b", nick5:"#f78c6c", nick6:"#7fdbca" }
+      },
+      "Noir Detective": {
+        dark: true,
+        wallpaper: "noir-detective.png",
+        app: { bg:"#101214", panel:"#1a1d20", panel2:"#25292d", text:"#e6e0d7", on:"#b08d57", on_text:"#000000", accent:"#cfc7b8", groove:"#050607", scroll:"#41464b", scroll_hi:"#b08d57", chat_bg:"#0b0d0f", chat_fg:"#e6e0d7" },
+        chat: { bg:"#0b0d0f", fg:"#e6e0d7", ts:"#8a8f93", bracket:"#cfc7b8", system:"#d4a95f", nick1:"#b08d57", nick2:"#cfc7b8", nick3:"#8a8f93", nick4:"#e6e0d7", nick5:"#5f6870", nick6:"#000000" }
+      },
+      "PaperColor Dark": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#1c1c1c", panel:"#262626", panel2:"#303030", text:"#d0d0d0", on:"#5fafaf", on_text:"#000000", accent:"#ffaf00", groove:"#121212", scroll:"#444444", scroll_hi:"#5fafaf", chat_bg:"#1c1c1c", chat_fg:"#d0d0d0" },
+        chat: { bg:"#1c1c1c", fg:"#d0d0d0", ts:"#808080", bracket:"#5fafd7", system:"#afd700", nick1:"#5fafaf", nick2:"#ffaf00", nick3:"#afd700", nick4:"#d75f5f", nick5:"#af87d7", nick6:"#000000" }
+      },
+      "PaperColor Light": {
+        dark: false,
+        wallpaper: "",
+        app: { bg:"#eeeeee", panel:"#ffffff", panel2:"#d7d7d7", text:"#444444", on:"#0087af", on_text:"#ffffff", accent:"#d75f00", groove:"#bcbcbc", scroll:"#c6c6c6", scroll_hi:"#0087af", chat_bg:"#eeeeee", chat_fg:"#444444" },
+        chat: { bg:"#eeeeee", fg:"#444444", ts:"#878787", bracket:"#005f87", system:"#008700", nick1:"#0087af", nick2:"#d75f00", nick3:"#008700", nick4:"#af0000", nick5:"#8787af", nick6:"#000000" }
+      },
+      "Punk Zine": {
+        dark: false,
+        wallpaper: "punk-zine.png",
+        app: { bg:"#f5f0df", panel:"#fffaf0", panel2:"#f0e2c0", text:"#111111", on:"#ff006e", on_text:"#ffffff", accent:"#ffd400", groove:"#111111", scroll:"#cfc2a6", scroll_hi:"#ff006e", chat_bg:"#fffaf0", chat_fg:"#111111" },
+        chat: { bg:"#fffaf0", fg:"#111111", ts:"#686258", bracket:"#111111", system:"#d90429", nick1:"#ff006e", nick2:"#ffd400", nick3:"#111111", nick4:"#00a6fb", nick5:"#d90429", nick6:"#000000" }
+      },
+      "Radioactive Slime": {
+        dark: true,
+        wallpaper: "radioactive-slime.png",
+        app: { bg:"#071006", panel:"#10200b", panel2:"#1d3512", text:"#eaffd1", on:"#9dff00", on_text:"#000000", accent:"#e4ff2f", groove:"#020501", scroll:"#36591f", scroll_hi:"#9dff00", chat_bg:"#030803", chat_fg:"#eaffd1" },
+        chat: { bg:"#030803", fg:"#eaffd1", ts:"#77a45a", bracket:"#e4ff2f", system:"#55ff55", nick1:"#9dff00", nick2:"#e4ff2f", nick3:"#55ff55", nick4:"#6fbf2c", nick5:"#eaffd1", nick6:"#000000" }
+      },
+      "Rainbow Terminal": {
+        dark: true,
+        wallpaper: "rainbow-terminal.png",
+        app: { bg:"#111111", panel:"#1a1a1a", panel2:"#242424", text:"#f2f2f2", on:"#00e5ff", on_text:"#000000", accent:"#ff4fd8", groove:"#050505", scroll:"#444444", scroll_hi:"#00e5ff", chat_bg:"#050505", chat_fg:"#f2f2f2" },
+        chat: { bg:"#050505", fg:"#f2f2f2", ts:"#888888", bracket:"#00e5ff", system:"#fff44f", nick1:"#ff3b30", nick2:"#ff9500", nick3:"#ffcc00", nick4:"#34c759", nick5:"#00c7ff", nick6:"#af52de" }
+      },
+      "Tank Garage": {
+        dark: true,
+        wallpaper: "tank-garage.png",
+        app: { bg:"#1d2118", panel:"#2d3524", panel2:"#3b452f", text:"#d8ddc8", on:"#8a9a5b", on_text:"#000000", accent:"#c29b54", groove:"#11140d", scroll:"#566348", scroll_hi:"#8a9a5b", chat_bg:"#171b13", chat_fg:"#d8ddc8" },
+        chat: { bg:"#171b13", fg:"#d8ddc8", ts:"#879071", bracket:"#c29b54", system:"#b9c46a", nick1:"#8a9a5b", nick2:"#c29b54", nick3:"#b9c46a", nick4:"#6f7c52", nick5:"#d8ddc8", nick6:"#000000" }
+      },
+      "Tomorrow Day": {
+        dark: false,
+        wallpaper: "",
+        app: { bg:"#ffffff", panel:"#f5f5f5", panel2:"#e0e0e0", text:"#4d4d4c", on:"#4271ae", on_text:"#ffffff", accent:"#8959a8", groove:"#d6d6d6", scroll:"#c8c8c8", scroll_hi:"#4271ae", chat_bg:"#ffffff", chat_fg:"#4d4d4c" },
+        chat: { bg:"#ffffff", fg:"#4d4d4c", ts:"#8e908c", bracket:"#3e999f", system:"#718c00", nick1:"#4271ae", nick2:"#8959a8", nick3:"#718c00", nick4:"#eab700", nick5:"#c82829", nick6:"#000000" }
+      },
+      "Tomorrow Night": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#1d1f21", panel:"#282a2e", panel2:"#373b41", text:"#c5c8c6", on:"#81a2be", on_text:"#000000", accent:"#b294bb", groove:"#111214", scroll:"#373b41", scroll_hi:"#81a2be", chat_bg:"#1d1f21", chat_fg:"#c5c8c6" },
+        chat: { bg:"#1d1f21", fg:"#c5c8c6", ts:"#969896", bracket:"#8abeb7", system:"#b5bd68", nick1:"#81a2be", nick2:"#b294bb", nick3:"#b5bd68", nick4:"#f0c674", nick5:"#cc6666", nick6:"#000000" }
+      },
+      "VHS Horror": {
+        dark: true,
+        wallpaper: "vhs-horror.png",
+        app: { bg:"#09080a", panel:"#151016", panel2:"#25131e", text:"#f4e8ef", on:"#d11f3c", on_text:"#ffffff", accent:"#00d4ff", groove:"#020102", scroll:"#3b2533", scroll_hi:"#d11f3c", chat_bg:"#070507", chat_fg:"#f4e8ef" },
+        chat: { bg:"#070507", fg:"#f4e8ef", ts:"#8e7585", bracket:"#00d4ff", system:"#ff4f75", nick1:"#d11f3c", nick2:"#00d4ff", nick3:"#ff4f75", nick4:"#b100ff", nick5:"#f4e8ef", nick6:"#000000" }
+      },
+      "VS Code Dark Plus": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#1e1e1e", panel:"#252526", panel2:"#333333", text:"#d4d4d4", on:"#007acc", on_text:"#ffffff", accent:"#569cd6", groove:"#161616", scroll:"#424242", scroll_hi:"#007acc", chat_bg:"#1e1e1e", chat_fg:"#d4d4d4" },
+        chat: { bg:"#1e1e1e", fg:"#d4d4d4", ts:"#858585", bracket:"#9cdcfe", system:"#4ec9b0", nick1:"#569cd6", nick2:"#4ec9b0", nick3:"#dcdcaa", nick4:"#ce9178", nick5:"#c586c0", nick6:"#000000" }
+      },
+      "VS Code Light Plus": {
+        dark: false,
+        wallpaper: "",
+        app: { bg:"#ffffff", panel:"#f3f3f3", panel2:"#e5e5e5", text:"#1e1e1e", on:"#006ab1", on_text:"#ffffff", accent:"#0000ff", groove:"#d4d4d4", scroll:"#c8c8c8", scroll_hi:"#006ab1", chat_bg:"#ffffff", chat_fg:"#1e1e1e" },
+        chat: { bg:"#ffffff", fg:"#1e1e1e", ts:"#6a737d", bracket:"#0451a5", system:"#267f99", nick1:"#0451a5", nick2:"#008000", nick3:"#795e26", nick4:"#a31515", nick5:"#af00db", nick6:"#000000" }
+      },
+      "Zenburn": {
+        dark: true,
+        wallpaper: "",
+        app: { bg:"#3f3f3f", panel:"#4f4f4f", panel2:"#5f5f5f", text:"#dcdccc", on:"#6ca0a3", on_text:"#ffffff", accent:"#dfaf8f", groove:"#2b2b2b", scroll:"#6f6f6f", scroll_hi:"#6ca0a3", chat_bg:"#3a3a3a", chat_fg:"#dcdccc" },
+        chat: { bg:"#3a3a3a", fg:"#dcdccc", ts:"#8c8c8c", bracket:"#93e0e3", system:"#bfebbf", nick1:"#93e0e3", nick2:"#dfaf8f", nick3:"#bfebbf", nick4:"#f0dfaf", nick5:"#cc9393", nick6:"#000000" }
+      }
+    };
+
+    const fontAreas = ["app", "chat", "list", "nick", "status", "topic"];
+    const fontAreaLabels = {
+      app: "App",
+      chat: "Chat",
+      list: "List",
+      nick: "Nick",
+      status: "Status",
+      topic: "Topic"
+    };
+    const fontFamilies = ["JetBrains Mono", "Comic Relief", "Symbols Nerd Font Mono"];
+
+    function fontSet(family, size, bold, overrides = {}) {
+      const fonts = {};
+      fontAreas.forEach((area) => {
+        const value = overrides[area] || {};
+        fonts[`${area}_font_family`] = value.family || family;
+        fonts[`${area}_font_size`] = value.size || size;
+        fonts[`${area}_font_bold`] = value.bold ?? bold;
+      });
+      return fonts;
+    }
+
+    const fontPresets = {
+      "none": {
+        label: "Do not bundle fonts",
+        fonts: null
+      },
+      "jetbrains-bold": {
+        label: "JetBrains Mono - all bold",
+        fonts: fontSet("JetBrains Mono", 10, true)
+      },
+      "jetbrains-regular": {
+        label: "JetBrains Mono - regular",
+        fonts: fontSet("JetBrains Mono", 10, false)
+      },
+      "jetbrains-compact": {
+        label: "JetBrains Mono - compact",
+        fonts: fontSet("JetBrains Mono", 9, false, {
+          chat: { size: 9, bold: true },
+          nick: { size: 9, bold: true },
+          status: { size: 9, bold: true },
+          topic: { size: 9, bold: true }
+        })
+      },
+      "jetbrains-comfort": {
+        label: "JetBrains Mono - comfortable",
+        fonts: fontSet("JetBrains Mono", 11, true, {
+          app: { size: 10, bold: true },
+          status: { size: 10, bold: true },
+          topic: { size: 10, bold: true }
+        })
+      },
+      "terminal-bbs": {
+        label: "Terminal / BBS",
+        fonts: fontSet("JetBrains Mono", 11, true, {
+          app: { size: 10, bold: true },
+          chat: { size: 11, bold: true },
+          list: { size: 10, bold: true },
+          nick: { size: 11, bold: true },
+          status: { size: 10, bold: true },
+          topic: { size: 10, bold: true }
+        })
+      },
+      "comic-ui": {
+        label: "Comic UI + mono chat",
+        fonts: fontSet("JetBrains Mono", 10, true, {
+          app: { family: "Comic Relief", size: 10, bold: true },
+          list: { family: "Comic Relief", size: 10, bold: true },
+          status: { family: "Comic Relief", size: 10, bold: true },
+          topic: { family: "Comic Relief", size: 10, bold: true }
+        })
+      },
+      "large-accessible": {
+        label: "Large accessible",
+        fonts: fontSet("JetBrains Mono", 12, true, {
+          app: { size: 11, bold: true },
+          list: { size: 11, bold: true },
+          status: { size: 11, bold: true },
+          topic: { size: 11, bold: true }
+        })
+      },
+      "custom": {
+        label: "Custom per area",
+        custom: true
+      }
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    function hexToArray(hex) {
+      const clean = String(hex || "#000000").replace("#", "");
+      return [0, 2, 4].map((i) => parseInt(clean.slice(i, i + 2), 16));
+    }
+
+    function arrayToHex(value, fallback = "#000000") {
+      if (Array.isArray(value) && value.length >= 3) {
+        return "#" + value.slice(0, 3).map((n) => Math.max(0, Math.min(255, Number(n) || 0)).toString(16).padStart(2, "0")).join("");
+      }
+      if (typeof value === "string" && value.startsWith("#")) return value;
+      if (value === "white") return "#ffffff";
+      if (value === "black") return "#000000";
+      return fallback;
+    }
+
+    function slugify(text) {
+      return String(text || "theme").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "theme";
+    }
+
+    function buildColorFields(target, fields, prefix) {
+      target.innerHTML = "";
+      fields.forEach(([key, label]) => {
+        const wrap = document.createElement("div");
+        wrap.className = "field";
+        wrap.innerHTML = `
+          <label for="${prefix}_${key}">${label}</label>
+          <div class="color-row">
+            <input id="${prefix}_${key}" type="color" value="#000000">
+            <input id="${prefix}_${key}_text" type="text" value="#000000">
+          </div>`;
+        target.appendChild(wrap);
+      });
+    }
+
+    function setColor(prefix, key, value) {
+      const hex = arrayToHex(value, value || "#000000");
+      $(`${prefix}_${key}`).value = hex;
+      $(`${prefix}_${key}_text`).value = hex;
+    }
+
+    function getColor(prefix, key) {
+      const raw = $(`${prefix}_${key}_text`).value.trim();
+      return /^#[0-9a-fA-F]{6}$/.test(raw) ? raw.toLowerCase() : $(`${prefix}_${key}`).value.toLowerCase();
+    }
+
+    function syncPair(prefix, key, fromText) {
+      const color = $(`${prefix}_${key}`);
+      const text = $(`${prefix}_${key}_text`);
+      if (fromText) {
+        if (/^#[0-9a-fA-F]{6}$/.test(text.value.trim())) color.value = text.value.trim();
+      } else {
+        text.value = color.value;
+      }
+      update();
+    }
+
+    function buildFontFields() {
+      const target = $("fontFields");
+      target.innerHTML = "";
+      fontAreas.forEach((area) => {
+        const row = document.createElement("div");
+        row.className = "font-row";
+        row.innerHTML = `
+          <strong>${fontAreaLabels[area]}</strong>
+          <select id="font_${area}_family">
+            ${fontFamilies.map((family) => `<option value="${family}">${family}</option>`).join("")}
+          </select>
+          <input id="font_${area}_size" type="number" min="8" max="24" value="10">
+          <select id="font_${area}_bold">
+            <option value="true">Bold</option>
+            <option value="false">Regular</option>
+          </select>`;
+        target.appendChild(row);
+      });
+    }
+
+    function setFontFields(fonts) {
+      const source = fonts || fontSet("JetBrains Mono", 10, true);
+      fontAreas.forEach((area) => {
+        $(`font_${area}_family`).value = source[`${area}_font_family`] || "JetBrains Mono";
+        $(`font_${area}_size`).value = source[`${area}_font_size`] || 10;
+        $(`font_${area}_bold`).value = String(source[`${area}_font_bold`] !== false);
+      });
+    }
+
+    function getFontFields() {
+      const fonts = {};
+      fontAreas.forEach((area) => {
+        fonts[`${area}_font_family`] = $(`font_${area}_family`).value || "JetBrains Mono";
+        fonts[`${area}_font_size`] = Number($(`font_${area}_size`).value) || 10;
+        fonts[`${area}_font_bold`] = $(`font_${area}_bold`).value === "true";
+      });
+      return fonts;
+    }
+
+    function cssFontFamily(family) {
+      return `"${String(family || "JetBrains Mono").replace(/"/g, "")}"`;
+    }
+
+    function applyPreviewFonts(root, fonts) {
+      const source = fonts || fontSet("JetBrains Mono", 10, true);
+      fontAreas.forEach((area) => {
+        root.style.setProperty(`--font-${area}-family`, cssFontFamily(source[`${area}_font_family`]));
+        root.style.setProperty(`--font-${area}-size`, `${Number(source[`${area}_font_size`]) || 10}px`);
+        root.style.setProperty(`--font-${area}-weight`, source[`${area}_font_bold`] === false ? "400" : "700");
+      });
+    }
+
+    function applyFontPreset(value) {
+      const preset = fontPresets[value] || fontPresets.none;
+      if (preset.fonts) {
+        setFontFields(preset.fonts);
+      } else if (value === "none") {
+        setFontFields(null);
+      }
+      update();
+    }
+
+    function wallpaperValue() {
+      const selected = $("wallpaper").value;
+      if (selected === "__custom__") {
+        return $("wallpaperCustom").value.trim();
+      }
+      if (selected === "Off" || selected === "Theme Default") {
+        return selected;
+      }
+      return selected || "";
+    }
+
+    function setWallpaperValue(value) {
+      const normalized = value || "";
+      const option = [...$("wallpaper").options].find((entry) => entry.value === normalized);
+      if (option) {
+        $("wallpaper").value = normalized;
+        $("wallpaperCustom").value = "";
+      } else if (normalized) {
+        $("wallpaper").value = "__custom__";
+        $("wallpaperCustom").value = normalized;
+      } else {
+        $("wallpaper").value = "";
+        $("wallpaperCustom").value = "";
+      }
+      syncWallpaperCustomVisibility();
+    }
+
+    function syncWallpaperCustomVisibility() {
+      $("wallpaperCustomField").classList.toggle("hidden", $("wallpaper").value !== "__custom__");
+    }
+
+    function cssUrl(value) {
+      return `url("${String(value).replace(/"/g, "%22")}")`;
+    }
+
+    function wallpaperPreviewUrl(value) {
+      if (!value || value === "Off") return "";
+      if (value === "Theme Default") return "";
+      if (/^(file:|https?:|[a-zA-Z]:[\\/])/.test(value) || value.includes("/") || value.includes("\\")) {
+        return value;
+      }
+      return `wallpapers/${value}`;
+    }
+
+    function wallpaperPattern(value) {
+      if (!value || value === "Off") return "none";
+      if (value === "Theme Default") {
+        return "radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--app-accent) 35%, transparent), transparent 32%), linear-gradient(135deg, color-mix(in srgb, var(--app-bg) 85%, black), var(--app-bg))";
+      }
+      if (value.includes("matrix")) {
+        return "repeating-linear-gradient(90deg, rgba(80,255,120,.14) 0 1px, transparent 1px 18px), linear-gradient(180deg, rgba(0,0,0,.1), rgba(0,0,0,.45))";
+      }
+      if (value.includes("synthwave") || value.includes("vaporwave")) {
+        return "radial-gradient(circle at 50% 42%, rgba(255,170,80,.28), transparent 22%), repeating-linear-gradient(0deg, rgba(0,255,255,.16) 0 2px, transparent 2px 22px)";
+      }
+      return "linear-gradient(135deg, color-mix(in srgb, var(--app-accent) 24%, transparent), transparent 45%), radial-gradient(circle at 70% 20%, color-mix(in srgb, var(--app-on) 24%, transparent), transparent 28%)";
+    }
+
+    function currentPack() {
+      const name = $("themeName").value.trim() || "MaxChat Theme";
+      const id = slugify($("themeId").value.trim() || name);
+      const app = {
+        id, label: name, name,
+        dark: $("darkMode").value === "true",
+        bg: hexToArray(getColor("app", "bg")),
+        panel: hexToArray(getColor("app", "panel")),
+        panel2: hexToArray(getColor("app", "panel2")),
+        text: hexToArray(getColor("app", "text")),
+        on: hexToArray(getColor("app", "on")),
+        on_text: getColor("app", "on_text") === "#000000" ? "black" : getColor("app", "on_text") === "#ffffff" ? "white" : getColor("app", "on_text"),
+        accent: hexToArray(getColor("app", "accent")),
+        groove: hexToArray(getColor("app", "groove")),
+        scroll: hexToArray(getColor("app", "scroll")),
+        scroll_hi: hexToArray(getColor("app", "scroll_hi")),
+        chat_bg: hexToArray(getColor("app", "chat_bg")),
+        chat_fg: hexToArray(getColor("app", "chat_fg"))
+      };
+      const wallpaper = wallpaperValue();
+      if (wallpaper) app.wallpaper = wallpaper;
+
+      if ($("fontPreset").value !== "none") {
+        app.fonts = getFontFields();
+      }
+
+      const chat = {
+        id, label: name,
+        bg: hexToArray(getColor("chat", "bg")),
+        fg: hexToArray(getColor("chat", "fg")),
+        fixed: $("fixedFont").value === "true",
+        ts: hexToArray(getColor("chat", "ts")),
+        bracket: hexToArray(getColor("chat", "bracket")),
+        system: hexToArray(getColor("chat", "system")),
+        nicks: ["nick1", "nick2", "nick3", "nick4", "nick5", "nick6"].map((key) => hexToArray(getColor("chat", key)))
+      };
+
+      const pack = { kind: "maxchat-theme-pack", version: 1, name, app, chat };
+      if (wallpaper) pack.wallpaper = wallpaper;
+      return pack;
+    }
+
+    function setPack(pack) {
+      const app = pack.app || (pack.panel ? pack : null);
+      const chat = pack.chat || (pack.fg && !pack.panel ? pack : null);
+      const name = pack.name || pack.label || (app && (app.name || app.label)) || (chat && chat.label) || "Loaded Theme";
+      $("themeName").value = name;
+      $("themeId").value = slugify((app && app.id) || (chat && chat.id) || name);
+      if (app) {
+        $("darkMode").value = String(app.dark !== false);
+        appFields.forEach(([key]) => setColor("app", key, app[key]));
+        setWallpaperValue(pack.wallpaper || app.wallpaper || "");
+        if (app.fonts && app.fonts.app_font_family) {
+          $("fontPreset").value = "custom";
+          setFontFields(app.fonts);
+        } else {
+          $("fontPreset").value = "none";
+          setFontFields(null);
+        }
+      }
+      if (chat) {
+        $("fixedFont").value = String(chat.fixed !== false);
+        ["bg", "fg", "ts", "bracket", "system"].forEach((key) => setColor("chat", key, chat[key]));
+        if (Array.isArray(chat.nicks)) {
+          chat.nicks.slice(0, 6).forEach((color, i) => setColor("chat", `nick${i + 1}`, color));
+        }
+      }
+      update();
+    }
+
+    function applyPreset(name) {
+      const preset = presets[name];
+      if (!preset) return;
+      $("themeName").value = name;
+      $("themeId").value = slugify(name);
+      $("darkMode").value = String(preset.dark);
+      Object.entries(preset.app).forEach(([key, value]) => setColor("app", key, value));
+      Object.entries(preset.chat).forEach(([key, value]) => setColor("chat", key, value));
+      setWallpaperValue(preset.wallpaper || preset.app.wallpaper || "");
+      update();
+    }
+
+    function update() {
+      const pack = currentPack();
+      const app = pack.app;
+      const chat = pack.chat;
+      const root = $("preview");
+      root.style.setProperty("--app-bg", getColor("app", "bg"));
+      root.style.setProperty("--app-panel", getColor("app", "panel"));
+      root.style.setProperty("--app-panel-2", getColor("app", "panel2"));
+      root.style.setProperty("--app-text", getColor("app", "text"));
+      root.style.setProperty("--app-on", getColor("app", "on"));
+      root.style.setProperty("--app-on-text", getColor("app", "on_text"));
+      root.style.setProperty("--app-accent", getColor("app", "accent"));
+      root.style.setProperty("--app-groove", getColor("app", "groove"));
+      root.style.setProperty("--chat-bg", getColor("chat", "bg"));
+      root.style.setProperty("--chat-fg", getColor("chat", "fg"));
+      root.style.setProperty("--chat-ts", getColor("chat", "ts"));
+      root.style.setProperty("--chat-bracket", getColor("chat", "bracket"));
+      root.style.setProperty("--chat-system", getColor("chat", "system"));
+      root.style.setProperty("--nick-1", getColor("chat", "nick1"));
+      root.style.setProperty("--nick-2", getColor("chat", "nick2"));
+      root.style.setProperty("--nick-3", getColor("chat", "nick3"));
+      const wallpaper = wallpaperValue();
+      const wallpaperUrl = wallpaperPreviewUrl(wallpaper);
+      root.style.setProperty("--wallpaper-image", wallpaperUrl ? cssUrl(wallpaperUrl) : "none");
+      root.style.setProperty("--wallpaper-pattern", wallpaperPattern(wallpaper));
+      root.classList.toggle("has-wallpaper", Boolean(wallpaper && wallpaper !== "Off"));
+      applyPreviewFonts(root, app.fonts || getFontFields());
+      $("previewTitle").textContent = `MaxChat - ${pack.name}`;
+      $("jsonOutput").value = JSON.stringify(pack, null, 2);
+      $("status").textContent = `${pack.name}: valid app + chat theme pack`;
+    }
+
+    function saveTheme() {
+      const pack = currentPack();
+      const blob = new Blob([JSON.stringify(pack, null, 2) + "\n"], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${slugify(pack.name)}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    async function copyJson() {
+      try {
+        await navigator.clipboard.writeText($("jsonOutput").value);
+        $("status").textContent = "JSON copied to clipboard.";
+      } catch {
+        $("jsonOutput").focus();
+        $("jsonOutput").select();
+        $("status").textContent = "Clipboard blocked. JSON selected instead.";
+      }
+    }
+
+    function init() {
+      buildColorFields($("appFields"), appFields, "app");
+      buildColorFields($("chatFields"), chatFields, "chat");
+      buildFontFields();
+      Object.entries(fontPresets).forEach(([value, preset]) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = preset.label;
+        $("fontPreset").appendChild(option);
+      });
+      $("fontPreset").value = "jetbrains-bold";
+      setFontFields(fontPresets["jetbrains-bold"].fonts);
+      Object.keys(presets).forEach((name) => {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        $("presetSelect").appendChild(option);
+      });
+      document.querySelectorAll(".tab").forEach((tab) => {
+        tab.addEventListener("click", () => {
+          document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+          document.querySelectorAll(".tab-page").forEach((page) => page.classList.remove("active"));
+          tab.classList.add("active");
+          $(`tab-${tab.dataset.tab}`).classList.add("active");
+        });
+      });
+      [...appFields.map(([key]) => ["app", key]), ...chatFields.map(([key]) => ["chat", key])].forEach(([prefix, key]) => {
+        $(`${prefix}_${key}`).addEventListener("input", () => syncPair(prefix, key, false));
+        $(`${prefix}_${key}_text`).addEventListener("input", () => syncPair(prefix, key, true));
+      });
+      fontAreas.forEach((area) => {
+        [`font_${area}_family`, `font_${area}_size`, `font_${area}_bold`].forEach((id) => {
+          $(id).addEventListener("input", () => {
+            $("fontPreset").value = "custom";
+            update();
+          });
+          $(id).addEventListener("change", () => {
+            $("fontPreset").value = "custom";
+            update();
+          });
+        });
+      });
+      ["themeName", "themeId", "darkMode", "fixedFont"].forEach((id) => {
+        $(id).addEventListener("input", update);
+        $(id).addEventListener("change", update);
+      });
+      $("wallpaper").addEventListener("change", () => {
+        syncWallpaperCustomVisibility();
+        update();
+      });
+      $("wallpaperCustom").addEventListener("input", update);
+      $("themeName").addEventListener("input", () => { $("themeId").value = slugify($("themeName").value); update(); });
+      $("presetSelect").addEventListener("change", (event) => applyPreset(event.target.value));
+      $("fontPreset").addEventListener("change", (event) => applyFontPreset(event.target.value));
+      $("saveButton").addEventListener("click", saveTheme);
+      $("copyButton").addEventListener("click", copyJson);
+      $("loadButton").addEventListener("click", () => $("fileInput").click());
+      $("fileInput").addEventListener("change", async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+        try {
+          const json = JSON.parse(await file.text());
+          setPack(json);
+          $("status").textContent = `Loaded ${file.name}`;
+        } catch (error) {
+          $("status").textContent = `Could not load JSON: ${error.message}`;
+        }
+      });
+      applyPreset("Kanagawa Wave");
+    }
+
+    init();
+  </script>
+</body>
+</html>

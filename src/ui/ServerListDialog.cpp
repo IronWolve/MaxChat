@@ -370,9 +370,17 @@ void ServerListDialog::editCurrentNetwork() {
 
 void ServerListDialog::openHomepage() {
     const QString website = selectedNetwork().value(QStringLiteral("website")).toString().trimmed();
-    if (!website.isEmpty()) {
-        QDesktopServices::openUrl(QUrl(website));
+    if (website.isEmpty()) {
+        return;
     }
+    QUrl url = QUrl(website);
+    if (url.scheme().isEmpty()) {
+        url = QUrl(QStringLiteral("https://") + website);
+    }
+    if (url.scheme() != QStringLiteral("http") && url.scheme() != QStringLiteral("https")) {
+        return;
+    }
+    QDesktopServices::openUrl(url);
 }
 
 void ServerListDialog::requestConnect() {

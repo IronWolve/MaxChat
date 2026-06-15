@@ -1,0 +1,125 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "VS Code Light Plus",
+  "app": {
+    "id": "vs-code-light-plus",
+    "label": "VS Code Light Plus",
+    "name": "VS Code Light Plus",
+    "dark": false,
+    "bg": [
+      255,
+      255,
+      255
+    ],
+    "panel": [
+      243,
+      243,
+      243
+    ],
+    "panel2": [
+      229,
+      229,
+      229
+    ],
+    "text": [
+      30,
+      30,
+      30
+    ],
+    "on": [
+      0,
+      106,
+      177
+    ],
+    "on_text": "white",
+    "accent": [
+      0,
+      0,
+      255
+    ],
+    "groove": [
+      212,
+      212,
+      212
+    ],
+    "scroll": [
+      200,
+      200,
+      200
+    ],
+    "scroll_hi": [
+      0,
+      106,
+      177
+    ],
+    "chat_bg": [
+      255,
+      255,
+      255
+    ],
+    "chat_fg": [
+      30,
+      30,
+      30
+    ]
+  },
+  "chat": {
+    "id": "vs-code-light-plus",
+    "label": "VS Code Light Plus",
+    "bg": [
+      255,
+      255,
+      255
+    ],
+    "fg": [
+      30,
+      30,
+      30
+    ],
+    "fixed": true,
+    "ts": [
+      106,
+      115,
+      125
+    ],
+    "bracket": [
+      4,
+      81,
+      165
+    ],
+    "system": [
+      38,
+      127,
+      153
+    ],
+    "nicks": [
+      [
+        4,
+        81,
+        165
+      ],
+      [
+        0,
+        128,
+        0
+      ],
+      [
+        121,
+        94,
+        38
+      ],
+      [
+        163,
+        21,
+        21
+      ],
+      [
+        175,
+        0,
+        219
+      ]
+    ]
+  },
+  "wallpaper": ""
+}

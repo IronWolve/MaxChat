@@ -1,0 +1,141 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Aqua Glass",
+  "app": {
+    "id": "aqua-glass",
+    "label": "Aqua Glass",
+    "name": "Aqua Glass",
+    "dark": false,
+    "bg": [
+      217,
+      246,
+      255
+    ],
+    "panel": [
+      238,
+      252,
+      255
+    ],
+    "panel2": [
+      184,
+      234,
+      255
+    ],
+    "text": [
+      18,
+      49,
+      61
+    ],
+    "on": [
+      42,
+      167,
+      255
+    ],
+    "on_text": "black",
+    "accent": [
+      0,
+      194,
+      215
+    ],
+    "groove": [
+      119,
+      205,
+      233
+    ],
+    "scroll": [
+      158,
+      221,
+      240
+    ],
+    "scroll_hi": [
+      42,
+      167,
+      255
+    ],
+    "scrollHi": [
+      42,
+      167,
+      255
+    ],
+    "chat_bg": [
+      247,
+      254,
+      255
+    ],
+    "chat_fg": [
+      18,
+      49,
+      61
+    ],
+    "bracket": [
+      0,
+      143,
+      199
+    ],
+    "system": [
+      27,
+      116,
+      185
+    ],
+    "wallpaper": "aqua-glass.png"
+  },
+  "chat": {
+    "id": "aqua-glass",
+    "label": "Aqua Glass",
+    "bg": [
+      247,
+      254,
+      255
+    ],
+    "fg": [
+      18,
+      49,
+      61
+    ],
+    "fixed": true,
+    "ts": [
+      90,
+      143,
+      160
+    ],
+    "bracket": [
+      0,
+      143,
+      199
+    ],
+    "system": [
+      27,
+      116,
+      185
+    ],
+    "nicks": [
+      [
+        0,
+        143,
+        199
+      ],
+      [
+        0,
+        194,
+        215
+      ],
+      [
+        42,
+        167,
+        255
+      ],
+      [
+        38,
+        115,
+        166
+      ],
+      [
+        18,
+        49,
+        61
+      ]
+    ]
+  },
+  "wallpaper": "aqua-glass.png"
+}

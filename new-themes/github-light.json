@@ -1,0 +1,125 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "GitHub Light",
+  "app": {
+    "id": "github-light",
+    "label": "GitHub Light",
+    "name": "GitHub Light",
+    "dark": false,
+    "bg": [
+      255,
+      255,
+      255
+    ],
+    "panel": [
+      246,
+      248,
+      250
+    ],
+    "panel2": [
+      234,
+      238,
+      242
+    ],
+    "text": [
+      36,
+      41,
+      47
+    ],
+    "on": [
+      9,
+      105,
+      218
+    ],
+    "on_text": "white",
+    "accent": [
+      45,
+      164,
+      78
+    ],
+    "groove": [
+      208,
+      215,
+      222
+    ],
+    "scroll": [
+      175,
+      184,
+      193
+    ],
+    "scroll_hi": [
+      9,
+      105,
+      218
+    ],
+    "chat_bg": [
+      255,
+      255,
+      255
+    ],
+    "chat_fg": [
+      36,
+      41,
+      47
+    ]
+  },
+  "chat": {
+    "id": "github-light",
+    "label": "GitHub Light",
+    "bg": [
+      255,
+      255,
+      255
+    ],
+    "fg": [
+      36,
+      41,
+      47
+    ],
+    "fixed": true,
+    "ts": [
+      87,
+      96,
+      106
+    ],
+    "bracket": [
+      111,
+      66,
+      193
+    ],
+    "system": [
+      9,
+      105,
+      218
+    ],
+    "nicks": [
+      [
+        9,
+        105,
+        218
+      ],
+      [
+        45,
+        164,
+        78
+      ],
+      [
+        191,
+        135,
+        0
+      ],
+      [
+        207,
+        34,
+        46
+      ],
+      [
+        130,
+        80,
+        223
+      ]
+    ]
+  },
+  "wallpaper": ""
+}

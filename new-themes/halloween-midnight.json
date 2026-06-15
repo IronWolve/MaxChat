@@ -1,0 +1,141 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Halloween Midnight",
+  "app": {
+    "id": "halloween-midnight",
+    "label": "Halloween Midnight",
+    "name": "Halloween Midnight",
+    "dark": true,
+    "bg": [
+      20,
+      9,
+      31
+    ],
+    "panel": [
+      35,
+      17,
+      48
+    ],
+    "panel2": [
+      53,
+      24,
+      74
+    ],
+    "text": [
+      248,
+      239,
+      228
+    ],
+    "on": [
+      255,
+      122,
+      0
+    ],
+    "on_text": "black",
+    "accent": [
+      180,
+      85,
+      255
+    ],
+    "groove": [
+      7,
+      3,
+      13
+    ],
+    "scroll": [
+      75,
+      40,
+      101
+    ],
+    "scroll_hi": [
+      255,
+      122,
+      0
+    ],
+    "scrollHi": [
+      255,
+      122,
+      0
+    ],
+    "chat_bg": [
+      16,
+      7,
+      24
+    ],
+    "chat_fg": [
+      248,
+      239,
+      228
+    ],
+    "bracket": [
+      255,
+      122,
+      0
+    ],
+    "system": [
+      123,
+      227,
+      108
+    ],
+    "wallpaper": "halloween-midnight.png"
+  },
+  "chat": {
+    "id": "halloween-midnight",
+    "label": "Halloween Midnight",
+    "bg": [
+      16,
+      7,
+      24
+    ],
+    "fg": [
+      248,
+      239,
+      228
+    ],
+    "fixed": true,
+    "ts": [
+      150,
+      118,
+      170
+    ],
+    "bracket": [
+      255,
+      122,
+      0
+    ],
+    "system": [
+      123,
+      227,
+      108
+    ],
+    "nicks": [
+      [
+        255,
+        122,
+        0
+      ],
+      [
+        180,
+        85,
+        255
+      ],
+      [
+        123,
+        227,
+        108
+      ],
+      [
+        248,
+        239,
+        228
+      ],
+      [
+        214,
+        90,
+        255
+      ]
+    ]
+  },
+  "wallpaper": "halloween-midnight.png"
+}

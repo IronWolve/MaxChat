@@ -1,0 +1,125 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Tomorrow Day",
+  "app": {
+    "id": "tomorrow-day",
+    "label": "Tomorrow Day",
+    "name": "Tomorrow Day",
+    "dark": false,
+    "bg": [
+      255,
+      255,
+      255
+    ],
+    "panel": [
+      245,
+      245,
+      245
+    ],
+    "panel2": [
+      224,
+      224,
+      224
+    ],
+    "text": [
+      77,
+      77,
+      76
+    ],
+    "on": [
+      66,
+      113,
+      174
+    ],
+    "on_text": "white",
+    "accent": [
+      137,
+      89,
+      168
+    ],
+    "groove": [
+      214,
+      214,
+      214
+    ],
+    "scroll": [
+      200,
+      200,
+      200
+    ],
+    "scroll_hi": [
+      66,
+      113,
+      174
+    ],
+    "chat_bg": [
+      255,
+      255,
+      255
+    ],
+    "chat_fg": [
+      77,
+      77,
+      76
+    ]
+  },
+  "chat": {
+    "id": "tomorrow-day",
+    "label": "Tomorrow Day",
+    "bg": [
+      255,
+      255,
+      255
+    ],
+    "fg": [
+      77,
+      77,
+      76
+    ],
+    "fixed": true,
+    "ts": [
+      142,
+      144,
+      140
+    ],
+    "bracket": [
+      62,
+      153,
+      159
+    ],
+    "system": [
+      113,
+      140,
+      0
+    ],
+    "nicks": [
+      [
+        66,
+        113,
+        174
+      ],
+      [
+        137,
+        89,
+        168
+      ],
+      [
+        113,
+        140,
+        0
+      ],
+      [
+        234,
+        183,
+        0
+      ],
+      [
+        200,
+        40,
+        41
+      ]
+    ]
+  },
+  "wallpaper": ""
+}

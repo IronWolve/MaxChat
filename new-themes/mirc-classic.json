@@ -1,0 +1,125 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "mIRC Classic",
+  "app": {
+    "id": "mirc-classic",
+    "label": "mIRC Classic",
+    "name": "mIRC Classic",
+    "dark": false,
+    "bg": [
+      212,
+      208,
+      200
+    ],
+    "panel": [
+      255,
+      255,
+      255
+    ],
+    "panel2": [
+      236,
+      233,
+      216
+    ],
+    "text": [
+      0,
+      0,
+      0
+    ],
+    "on": [
+      10,
+      36,
+      106
+    ],
+    "on_text": "white",
+    "accent": [
+      0,
+      0,
+      128
+    ],
+    "groove": [
+      128,
+      128,
+      128
+    ],
+    "scroll": [
+      192,
+      192,
+      192
+    ],
+    "scroll_hi": [
+      10,
+      36,
+      106
+    ],
+    "chat_bg": [
+      255,
+      255,
+      255
+    ],
+    "chat_fg": [
+      0,
+      0,
+      0
+    ]
+  },
+  "chat": {
+    "id": "mirc-classic",
+    "label": "mIRC Classic",
+    "bg": [
+      255,
+      255,
+      255
+    ],
+    "fg": [
+      0,
+      0,
+      0
+    ],
+    "fixed": true,
+    "ts": [
+      128,
+      128,
+      128
+    ],
+    "bracket": [
+      0,
+      0,
+      128
+    ],
+    "system": [
+      0,
+      128,
+      0
+    ],
+    "nicks": [
+      [
+        0,
+        0,
+        128
+      ],
+      [
+        0,
+        128,
+        0
+      ],
+      [
+        128,
+        0,
+        0
+      ],
+      [
+        128,
+        0,
+        128
+      ],
+      [
+        255,
+        128,
+        0
+      ]
+    ]
+  },
+  "wallpaper": ""
+}

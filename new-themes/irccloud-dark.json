@@ -1,0 +1,125 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "IRCCloud Dark",
+  "app": {
+    "id": "irccloud-dark",
+    "label": "IRCCloud Dark",
+    "name": "IRCCloud Dark",
+    "dark": true,
+    "bg": [
+      24,
+      32,
+      38
+    ],
+    "panel": [
+      32,
+      42,
+      49
+    ],
+    "panel2": [
+      43,
+      55,
+      64
+    ],
+    "text": [
+      215,
+      222,
+      228
+    ],
+    "on": [
+      61,
+      139,
+      253
+    ],
+    "on_text": "white",
+    "accent": [
+      46,
+      204,
+      113
+    ],
+    "groove": [
+      16,
+      22,
+      26
+    ],
+    "scroll": [
+      58,
+      73,
+      84
+    ],
+    "scroll_hi": [
+      61,
+      139,
+      253
+    ],
+    "chat_bg": [
+      20,
+      27,
+      32
+    ],
+    "chat_fg": [
+      215,
+      222,
+      228
+    ]
+  },
+  "chat": {
+    "id": "irccloud-dark",
+    "label": "IRCCloud Dark",
+    "bg": [
+      20,
+      27,
+      32
+    ],
+    "fg": [
+      215,
+      222,
+      228
+    ],
+    "fixed": true,
+    "ts": [
+      135,
+      149,
+      161
+    ],
+    "bracket": [
+      111,
+      177,
+      255
+    ],
+    "system": [
+      241,
+      196,
+      15
+    ],
+    "nicks": [
+      [
+        61,
+        139,
+        253
+      ],
+      [
+        46,
+        204,
+        113
+      ],
+      [
+        241,
+        196,
+        15
+      ],
+      [
+        230,
+        126,
+        34
+      ],
+      [
+        155,
+        89,
+        182
+      ]
+    ]
+  },
+  "wallpaper": ""
+}

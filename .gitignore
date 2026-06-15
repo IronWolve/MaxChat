@@ -12,3 +12,6 @@ build-*/
 *.exe
 *.app/
 compile_commands.json
+dist-win/
+build-output.log
+*.mcb

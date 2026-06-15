@@ -1,0 +1,125 @@
+{
+  "kind": "maxchat-theme-pack",
+  "version": 1,
+  "name": "Material Ocean",
+  "app": {
+    "id": "material-ocean",
+    "label": "Material Ocean",
+    "name": "Material Ocean",
+    "dark": true,
+    "bg": [
+      15,
+      17,
+      26
+    ],
+    "panel": [
+      20,
+      24,
+      36
+    ],
+    "panel2": [
+      31,
+      34,
+      51
+    ],
+    "text": [
+      166,
+      172,
+      205
+    ],
+    "on": [
+      132,
+      255,
+      255
+    ],
+    "on_text": "black",
+    "accent": [
+      199,
+      146,
+      234
+    ],
+    "groove": [
+      9,
+      11,
+      16
+    ],
+    "scroll": [
+      43,
+      48,
+      69
+    ],
+    "scroll_hi": [
+      132,
+      255,
+      255
+    ],
+    "chat_bg": [
+      11,
+      14,
+      20
+    ],
+    "chat_fg": [
+      166,
+      172,
+      205
+    ]
+  },
+  "chat": {
+    "id": "material-ocean",
+    "label": "Material Ocean",
+    "bg": [
+      11,
+      14,
+      20
+    ],
+    "fg": [
+      166,
+      172,
+      205
+    ],
+    "fixed": true,
+    "ts": [
+      103,
+      110,
+      149
+    ],
+    "bracket": [
+      137,
+      221,
+      255
+    ],
+    "system": [
+      195,
+      232,
+      141
+    ],
+    "nicks": [
+      [
+        132,
+        255,
+        255
+      ],
+      [
+        199,
+        146,
+        234
+      ],
+      [
+        195,
+        232,
+        141
+      ],
+      [
+        255,
+        203,
+        107
+      ],
+      [
+        240,
+        113,
+        120
+      ]
+    ]
+  },
+  "wallpaper": ""
+}
