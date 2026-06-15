@@ -11,7 +11,7 @@ QString organizationName() {
 }
 
 QString version() {
-    return QStringLiteral("0.1.0-dev");
+    return QStringLiteral("0.9.1");
 }
 
 QString displayName() {

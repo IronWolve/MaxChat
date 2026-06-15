@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 
 project(MaxChatCpp
-    VERSION 0.1.0
+    VERSION 0.9.1
     DESCRIPTION "Native C++/Qt port experiment for MaxChat"
     LANGUAGES CXX
 )
