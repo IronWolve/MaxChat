@@ -1,5 +1,7 @@
 #include "core/ChatBufferStore.h"
 
+#include <QSet>
+
 #include <algorithm>
 
 namespace maxchat::core {
@@ -33,9 +35,19 @@ bool containsNick(const QStringList &members, const QString &nick) {
 
 QStringList sortedUniqueMembers(const QStringList &members) {
   QStringList out;
+  out.reserve(members.size());
+  // O(n) dedup by match-key (was O(n^2) via a linear containsNick per member —
+  // it bit hard on a large channel's NAMES burst).
+  QSet<QString> seen;
+  seen.reserve(members.size());
   for (const QString &member : members) {
     const QString trimmed = member.trimmed();
-    if (!trimmed.isEmpty() && !containsNick(out, trimmed)) {
+    if (trimmed.isEmpty()) {
+      continue;
+    }
+    const QString key = nickMatchKey(trimmed);
+    if (!key.isEmpty() && !seen.contains(key)) {
+      seen.insert(key);
       out.append(trimmed);
     }
   }
@@ -58,8 +70,11 @@ int ChatBufferStore::maxLinesPerBuffer() const { return maxLinesPerBuffer_; }
 void ChatBufferStore::setMaxLinesPerBuffer(const int maxLinesPerBuffer) {
   maxLinesPerBuffer_ = std::max(1, maxLinesPerBuffer);
   for (Buffer &buffer : buffersByKey_) {
-    while (buffer.snapshot.lines.size() > maxLinesPerBuffer_) {
-      buffer.snapshot.lines.removeFirst();
+    // Drop the oldest excess in one shot: repeated removeFirst() shifts the
+    // whole QList each call (O(n^2) when shrinking a big buffer).
+    const qsizetype excess = buffer.snapshot.lines.size() - maxLinesPerBuffer_;
+    if (excess > 0) {
+      buffer.snapshot.lines.remove(0, excess);
     }
   }
 }
@@ -215,8 +230,8 @@ bool ChatBufferStore::appendLine(const ChatBufferId &id, ChatBufferLine line) {
 
   ChatBufferSnapshot &snapshot = it->snapshot;
   snapshot.lines.append(line);
-  while (snapshot.lines.size() > maxLinesPerBuffer_) {
-    snapshot.lines.removeFirst();
+  if (const qsizetype excess = snapshot.lines.size() - maxLinesPerBuffer_; excess > 0) {
+    snapshot.lines.remove(0, excess);
   }
 
   const bool inactive = activeKey_ != key;

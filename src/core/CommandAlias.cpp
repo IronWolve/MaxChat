@@ -54,7 +54,7 @@ QString applyTemplate(QString aliasTemplate, const QString& arguments,
     bool usedPlaceholder = false;
 
     // $me / $chan / $* / $N / $N- — matches the Python _expand_alias token set.
-    QRegularExpression placeholder(QStringLiteral(R"(\$(me|chan|\*|\d+-?))"));
+    static const QRegularExpression placeholder(QStringLiteral(R"(\$(me|chan|\*|\d+-?))"));
     QRegularExpressionMatchIterator matches = placeholder.globalMatch(aliasTemplate);
     QString expanded;
     qsizetype last = 0;

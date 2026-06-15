@@ -286,6 +286,9 @@ bool SettingsStore::mergeDefaultNetworks() const {
 }
 
 QVariantMap SettingsStore::defaultSettings() {
+  // Built once and returned by (COW-cheap) value: loadWithDefaults() calls this
+  // on every read, so the ~150 insert()s should not run each time.
+  static const QVariantMap cached = []() {
   QVariantMap settings;
   settings.insert(QStringLiteral("theme"), QStringLiteral("synthwave"));
   settings.insert(QStringLiteral("chat_theme"), QStringLiteral("follow"));
@@ -455,6 +458,8 @@ QVariantMap SettingsStore::defaultSettings() {
   settings.insert(QStringLiteral("networks"),
                   networkConfigListToVariantList(defaultNetworkConfigs()));
   return settings;
+  }();
+  return cached;
 }
 
 } // namespace maxchat::core
