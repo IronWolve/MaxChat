@@ -23,6 +23,19 @@ cmake --build build-release
 ctest --test-dir build-release --output-on-failure
 ```
 
+### Build options
+
+| Option | Default | Effect when OFF |
+|--------|---------|-----------------|
+| `MAXCHAT_LUA` | ON | No Lua scripting engine; `api.*` unavailable. |
+| `MAXCHAT_TERMINAL` | ON | No script terminal / BBS UI — a lean "vanilla IRC client". Bundled BBS scripts degrade gracefully (`api.terminal_*` return false). Auto-off when `MAXCHAT_LUA` is off. |
+| `MAXCHAT_OS_SPELL` | OFF | (Windows only) native ISpellChecker backend instead of the bundled engine. |
+
+```bash
+cmake -S . -B build-lean -G Ninja -DCMAKE_BUILD_TYPE=Release \
+      -DMAXCHAT_TERMINAL=OFF        # IRC client without the terminal/BBS feature
+```
+
 ### Run
 
 ```bash

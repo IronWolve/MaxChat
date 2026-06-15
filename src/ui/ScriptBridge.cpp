@@ -4,9 +4,11 @@
 #include "irc/IrcConnection.h"
 #include "scripting/LuaEngine.h"
 #include "services/LinkPreviewClassifier.h"
-#include "ui/AnsiRenderer.h"
 #include "ui/MainWindowHost.h"
+#if MAXCHAT_TERMINAL
+#include "ui/AnsiRenderer.h"
 #include "ui/TerminalProfile.h"
+#endif
 
 #include <QCoreApplication>
 #include <QDir>
@@ -25,6 +27,7 @@
 
 namespace maxchat::ui {
 
+#if MAXCHAT_TERMINAL
 namespace {
 
 QString terminalScopedId(const QString& scriptName, const QString& id) {
@@ -40,9 +43,11 @@ std::optional<std::pair<QString, QString>> splitTerminalScopedId(const QString& 
 }
 
 } // namespace
+#endif // MAXCHAT_TERMINAL
 
 ScriptBridge::ScriptBridge(MainWindowHost& host, QString scriptsDir, QObject* parent)
     : QObject(parent), host_(host), scriptsDir_(std::move(scriptsDir)) {
+#if MAXCHAT_TERMINAL
     // The terminal manager parents real dialog widgets, so it needs a QWidget
     // parent (the window), not the bridge. Lifetime still tracks the window.
     terminals_ = new ScriptTerminalManager(host_.dialogParent());
@@ -110,6 +115,7 @@ ScriptBridge::ScriptBridge(MainWindowHost& host, QString scriptsDir, QObject* pa
                 settings.insert(QStringLiteral("terminal_rows"), rows);
                 (void)host_.settings().saveRaw(settings);
             });
+#endif // MAXCHAT_TERMINAL
     lua_ = new maxchat::scripting::LuaEngine(
         this, scriptsDir_, QDir(scriptsDir_).filePath(QStringLiteral("data")), this);
 }
@@ -158,6 +164,7 @@ bool ScriptBridge::dispatch(const QString& hook, const QString& network,
     return lua_ != nullptr && lua_->dispatch(hook, network, args);
 }
 
+#if MAXCHAT_TERMINAL
 void ScriptBridge::showTerminal(const QString& id) {
     if (terminals_ != nullptr) {
         terminals_->showTerminal(id);
@@ -179,6 +186,12 @@ void ScriptBridge::setTerminalFont(const QString& family, const int pointSize, c
         terminals_->setTerminalFont(family, pointSize, bold);
     }
 }
+#else // !MAXCHAT_TERMINAL — built without the script terminal / BBS UI
+void ScriptBridge::showTerminal(const QString&) {}
+void ScriptBridge::killTerminal(const QString&) {}
+QList<TerminalInfo> ScriptBridge::terminals() const { return {}; }
+void ScriptBridge::setTerminalFont(const QString&, int, bool) {}
+#endif // MAXCHAT_TERMINAL
 
 // --- ScriptHost -------------------------------------------------------------
 
@@ -228,6 +241,7 @@ bool ScriptBridge::scriptMcData(const QString& network, const QString& target,
     return ok;
 }
 
+#if MAXCHAT_TERMINAL
 bool ScriptBridge::scriptTerminalOpen(const QString& scriptName, const QString& id,
                                       const QString& title, const QString& profile,
                                       const int cols, const int rows) {
@@ -319,6 +333,27 @@ void ScriptBridge::scriptTerminalFit(const QString& scriptName, const QString& i
 QString ScriptBridge::scriptTerminalHotspot(const QString& actionId, const QString& label) {
     return AnsiRenderer::hotspot(actionId, label);
 }
+#else // !MAXCHAT_TERMINAL — api.terminal_* are inert (BBS scripts degrade gracefully)
+bool ScriptBridge::scriptTerminalOpen(const QString&, const QString&, const QString&,
+                                      const QString&, int, int) {
+    return false;
+}
+void ScriptBridge::scriptTerminalClose(const QString&, const QString&) {}
+void ScriptBridge::scriptTerminalClear(const QString&, const QString&) {}
+void ScriptBridge::scriptTerminalWrite(const QString&, const QString&, const QString&) {}
+bool ScriptBridge::scriptTerminalFrame(const QString&, const QString&, const QString&) {
+    return false;
+}
+void ScriptBridge::scriptTerminalStatus(const QString&, const QString&, const QString&) {}
+void ScriptBridge::scriptTerminalPrompt(const QString&, const QString&, const QString&) {}
+QSize ScriptBridge::scriptTerminalSize(const QString&, const QString&) { return {}; }
+void ScriptBridge::scriptTerminalProfile(const QString&, const QString&, const QString&, int,
+                                         int) {}
+void ScriptBridge::scriptTerminalFit(const QString&, const QString&, const QString&) {}
+QString ScriptBridge::scriptTerminalHotspot(const QString&, const QString& label) {
+    return label; // no ANSI hotspot markup without the terminal renderer
+}
+#endif // MAXCHAT_TERMINAL
 
 void ScriptBridge::scriptInsertInput(const QString& text) {
     host_.insertInput(text);

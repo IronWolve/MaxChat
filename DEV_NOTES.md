@@ -39,6 +39,34 @@ When adding anything that should survive a buffer switch, store it in the model.
   **Lesson: header-inline host overrides may only touch types complete in the
   header; anything reaching into a forward-declared member goes in the .cpp.**
 
+## MAXCHAT_TERMINAL build option (2026-06-15)
+
+Made the script terminal / BBS UI a compile-time option (`MAXCHAT_TERMINAL`,
+default ON), mirroring the `MAXCHAT_LUA` pattern. OFF → a lean "vanilla IRC
+client" with no terminal widgets; `bbs.lua` degrades gracefully (`api.terminal_*`
+return false). Requires Lua, so it's force-disabled when `MAXCHAT_LUA=OFF`.
+
+Mechanics:
+- The Phase-1 ScriptBridge refactor made this clean: the terminal lives in
+  ScriptBridge + 5 self-contained Qt files (AnsiRenderer, TerminalFrame,
+  TerminalProfile, ScriptTerminalManager, ScriptTerminalDialog) with **no**
+  core/irc/services coupling — so they drop into a new `maxchat_terminal` static
+  lib, linked only where needed when ON.
+- `ScriptBridge.cpp` guards the terminal manager creation + the 15 terminal
+  methods behind `#if MAXCHAT_TERMINAL`; the `#else` path is inert stubs
+  (return false/no-op). The `ScriptHost` interface is unchanged, so LuaEngine's
+  `api.terminal_*` bindings still compile — they just reach stubs.
+- **MC DATA stays in** (the `McDataCodec` sideband is general + tiny, lives in
+  core/irc) — only the terminal *UI* is gated, which is enough to make the BBS
+  non-functional.
+- The 4 standalone terminal tests (`ansi_renderer`, `terminal_frame`,
+  `terminal_profile`, `script_terminal_manager`) are wrapped in
+  `if(MAXCHAT_TERMINAL)`. `lua_engine_test` keeps building `TerminalFrame.cpp`
+  inline (it tests LuaEngine + the parser with its own fake host, gate-agnostic).
+- Verified BOTH ways: ON → 56/56; OFF (fresh build dir) → app links, 52/52, no
+  `maxchat_terminal` lib, no terminal tests. Also dropped a dead AnsiRenderer
+  include left in MainWindow.cpp after the ScriptBridge extraction.
+
 ## Render-pipeline R0: ChatRenderTheme (2026-06-15)
 
 First step of RENDER_PIPELINE_DESIGN.md. Extracted the chat-theme → render-colour

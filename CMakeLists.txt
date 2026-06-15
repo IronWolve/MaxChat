@@ -15,6 +15,22 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # a lean build without scripting.
 option(MAXCHAT_LUA "Build the Lua scripting engine" ON)
 
+# Script-driven terminal / BBS UI (ScriptTerminalManager + the api.terminal_*
+# surface). Default ON. Disable for a lean "vanilla IRC client" build with no
+# terminal widgets — bundled BBS scripts (bbs.lua) then degrade gracefully
+# (api.terminal_* return false). Requires scripting, so it is forced off when
+# MAXCHAT_LUA is off.
+option(MAXCHAT_TERMINAL "Build the script terminal / BBS UI" ON)
+if(MAXCHAT_TERMINAL AND NOT MAXCHAT_LUA)
+    message(STATUS "MAXCHAT_TERMINAL needs MAXCHAT_LUA; disabling the terminal UI.")
+    set(MAXCHAT_TERMINAL OFF)
+endif()
+if(MAXCHAT_TERMINAL)
+    add_compile_definitions(MAXCHAT_TERMINAL=1)
+else()
+    add_compile_definitions(MAXCHAT_TERMINAL=0)
+endif()
+
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
@@ -255,12 +271,31 @@ if(HUNSPELL_FOUND)
     )
 endif()
 
+# Script terminal / BBS UI — gated behind MAXCHAT_TERMINAL. Self-contained Qt
+# widgets (no core/irc/services coupling); linked into the app + the tests that
+# need it. When the option is off this target isn't built and ScriptBridge's
+# api.terminal_* compile to inert stubs.
+if(MAXCHAT_TERMINAL)
+    add_library(maxchat_terminal STATIC
+        src/ui/AnsiRenderer.cpp
+        src/ui/AnsiRenderer.h
+        src/ui/TerminalFrame.cpp
+        src/ui/TerminalFrame.h
+        src/ui/TerminalProfile.cpp
+        src/ui/TerminalProfile.h
+        src/ui/ScriptTerminalManager.cpp
+        src/ui/ScriptTerminalManager.h
+        src/ui/ScriptTerminalDialog.cpp
+        src/ui/ScriptTerminalDialog.h
+    )
+    target_include_directories(maxchat_terminal PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    target_link_libraries(maxchat_terminal PUBLIC Qt6::Widgets Qt6::Gui)
+endif()
+
 qt_add_executable(maxchat-c
     src/main.cpp
     src/ui/AliasEditorDialog.cpp
     src/ui/AliasEditorDialog.h
-    src/ui/AnsiRenderer.cpp
-    src/ui/AnsiRenderer.h
     src/ui/AppearanceController.cpp
     src/ui/AppearanceController.h
     src/ui/ChatRenderTheme.cpp
@@ -320,12 +355,6 @@ qt_add_executable(maxchat-c
     src/ui/RawLogDialog.h
     src/ui/ServerListDialog.cpp
     src/ui/ServerListDialog.h
-    src/ui/ScriptTerminalDialog.cpp
-    src/ui/ScriptTerminalDialog.h
-    src/ui/ScriptTerminalManager.cpp
-    src/ui/ScriptTerminalManager.h
-    src/ui/TerminalFrame.cpp
-    src/ui/TerminalFrame.h
     src/ui/ShortcutEditorDialog.cpp
     src/ui/ShortcutEditorDialog.h
     src/ui/SpellcheckHighlighter.cpp
@@ -346,8 +375,6 @@ qt_add_executable(maxchat-c
     src/ui/SoundPlayer.h
     src/ui/SystemInfo.cpp
     src/ui/SystemInfo.h
-    src/ui/TerminalProfile.cpp
-    src/ui/TerminalProfile.h
     resources/maxchat.qrc
 )
 
@@ -380,6 +407,10 @@ if(HUNSPELL_FOUND)
     )
 endif()
 
+if(MAXCHAT_TERMINAL)
+    target_link_libraries(maxchat-c PRIVATE maxchat_terminal)
+endif()
+
 enable_testing()
 
 qt_add_executable(app_info_test
@@ -394,6 +425,8 @@ target_link_libraries(app_info_test
 
 add_test(NAME app_info COMMAND app_info_test)
 
+# Terminal-subsystem unit tests — only built when the terminal UI is.
+if(MAXCHAT_TERMINAL)
 qt_add_executable(ansi_renderer_test
     tests/unit/ansi_renderer_test.cpp
     src/ui/AnsiRenderer.cpp
@@ -480,6 +513,7 @@ target_link_libraries(script_terminal_manager_test
 )
 
 add_test(NAME script_terminal_manager COMMAND script_terminal_manager_test)
+endif() # MAXCHAT_TERMINAL
 
 qt_add_executable(irc_message_test
     tests/unit/irc_message_test.cpp
@@ -1160,20 +1194,12 @@ qt_add_executable(main_window_link_preview_test
     src/ui/QuickConnectDialog.h
     src/ui/RawLogDialog.cpp
     src/ui/RawLogDialog.h
-    src/ui/AnsiRenderer.cpp
-    src/ui/AnsiRenderer.h
     src/ui/AppearanceController.cpp
     src/ui/AppearanceController.h
     src/ui/ChatRenderTheme.cpp
     src/ui/ChatRenderTheme.h
     src/ui/ServerListDialog.cpp
     src/ui/ServerListDialog.h
-    src/ui/ScriptTerminalDialog.cpp
-    src/ui/ScriptTerminalDialog.h
-    src/ui/ScriptTerminalManager.cpp
-    src/ui/ScriptTerminalManager.h
-    src/ui/TerminalFrame.cpp
-    src/ui/TerminalFrame.h
     src/ui/ShortcutEditorDialog.cpp
     src/ui/ShortcutEditorDialog.h
     src/ui/SpellcheckHighlighter.cpp
@@ -1224,6 +1250,10 @@ if(HUNSPELL_FOUND)
     )
 endif()
 
+if(MAXCHAT_TERMINAL)
+    target_link_libraries(main_window_link_preview_test PRIVATE maxchat_terminal)
+endif()
+
 add_test(NAME main_window_link_preview COMMAND main_window_link_preview_test)
 set_tests_properties(main_window_link_preview PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
@@ -1235,16 +1265,6 @@ qt_add_executable(script_bridge_test
     src/ui/ScriptBridge.cpp
     src/ui/ScriptBridge.h
     src/ui/MainWindowHost.h
-    src/ui/AnsiRenderer.cpp
-    src/ui/AnsiRenderer.h
-    src/ui/ScriptTerminalDialog.cpp
-    src/ui/ScriptTerminalDialog.h
-    src/ui/ScriptTerminalManager.cpp
-    src/ui/ScriptTerminalManager.h
-    src/ui/TerminalFrame.cpp
-    src/ui/TerminalFrame.h
-    src/ui/TerminalProfile.cpp
-    src/ui/TerminalProfile.h
 )
 target_link_libraries(script_bridge_test
     PRIVATE
@@ -1255,6 +1275,9 @@ target_link_libraries(script_bridge_test
         Qt6::Widgets
         Qt6::Test
 )
+if(MAXCHAT_TERMINAL)
+    target_link_libraries(script_bridge_test PRIVATE maxchat_terminal)
+endif()
 add_test(NAME script_bridge COMMAND script_bridge_test)
 set_tests_properties(script_bridge PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 

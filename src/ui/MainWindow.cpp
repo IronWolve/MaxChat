@@ -40,7 +40,6 @@
 #include "ui/QuickConnectDialog.h"
 #include "ui/RawLogDialog.h"
 #include "ui/ServerListDialog.h"
-#include "ui/AnsiRenderer.h"
 #include "ui/AppearanceController.h"
 #include "ui/ChatRenderTheme.h"
 #include "ui/MediaController.h"
