@@ -45,6 +45,9 @@ class FakeHost final : public MainWindowHost {
     void echoOutbound(const QString&, const QString&, const QString&) override {}
     void insertInput(const QString&) override {}
     void notifyUser(const QString&, const QString&) override {}
+    void appendInputUrl(const QString&) override {}
+    void showStatus(const QString&, int) override {}
+    void clearStatus() override {}
 
     maxchat::irc::IrcConnection* connectionFor(const QString& network) override {
         connectionRequests << network;
@@ -52,6 +55,7 @@ class FakeHost final : public MainWindowHost {
     }
 
     QNetworkAccessManager& scriptNetworkManager() override { return nam_; }
+    QNetworkAccessManager& previewNetworkManager() override { return nam_; }
     SettingsStore& settings() override { return store_; }
     QWidget* dialogParent() override { return parent_; }
     void rebuildTree() override { ++rebuildCount; }

@@ -15,7 +15,6 @@
 #include "ui/MainWindowHost.h"
 #include "ui/SoundPlayer.h"
 #include "spell/Speller.h" // backend-neutral; OS speller works without Hunspell
-#include "upload/ImageUploader.h"
 #include "ui/ChannelListDialog.h"
 
 #include <QElapsedTimer>
@@ -60,6 +59,7 @@ class MainWindowLinkPreviewTest;
 namespace maxchat::ui {
 
 class AudioPlayerBar;
+class MediaController;
 class ComicView;
 class DccManager;
 class MediaPlayerDialog;
@@ -104,11 +104,17 @@ class MainWindow final : public QMainWindow, public MainWindowHost {
     void notifyUser(const QString& title, const QString& text) override {
         notify(title, text, activeNetworkName(), m_currentTarget);
     }
+    void appendInputUrl(const QString& url) override;  // m_input type incomplete here
+    void showStatus(const QString& text, int timeoutMs = 0) override; // QStatusBar incomplete
+    void clearStatus() override;
     [[nodiscard]] maxchat::irc::IrcConnection* connectionFor(const QString& network) override {
         return connectionForNetwork(network);
     }
     [[nodiscard]] QNetworkAccessManager& scriptNetworkManager() override {
         return m_updateNetworkManager;
+    }
+    [[nodiscard]] QNetworkAccessManager& previewNetworkManager() override {
+        return m_previewNetworkManager;
     }
     [[nodiscard]] maxchat::core::SettingsStore& settings() override { return m_settings; }
     [[nodiscard]] QWidget* dialogParent() override { return this; }
@@ -142,8 +148,6 @@ class MainWindow final : public QMainWindow, public MainWindowHost {
     void setWallpaper(const QString& wallpaper, bool save);
     void syncWallpaperActions(const QString& wallpaper);
     void configureSpellcheck(const QVariantMap& settings);
-    void configureImageUploader(const QVariantMap& settings);
-    void startImageUpload(const QImage& image);
     void resizeMessageInput();
     void setServerListVisible(bool visible, bool save);
     void setMembersVisible(bool visible, bool save);
@@ -377,7 +381,6 @@ class MainWindow final : public QMainWindow, public MainWindowHost {
     void jumpToBufferIndex(int index);
     void jumpToNextActivity();
     void openShortcutEditor();
-    void handleChatAnchorClicked(const QUrl& url);
     void removeMemberFromChannelBuffers(const QString& network, const QString& nick);
     void removeMemberFromChannelBuffers(const QString& nick);
     void renameMemberInChannelBuffers(const QString& network, const QString& oldNick,
@@ -580,7 +583,7 @@ class MainWindow final : public QMainWindow, public MainWindowHost {
     // Active speller (internal Hunspell or native OS engine) — declared
     // unconditionally so the OS backend works on builds without Hunspell.
     std::unique_ptr<maxchat::spell::Speller> m_spellchecker;
-    std::unique_ptr<maxchat::upload::ImageUploader> m_imageUploader;
+    MediaController* m_media = nullptr; // inline media playback + image upload
     bool m_autocorrectEnabled = false;
     bool m_focusedOnce = false;
     QPointer<ChatFindDialog> m_chatFindDialog;

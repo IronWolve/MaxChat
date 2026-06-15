@@ -394,7 +394,16 @@ means every consumer is already a clean controller.
       `script_bridge_test` covers bundled-vs-user ircSend + MC-DATA routing.
       Residual: terminal manager takes the window as its QWidget parent — full
       relocation waits on Phase 2+, see DEV_NOTES.)*
-- [ ] Phase 2 — PreviewController
+- [~] Phase 2 — split on separability:
+  - [x] **2a — MediaController** *(inline media playback + image upload: clicked
+        image/audio/video links with the scheme allow-list + SSRF gate, and the
+        drag/drop/paste image uploader). New `media_controller_test` covers the
+        scheme allow-list + no-uploader path.)*
+  - [ ] **2b — link-preview fetch/cache (OG + inline images)** — DEFERRED: it's
+        interleaved with the chat-render pipeline (`appendPreviewHtmlLine` writes
+        straight to the chat document during render; `registerCachedImagesIn` /
+        `requestPreviewImagesIn` run mid-render). Migrates when the render
+        pipeline is addressed, not as a standalone controller. See DEV_NOTES.
 - [ ] Phase 3 — AppearanceController
 - [ ] Phase 4 — NotificationController
 - [ ] Phase 5 — ComicController

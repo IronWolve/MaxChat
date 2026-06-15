@@ -302,6 +302,8 @@ qt_add_executable(maxchat-c
     src/ui/MainWindow.cpp
     src/ui/MainWindow.h
     src/ui/MainWindowHost.h
+    src/ui/MediaController.cpp
+    src/ui/MediaController.h
     src/ui/ScriptBridge.cpp
     src/ui/ScriptBridge.h
     src/ui/PreferencesDialog.cpp
@@ -1142,6 +1144,8 @@ qt_add_executable(main_window_link_preview_test
     src/ui/MainWindow.cpp
     src/ui/MainWindow.h
     src/ui/MainWindowHost.h
+    src/ui/MediaController.cpp
+    src/ui/MediaController.h
     src/ui/ScriptBridge.cpp
     src/ui/ScriptBridge.h
     src/ui/PreferencesDialog.cpp
@@ -1245,6 +1249,34 @@ target_link_libraries(script_bridge_test
 )
 add_test(NAME script_bridge COMMAND script_bridge_test)
 set_tests_properties(script_bridge PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+# MediaController (decomp phase 2) — inline media + image upload, testable now
+# against a fake host (clicked-link scheme allow-list, no-uploader path).
+qt_add_executable(media_controller_test
+    tests/unit/media_controller_test.cpp
+    src/ui/MediaController.cpp
+    src/ui/MediaController.h
+    src/ui/MainWindowHost.h
+    src/ui/AudioPlayerBar.cpp
+    src/ui/AudioPlayerBar.h
+    src/ui/ImageViewerDialog.cpp
+    src/ui/ImageViewerDialog.h
+    src/ui/MediaPlayerDialog.cpp
+    src/ui/MediaPlayerDialog.h
+)
+target_link_libraries(media_controller_test
+    PRIVATE
+        maxchat_core
+        maxchat_network
+        maxchat_services
+        maxchat_upload
+        Qt6::Widgets
+        Qt6::Multimedia
+        Qt6::MultimediaWidgets
+        Qt6::Test
+)
+add_test(NAME media_controller COMMAND media_controller_test)
+set_tests_properties(media_controller PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 qt_add_executable(quick_connect_dialog_test
     tests/unit/quick_connect_dialog_test.cpp

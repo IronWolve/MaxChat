@@ -57,9 +57,19 @@ class MainWindowHost {
     [[nodiscard]] virtual maxchat::irc::IrcConnection* connectionFor(
         const QString& network) = 0;
 
+    // --- Input / status (for MediaController) -------------------------------
+    // Append a (just-uploaded) URL to the message input, space-separated, and
+    // focus the box.
+    virtual void appendInputUrl(const QString& url) = 0;
+    // Transient status-bar message (timeoutMs == 0 → until replaced/cleared).
+    virtual void showStatus(const QString& text, int timeoutMs = 0) = 0;
+    virtual void clearStatus() = 0;
+
     // --- Services -----------------------------------------------------------
     // Network manager scripts borrow for api.http_get (SSRF-gated by caller).
     [[nodiscard]] virtual QNetworkAccessManager& scriptNetworkManager() = 0;
+    // Network manager the image uploader / preview fetchers use.
+    [[nodiscard]] virtual QNetworkAccessManager& previewNetworkManager() = 0;
     // Shared settings store (read/write).
     [[nodiscard]] virtual maxchat::core::SettingsStore& settings() = 0;
     // Parent widget for controller-owned dialogs.

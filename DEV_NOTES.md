@@ -39,6 +39,31 @@ When adding anything that should survive a buffer switch, store it in the model.
   **Lesson: header-inline host overrides may only touch types complete in the
   header; anything reaching into a forward-declared member goes in the .cpp.**
 
+## MainWindow decomposition — Phase 2: MediaController (2026-06-15)
+
+Extracted inline-media playback + image upload into `src/ui/MediaController.{h,cpp}`.
+It owns the image uploader and the single reusable video player, drives the
+chat-column audio bar (still a window-owned child widget — the controller gets a
+non-owning pointer via `setAudioBar`), and handles clicked chat anchors: the
+image-viewer / audio-bar / video-player dispatch plus the **scheme allow-list**
+(http/https/ftp/mailto only — no file:/javascript:/app handlers reach
+`QDesktopServices`) and the SSRF gate on media URLs. MainWindow forwards
+drag/drop/paste and anchor clicks to it. New host hooks: `appendInputUrl`,
+`showStatus`/`clearStatus`, `previewNetworkManager`. `media_controller_test`
+covers the scheme allow-list (file:/javascript: refused) and the no-uploader path.
+
+**Scope decision — Phase 2 split.** The plan's PreviewController bundled
+link-preview fetch/cache *with* media+upload. I split it: media+upload extracted
+cleanly (event-driven, off the render path); the **link-preview fetch/cache (OG +
+inline images) was DEFERRED**, because it's interleaved with the chat-render
+pipeline — `appendPreviewHtmlLine` writes directly to the chat `QTextDocument`
+during rendering, and `registerCachedImagesIn`/`requestPreviewImagesIn` run mid
+render. Lifting it into a standalone controller would make it ~half host
+callbacks while touching the render hot path. It migrates when the render
+pipeline itself is refactored. **Lesson: extract by separability, not by the
+plan's grouping — a subsystem welded to the render loop isn't a clean controller
+yet.** Build + 55/55 ctest green.
+
 ## MainWindow decomposition — Phase 1: ScriptBridge (2026-06-15)
 
 Extracted the entire scripting subsystem out of MainWindow into
