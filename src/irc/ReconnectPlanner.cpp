@@ -34,7 +34,10 @@ ServerEndpoint chooseReconnectServer(ReconnectState& state, bool forceNext) {
             ++state.serverAttempt;
         }
     } else {
-        state.serverAttempt = std::max(1, state.serverAttempt + 1);
+        // Single server: keep a bounded attempt counter (it's only ever compared
+        // against ServerRetryLimit; the actual reconnect backoff/giving-up is the
+        // reconnect timer's job, not the server picker's).
+        state.serverAttempt = std::clamp(state.serverAttempt + 1, 1, ServerRetryLimit);
     }
 
     return state.servers.at(state.serverIndex);

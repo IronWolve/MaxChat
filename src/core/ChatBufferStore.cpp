@@ -291,10 +291,28 @@ bool ChatBufferStore::removeMember(const ChatBufferId &id,
 bool ChatBufferStore::renameMember(const ChatBufferId &id,
                                    const QString &oldNick,
                                    const QString &newNick) {
+  // A NICK change carries no channel status prefix, so capture the old entry's
+  // prefix (~&@%+) and re-apply it — otherwise an op/voiced user silently loses
+  // their mode on rename.
+  static const QString prefixes = QStringLiteral("~&@%+");
+  QString prefix;
+  if (auto it = buffersByKey_.find(keyFor(id)); it != buffersByKey_.end()) {
+    const QString needle = nickMatchKey(oldNick);
+    for (const QString &member : it->snapshot.members) {
+      if (nickMatchKey(member) == needle) {
+        int i = 0;
+        while (i < member.size() && prefixes.contains(member.at(i))) {
+          ++i;
+        }
+        prefix = member.left(i);
+        break;
+      }
+    }
+  }
   if (!removeMember(id, oldNick)) {
     return false;
   }
-  return addMember(id, newNick);
+  return addMember(id, prefix + newNick.trimmed());
 }
 
 int ChatBufferStore::totalUnreadCount() const {
