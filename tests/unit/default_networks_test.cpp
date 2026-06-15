@@ -91,6 +91,27 @@ class DefaultNetworksTest final : public QObject {
         QCOMPARE(defaulted.port, 6697);
         QCOMPARE(defaulted.tls, true);
     }
+
+    void parserHandlesIpv6Literals() {
+        // Bare IPv6 (multiple colons, no brackets) is all host, default port.
+        const auto bare = parseServerSpec(QStringLiteral("2001:db8::1"), 6667, false);
+        QCOMPARE(bare.host, QStringLiteral("2001:db8::1"));
+        QCOMPARE(bare.port, 6667);
+
+        // Bracketed IPv6 with a TLS port; round-trips through serverSpec.
+        const auto bracketed = parseServerSpec(QStringLiteral("[2001:db8::1]:+6697"));
+        QCOMPARE(bracketed.host, QStringLiteral("2001:db8::1"));
+        QCOMPARE(bracketed.port, 6697);
+        QCOMPARE(bracketed.tls, true);
+        QCOMPARE(serverSpec(bracketed), QStringLiteral("[2001:db8::1]:+6697"));
+    }
+
+    void parserKeepsTlsDefaultOnGarbagePort() {
+        // "host:notaport" must not downgrade TLS or drop the default port.
+        const auto bad = parseServerSpec(QStringLiteral("irc.example.test:xyz"), 6697, true);
+        QCOMPARE(bad.port, 6697);
+        QCOMPARE(bad.tls, true);
+    }
 };
 
 QTEST_MAIN(DefaultNetworksTest)

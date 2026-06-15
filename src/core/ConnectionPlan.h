@@ -26,6 +26,7 @@ struct NetworkConnectionPlan {
     QString proxyUsername;
     QString proxyPassword;
     int connectTimeoutMs = 15000;
+    int registrationTimeoutMs = 15000;
     maxchat::irc::ReconnectState reconnect;
 };
 

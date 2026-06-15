@@ -1523,20 +1523,42 @@ maxchat::irc::ServerEndpoint parseServerSpec(const QString& spec, int defaultPor
     int port = defaultPort;
     bool tls = defaultTls;
 
-    const int colon = host.lastIndexOf(QLatin1Char(':'));
-    if (colon > 0 && colon + 1 < host.size()) {
-        QString portText = host.mid(colon + 1).trimmed();
-        host = host.left(colon).trimmed();
-        if (portText.startsWith(QLatin1Char('+'))) {
-            tls = true;
+    // Find the host/port boundary without mangling IPv6 literals:
+    //  - "[2001:db8::1]:+6697" — bracketed, port (if any) after ']'
+    //  - "irc.x.net:+6697"     — exactly one colon -> host:port
+    //  - "2001:db8::1"         — bare IPv6 (>1 colon, unbracketed) -> all host
+    QString portText;
+    if (host.startsWith(QLatin1Char('['))) {
+        const int close = host.indexOf(QLatin1Char(']'));
+        if (close > 0) {
+            const QString inner = host.mid(1, close - 1).trimmed();
+            const int after = close + 1;
+            if (after < host.size() && host.at(after) == QLatin1Char(':')) {
+                portText = host.mid(after + 1).trimmed();
+            }
+            host = inner;
+        }
+    } else if (host.count(QLatin1Char(':')) == 1) {
+        const int colon = host.indexOf(QLatin1Char(':'));
+        if (colon > 0 && colon + 1 < host.size()) {
+            portText = host.mid(colon + 1).trimmed();
+            host = host.left(colon).trimmed();
+        }
+    }
+
+    if (!portText.isEmpty()) {
+        const bool explicitTls = portText.startsWith(QLatin1Char('+'));
+        if (explicitTls) {
             portText.remove(0, 1);
-        } else {
-            tls = false;
         }
         bool ok = false;
         const int parsedPort = portText.toInt(&ok);
         if (ok) {
+            // Only adjust once the port actually parses, so "host:garbage" can't
+            // silently downgrade TLS or drop the default port. The mIRC "+port"
+            // convention marks TLS; a bare numeric port means plaintext.
             port = parsedPort;
+            tls = explicitTls;
         }
     }
 
@@ -1544,7 +1566,11 @@ maxchat::irc::ServerEndpoint parseServerSpec(const QString& spec, int defaultPor
 }
 
 QString serverSpec(const maxchat::irc::ServerEndpoint& server) {
-    return QStringLiteral("%1:%2%3").arg(server.host, server.tls ? QStringLiteral("+") : QString(),
+    // Bracket IPv6 literals so the round-trip through parseServerSpec is stable.
+    const QString host = server.host.contains(QLatin1Char(':'))
+                             ? QStringLiteral("[%1]").arg(server.host)
+                             : server.host;
+    return QStringLiteral("%1:%2%3").arg(host, server.tls ? QStringLiteral("+") : QString(),
                                          QString::number(server.port));
 }
 

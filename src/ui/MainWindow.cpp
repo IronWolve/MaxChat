@@ -9080,7 +9080,7 @@ MainWindow::connectConfigFor(const maxchat::irc::ServerEndpoint& server,
     config.allowInsecureAuth = plan.allowInsecureAuth;
     config.autojoin = plan.autojoin;
     config.connectTimeoutMs = plan.connectTimeoutMs;
-    config.registrationTimeoutMs = plan.connectTimeoutMs;
+    config.registrationTimeoutMs = plan.registrationTimeoutMs;
     config.proxyType = plan.proxyType;
     config.proxyHost = plan.proxyHost;
     config.proxyPort = plan.proxyPort;

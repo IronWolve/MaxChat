@@ -102,6 +102,12 @@ NetworkConnectionPlan connectionPlanFromNetwork(const NetworkConfig& network) {
     plan.allowInsecureAuth = network.value(QStringLiteral("allow_insecure_auth")).toBool();
     plan.connectTimeoutMs =
         positiveIntOrDefault(network.value(QStringLiteral("connect_timeout_ms")), 15000);
+    // Registration (CAP/SASL/NICK/USER) can legitimately outlast the TCP connect;
+    // defaults to the connect timeout so existing behaviour is unchanged, but is
+    // independently configurable. (Was previously fed the connect timeout in
+    // MainWindow — a copy-paste that conflated the two phases.)
+    plan.registrationTimeoutMs = positiveIntOrDefault(
+        network.value(QStringLiteral("registration_timeout_ms")), plan.connectTimeoutMs);
     plan.autojoin = parseAutojoinChannels(network.value(QStringLiteral("channels")).toString());
     plan.perform = stringListFromVariant(network.value(QStringLiteral("perform")));
     plan.proxyType = network.value(QStringLiteral("proxy_type")).toString().trimmed().toLower();
