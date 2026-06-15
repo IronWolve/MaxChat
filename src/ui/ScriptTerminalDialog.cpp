@@ -135,6 +135,9 @@ ScriptTerminalDialog::ScriptTerminalDialog(QString id, QString title, TerminalPr
     display_->setOpenExternalLinks(false);
     display_->setOpenLinks(false);
     display_->setUndoRedoEnabled(false);
+    // Cap streamed (non-frame) output so a script can't grow the document
+    // without bound; frame mode replaces the whole document each render.
+    display_->document()->setMaximumBlockCount(5000);
     connect(display_, &QTextBrowser::anchorClicked, this, [this](const QUrl& url) {
         if (url.scheme() == QLatin1String("mc-term")) {
             QString path = url.path();

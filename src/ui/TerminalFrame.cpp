@@ -83,9 +83,23 @@ bool TerminalFrame::parse(const QString& ops, QVector<Op>* out, QString* error) 
         setError(error, QStringLiteral("missing output vector"));
         return false;
     }
+    // Bound the work a single frame can demand: a legitimate full 80x50 redraw
+    // (incl. MCB1 bitmap art) stays well under these, but a script calling
+    // api.terminal_frame with a giant op stream must not be able to spin the
+    // parser/grid. Caps are generous, not a protocol limit.
+    constexpr qsizetype kMaxOpsBytes = 256 * 1024;
+    constexpr int kMaxOps = 20000;
+    if (ops.size() > kMaxOpsBytes) {
+        setError(error, QStringLiteral("frame op stream too large"));
+        return false;
+    }
     out->clear();
     qsizetype pos = 0;
     while (pos < ops.size()) {
+        if (out->size() >= kMaxOps) {
+            setError(error, QStringLiteral("too many frame ops"));
+            return false;
+        }
         const QChar opcode = ops.at(pos++);
         Op op;
         switch (opcode.unicode()) {
