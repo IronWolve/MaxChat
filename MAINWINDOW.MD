@@ -404,11 +404,20 @@ means every consumer is already a clean controller.
         straight to the chat document during render; `registerCachedImagesIn` /
         `requestPreviewImagesIn` run mid-render). Migrates when the render
         pipeline is addressed, not as a standalone controller. See DEV_NOTES.
-- [—] Phase 3 — AppearanceController — **deferred (render/window-welded).**
-      `applyTheme` drives `qApp` palette/stylesheet + tray + window icon + menu
-      font, and `m_currentTheme`/`m_currentChatTheme` are read in ~8 render/paint
-      sites. A controller is ~half host-callbacks and touches the
-      regression-prone theming path. Fold into the render-pipeline pass.
+- [~] Phase 3 — AppearanceController — **IN PROGRESS (as a coordinator).**
+      Re-scoped after R0: theming is welded to the *app shell* (qApp + the
+      window's child-widget fonts), not to chat specifically, so the controller
+      is a coordinator with thin host hooks, not a clean standalone. R0 already
+      moved the chat-related half out (`ChatRenderTheme`).
+      - [x] **A0 — fonts:** `AppearanceController.{h,cpp}` owns bundled-font
+            registration (`registerBundledFonts`, was `loadFonts`) + per-area
+            font resolution (`resolveFonts` → `ResolvedFonts{app,chat,list}`,
+            was the inline `configuredFont` lambda). MainWindow applies them.
+      - [ ] **A1 — theme/chat-theme/wallpaper/opacity apply:** move `applyTheme`/
+            `setTheme`/`setChatTheme`/`setWallpaper`/`sync*Actions` + state; push
+            the resolved `ChatRenderTheme` to the chat side; host hooks for the
+            shell ops (qApp QSS/palette is global; tray/window-icon/menu/re-render
+            are callbacks). The bigger, regression-prone step — best post-v1.
 - [—] Phase 4 — NotificationController — **deferred (window/theme-welded).**
       `notify()` depends on window active-state, taskbar flash, click-to-focus
       + activate-buffer, the theme accent, and 6+ `m_notify*` config members; the

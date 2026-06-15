@@ -41,6 +41,7 @@
 #include "ui/RawLogDialog.h"
 #include "ui/ServerListDialog.h"
 #include "ui/AnsiRenderer.h"
+#include "ui/AppearanceController.h"
 #include "ui/ChatRenderTheme.h"
 #include "ui/MediaController.h"
 #include "ui/ScriptBridge.h"
@@ -842,7 +843,8 @@ MainWindow::MainWindow(QWidget* parent)
     // Inline media + image upload controller. Constructed before buildLayout()
     // because the chat view's anchor-click handler and the audio bar wire into it.
     m_media = new MediaController(*this, this);
-    loadFonts();
+    m_appearance = new AppearanceController(*this, this);
+    m_appearance->registerBundledFonts();
     buildMenus();
     buildLayout();
     setupConnectionSignals();
@@ -8562,14 +8564,6 @@ int MainWindow::maxInitialConnectAttempts(const QString& network) const {
                            maxchat::irc::ServerRetryLimit);
 }
 
-void maxchat::ui::MainWindow::loadFonts() {
-    QFontDatabase::addApplicationFont(QStringLiteral(":/fonts/JetBrainsMono-Regular.ttf"));
-    QFontDatabase::addApplicationFont(QStringLiteral(":/fonts/JetBrainsMono-Bold.ttf"));
-    QFontDatabase::addApplicationFont(QStringLiteral(":/fonts/ComicRelief-Regular.ttf"));
-    QFontDatabase::addApplicationFont(QStringLiteral(":/fonts/ComicRelief-Bold.ttf"));
-    QFontDatabase::addApplicationFont(QStringLiteral(":/fonts/SymbolsNerdFontMono-Regular.ttf"));
-}
-
 void maxchat::ui::MainWindow::configureSpellcheck(const QVariantMap& settings) {
     if (m_input == nullptr) {
         return;
@@ -8990,23 +8984,10 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
         pollFriends();
         m_friendPollTimer.start();
     }
-    const auto configuredFont = [&settings](const QString& familyKey, const QString& sizeKey,
-                                            const QString& boldKey) {
-        QFont font(settings.value(familyKey, QStringLiteral("JetBrains Mono")).toString(),
-                   settings.value(sizeKey, 14).toInt());
-        font.setBold(settings.value(boldKey, true).toBool());
-        return font;
-    };
-
-    const QFont appFont =
-        configuredFont(QStringLiteral("app_font_family"), QStringLiteral("app_font_size"),
-                       QStringLiteral("app_font_bold"));
-    const QFont chatFont =
-        configuredFont(QStringLiteral("chat_font_family"), QStringLiteral("chat_font_size"),
-                       QStringLiteral("chat_font_bold"));
-    const QFont listFont =
-        configuredFont(QStringLiteral("list_font_family"), QStringLiteral("list_font_size"),
-                       QStringLiteral("list_font_bold"));
+    const maxchat::ui::ResolvedFonts fonts = m_appearance->resolveFonts(settings);
+    const QFont appFont = fonts.app;
+    const QFont chatFont = fonts.chat;
+    const QFont listFont = fonts.list;
     qApp->setFont(appFont);
     if (m_chatView != nullptr) {
         m_chatView->setFont(chatFont);

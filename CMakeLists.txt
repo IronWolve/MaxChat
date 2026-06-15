@@ -261,6 +261,8 @@ qt_add_executable(maxchat-c
     src/ui/AliasEditorDialog.h
     src/ui/AnsiRenderer.cpp
     src/ui/AnsiRenderer.h
+    src/ui/AppearanceController.cpp
+    src/ui/AppearanceController.h
     src/ui/ChatRenderTheme.cpp
     src/ui/ChatRenderTheme.h
     src/ui/BanListDialog.cpp
@@ -1160,6 +1162,8 @@ qt_add_executable(main_window_link_preview_test
     src/ui/RawLogDialog.h
     src/ui/AnsiRenderer.cpp
     src/ui/AnsiRenderer.h
+    src/ui/AppearanceController.cpp
+    src/ui/AppearanceController.h
     src/ui/ChatRenderTheme.cpp
     src/ui/ChatRenderTheme.h
     src/ui/ServerListDialog.cpp

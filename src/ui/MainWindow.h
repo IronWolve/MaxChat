@@ -60,6 +60,7 @@ namespace maxchat::ui {
 
 class AudioPlayerBar;
 class MediaController;
+class AppearanceController;
 class ComicView;
 class DccManager;
 class MediaPlayerDialog;
@@ -138,7 +139,6 @@ class MainWindow final : public QMainWindow, public MainWindowHost {
 
     void buildMenus();
     void buildLayout();
-    void loadFonts();
     void applyCurrentSettings();
     void applyTheme(const QString& theme);
     void setTheme(const QString& theme, bool save);
@@ -583,7 +583,8 @@ class MainWindow final : public QMainWindow, public MainWindowHost {
     // Active speller (internal Hunspell or native OS engine) — declared
     // unconditionally so the OS backend works on builds without Hunspell.
     std::unique_ptr<maxchat::spell::Speller> m_spellchecker;
-    MediaController* m_media = nullptr; // inline media playback + image upload
+    MediaController* m_media = nullptr;           // inline media playback + image upload
+    AppearanceController* m_appearance = nullptr; // fonts + (incrementally) theming
     bool m_autocorrectEnabled = false;
     bool m_focusedOnce = false;
     QPointer<ChatFindDialog> m_chatFindDialog;
