@@ -23,6 +23,12 @@ regression-prone render/theming code. **Recommendation: fold them into one futur
 render-pipeline refactor**, not separate controller phases. See MAINWINDOW.MD §9
 "Separability conclusion" and DEV_NOTES. The `MainWindowHost` seam is ready for it.
 
+That refactor is now fully designed in **RENDER_PIPELINE_DESIGN.md**: extract a
+`ChatPane` widget component (owns the chat view + buffer→view render + preview
+cache + comic swap) behind a `ChatRenderTheme` value-in / `ChatPaneDelegate`
+events-out seam; behaviour-preserving R0–R5 migration with a `chat_pane_test`
+safety net; **post-v1**, then the deferred controller phases fall out small.
+
 ## Latest Completed Slice (Peer-audit fix pass P0-P4, 2026-06-15)
 
 Worked the consolidated 10-model audit (AUDIT-PLAN.MD) top-down, committing per

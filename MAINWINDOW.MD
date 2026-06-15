@@ -439,3 +439,7 @@ regression-prone render/theming code, for marginal structural gain.
 refactor** (extract a chat-render component first, then the preview/appearance/
 comic/notification state can move with it), rather than as separate controller
 phases. The `MainWindowHost` seam is in place to support that when it happens.
+
+→ Full design for that refactor: **[RENDER_PIPELINE_DESIGN.md](RENDER_PIPELINE_DESIGN.md)**
+(the `ChatPane` component + `ChatRenderTheme`/`ChatPaneDelegate` seams, R0–R5
+behaviour-preserving migration plan, and how each deferred phase falls out of it).
