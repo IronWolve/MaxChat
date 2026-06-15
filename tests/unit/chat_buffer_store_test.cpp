@@ -181,12 +181,13 @@ private slots:
                                QStringLiteral("Carol")));
     auto snapshot = store.snapshot(channel);
     QVERIFY(!snapshot.members.contains(QStringLiteral("@Alice")));
-    QVERIFY(snapshot.members.contains(QStringLiteral("Carol")));
+    // The op status (@) is preserved across the nick change.
+    QVERIFY(snapshot.members.contains(QStringLiteral("@Carol")));
 
     QVERIFY(store.removeMember(channel, QStringLiteral("bob")));
     snapshot = store.snapshot(channel);
     QVERIFY(!snapshot.members.contains(QStringLiteral("+Bob")));
-    QCOMPARE(snapshot.members, QStringList({QStringLiteral("Carol")}));
+    QCOMPARE(snapshot.members, QStringList({QStringLiteral("@Carol")}));
   }
 
   void removeActiveBufferSelectsNextAvailableBuffer() {

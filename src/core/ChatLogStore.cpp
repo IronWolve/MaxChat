@@ -18,10 +18,13 @@ QString ChatLogStore::logRoot() const {
 }
 
 QString ChatLogStore::safePathPart(const QString& value, const QString& fallback) {
+    // static const: this runs per logged line; rebuilding the regexes each call
+    // is pure overhead.
+    static const QRegularExpression unsafe(QStringLiteral(R"([\\/:*?"<>|\x00-\x1f])"));
+    static const QRegularExpression whitespace(QStringLiteral(R"(\s+)"));
     QString result = value.trimmed();
-    result.replace(QRegularExpression(QStringLiteral(R"([\\/:*?"<>|\x00-\x1f])")),
-                   QStringLiteral("_"));
-    result.replace(QRegularExpression(QStringLiteral(R"(\s+)")), QStringLiteral(" "));
+    result.replace(unsafe, QStringLiteral("_"));
+    result.replace(whitespace, QStringLiteral(" "));
     result = result.left(80).trimmed();
     while (result.startsWith(QLatin1Char('.'))) {
         result.remove(0, 1);
