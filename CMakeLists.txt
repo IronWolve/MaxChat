@@ -302,6 +302,8 @@ qt_add_executable(maxchat-c
     src/ui/ColorPickerDialog.h
     src/comic/ComicArt.cpp
     src/comic/ComicArt.h
+    src/ui/ComicController.cpp
+    src/ui/ComicController.h
     src/comic/ComicCharacter.cpp
     src/comic/ComicCharacter.h
     src/comic/ComicEmotion.cpp
@@ -1158,6 +1160,8 @@ qt_add_executable(main_window_link_preview_test
     src/ui/ColorPickerDialog.h
     src/comic/ComicArt.cpp
     src/comic/ComicArt.h
+    src/ui/ComicController.cpp
+    src/ui/ComicController.h
     src/comic/ComicCharacter.cpp
     src/comic/ComicCharacter.h
     src/comic/ComicEmotion.cpp

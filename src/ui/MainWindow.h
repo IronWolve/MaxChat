@@ -70,6 +70,7 @@ class Notifier;
 
 class BanListDialog;
 class ChatFindDialog;
+class ComicController;
 class IrcRouter;
 class RawLogDialog;
 class ScriptBridge;
@@ -88,6 +89,7 @@ class MainWindow final : public QMainWindow,
     // handlers it owns — a behaviour-preserving relocation, so it needs the same
     // private access the handlers had when they lived here.
     friend class IrcRouter;
+    friend class ComicController; // same: relocated comic backend drives m_comic* state
 
   public:
     explicit MainWindow(QWidget* parent = nullptr);
@@ -211,7 +213,6 @@ class MainWindow final : public QMainWindow,
     void openRawLog();
     void openUrlList();
     void openCommandHelp();
-    void openComicHelp();
     void openAbout();
     // Quiet GitHub Releases check (manual=true also reports "you're up to date").
     void checkForUpdates(bool manual);
@@ -370,16 +371,8 @@ class MainWindow final : public QMainWindow,
     QHash<QString, int> m_bufferMarkerCount;
     void noteUnreadBoundary(const maxchat::core::ChatBufferId& id, bool active,
                             int lineCountBeforeAppend);
-    void setComicMode(bool enabled);
-    void refreshComic();
-    void ensureComicArt();
-    [[nodiscard]] maxchat::comic::Character* comicCharacterForNick(const QString& nick);
-    [[nodiscard]] QString comicEmotionForMessage(const QString& nick, const QString& text);
-    [[nodiscard]] QImage comicBackground();
-    void openComicSettings();
     void openCharacterGallery();
     void openEmotionPicker();
-    void saveComic();
     void openDccTransfers();
     void handleDccCommand(const QStringList& args);
     void configureDcc();
@@ -454,6 +447,7 @@ class MainWindow final : public QMainWindow,
     SoundPlayer m_soundPlayer;
     ScriptBridge* m_scripts = nullptr; // owns LuaEngine + ScriptTerminalManager
     IrcRouter* m_ircRouter = nullptr;  // IRC signal → handler wiring (Phase 7)
+    ComicController* m_comicController = nullptr; // Comic Mode backend (Phase 5)
     PreviewFetcher* m_previewFetcher = nullptr; // link-preview card fetch (Phase 2b)
     maxchat::services::ImageFetcher m_imageFetcher;
     maxchat::core::NetworkConnectionPlan m_connectionPlan;
