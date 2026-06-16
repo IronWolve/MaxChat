@@ -1351,16 +1351,16 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
             return;
         }
         const QString label = theme_->currentText();
-        if (QMessageBox::question(this, QStringLiteral("Delete Theme"),
-                                  QStringLiteral("Delete the user theme \"%1\"?").arg(label)) !=
+        if (QMessageBox::question(this, tr("Delete Theme"),
+                                  tr("Delete the user theme \"%1\"?").arg(label)) !=
             QMessageBox::Yes) {
             return;
         }
         if (deleteUserAppTheme(id)) {
             refillThemeCombo(theme_, false, defaultThemeId());
         } else {
-            QMessageBox::warning(this, QStringLiteral("Delete Theme"),
-                                 QStringLiteral("Could not delete the theme file."));
+            QMessageBox::warning(this, tr("Delete Theme"),
+                                 tr("Could not delete the theme file."));
         }
     });
     appForm->addRow(QString(), appEditRow);
@@ -1471,16 +1471,16 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
         if (!isUserThemeId(id)) {
             return;
         }
-        if (QMessageBox::question(this, QStringLiteral("Delete Theme"),
-                                  QStringLiteral("Delete the user chat theme \"%1\"?")
+        if (QMessageBox::question(this, tr("Delete Theme"),
+                                  tr("Delete the user chat theme \"%1\"?")
                                       .arg(chatTheme_->currentText())) != QMessageBox::Yes) {
             return;
         }
         if (deleteUserChatTheme(id)) {
             refillThemeCombo(chatTheme_, true, QStringLiteral("follow"));
         } else {
-            QMessageBox::warning(this, QStringLiteral("Delete Theme"),
-                                 QStringLiteral("Could not delete the theme."));
+            QMessageBox::warning(this, tr("Delete Theme"),
+                                 tr("Could not delete the theme."));
         }
     });
     chatForm->addRow(QString(), chatEditRow);
@@ -1588,14 +1588,14 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
     connect(saveTheme, &QPushButton::clicked, this, [this]() {
         const QString currentId = theme_->currentData().toString();
         if (currentId == systemThemeId()) {
-            QMessageBox::information(this, QStringLiteral("Save Theme"),
-                                     QStringLiteral("Pick a theme first - \"Themes Off\" has no "
-                                                    "colors to save."));
+            QMessageBox::information(this, tr("Save Theme"),
+                                     tr("Pick a theme first - \"Themes Off\" has no "
+                                        "colors to save."));
             return;
         }
         const QString name =
-            QInputDialog::getText(this, QStringLiteral("Save Theme"),
-                                  QStringLiteral("Theme name (saved with current fonts):"));
+            QInputDialog::getText(this, tr("Save Theme"),
+                                  tr("Theme name (saved with current fonts):"));
         if (name.trimmed().isEmpty()) {
             return;
         }
@@ -1603,8 +1603,8 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
         def.fonts = currentFontSelections();
         const QString id = saveUserAppTheme(name.trimmed(), def);
         if (id.isEmpty()) {
-            QMessageBox::warning(this, QStringLiteral("Save Theme"),
-                                 QStringLiteral("Could not write the theme file."));
+            QMessageBox::warning(this, tr("Save Theme"),
+                                 tr("Could not write the theme file."));
             return;
         }
         refillThemeCombo(theme_, false, id);
@@ -1628,28 +1628,26 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
                                       .arg(pack.name.toLower().replace(QLatin1Char(' '),
                                                                        QLatin1Char('-'))));
         const QString path = QFileDialog::getSaveFileName(
-            this, QStringLiteral("Export Theme"), suggested,
-            QStringLiteral("MaxChat theme (*.json)"));
+            this, tr("Export Theme"), suggested, tr("MaxChat theme (*.json)"));
         if (path.isEmpty()) {
             return;
         }
         if (!exportThemePack(path, pack)) {
-            QMessageBox::warning(this, QStringLiteral("Export Theme"),
-                                 QStringLiteral("Could not write the theme file."));
+            QMessageBox::warning(this, tr("Export Theme"),
+                                 tr("Could not write the theme file."));
         }
     });
 
     connect(importTheme, &QPushButton::clicked, this, [this]() {
         const QString path = QFileDialog::getOpenFileName(
-            this, QStringLiteral("Import Theme"), QDir::homePath(),
-            QStringLiteral("MaxChat theme (*.json)"));
+            this, tr("Import Theme"), QDir::homePath(), tr("MaxChat theme (*.json)"));
         if (path.isEmpty()) {
             return;
         }
         const ThemePack pack = importThemePack(path);
         if (!pack.error.isEmpty()) {
-            QMessageBox::warning(this, QStringLiteral("Import Theme"),
-                                 QStringLiteral("Import failed: %1.").arg(pack.error));
+            QMessageBox::warning(this, tr("Import Theme"),
+                                 tr("Import failed: %1.").arg(pack.error));
             return;
         }
         if (!pack.app.id.isEmpty()) {

@@ -35,6 +35,24 @@
     </message>
 </context>
 <context>
+    <name>maxchat::ui::AppearanceController</name>
+    <message>
+        <location filename="../src/ui/AppearanceController.cpp" line="217"/>
+        <source>! Could not save theme.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/AppearanceController.cpp" line="236"/>
+        <source>! Could not save chat theme.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/AppearanceController.cpp" line="253"/>
+        <source>! Could not save wallpaper.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>maxchat::ui::BanListDialog</name>
     <message>
         <location filename="../src/ui/BanListDialog.cpp" line="36"/>
@@ -449,1007 +467,1010 @@
     </message>
 </context>
 <context>
-    <name>maxchat::ui::MainWindow</name>
+    <name>maxchat::ui::IrcRouter</name>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="919"/>
-        <location filename="../src/ui/MainWindow.cpp" line="4809"/>
-        <location filename="../src/ui/MainWindow.cpp" line="4824"/>
-        <source>! %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1374"/>
-        <source>&amp;Server</source>
-        <translation>&amp;Server</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1376"/>
-        <source>Server List...</source>
-        <translation>Serverliste...</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1378"/>
-        <source>Quick Connect...</source>
-        <translation>Schnellverbindung...</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1379"/>
-        <location filename="../src/ui/MainWindow.cpp" line="1381"/>
-        <source>Disconnect</source>
-        <translation>Trennen</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1383"/>
-        <source>Reconnect</source>
-        <translation>Erneut verbinden</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1387"/>
-        <source>Join...</source>
-        <translation>Betreten...</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1389"/>
-        <source>Leave Channel</source>
-        <translation>Kanal verlassen</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1390"/>
-        <source>Leave All Channels</source>
-        <translation>Alle Kanäle verlassen</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1393"/>
-        <source>Channels...</source>
-        <translation>Kanäle...</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1396"/>
-        <location filename="../src/ui/MainWindow.cpp" line="9241"/>
-        <source>Quit</source>
-        <translation>Beenden</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1398"/>
-        <source>&amp;View</source>
-        <translation>&amp;Ansicht</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1399"/>
-        <source>Button Bar</source>
-        <translation>Schaltflächenleiste</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1405"/>
-        <source>Server List</source>
-        <translation>Serverliste</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1410"/>
-        <source>Member List</source>
-        <translation>Mitgliederliste</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1415"/>
-        <source>Buttons as Tabs</source>
-        <translation>Schaltflächen als Tabs</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1421"/>
-        <source>Chat Separator</source>
-        <translation>Chat-Trenner</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1427"/>
-        <source>Clear Current Chat</source>
-        <translation>Aktuellen Chat leeren</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1428"/>
-        <source>Mark All Read</source>
-        <translation>Alle als gelesen markieren</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1430"/>
-        <source>&amp;Tools</source>
-        <translation>E&amp;xtras</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1432"/>
-        <source>Find in Chat...</source>
-        <translation>Im Chat suchen...</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1434"/>
-        <source>Open Log Folder</source>
-        <translation>Protokollordner öffnen</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1442"/>
-        <source>URL List...</source>
-        <translation>URL-Liste...</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1443"/>
-        <source>Raw Log...</source>
-        <translation>Rohprotokoll...</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1445"/>
-        <source>Do Not Disturb</source>
-        <translation>Nicht stören</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1454"/>
-        <source>! Could not save Do Not Disturb.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1461"/>
-        <source>&amp;Settings</source>
-        <translation>&amp;Einstellungen</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1462"/>
-        <source>Preferences...</source>
-        <translation>Einstellungen...</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1465"/>
-        <source>Ignore List...</source>
-        <translation>Ignorierliste...</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1466"/>
-        <source>Aliases...</source>
-        <translation>Aliase...</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1468"/>
-        <source>Themes</source>
-        <translation>Designs</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1469"/>
-        <source>Theme</source>
-        <translation>Design</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1480"/>
-        <source>Chat Theme</source>
-        <translation>Chat-Design</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1492"/>
-        <source>Wallpaper</source>
-        <translation>Hintergrundbild</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1505"/>
-        <source>Load Image...</source>
-        <translation>Bild laden...</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1513"/>
-        <source>Saved Looks</source>
-        <translation>Gespeicherte Looks</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1516"/>
-        <source>Keyboard Shortcuts...</source>
-        <translation>Tastenkürzel...</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1518"/>
-        <source>Friends / Notify...</source>
-        <translation>Freunde / Benachrichtigung...</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1520"/>
-        <source>Scripts...</source>
-        <translation>Skripte...</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1522"/>
-        <source>File Transfers...</source>
-        <translation>Dateiübertragungen...</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1525"/>
-        <source>Import Settings...</source>
-        <translation>Einstellungen importieren...</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1527"/>
-        <source>Export Settings...</source>
-        <translation>Einstellungen exportieren...</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1529"/>
-        <source>Reset Server List</source>
-        <translation>Serverliste zurücksetzen</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1532"/>
-        <source>&amp;Comic</source>
-        <translation>&amp;Comic</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1533"/>
-        <source>Comic Mode</source>
-        <translation>Comic-Modus</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1540"/>
-        <source>Emotion...</source>
-        <translation>Emotion...</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1542"/>
-        <source>Comic Settings...</source>
-        <translation>Comic-Einstellungen...</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1543"/>
-        <source>Browse Characters...</source>
-        <translation>Charaktere durchsuchen...</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1545"/>
-        <source>Save Comic...</source>
-        <translation>Comic speichern...</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1547"/>
-        <source>Character Names</source>
-        <translation>Charakternamen</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1555"/>
-        <source>! Could not save comic caption setting.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1563"/>
-        <source>&amp;Help</source>
-        <translation>&amp;Hilfe</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1564"/>
-        <source>Commands &amp;&amp; Shortcuts...</source>
-        <translation>Befehle &amp;&amp; Tastenkürzel...</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1566"/>
-        <source>Comic Chat Guide...</source>
-        <translation>Comic-Chat-Anleitung...</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1570"/>
-        <source>Check for Updates...</source>
-        <translation>Nach Updates suchen...</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1572"/>
-        <source>About</source>
-        <translation>Über</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1948"/>
-        <source>! Could not save server list.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1974"/>
-        <location filename="../src/ui/MainWindow.cpp" line="3612"/>
-        <source>! Server list was updated with bundled defaults.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2144"/>
-        <source>! Could not save preferences.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2148"/>
-        <source>! Preferences saved.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2162"/>
-        <location filename="../src/ui/MainWindow.cpp" line="5850"/>
-        <location filename="../src/ui/MainWindow.cpp" line="5874"/>
-        <source>! Could not save command aliases.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2184"/>
-        <location filename="../src/ui/MainWindow.cpp" line="5631"/>
-        <location filename="../src/ui/MainWindow.cpp" line="5657"/>
-        <source>! Could not save ignore list.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2216"/>
-        <location filename="../src/ui/MainWindow.cpp" line="5894"/>
-        <location filename="../src/ui/MainWindow.cpp" line="5920"/>
-        <source>! Could not save notify list.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2240"/>
-        <source>! Select a channel before opening channel modes.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2258"/>
-        <source>! Select a channel before opening the ban list.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2302"/>
-        <source>! Could not send LIST — not connected.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2358"/>
-        <source>! Raw log cleared.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2376"/>
-        <source>! URL list cleared.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2558"/>
-        <source>! This build has no scripting support.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2568"/>
-        <source>* Scripts folder: %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2573"/>
-        <source>! Usage: /%1 &lt;script&gt;</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2592"/>
-        <source>! Scripts are unavailable: this build was compiled without scripting support.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2734"/>
-        <location filename="../src/ui/MainWindow.cpp" line="2751"/>
-        <location filename="../src/ui/MainWindow.cpp" line="4396"/>
-        <location filename="../src/ui/MainWindow.cpp" line="4727"/>
-        <location filename="../src/ui/MainWindow.cpp" line="4813"/>
-        <source>! Not connected.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2738"/>
-        <source>! Select a channel before leaving.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2764"/>
-        <source>! No joined channels on %1.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2859"/>
-        <source>Cleared current chat view.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2870"/>
-        <source>* All chats cleared.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2891"/>
-        <source>* No network selected.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2903"/>
-        <source>* %1 (%2): no ISUPPORT received yet</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="3005"/>
-        <source>! No channel or query is selected to close.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="3028"/>
-        <location filename="../src/ui/MainWindow.cpp" line="4507"/>
-        <source>Closed %1.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="3039"/>
-        <source>Server list saved — it will show when Buttons as Tabs is turned off.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="3147"/>
-        <source>Could not save nick column width.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="3152"/>
-        <source>Nick column width: %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="3307"/>
-        <location filename="../src/ui/MainWindow.cpp" line="3357"/>
-        <source>Could not save panel layout.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="3339"/>
-        <source>Could not save view setting.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="3394"/>
-        <source>! Could not open settings export file.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="3401"/>
-        <source>! Could not write settings export file.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="3404"/>
-        <source>! Settings exported to %1.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="3417"/>
-        <source>! Could not open settings import file.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="3424"/>
-        <source>! Settings import file is not valid JSON.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="3466"/>
-        <source>! Could not save imported settings.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="3470"/>
-        <source>! Settings imported from %1.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="3475"/>
-        <source>! Could not reset server list.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="3478"/>
-        <source>! Server list reset to bundled defaults.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="3642"/>
-        <source>! Auto-connect is enabled, but no server is available.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="3667"/>
+        <location filename="../src/ui/IrcRouter.cpp" line="128"/>
         <source>Registering with IRC server...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="3770"/>
+        <location filename="../src/ui/IrcRouter.cpp" line="231"/>
         <source>* Lag: %1 ms</source>
         <translation type="unfinished"></translation>
     </message>
+</context>
+<context>
+    <name>maxchat::ui::MainWindow</name>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="4234"/>
+        <location filename="../src/ui/MainWindow.cpp" line="791"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4094"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4109"/>
+        <source>! %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1246"/>
+        <source>&amp;Server</source>
+        <translation>&amp;Server</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1248"/>
+        <source>Server List...</source>
+        <translation>Serverliste...</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1250"/>
+        <source>Quick Connect...</source>
+        <translation>Schnellverbindung...</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1251"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1253"/>
+        <source>Disconnect</source>
+        <translation>Trennen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1255"/>
+        <source>Reconnect</source>
+        <translation>Erneut verbinden</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1259"/>
+        <source>Join...</source>
+        <translation>Betreten...</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1261"/>
+        <source>Leave Channel</source>
+        <translation>Kanal verlassen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1262"/>
+        <source>Leave All Channels</source>
+        <translation>Alle Kanäle verlassen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1265"/>
+        <source>Channels...</source>
+        <translation>Kanäle...</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1268"/>
+        <location filename="../src/ui/MainWindow.cpp" line="7993"/>
+        <source>Quit</source>
+        <translation>Beenden</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1270"/>
+        <source>&amp;View</source>
+        <translation>&amp;Ansicht</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1271"/>
+        <source>Button Bar</source>
+        <translation>Schaltflächenleiste</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1277"/>
+        <source>Server List</source>
+        <translation>Serverliste</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1282"/>
+        <source>Member List</source>
+        <translation>Mitgliederliste</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1287"/>
+        <source>Buttons as Tabs</source>
+        <translation>Schaltflächen als Tabs</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1293"/>
+        <source>Chat Separator</source>
+        <translation>Chat-Trenner</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1299"/>
+        <source>Clear Current Chat</source>
+        <translation>Aktuellen Chat leeren</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1300"/>
+        <source>Mark All Read</source>
+        <translation>Alle als gelesen markieren</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1302"/>
+        <source>&amp;Tools</source>
+        <translation>E&amp;xtras</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1304"/>
+        <source>Find in Chat...</source>
+        <translation>Im Chat suchen...</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1306"/>
+        <source>Open Log Folder</source>
+        <translation>Protokollordner öffnen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1314"/>
+        <source>URL List...</source>
+        <translation>URL-Liste...</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1315"/>
+        <source>Raw Log...</source>
+        <translation>Rohprotokoll...</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1317"/>
+        <source>Do Not Disturb</source>
+        <translation>Nicht stören</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1326"/>
+        <source>! Could not save Do Not Disturb.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1333"/>
+        <source>&amp;Settings</source>
+        <translation>&amp;Einstellungen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1334"/>
+        <source>Preferences...</source>
+        <translation>Einstellungen...</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1337"/>
+        <source>Ignore List...</source>
+        <translation>Ignorierliste...</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1338"/>
+        <source>Aliases...</source>
+        <translation>Aliase...</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1340"/>
+        <source>Themes</source>
+        <translation>Designs</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1341"/>
+        <source>Theme</source>
+        <translation>Design</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1352"/>
+        <source>Chat Theme</source>
+        <translation>Chat-Design</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1364"/>
+        <source>Wallpaper</source>
+        <translation>Hintergrundbild</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1377"/>
+        <source>Load Image...</source>
+        <translation>Bild laden...</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1385"/>
+        <source>Saved Looks</source>
+        <translation>Gespeicherte Looks</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1388"/>
+        <source>Keyboard Shortcuts...</source>
+        <translation>Tastenkürzel...</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1390"/>
+        <source>Friends / Notify...</source>
+        <translation>Freunde / Benachrichtigung...</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1392"/>
+        <source>Scripts...</source>
+        <translation>Skripte...</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1394"/>
+        <source>File Transfers...</source>
+        <translation>Dateiübertragungen...</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1397"/>
+        <source>Import Settings...</source>
+        <translation>Einstellungen importieren...</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1399"/>
+        <source>Export Settings...</source>
+        <translation>Einstellungen exportieren...</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1401"/>
+        <source>Reset Server List</source>
+        <translation>Serverliste zurücksetzen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1404"/>
+        <source>&amp;Comic</source>
+        <translation>&amp;Comic</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1405"/>
+        <source>Comic Mode</source>
+        <translation>Comic-Modus</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1412"/>
+        <source>Emotion...</source>
+        <translation>Emotion...</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1414"/>
+        <source>Comic Settings...</source>
+        <translation>Comic-Einstellungen...</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1415"/>
+        <source>Browse Characters...</source>
+        <translation>Charaktere durchsuchen...</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1417"/>
+        <source>Save Comic...</source>
+        <translation>Comic speichern...</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1419"/>
+        <source>Character Names</source>
+        <translation>Charakternamen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1427"/>
+        <source>! Could not save comic caption setting.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1435"/>
+        <source>&amp;Help</source>
+        <translation>&amp;Hilfe</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1436"/>
+        <source>Commands &amp;&amp; Shortcuts...</source>
+        <translation>Befehle &amp;&amp; Tastenkürzel...</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1438"/>
+        <source>Comic Chat Guide...</source>
+        <translation>Comic-Chat-Anleitung...</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1442"/>
+        <source>Check for Updates...</source>
+        <translation>Nach Updates suchen...</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1444"/>
+        <source>About</source>
+        <translation>Über</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1811"/>
+        <source>! Could not save server list.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1837"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3472"/>
+        <source>! Server list was updated with bundled defaults.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2006"/>
+        <source>! Could not save preferences.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2010"/>
+        <source>! Preferences saved.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2024"/>
+        <location filename="../src/ui/MainWindow.cpp" line="5135"/>
+        <location filename="../src/ui/MainWindow.cpp" line="5159"/>
+        <source>! Could not save command aliases.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2046"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4916"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4942"/>
+        <source>! Could not save ignore list.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2078"/>
+        <location filename="../src/ui/MainWindow.cpp" line="5179"/>
+        <location filename="../src/ui/MainWindow.cpp" line="5205"/>
+        <source>! Could not save notify list.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2102"/>
+        <source>! Select a channel before opening channel modes.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2120"/>
+        <source>! Select a channel before opening the ban list.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2164"/>
+        <source>! Could not send LIST — not connected.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2220"/>
+        <source>! Raw log cleared.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2238"/>
+        <source>! URL list cleared.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2361"/>
+        <source>You&apos;re on the latest version (v%1).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2362"/>
+        <source>Couldn&apos;t check for updates (no releases yet, or no connection).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2363"/>
+        <source>Check for Updates</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2419"/>
+        <source>! This build has no scripting support.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2429"/>
+        <source>* Scripts folder: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2434"/>
+        <source>! Usage: /%1 &lt;script&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2453"/>
+        <source>! Scripts are unavailable: this build was compiled without scripting support.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2595"/>
+        <location filename="../src/ui/MainWindow.cpp" line="2612"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3681"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4012"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4098"/>
+        <source>! Not connected.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2599"/>
+        <source>! Select a channel before leaving.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2625"/>
+        <source>! No joined channels on %1.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2720"/>
+        <source>Cleared current chat view.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2731"/>
+        <source>* All chats cleared.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2752"/>
+        <source>* No network selected.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2764"/>
+        <source>* %1 (%2): no ISUPPORT received yet</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2866"/>
+        <source>! No channel or query is selected to close.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2889"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3792"/>
+        <source>Closed %1.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="2900"/>
+        <source>Server list saved — it will show when Buttons as Tabs is turned off.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="3008"/>
+        <source>Could not save nick column width.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="3013"/>
+        <source>Nick column width: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="3168"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3217"/>
+        <source>Could not save panel layout.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="3199"/>
+        <source>Could not save view setting.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="3254"/>
+        <source>! Could not open settings export file.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="3261"/>
+        <source>! Could not write settings export file.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="3264"/>
+        <source>! Settings exported to %1.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="3277"/>
+        <source>! Could not open settings import file.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="3284"/>
+        <source>! Settings import file is not valid JSON.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="3326"/>
+        <source>! Could not save imported settings.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="3330"/>
+        <source>! Settings imported from %1.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="3335"/>
+        <source>! Could not reset server list.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="3338"/>
+        <source>! Server list reset to bundled defaults.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="3502"/>
+        <source>! Auto-connect is enabled, but no server is available.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="3519"/>
         <source>! Saved network has no usable server.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="4295"/>
-        <location filename="../src/ui/MainWindow.cpp" line="4312"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3580"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3597"/>
         <source>! No server is available to connect.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="4302"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3587"/>
         <source>! Connection attempts exhausted for %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="4304"/>
-        <location filename="../src/ui/MainWindow.cpp" line="4397"/>
-        <location filename="../src/ui/MainWindow.cpp" line="4516"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3589"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3682"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3801"/>
         <source>Not connected</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="4322"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3607"/>
         <source>! Connecting to %1 (%2:%3%4), attempt %5 of %6.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="4333"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3618"/>
         <source>! Could not create network connection.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="4347"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3632"/>
         <source>! No saved connection is available to reconnect.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="4515"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3800"/>
         <source>! Disconnected: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="4557"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3842"/>
         <source>! Auto reconnect is disabled.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="4565"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3850"/>
         <source>! Reconnecting to %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="4783"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4068"/>
         <source>! Usage: /sysinfo send [#channel|nick] (needs a connection and a target).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="4793"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4078"/>
         <source>! Could not send sysinfo.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="4797"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4082"/>
         <source>* %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="4846"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4131"/>
         <source>* Measuring lag...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="4848"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4133"/>
         <source>! Could not send lag probe.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="4867"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4152"/>
         <source>! Join a channel or use /msg before sending text.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="4883"/>
-        <location filename="../src/ui/MainWindow.cpp" line="4914"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4168"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4199"/>
         <source>! Could not send JOIN.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="4910"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4195"/>
         <source>! Could not send PART.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="4936"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4221"/>
         <source>%1 - %2 as %3</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="4953"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4238"/>
         <source>! Could not send NOTICE.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="4959"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4244"/>
         <source>! No joined channels to message.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="4978"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4263"/>
         <source>! No joined channels for action.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5000"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4285"/>
         <source>! Could not send op notice.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5022"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4307"/>
         <source>! Could not send CTCP.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5028"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4313"/>
         <source>! /sound needs a channel or query.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5042"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4327"/>
         <source>! Could not send sound.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5053"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4338"/>
         <source>-&gt; %1: %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5055"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4340"/>
         <source>! Could not message %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5060"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4345"/>
         <source>! Could not change nick.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5065"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4350"/>
         <source>! Could not send WHOIS.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5070"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4355"/>
         <source>! Could not send WHO.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5075"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4360"/>
         <source>! Could not send WHOWAS.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5080"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4365"/>
         <source>! Could not send NAMES.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5088"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4373"/>
         <source>! Could not send LIST.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5101"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4386"/>
         <source>! Could not send TOPIC.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5107"/>
-        <location filename="../src/ui/MainWindow.cpp" line="5588"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4392"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4873"/>
         <source>! Could not send MODE.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5113"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4398"/>
         <source>! Could not send INVITE.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5122"/>
-        <location filename="../src/ui/MainWindow.cpp" line="5143"/>
-        <location filename="../src/ui/MainWindow.cpp" line="5600"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4407"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4428"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4885"/>
         <source>! Could not send KICK.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5129"/>
-        <location filename="../src/ui/MainWindow.cpp" line="5137"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4414"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4422"/>
         <source>! Could not send ban.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5151"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4436"/>
         <source>! Could not send AWAY.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5182"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4467"/>
         <source>! Could not send raw command.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5484"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4769"/>
         <source>! Could not save comic character.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5623"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4908"/>
         <source>! Already ignoring %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5640"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4925"/>
         <source>! Ignoring %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5649"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4934"/>
         <source>! %1 is not in the ignore list.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5666"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4951"/>
         <source>! No longer ignoring %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5672"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4957"/>
         <source>! Usage: /mute [#channel]</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5686"/>
-        <location filename="../src/ui/MainWindow.cpp" line="5711"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4971"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4996"/>
         <source>! Could not save muted channels.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5691"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4976"/>
         <source>! Muted highlights for %1 on %2.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5698"/>
+        <location filename="../src/ui/MainWindow.cpp" line="4983"/>
         <source>! Usage: /unmute [#channel]</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5716"/>
+        <location filename="../src/ui/MainWindow.cpp" line="5001"/>
         <source>! Unmuted highlights for %1 on %2.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5822"/>
+        <location filename="../src/ui/MainWindow.cpp" line="5107"/>
         <source>! No command aliases are defined.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5828"/>
+        <location filename="../src/ui/MainWindow.cpp" line="5113"/>
         <source>! Command aliases:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5842"/>
+        <location filename="../src/ui/MainWindow.cpp" line="5127"/>
         <source>! Usage: /alias name command</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5853"/>
+        <location filename="../src/ui/MainWindow.cpp" line="5138"/>
         <source>! Alias /%1 = %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5862"/>
+        <location filename="../src/ui/MainWindow.cpp" line="5147"/>
         <source>! Usage: /unalias name</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5866"/>
+        <location filename="../src/ui/MainWindow.cpp" line="5151"/>
         <source>! Alias /%1 is not defined.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5877"/>
+        <location filename="../src/ui/MainWindow.cpp" line="5162"/>
         <source>! Removed alias /%1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5886"/>
+        <location filename="../src/ui/MainWindow.cpp" line="5171"/>
         <source>! %1 is already on the notify list.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5903"/>
+        <location filename="../src/ui/MainWindow.cpp" line="5188"/>
         <source>! Added %1 to the notify list.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5912"/>
+        <location filename="../src/ui/MainWindow.cpp" line="5197"/>
         <source>! %1 is not on the notify list.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="5934"/>
+        <location filename="../src/ui/MainWindow.cpp" line="5219"/>
         <source>! Removed %1 from the notify list.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="6022"/>
+        <location filename="../src/ui/MainWindow.cpp" line="5307"/>
         <source>! Auto-ignored %1 for flooding. Use /unignore %1 to undo.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="6031"/>
+        <location filename="../src/ui/MainWindow.cpp" line="5316"/>
         <source>Enter text to find.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="6045"/>
-        <location filename="../src/ui/MainWindow.cpp" line="6058"/>
+        <location filename="../src/ui/MainWindow.cpp" line="5330"/>
+        <location filename="../src/ui/MainWindow.cpp" line="5343"/>
         <source>Found &quot;%1&quot;.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="6064"/>
+        <location filename="../src/ui/MainWindow.cpp" line="5349"/>
         <source>No matches for &quot;%1&quot;.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="7056"/>
+        <location filename="../src/ui/MainWindow.cpp" line="5986"/>
         <source>No unread activity.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="7070"/>
+        <location filename="../src/ui/MainWindow.cpp" line="6000"/>
         <source>! Could not save shortcuts.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="7074"/>
+        <location filename="../src/ui/MainWindow.cpp" line="6004"/>
         <source>! Shortcuts saved.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="7125"/>
+        <location filename="../src/ui/MainWindow.cpp" line="6055"/>
         <source>! Could not save look.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="7129"/>
+        <location filename="../src/ui/MainWindow.cpp" line="6059"/>
         <source>! Look &quot;%1&quot; saved.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="7137"/>
+        <location filename="../src/ui/MainWindow.cpp" line="6067"/>
         <source>! Look &quot;%1&quot; was not found.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="7146"/>
+        <location filename="../src/ui/MainWindow.cpp" line="6076"/>
         <source>! Could not apply look.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="7150"/>
+        <location filename="../src/ui/MainWindow.cpp" line="6080"/>
         <source>! Look &quot;%1&quot; applied.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="7162"/>
+        <location filename="../src/ui/MainWindow.cpp" line="6092"/>
         <source>! Could not delete look.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="7166"/>
+        <location filename="../src/ui/MainWindow.cpp" line="6096"/>
         <source>! Look &quot;%1&quot; deleted.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="7256"/>
+        <location filename="../src/ui/MainWindow.cpp" line="6141"/>
         <source>! File transfers are disabled. Enable them in Preferences → Files (DCC).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="7278"/>
+        <location filename="../src/ui/MainWindow.cpp" line="6163"/>
         <source>! %1 DCC transfer(s).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="7288"/>
+        <location filename="../src/ui/MainWindow.cpp" line="6173"/>
         <source>! Cancelled active DCC transfers.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="7291"/>
+        <location filename="../src/ui/MainWindow.cpp" line="6176"/>
         <source>! Usage: /dcc send &lt;nick&gt; [file] | /dcc chat &lt;nick&gt; | /dcc list | /dcc close</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="7320"/>
+        <location filename="../src/ui/MainWindow.cpp" line="6205"/>
         <source>! Could not save comic settings.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="7326"/>
+        <location filename="../src/ui/MainWindow.cpp" line="6211"/>
         <source>! Comic settings saved.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="7332"/>
+        <location filename="../src/ui/MainWindow.cpp" line="6217"/>
         <source>! No comic art found - set your comic art folder in Comic &gt; Comic Settings first.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="7472"/>
+        <location filename="../src/ui/MainWindow.cpp" line="6357"/>
         <source>! No comic to save yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="7493"/>
+        <location filename="../src/ui/MainWindow.cpp" line="6378"/>
         <source>! Comic saved to %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="7495"/>
+        <location filename="../src/ui/MainWindow.cpp" line="6380"/>
         <source>! Could not save the comic image.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="7538"/>
+        <location filename="../src/ui/MainWindow.cpp" line="6415"/>
         <source>! Comic Mode: no art loaded. Set your Comic Chat art folder in Comic &gt; Comic Settings (the folder with the .avb/.bgb files).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="8033"/>
+        <location filename="../src/ui/MainWindow.cpp" line="6910"/>
         <source>! Could not reset settings.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="8038"/>
+        <location filename="../src/ui/MainWindow.cpp" line="6915"/>
         <source>! Settings were reset to defaults.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="8065"/>
-        <location filename="../src/ui/MainWindow.cpp" line="8079"/>
+        <location filename="../src/ui/MainWindow.cpp" line="6942"/>
+        <location filename="../src/ui/MainWindow.cpp" line="6956"/>
         <source>! Could not save nick colors.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="8493"/>
+        <location filename="../src/ui/MainWindow.cpp" line="7370"/>
         <source>Added “%1” to your dictionary.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="8646"/>
+        <location filename="../src/ui/MainWindow.cpp" line="7523"/>
         <source>Failed to load the spelling dictionary.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="8652"/>
+        <location filename="../src/ui/MainWindow.cpp" line="7529"/>
         <source>OS spell engine isn&apos;t in this build; using the internal dictionary (rebuild without the noosspell flag for the native engine).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="8766"/>
-        <source>! Could not save theme.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="8796"/>
-        <source>! Could not save chat theme.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="8824"/>
-        <source>! Could not save wallpaper.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="9233"/>
+        <location filename="../src/ui/MainWindow.cpp" line="7985"/>
         <source>Show / Hide</source>
         <translation>Anzeigen / Verbergen</translation>
     </message>
@@ -1716,7 +1737,7 @@
     <message>
         <location filename="../src/ui/PreferencesDialog.cpp" line="211"/>
         <location filename="../src/ui/PreferencesDialog.cpp" line="841"/>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2364"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2362"/>
         <source>Scripts</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2246,8 +2267,36 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1354"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1362"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1474"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1482"/>
+        <source>Delete Theme</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1355"/>
+        <source>Delete the user theme &quot;%1&quot;?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1363"/>
+        <source>Could not delete the theme file.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../src/ui/PreferencesDialog.cpp" line="1369"/>
         <source>Chat area - message view + input</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1475"/>
+        <source>Delete the user chat theme &quot;%1&quot;?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1483"/>
+        <source>Could not delete the theme.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2277,13 +2326,13 @@
     </message>
     <message>
         <location filename="../src/ui/PreferencesDialog.cpp" line="1532"/>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2403"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2401"/>
         <source>Import...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/ui/PreferencesDialog.cpp" line="1534"/>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2401"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2399"/>
         <source>Export...</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2293,583 +2342,629 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1760"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1591"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1597"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1606"/>
+        <source>Save Theme</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1592"/>
+        <source>Pick a theme first - &quot;Themes Off&quot; has no colors to save.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1598"/>
+        <source>Theme name (saved with current fonts):</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1607"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1637"/>
+        <source>Could not write the theme file.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1631"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1636"/>
+        <source>Export Theme</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1631"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1643"/>
+        <source>MaxChat theme (*.json)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1643"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1649"/>
+        <source>Import Theme</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1650"/>
+        <source>Import failed: %1.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1758"/>
         <source>Hide join / part / quit</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1761"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1759"/>
         <source>Show mode changes</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1762"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1760"/>
         <source>Private msgs in server tab &amp;&amp; chat</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1763"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1761"/>
         <source>Log conversations to disk</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1764"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1762"/>
         <source>Log filename mask</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1765"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1763"/>
         <source>Replay last log on open</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1766"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1764"/>
         <source>Lines to replay</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1767"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1765"/>
         <source>Auto-reconnect on disconnect</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1768"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1766"/>
         <source>Auto-rejoin after kick</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1769"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1767"/>
         <source>Confirm before quitting</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1770"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1768"/>
         <source>Scrollback (lines)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1778"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1776"/>
         <source>Show server list on startup</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1783"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1781"/>
         <source>Show member list on startup</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1788"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1786"/>
         <source>Show buttons as tabs on startup</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1792"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1790"/>
         <source>Auto-connect on startup</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1834"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1832"/>
         <source>Flood protection (auto-ignore)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1835"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1833"/>
         <source>Flood: max messages</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1836"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1834"/>
         <source>Flood: within</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1837"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1835"/>
         <source>Large-paste guard</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1838"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1836"/>
         <source>Paste guard: lines</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1839"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1837"/>
         <source>Auto-ignore invite spam</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1840"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1838"/>
         <source>Ignore all channel invites</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1860"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1858"/>
         <source>Allow DCC file transfers and chats. Off by default — most users don&apos;t need it.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1862"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1860"/>
         <source>Enable File Transfers</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1867"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1865"/>
         <source>Ask each time</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1868"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1866"/>
         <source>Auto-accept trusted nicks</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1869"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1867"/>
         <source>Auto-accept everything (careful)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1889"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1887"/>
         <source>Recommended: 5000 (forward this range in your router for active DCC)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1895"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1893"/>
         <source>Recommended: 5010 (forward this range in your router for active DCC)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1899"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1897"/>
         <source>&lt;config&gt;/downloads</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1900"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1898"/>
         <source>Browse...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1914"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1912"/>
         <source>Incoming files</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1915"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1913"/>
         <source>Trusted nicks (auto-accept)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1916"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1914"/>
         <source>Passive / reverse DCC (NAT-friendly)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1917"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1915"/>
         <source>Your DCC IP (for active DCC)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1918"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1916"/>
         <source>Listen port from</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1919"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1917"/>
         <source>Listen port to</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1920"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1918"/>
         <source>Download folder</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1938"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1936"/>
         <source>CTCP Security</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1945"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1943"/>
         <source>Hide CTCP VERSION replies</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1953"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1951"/>
         <source>Custom CTCP VERSION</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1959"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1957"/>
         <source>Reply to CTCP PING</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1964"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1962"/>
         <source>Reply to CTCP TIME</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1969"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1967"/>
         <source>Reply to CTCP CLIENTINFO</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1977"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1975"/>
         <source>Image previews</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1980"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1978"/>
         <source>Audio/video previews</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1983"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1981"/>
         <source>X / Twitter cards</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="1986"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1984"/>
         <source>Website cards</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2003"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2001"/>
         <source>Card fields to display:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2007"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2005"/>
         <source>Site name</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2011"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2009"/>
         <source>Title</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2015"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2013"/>
         <source>Description</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2019"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2017"/>
         <source>Photo (shown below card)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2036"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2034"/>
         <source>System default</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2037"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2035"/>
         <source>English</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2038"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2036"/>
         <source>Arabic</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2039"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2037"/>
         <source>German</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2040"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2038"/>
         <source>Spanish</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2041"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2039"/>
         <source>French</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2042"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2040"/>
         <source>Hindi</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2043"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2041"/>
         <source>Italian</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2044"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2042"/>
         <source>Japanese</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2045"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2043"/>
         <source>Korean</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2046"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2044"/>
         <source>Dutch</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2047"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2045"/>
         <source>Polish</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2048"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2046"/>
         <source>Portuguese (Brazil)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2049"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2047"/>
         <source>Russian</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2050"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2048"/>
         <source>Turkish</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2051"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2049"/>
         <source>Ukrainian</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2052"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2050"/>
         <source>Chinese (Simplified)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2053"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2051"/>
         <source>Chinese (Traditional)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2057"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2055"/>
         <source>Interface Language</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2066"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2064"/>
         <source>Enable spellcheck</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2072"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2070"/>
         <source>Internal (Hunspell)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2073"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2071"/>
         <source>Operating system</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2090"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2088"/>
         <source>Replace a misspelled word with the top suggestion when you press space. Press Backspace right after to undo and keep your spelling.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2113"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2111"/>
         <source>Spell Engine</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2114"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2112"/>
         <source>Dictionary</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2116"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2114"/>
         <source>Autocorrect strength</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2128"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2126"/>
         <source>Disabled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2137"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2135"/>
         <source>Service</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2129"/>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2158"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2127"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2156"/>
         <source>ImgBB</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2164"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2162"/>
         <source>Opens imgbb.com in your browser</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2181"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2179"/>
         <source>Paste your API key here</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2183"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2181"/>
         <source>API key</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2130"/>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2193"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2128"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2191"/>
         <source>Imgur</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2199"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2197"/>
         <source>Opens imgur.com in your browser</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2216"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2214"/>
         <source>Paste your Client-ID here</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2218"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2216"/>
         <source>Client-ID</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2131"/>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2228"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2129"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2226"/>
         <source>Postimages</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2234"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2232"/>
         <source>Opens postimages.org in your browser</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2251"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2249"/>
         <source>Paste your API token here</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2253"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2251"/>
         <source>API token</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2132"/>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2263"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2130"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2261"/>
         <source>Imgbox</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2269"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2267"/>
         <source>Opens imgbox.com in your browser</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2287"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2285"/>
         <source>Your username</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2289"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2287"/>
         <source>Username</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2294"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2292"/>
         <source>Your password</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2300"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2298"/>
         <source>Show / hide password</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2309"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2307"/>
         <source>Password</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2348"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2346"/>
         <source>Open</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2358"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2356"/>
         <source>Folders</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2360"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2358"/>
         <source>Config</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2361"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2359"/>
         <source>Cache</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2362"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2360"/>
         <source>Logs</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2363"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2361"/>
         <source>Downloads</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2367"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2365"/>
         <source>Storage &amp;&amp; stats</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2369"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2370"/>
         <location filename="../src/ui/PreferencesDialog.cpp" line="2371"/>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2372"/>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2373"/>
         <source>computing...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2374"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2372"/>
         <source>Config size</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2375"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2373"/>
         <source>Cache size</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2376"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2374"/>
         <source>Logs size</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2392"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2390"/>
         <source>Ignored masks</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2399"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2397"/>
         <source>Configuration</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2405"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2403"/>
         <source>Reset Server List...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferencesDialog.cpp" line="2407"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2405"/>
         <source>Reset to Defaults...</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3014,6 +3109,16 @@
     <message>
         <location filename="../src/ui/ThemeEditorDialog.cpp" line="108"/>
         <source>Monochrome nicks (irssi-style)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ThemeEditorDialog.cpp" line="152"/>
+        <source>Save Theme</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ThemeEditorDialog.cpp" line="153"/>
+        <source>Could not write the theme file - check that the config folder is writable.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

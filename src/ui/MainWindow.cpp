@@ -2358,10 +2358,9 @@ void maxchat::ui::MainWindow::checkForUpdates(bool manual) {
             }
         } else if (manual) {
             const QString msg =
-                parsed ? QStringLiteral("You're on the latest version (v%1).").arg(app::version())
-                       : QStringLiteral(
-                             "Couldn't check for updates (no releases yet, or no connection).");
-            QMessageBox::information(this, QStringLiteral("Check for Updates"), msg);
+                parsed ? tr("You're on the latest version (v%1).").arg(app::version())
+                       : tr("Couldn't check for updates (no releases yet, or no connection).");
+            QMessageBox::information(this, tr("Check for Updates"), msg);
         }
     });
 }
