@@ -70,6 +70,7 @@ class Notifier;
 
 class BanListDialog;
 class ChatFindDialog;
+class IrcRouter;
 class RawLogDialog;
 class ScriptBridge;
 class SpellTextEdit;
@@ -83,6 +84,10 @@ class MainWindow final : public QMainWindow,
     // header a different layout in the test TU than in the app TU — an ODR
     // violation). A friend grants the same access cleanly.
     friend class ::MainWindowLinkPreviewTest;
+    // IrcRouter (decomp Phase 7) drives the window directly from the IRC signal
+    // handlers it owns — a behaviour-preserving relocation, so it needs the same
+    // private access the handlers had when they lived here.
+    friend class IrcRouter;
 
   public:
     explicit MainWindow(QWidget* parent = nullptr);
@@ -448,6 +453,7 @@ class MainWindow final : public QMainWindow,
     QNetworkAccessManager m_updateNetworkManager;
     SoundPlayer m_soundPlayer;
     ScriptBridge* m_scripts = nullptr; // owns LuaEngine + ScriptTerminalManager
+    IrcRouter* m_ircRouter = nullptr;  // IRC signal → handler wiring (Phase 7)
     PreviewFetcher* m_previewFetcher = nullptr; // link-preview card fetch (Phase 2b)
     maxchat::services::ImageFetcher m_imageFetcher;
     maxchat::core::NetworkConnectionPlan m_connectionPlan;
