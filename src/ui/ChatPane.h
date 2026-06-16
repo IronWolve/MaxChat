@@ -3,17 +3,17 @@
 #include <QColor>
 #include <QHash>
 #include <QImage>
-#include <QObject>
 #include <QSet>
 #include <QString>
+#include <QWidget>
 
 #include "core/ChatBufferStore.h"  // maxchat::core::ChatBufferSnapshot
 #include "core/ChatLineFormatter.h" // maxchat::core::FormattedChatLine
 
 class QImage;
+class QSplitter;
 class QTextBrowser;
 class QUrl;
-class QWidget;
 
 namespace maxchat::ui {
 
@@ -48,12 +48,13 @@ class ChatPaneDelegate {
 // line's format/indent and calls these primitives. Anchor-click and
 // separator-drag route back through ChatPaneDelegate.
 //
-// Note: an R1-stage QObject that owns the view widget rather than the QWidget
-// composite the design's end-state describes — deliberately, so the splitter +
-// comic view + audio bar stay untouched in MainWindow until R4. MainWindow adds
-// view() to its existing splitter exactly where the raw view used to sit, so the
-// layout is pixel-identical.
-class ChatPane : public QObject {
+// The QWidget composite (render-pipeline R4): owns the vertical splitter holding
+// an (injected) comic view above the chat view. MainWindow drops this whole
+// widget into its layout where the raw splitter used to sit, with zero-margin
+// internals so the layout stays pixel-identical. MainWindow still owns the
+// ComicView + its art pipeline (refreshComic/saveComic) and injects the view via
+// setComicWidget; ChatPane just manages the splitter + chat/comic visibility swap.
+class ChatPane : public QWidget {
     Q_OBJECT
 
   public:
@@ -81,10 +82,18 @@ class ChatPane : public QObject {
 
     void clear();
 
-    // Clear the view and render a buffer's entire line model (R2). Does not touch
-    // the comic view — MainWindow refreshes that after, until R4 folds it in.
+    // Clear the view and render a buffer's entire line model (R2).
     void showBuffer(const maxchat::core::ChatBufferSnapshot& snapshot,
                     const BufferRenderOptions& options);
+
+    // --- Comic display (R4) — ChatPane owns the splitter + chat/comic swap ---
+    // Inject the comic widget as the top splitter pane (MainWindow owns it + its
+    // art pipeline). Call once during layout.
+    void setComicWidget(QWidget* comic);
+    // Show/hide the comic pane (the chat-vs-comic render-mode swap).
+    void setComicVisible(bool visible);
+    // When the comic pane is collapsed, give it half the height (used on enable).
+    void ensureComicSplit();
 
     // Forwarded to the underlying ChatTextView.
     void setStripColorsOnCopy(bool strip);
@@ -120,6 +129,8 @@ class ChatPane : public QObject {
     void requestPreviewImages(const QString& html);
 
     QTextBrowser* view_ = nullptr;        // a ChatTextView (private impl detail)
+    QSplitter* splitter_ = nullptr;       // comic (top) over chat (bottom)
+    QWidget* comicWidget_ = nullptr;      // injected by MainWindow (borrowed)
     ChatPaneDelegate* delegate_ = nullptr;
     QHash<QString, QImage> previewImageCache_; // url -> decoded, scaled image
     QSet<QString> previewImagePending_;        // in-flight image fetches

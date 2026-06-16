@@ -15,8 +15,11 @@
 #include <QMouseEvent>
 #include <QPaintEvent>
 #include <QPainter>
+#include <QList>
 #include <QRegularExpression>
 #include <QScrollBar>
+#include <QSizePolicy>
+#include <QSplitter>
 #include <QStringList>
 #include <QTextBlock>
 #include <QTextBlockFormat>
@@ -25,6 +28,7 @@
 #include <QTextCursor>
 #include <QTextDocument>
 #include <QUrl>
+#include <QVBoxLayout>
 #include <QVariant>
 #include <QWidget>
 
@@ -188,8 +192,8 @@ class ChatTextView final : public QTextBrowser {
 
 } // namespace
 
-ChatPane::ChatPane(QWidget* parent) : QObject(parent) {
-    auto* view = new ChatTextView(parent);
+ChatPane::ChatPane(QWidget* parent) : QWidget(parent) {
+    auto* view = new ChatTextView(this);
     view->setObjectName(QStringLiteral("chatView"));
     view->setReadOnly(true);
     // Anchor clicks route through the delegate (→ MediaController) so image/
@@ -207,6 +211,50 @@ ChatPane::ChatPane(QWidget* parent) : QObject(parent) {
         }
     });
     view_ = view;
+
+    // Vertical splitter, chat as the (only, for now) bottom pane; the comic pane
+    // is inserted above it via setComicWidget. Zero-margin layout so dropping this
+    // composite into MainWindow's column is pixel-identical to the old splitter.
+    splitter_ = new QSplitter(Qt::Vertical, this);
+    splitter_->setObjectName(QStringLiteral("chatSplitter"));
+    splitter_->addWidget(view_);
+    splitter_->setCollapsible(0, false);
+    auto* layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+    layout->addWidget(splitter_);
+    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+}
+
+void ChatPane::setComicWidget(QWidget* comic) {
+    comicWidget_ = comic;
+    if (comic == nullptr || splitter_ == nullptr) {
+        return;
+    }
+    comic->setVisible(false);
+    // Comic above chat (MS Comic Chat style); chat stays visible beneath.
+    splitter_->insertWidget(0, comic);
+    splitter_->setCollapsible(0, false);
+    splitter_->setCollapsible(1, false);
+    splitter_->setStretchFactor(0, 1);
+    splitter_->setStretchFactor(1, 1);
+}
+
+void ChatPane::setComicVisible(bool visible) {
+    if (comicWidget_ != nullptr) {
+        comicWidget_->setVisible(visible);
+    }
+}
+
+void ChatPane::ensureComicSplit() {
+    if (splitter_ == nullptr) {
+        return;
+    }
+    const QList<int> sizes = splitter_->sizes();
+    const int total = sizes.value(0) + sizes.value(1);
+    if (total > 0 && sizes.value(0) <= 0) {
+        splitter_->setSizes({total / 2, total - total / 2});
+    }
 }
 
 void ChatPane::clear() {

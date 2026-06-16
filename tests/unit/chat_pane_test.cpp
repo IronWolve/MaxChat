@@ -185,6 +185,28 @@ class ChatPaneTest : public QObject {
                                                            Qt::CaseInsensitive));
     }
 
+    void comicWidgetStartsHiddenAndTogglesVisible() {
+        ChatPane pane;
+        FakeDelegate delegate;
+        pane.setDelegate(&delegate);
+
+        // A plain widget stands in for the ComicView (MainWindow owns the real
+        // one + its art pipeline; ChatPane only manages the splitter + swap).
+        auto* comic = new QWidget;
+        pane.setComicWidget(comic);
+        // isHidden() tracks the explicit visibility flag (the pane itself is never
+        // shown in the test, so isVisible() would always be false).
+        QVERIFY(comic->isHidden()); // comic pane hidden until Comic Mode is on
+
+        pane.setComicVisible(true);
+        QVERIFY(!comic->isHidden());
+        pane.setComicVisible(false);
+        QVERIFY(comic->isHidden());
+        // ensureComicSplit is a no-op when nothing is laid out yet; just confirm
+        // it doesn't crash on an unshown splitter.
+        pane.ensureComicSplit();
+    }
+
     void previewHtmlWithoutImageRendersText() {
         ChatPane pane;
         FakeDelegate delegate;
