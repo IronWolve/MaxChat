@@ -10,21 +10,15 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Scripting engine (vendors Lua 5.4 under third_party/lua). ON by default now
-# that the MinGW/Windows compile is verified; disable with -DMAXCHAT_LUA=OFF for
-# a lean build without scripting.
-option(MAXCHAT_LUA "Build the Lua scripting engine" ON)
+# Lua scripting (vendors Lua 5.4 under third_party/lua) is a CORE dependency —
+# always built. (There used to be a MAXCHAT_LUA=OFF lean build; dropped, since we
+# always ship with scripting and an unbuilt config only rots.)
 
 # Script-driven terminal / BBS UI (ScriptTerminalManager + the api.terminal_*
 # surface). Default ON. Disable for a lean "vanilla IRC client" build with no
 # terminal widgets — bundled BBS scripts (bbs.lua) then degrade gracefully
-# (api.terminal_* return false). Requires scripting, so it is forced off when
-# MAXCHAT_LUA is off.
+# (api.terminal_* return false).
 option(MAXCHAT_TERMINAL "Build the script terminal / BBS UI" ON)
-if(MAXCHAT_TERMINAL AND NOT MAXCHAT_LUA)
-    message(STATUS "MAXCHAT_TERMINAL needs MAXCHAT_LUA; disabling the terminal UI.")
-    set(MAXCHAT_TERMINAL OFF)
-endif()
 if(MAXCHAT_TERMINAL)
     add_compile_definitions(MAXCHAT_TERMINAL=1)
 else()
@@ -73,22 +67,17 @@ qt_standard_project_setup()
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/app/Version.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/generated/maxchat_version.h @ONLY)
 
-if(MAXCHAT_LUA)
-    # Lua is C; enable it only when scripting is requested so a C compiler isn't
-    # required for the default build.
-    enable_language(C)
-    file(GLOB MAXCHAT_LUA_SOURCES CONFIGURE_DEPENDS
-         "${CMAKE_CURRENT_SOURCE_DIR}/third_party/lua/*.c")
-    add_library(maxchat_lua STATIC ${MAXCHAT_LUA_SOURCES})
-    target_include_directories(maxchat_lua PUBLIC
-         "${CMAKE_CURRENT_SOURCE_DIR}/third_party/lua")
-    set_target_properties(maxchat_lua PROPERTIES C_STANDARD 99)
-    # No LUA_USE_POSIX/DLL: the dlopen-based `require`/loadlib stays inert, which
-    # suits the script sandbox. Build as portable ANSI C.
-endif()
+# Lua interpreter (C). Always built — scripting is a core dependency.
+enable_language(C)
+file(GLOB MAXCHAT_LUA_SOURCES CONFIGURE_DEPENDS
+     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/lua/*.c")
+add_library(maxchat_lua STATIC ${MAXCHAT_LUA_SOURCES})
+target_include_directories(maxchat_lua PUBLIC
+     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/lua")
+set_target_properties(maxchat_lua PROPERTIES C_STANDARD 99)
+# No LUA_USE_POSIX/DLL: the dlopen-based `require`/loadlib stays inert, which
+# suits the script sandbox. Build as portable ANSI C.
 
-# The scripting engine is ALWAYS built so the app links one stable target; when
-# MAXCHAT_LUA is off, LuaEngine.cpp compiles to inert stubs (no Lua linked).
 add_library(maxchat_scripting STATIC
     src/scripting/LuaEngine.cpp
     src/scripting/LuaEngine.h
@@ -97,11 +86,8 @@ add_library(maxchat_scripting STATIC
 target_include_directories(maxchat_scripting PUBLIC
      "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_link_libraries(maxchat_scripting PUBLIC Qt6::Core)
-if(MAXCHAT_LUA)
-    target_compile_definitions(maxchat_scripting PUBLIC MAXCHAT_LUA=1)
-    # maxchat_core for stripFormatting; maxchat_lua for the interpreter.
-    target_link_libraries(maxchat_scripting PRIVATE maxchat_core maxchat_lua)
-endif()
+# maxchat_core for stripFormatting; maxchat_lua for the interpreter.
+target_link_libraries(maxchat_scripting PRIVATE maxchat_core maxchat_lua)
 
 add_library(maxchat_core STATIC
     src/app/AppInfo.cpp
@@ -1393,34 +1379,30 @@ target_link_libraries(irc_connection_test
 
 add_test(NAME irc_connection COMMAND irc_connection_test)
 
-if(MAXCHAT_LUA)
-    qt_add_executable(lua_smoke_test
-        tests/unit/lua_smoke_test.cpp
-    )
+# Scripting tests — always built (Lua is a core dependency). lua_engine_test
+# compiles TerminalFrame.cpp inline to parse api.terminal_frame output against
+# its own fake host, independent of the MAXCHAT_TERMINAL app gate.
+qt_add_executable(lua_smoke_test
+    tests/unit/lua_smoke_test.cpp
+)
+target_link_libraries(lua_smoke_test
+    PRIVATE
+        maxchat_lua
+        Qt6::Test
+)
+add_test(NAME lua_smoke COMMAND lua_smoke_test)
 
-    target_link_libraries(lua_smoke_test
-        PRIVATE
-            maxchat_lua
-            Qt6::Test
-    )
-
-    add_test(NAME lua_smoke COMMAND lua_smoke_test)
-
-    qt_add_executable(lua_engine_test
-        tests/unit/lua_engine_test.cpp
-        src/ui/TerminalFrame.cpp
-        src/ui/TerminalFrame.h
-    )
-
-    target_include_directories(lua_engine_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-
-    target_link_libraries(lua_engine_test
-        PRIVATE
-            maxchat_scripting
-            Qt6::Test
-    )
-    target_compile_definitions(lua_engine_test PRIVATE
-        MAXCHAT_EXAMPLE_SCRIPTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/scripts")
-
-    add_test(NAME lua_engine COMMAND lua_engine_test)
-endif()
+qt_add_executable(lua_engine_test
+    tests/unit/lua_engine_test.cpp
+    src/ui/TerminalFrame.cpp
+    src/ui/TerminalFrame.h
+)
+target_include_directories(lua_engine_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(lua_engine_test
+    PRIVATE
+        maxchat_scripting
+        Qt6::Test
+)
+target_compile_definitions(lua_engine_test PRIVATE
+    MAXCHAT_EXAMPLE_SCRIPTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/scripts")
+add_test(NAME lua_engine COMMAND lua_engine_test)
