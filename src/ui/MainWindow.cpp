@@ -2090,7 +2090,7 @@ void maxchat::ui::MainWindow::openPreferences() {
         }
 
         // Custom toast
-        const AppThemeDefinition& themeDef = appThemeById(m_currentTheme);
+        const AppThemeDefinition& themeDef = m_appearance->appTheme();
         QColor followBg = themeDef.panel.isValid() ? themeDef.panel : QColor(QStringLiteral("#2b2b2b"));
         QColor followFg = themeDef.text.isValid() ? themeDef.text : QColor(QStringLiteral("#e8e8e8"));
         QColor followAccent = themeDef.accent.isValid() ? themeDef.accent : QColor(QStringLiteral("#4a9eff"));
@@ -2112,15 +2112,14 @@ void maxchat::ui::MainWindow::openPreferences() {
     connect(&dialog, &PreferencesDialog::themePreviewRequested, this,
             [this](const QString& app, const QString& chat, const QString& wallpaper,
                    int chatOpacity) {
-                m_chatOpacity = std::clamp(chatOpacity, 20, 100);
+                m_appearance->setChatOpacity(chatOpacity);
                 setTheme(app, false);
                 setChatTheme(chat, false);
                 setWallpaper(wallpaper, false);
             });
     if (dialog.exec() != QDialog::Accepted) {
         const QVariantMap saved = m_settings.loadWithDefaults();
-        m_chatOpacity =
-            std::clamp(saved.value(QStringLiteral("chat_opacity"), 100).toInt(), 20, 100);
+        m_appearance->setChatOpacity(saved.value(QStringLiteral("chat_opacity"), 100).toInt());
         setTheme(saved.value(QStringLiteral("theme"), QStringLiteral("synthwave")).toString(),
                  false);
         setChatTheme(
@@ -6110,64 +6109,15 @@ QStringList MainWindow::completionCandidates(bool commandCompletion) const {
     return candidates;
 }
 
-namespace {
-// The traditional client nick palette: the readable slice of the standard
-// 16-color IRC palette (skips white/black/greys, which vanish on some bgs).
-QStringList classicIrcNickPalette() {
-    return {QStringLiteral("#009300"), QStringLiteral("#ff0000"), QStringLiteral("#7f0000"),
-            QStringLiteral("#9c009c"), QStringLiteral("#fc7f00"), QStringLiteral("#ffff00"),
-            QStringLiteral("#00fc00"), QStringLiteral("#009393"), QStringLiteral("#00ffff"),
-            QStringLiteral("#0000fc"), QStringLiteral("#ff00ff"), QStringLiteral("#00007f")};
-}
-} // namespace
-
+// Theme-derived colour resolution lives in AppearanceController now (decomp
+// phase 3 / A1); these stay as thin forwarders so their many callers (member
+// list recolor, the QSS, chatLineFormatOptions) don't all change.
 QColor MainWindow::resolvedChatBackground() const {
-    const maxchat::ui::ChatThemeDefinition chatTheme = chatThemeById(m_currentChatTheme);
-    QColor bg = chatTheme.bg;
-    if (chatTheme.id == QStringLiteral("follow") || !bg.isValid()) {
-        const maxchat::ui::AppThemeDefinition appTheme = appThemeById(m_currentTheme);
-        bg = appTheme.chatBg.isValid() ? appTheme.chatBg : appTheme.panel;
-    }
-    return bg.isValid() ? bg : QColor(28, 30, 33);
+    return m_appearance->resolvedChatBackground();
 }
 
 QStringList MainWindow::effectiveNickPalette(bool* monoOut) const {
-    // THE one source of nick colours: chat view and member list both call this
-    // so a given nick is the same colour everywhere.
-    const maxchat::ui::ChatThemeDefinition chatTheme = chatThemeById(m_currentChatTheme);
-    bool mono = chatTheme.monoNicks;
-    QStringList palette;
-    if (m_nickColorMode == QLatin1String("irc")) {
-        // Explicit classic-IRC choice overrides the chat theme's nick styling.
-        mono = false;
-        palette = classicIrcNickPalette();
-    } else {
-        for (const QColor& color : chatTheme.nickPalette) {
-            palette.append(color.name());
-        }
-        if (palette.isEmpty()) {
-            palette = maxchat::irc::defaultNickPalette();
-        }
-    }
-    // Contrast guard: yellow/cyan vanish on light backgrounds, navy on dark.
-    const QColor bg = resolvedChatBackground();
-    const bool darkBg = (0.299 * bg.red() + 0.587 * bg.green() + 0.114 * bg.blue()) < 150.0;
-    for (QString& name : palette) {
-        QColor c(name);
-        if (!c.isValid()) {
-            continue;
-        }
-        const double luma = 0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue();
-        if (darkBg && luma < 70.0) {
-            name = c.lighter(170).name();
-        } else if (!darkBg && luma > 170.0) {
-            name = c.darker(170).name();
-        }
-    }
-    if (monoOut != nullptr) {
-        *monoOut = mono;
-    }
-    return palette;
+    return m_appearance->effectiveNickPalette(monoOut);
 }
 
 maxchat::core::ChatLineFormatOptions MainWindow::chatLineFormatOptions() const {
@@ -6180,14 +6130,10 @@ maxchat::core::ChatLineFormatOptions MainWindow::chatLineFormatOptions() const {
     options.nickColumnWidth = m_nickColumnWidth;
     options.timestamp = timestampText();
 
-    // All theme-derived colour resolution lives in the pure resolveChatRenderTheme
-    // (RENDER_PIPELINE_DESIGN.md R0). This method keeps only the user-pref toggles
-    // above, the per-nick overrides below, and the live timestamp.
-    bool monoNicks = false;
-    const QStringList nickPalette = effectiveNickPalette(&monoNicks);
-    const maxchat::ui::ChatRenderTheme rt = maxchat::ui::resolveChatRenderTheme(
-        chatThemeById(m_currentChatTheme), appThemeById(m_currentTheme), resolvedChatBackground(),
-        nickPalette, monoNicks, m_eventColor);
+    // All theme-derived colour resolution lives in AppearanceController (which
+    // wraps the pure resolveChatRenderTheme — R0). This method keeps only the
+    // user-pref toggles above, the per-nick overrides below, and the timestamp.
+    const maxchat::ui::ChatRenderTheme rt = m_appearance->buildChatRenderTheme();
     options.timestampColor = rt.timestampColor;
     if (!rt.bracketColor.isEmpty()) {
         options.bracketColor = rt.bracketColor;
@@ -8705,8 +8651,8 @@ void maxchat::ui::MainWindow::resizeMessageInput() {
 void maxchat::ui::MainWindow::applyTheme(const QString& theme) {
     const QString normalized = normalizeThemeId(theme);
     const QString styleSheet =
-        styleSheetForAppearance(normalized, m_currentChatTheme, m_currentWallpaper,
-                                m_chatOpacity);
+        styleSheetForAppearance(normalized, m_appearance->chatThemeId(),
+                                m_appearance->wallpaperValue(), m_appearance->chatOpacity());
     // Chrome font lives IN the stylesheet: with an app-wide QSS active,
     // qApp->setFont/menuBar()->setFont are unreliable — any re-polish (theme,
     // chat theme, wallpaper switch, even later widget churn) silently reverts
@@ -8769,9 +8715,9 @@ void maxchat::ui::MainWindow::setTheme(const QString& theme, const bool save) {
             applyCurrentSettings(); // picks up the bundled fonts
         }
     }
-    m_currentTheme = normalized;
-    applyTheme(m_currentTheme);
-    syncThemeActions(m_currentTheme);
+    m_appearance->setThemeId(normalized);
+    applyTheme(m_appearance->themeId());
+    syncThemeActions(m_appearance->themeId());
     renderActiveBuffer();
     updateChatSeparatorGuide();
 }
@@ -8796,9 +8742,9 @@ void maxchat::ui::MainWindow::setChatTheme(const QString& chatTheme, const bool 
             appendSystemLine(tr("! Could not save chat theme."));
         }
     }
-    m_currentChatTheme = normalized;
-    applyTheme(m_currentTheme);
-    syncChatThemeActions(m_currentChatTheme);
+    m_appearance->setChatThemeId(normalized);
+    applyTheme(m_appearance->themeId());
+    syncChatThemeActions(m_appearance->chatThemeId());
     renderActiveBuffer();
     recolorMemberList();
     updateChatSeparatorGuide();
@@ -8824,9 +8770,9 @@ void maxchat::ui::MainWindow::setWallpaper(const QString& wallpaper, const bool 
             appendSystemLine(tr("! Could not save wallpaper."));
         }
     }
-    m_currentWallpaper = normalized;
-    applyTheme(m_currentTheme);
-    syncWallpaperActions(m_currentWallpaper);
+    m_appearance->setWallpaperValue(normalized);
+    applyTheme(m_appearance->themeId());
+    syncWallpaperActions(m_appearance->wallpaperValue());
 }
 
 void maxchat::ui::MainWindow::syncWallpaperActions(const QString& wallpaper) {
@@ -8858,14 +8804,15 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
     m_separatorLine = settings.value(QStringLiteral("separator_line"), true).toBool();
     m_hideJoinPart = settings.value(QStringLiteral("hide_joinpart"), false).toBool();
     m_showFormatting = settings.value(QStringLiteral("show_formatting"), true).toBool();
-    m_nickColorMode =
+    const QString nickColorMode =
         settings
             .value(QStringLiteral("nick_color_mode"),
                    settings.value(QStringLiteral("colored_nicks"), true).toBool()
                        ? QStringLiteral("palette")
                        : QStringLiteral("off"))
             .toString();
-    m_coloredNicks = m_nickColorMode != QLatin1String("off");
+    m_appearance->setNickColorMode(nickColorMode);
+    m_coloredNicks = nickColorMode != QLatin1String("off");
     m_showMode = settings.value(QStringLiteral("show_mode"), true).toBool();
     m_pmEcho = settings.value(QStringLiteral("pm_echo"), true).toBool();
     m_indentWrap = settings.value(QStringLiteral("indent_wrap"), true).toBool();
@@ -9017,15 +8964,8 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
             settings.value(QStringLiteral("terminal_font_bold"), false).toBool());
     }
 
-    m_currentTheme = normalizeThemeId(
-        settings.value(QStringLiteral("theme"), QStringLiteral("synthwave")).toString());
-    m_currentChatTheme = normalizeChatThemeId(
-        settings.value(QStringLiteral("chat_theme"), QStringLiteral("follow")).toString());
-    m_currentWallpaper =
-        normalizeWallpaperValue(settings.value(QStringLiteral("wallpaper")).toString());
-    m_chatOpacity =
-        std::clamp(settings.value(QStringLiteral("chat_opacity"), 100).toInt(), 20, 100);
-    applyTheme(m_currentTheme);
+    m_appearance->loadFromSettings(settings);
+    applyTheme(m_appearance->themeId());
     // Re-apply the app font AFTER the theme: setting a global stylesheet re-polishes
     // widgets and drops qApp->setFont for chrome (menu bar, menus, dialogs), so the
     // window/menu font would otherwise ignore the configured app font. Set it on the
@@ -9034,9 +8974,9 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
     if (menuBar() != nullptr) {
         menuBar()->setFont(appFont);
     }
-    syncThemeActions(m_currentTheme);
-    syncChatThemeActions(m_currentChatTheme);
-    syncWallpaperActions(m_currentWallpaper);
+    syncThemeActions(m_appearance->themeId());
+    syncChatThemeActions(m_appearance->chatThemeId());
+    syncWallpaperActions(m_appearance->wallpaperValue());
 
     // Per-area color overrides ride on widget-level style sheets so they win
     // over the window-level theme QSS; empty = follow the theme.
@@ -9072,7 +9012,7 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
             topicColor.isEmpty() ? QString()
                                  : QStringLiteral("QLabel{color:%1;}").arg(topicColor));
     }
-    m_eventColor = colorOverride("event_color");
+    m_appearance->setEventColor(colorOverride("event_color"));
 
     // Per-area fonts (list/nick/status/topic). Empty family / size 0 = inherit.
     const auto areaFont = [&settings](const char* familyKey, const char* sizeKey,
@@ -9175,7 +9115,7 @@ void maxchat::ui::MainWindow::notify(const QString& title, const QString& text,
     }
 
     // Custom toast (also fallback when system tray unavailable)
-    const AppThemeDefinition& themeDef = appThemeById(m_currentTheme);
+    const AppThemeDefinition& themeDef = m_appearance->appTheme();
     QColor followBg = themeDef.panel.isValid() ? themeDef.panel : QColor(QStringLiteral("#2b2b2b"));
     QColor followFg = themeDef.text.isValid() ? themeDef.text : QColor(QStringLiteral("#e8e8e8"));
     QColor followAccent = themeDef.accent.isValid() ? themeDef.accent : QColor(QStringLiteral("#4a9eff"));
@@ -9269,7 +9209,7 @@ void maxchat::ui::MainWindow::updateTrayIcon() {
     if (!m_tray) return;
 
     // Pull accent from current theme, fallback to default blue
-    QColor accent = appThemeById(m_currentTheme).accent;
+    QColor accent = m_appearance->appTheme().accent;
     if (!accent.isValid()) {
         accent = QColor(QStringLiteral("#4a9eff"));
     }
