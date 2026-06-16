@@ -557,7 +557,6 @@ class MainWindow final : public QMainWindow, public MainWindowHost, public ChatP
     DccManager* m_dccManager = nullptr;
     QToolBar* m_buttonBar = nullptr;
     QSplitter* m_mainSplitter = nullptr;
-    QSplitter* m_chatSplitter = nullptr;
     QTreeWidget* m_networkTree = nullptr;
     QTabBar* m_bufferTabBar = nullptr;
     ChatPane* m_chatPane = nullptr;             // owns the chat view + append primitives

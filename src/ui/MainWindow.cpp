@@ -1749,19 +1749,13 @@ void maxchat::ui::MainWindow::buildLayout() {
     });
 
     // Comic panels sit ABOVE the chat in a vertical splitter so the chat stays
-    // visible beneath them when Comic Mode is on (MS Comic Chat style).
+    // visible beneath them when Comic Mode is on (MS Comic Chat style). ChatPane
+    // owns the splitter now (render-pipeline R4); MainWindow still owns the
+    // ComicView + its art pipeline (refreshComic/saveComic) and injects it.
     m_comicView = new ComicView(chatColumn);
     connect(m_comicView, &ComicView::saveRequested, this, &MainWindow::saveComic);
-    m_comicView->setVisible(false);
-    m_chatSplitter = new QSplitter(Qt::Vertical, chatColumn);
-    m_chatSplitter->setObjectName(QStringLiteral("chatSplitter"));
-    m_chatSplitter->addWidget(m_comicView);
-    m_chatSplitter->addWidget(m_chatView);
-    m_chatSplitter->setCollapsible(0, false);
-    m_chatSplitter->setCollapsible(1, false);
-    m_chatSplitter->setStretchFactor(0, 1);
-    m_chatSplitter->setStretchFactor(1, 1);
-    chatLayout->addWidget(m_chatSplitter, 1);
+    m_chatPane->setComicWidget(m_comicView);
+    chatLayout->addWidget(m_chatPane, 1);
     m_audioBar = new AudioPlayerBar(chatColumn);
     chatLayout->addWidget(m_audioBar);
     m_media->setAudioBar(m_audioBar);
@@ -6418,9 +6412,7 @@ void maxchat::ui::MainWindow::activateBufferTarget(const QString& target) {
     const bool serverBuffer = m_currentTarget.trimmed().isEmpty();
     const QString key = comicKey(activeNetworkName(), m_currentTarget);
     const bool viewVisible = !serverBuffer && m_comicEnabledBuffers.contains(key);
-    if (m_comicView != nullptr) {
-        m_comicView->setVisible(viewVisible);
-    }
+    m_chatPane->setComicVisible(viewVisible);
     if (m_comicModeAction != nullptr) {
         m_comicModeAction->setEnabled(!serverBuffer);
         if (m_comicModeAction->isChecked() != viewVisible) {
@@ -7067,17 +7059,9 @@ void maxchat::ui::MainWindow::setComicMode(bool enabled) {
     // non-opted-in buffers is skipped in refreshComic.
     m_comicMode = !m_comicEnabledBuffers.isEmpty();
 
-    if (m_comicView != nullptr) {
-        m_comicView->setVisible(enabled);
-    }
+    m_chatPane->setComicVisible(enabled);
     if (enabled) {
-        if (m_chatSplitter != nullptr) {
-            const QList<int> sizes = m_chatSplitter->sizes();
-            const int total = sizes.value(0) + sizes.value(1);
-            if (total > 0 && sizes.value(0) <= 0) {
-                m_chatSplitter->setSizes({total / 2, total - total / 2});
-            }
-        }
+        m_chatPane->ensureComicSplit();
         ensureComicArt();
         refreshComic();
         if (!backendWasOn && m_comicCharacterPaths.isEmpty()) {
