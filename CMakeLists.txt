@@ -1325,6 +1325,23 @@ target_link_libraries(chat_render_theme_test
 target_include_directories(chat_render_theme_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 add_test(NAME chat_render_theme COMMAND chat_render_theme_test)
 
+qt_add_executable(chat_pane_test
+    tests/unit/chat_pane_test.cpp
+    src/ui/ChatPane.cpp
+    src/ui/ChatPane.h
+)
+target_link_libraries(chat_pane_test
+    PRIVATE
+        maxchat_core
+        maxchat_services
+        Qt6::Widgets
+        Qt6::Gui
+        Qt6::Test
+)
+target_include_directories(chat_pane_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+add_test(NAME chat_pane COMMAND chat_pane_test)
+set_tests_properties(chat_pane PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 qt_add_executable(quick_connect_dialog_test
     tests/unit/quick_connect_dialog_test.cpp
     src/ui/QuickConnectDialog.cpp
