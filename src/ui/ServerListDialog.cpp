@@ -124,24 +124,24 @@ class NetworkEditDialog final : public QDialog {
             QStringLiteral("commands run on connect, one per line - e.g. /msg NickServ ..."));
 
         section(QStringLiteral("Connection"));
-        form->addRow(QStringLiteral("Name"), name_);
-        form->addRow(QStringLiteral("Primary server"), host_);
-        form->addRow(QStringLiteral("Port"), port_);
+        form->addRow(tr("Name"), name_);
+        form->addRow(tr("Primary server"), host_);
+        form->addRow(tr("Port"), port_);
         form->addRow(QString(), tlsRow);
-        form->addRow(QStringLiteral("Failover servers"), servers_);
-        form->addRow(QStringLiteral("Homepage"), website_);
+        form->addRow(tr("Failover servers"), servers_);
+        form->addRow(tr("Homepage"), website_);
         section(QStringLiteral("Startup"));
         form->addRow(QString(), autostart_);
-        form->addRow(QStringLiteral("Channels"), channels_);
-        form->addRow(QStringLiteral("Perform"), perform_);
+        form->addRow(tr("Channels"), channels_);
+        form->addRow(tr("Perform"), perform_);
         section(QStringLiteral("Identity"));
-        form->addRow(QStringLiteral("Nickname"), nick_);
-        form->addRow(QStringLiteral("Real name"), realname_);
-        form->addRow(QStringLiteral("Username"), username_);
+        form->addRow(tr("Nickname"), nick_);
+        form->addRow(tr("Real name"), realname_);
+        form->addRow(tr("Username"), username_);
         section(QStringLiteral("Authentication / Bouncers"));
-        form->addRow(QStringLiteral("NickServ account"), account_);
-        form->addRow(QStringLiteral("NickServ password"), password_);
-        form->addRow(QStringLiteral("Server PASS / bouncer"), serverPass_);
+        form->addRow(tr("NickServ account"), account_);
+        form->addRow(tr("NickServ password"), password_);
+        form->addRow(tr("Server PASS / bouncer"), serverPass_);
         form->addRow(QString(), allowInsecureAuth_);
 
         proxyType_ = new QComboBox(this);
@@ -181,10 +181,10 @@ class NetworkEditDialog final : public QDialog {
         syncProxyFields();
 
         section(QStringLiteral("Proxy"));
-        form->addRow(QStringLiteral("Proxy"), proxyType_);
-        form->addRow(QStringLiteral("Proxy server"), proxyServer);
-        form->addRow(QStringLiteral("Proxy username"), proxyUser_);
-        form->addRow(QStringLiteral("Proxy password"), proxyPassword_);
+        form->addRow(tr("Proxy"), proxyType_);
+        form->addRow(tr("Proxy server"), proxyServer);
+        form->addRow(tr("Proxy username"), proxyUser_);
+        form->addRow(tr("Proxy password"), proxyPassword_);
 
         auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
         connect(buttons, &QDialogButtonBox::accepted, this, &NetworkEditDialog::accept);

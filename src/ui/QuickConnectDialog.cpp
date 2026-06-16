@@ -37,11 +37,11 @@ QuickConnectDialog::QuickConnectDialog(QWidget* parent) : QDialog(parent) {
     channels_->setObjectName(QStringLiteral("channels"));
     channels_->setPlaceholderText(tr("#channel #other"));
 
-    form->addRow(QStringLiteral("Server"), host_);
-    form->addRow(QStringLiteral("Port"), port_);
+    form->addRow(tr("Server"), host_);
+    form->addRow(tr("Port"), port_);
     form->addRow(QString(), tls_);
-    form->addRow(QStringLiteral("Nickname"), nick_);
-    form->addRow(QStringLiteral("Channels"), channels_);
+    form->addRow(tr("Nickname"), nick_);
+    form->addRow(tr("Channels"), channels_);
     root->addLayout(form);
 
     auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
