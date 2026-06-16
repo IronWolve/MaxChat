@@ -59,6 +59,12 @@ class FakeHost final : public MainWindowHost {
     SettingsStore& settings() override { return store_; }
     QWidget* dialogParent() override { return parent_; }
     void rebuildTree() override { ++rebuildCount; }
+    void renderActiveBuffer() override {}
+    void recolorMemberList() override {}
+    void updateChatSeparatorGuide() override {}
+    void updateTrayIcon() override {}
+    void setMenuBarFont(const QFont&) override {}
+    void applyAllSettings() override {}
 
     QStringList activeLines;
     QList<QPair<QString, QString>> systemLines;
