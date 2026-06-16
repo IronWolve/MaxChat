@@ -183,6 +183,11 @@ bool SettingsStore::saveRaw(const QVariantMap &settings, const bool preserveGeom
 
   const QJsonDocument document = QJsonDocument::fromVariant(merged);
   file.write(document.toJson(QJsonDocument::Indented));
+  // settings.json holds credentials in clear text (server/NickServ/SASL/proxy
+  // passwords, image-host keys). Restrict it to the owner so other local users
+  // can't read them. POSIX 0600; a near-no-op on Windows (ACL-based), harmless.
+  // (At-rest encryption / OS keychain is the larger follow-on — SECRETS_AT_REST_DESIGN.md.)
+  file.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner);
   return file.commit();
 }
 
