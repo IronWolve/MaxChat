@@ -619,6 +619,19 @@ path) lands in Phase 7. Build + 54/54 ctest green.
 
 ## DECISIONS
 
+- **2026-06-15 — settings.json: keep SHARED with the Python app (no split). RESOLVED.**
+  Both apps read/write `~/.config/maxchat/settings.json`. The long-open question
+  was whether to give the C++ port its own file to avoid cross-app key clobber
+  (the old "lost nick_color_mode" bug). It's a non-issue now: BOTH sides do
+  load-merge-save and preserve unknown keys — C++ `SettingsStore::saveRaw()`
+  merges onto `loadRaw()` (audit P1 fix); Python `set_pref` does
+  `load_settings(); data[k]=v; save_settings(data)`. Only Import/Reset write
+  destructively, intentionally, on both. Decision: **don't split** — the shared
+  file is a transition feature (settings/themes/scripts/logs carry over between
+  the Python and C++ apps). The C++ app is the future and is NOT constrained by
+  Python compat; if a C++-only key ever needs Python to *act* on it (not just
+  preserve it), that's a small **Python backport**, not a config-file fork.
+
 - **2026-06-10 — Scripting/plugins: use embedded Lua (supersedes the earlier
   defer).** Python ships a Python plugin API; embedding CPython in a C++/Qt app
   is heavy + a Windows packaging headache, so the port adopts **Lua 5.4**

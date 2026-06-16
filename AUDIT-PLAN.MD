@@ -145,9 +145,10 @@ reflected below; do not re-fix already-resolved items.
 - **MainWindow God-object decomposition** (~9,900 LOC → IRC router / preview
   manager / DCC facade / comic controller / script bridge).
 - **Secrets-at-rest encryption / OS keychain** — write a design note; defer build.
-- **settings.json split** from the Python app (longstanding pending decision).
+- ~~**settings.json split** from the Python app~~ — RESOLVED 2026-06-15: keep
+  shared (no split); both apps load-merge-save, so no clobber. See DEV_NOTES DECISIONS.
 - **MC DATA / BBS plaintext → future `MC SEC`** (reviewed crypto).
-- Uploader boilerplate → shared base class.
+- ~~Uploader boilerplate → shared base class~~ — DONE (commit fd617f2).
 
 ---
 
