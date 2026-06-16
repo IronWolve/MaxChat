@@ -63,7 +63,7 @@ MediaPlayerDialog::MediaPlayerDialog(const QUrl& mediaUrl, QWidget* parent) : QD
     // dialog claiming it was playing.
     connect(player_, &QMediaPlayer::errorOccurred, this,
             [this](QMediaPlayer::Error, const QString& errorString) {
-                setWindowTitle(QStringLiteral("Playback error: %1").arg(errorString));
+                setWindowTitle(tr("Playback error: %1").arg(errorString));
                 const QSignalBlocker blocker(playPause_);
                 playPause_->setChecked(false);
                 playPause_->setText(QStringLiteral("Play"));

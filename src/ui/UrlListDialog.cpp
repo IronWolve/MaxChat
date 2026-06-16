@@ -34,7 +34,7 @@ QUrl openableUrl(const QString& url) {
 } // namespace
 
 UrlListDialog::UrlListDialog(QWidget* parent) : QDialog(parent) {
-    setWindowTitle(QStringLiteral("URL List"));
+    setWindowTitle(tr("URL List"));
     resize(700, 460);
 
     auto* layout = new QVBoxLayout(this);

@@ -153,7 +153,7 @@ ScriptTerminalDialog::ScriptTerminalDialog(QString id, QString title, TerminalPr
     auto* inputLayout = new QHBoxLayout(inputRow);
     inputLayout->setContentsMargins(0, 0, 0, 0);
     inputLayout->setSpacing(6);
-    prompt_ = new QLabel(QStringLiteral(">"), inputRow);
+    prompt_ = new QLabel(tr(">"), inputRow);
     prompt_->setObjectName(QStringLiteral("terminalPrompt"));
     inputLayout->addWidget(prompt_);
     input_ = new TerminalInputLineEdit(inputRow);

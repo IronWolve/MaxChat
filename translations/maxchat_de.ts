@@ -2,6 +2,333 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="de_DE">
 <context>
+    <name>maxchat::ui::AliasEditorDialog</name>
+    <message>
+        <location filename="../src/ui/AliasEditorDialog.cpp" line="71"/>
+        <source>Command Aliases</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/AliasEditorDialog.cpp" line="97"/>
+        <source>alias</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/AliasEditorDialog.cpp" line="100"/>
+        <source>/command $*</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/AliasEditorDialog.cpp" line="101"/>
+        <source>Add / Update</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/AliasEditorDialog.cpp" line="103"/>
+        <source>Remove</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/AliasEditorDialog.cpp" line="106"/>
+        <source>Restore Defaults</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>maxchat::ui::BanListDialog</name>
+    <message>
+        <location filename="../src/ui/BanListDialog.cpp" line="36"/>
+        <source>Ban List - %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BanListDialog.cpp" line="39"/>
+        <source>&lt;b&gt;%1&lt;/b&gt; - %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BanListDialog.cpp" line="55"/>
+        <source>nick!user@host or *!*@host</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BanListDialog.cpp" line="56"/>
+        <source>Add</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BanListDialog.cpp" line="58"/>
+        <source>Remove</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BanListDialog.cpp" line="68"/>
+        <source>Requesting ban list...</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>maxchat::ui::ChannelListDialog</name>
+    <message>
+        <location filename="../src/ui/ChannelListDialog.cpp" line="52"/>
+        <source>Channel List</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ChannelListDialog.cpp" line="60"/>
+        <source>Get List</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ChannelListDialog.cpp" line="62"/>
+        <source>Fetch channel list from the server (/LIST)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ChannelListDialog.cpp" line="69"/>
+        <source>Search channels or topics</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ChannelListDialog.cpp" line="74"/>
+        <source>Min users:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ChannelListDialog.cpp" line="80"/>
+        <source>Hide channels with fewer than this many users</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ChannelListDialog.cpp" line="108"/>
+        <source>No channels loaded — click Get List</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>maxchat::ui::ChannelModesDialog</name>
+    <message>
+        <location filename="../src/ui/ChannelModesDialog.cpp" line="112"/>
+        <source>Channel Modes - %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ChannelModesDialog.cpp" line="115"/>
+        <source>&lt;b&gt;%1&lt;/b&gt; - %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ChannelModesDialog.cpp" line="120"/>
+        <source>%1 (+%2)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ChannelModesDialog.cpp" line="135"/>
+        <source>Key (+k)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ChannelModesDialog.cpp" line="140"/>
+        <source>password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ChannelModesDialog.cpp" line="141"/>
+        <location filename="../src/ui/ChannelModesDialog.cpp" line="157"/>
+        <source>Set</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ChannelModesDialog.cpp" line="150"/>
+        <source>User limit (+l)</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>maxchat::ui::ChatFindDialog</name>
+    <message>
+        <location filename="../src/ui/ChatFindDialog.cpp" line="14"/>
+        <source>Find in Chat</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ChatFindDialog.cpp" line="28"/>
+        <source>Case sensitive</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ChatFindDialog.cpp" line="30"/>
+        <source>Wrap</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>maxchat::ui::ColorPick</name>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="94"/>
+        <source>Default</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="95"/>
+        <source>Back to the theme&apos;s own color.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>maxchat::ui::ColorPickerDialog</name>
+    <message>
+        <location filename="../src/ui/ColorPickerDialog.cpp" line="32"/>
+        <source>Insert Color</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ColorPickerDialog.cpp" line="35"/>
+        <source>Pick a text color (mIRC code).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ColorPickerDialog.cpp" line="59"/>
+        <source>Cancel</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>maxchat::ui::ComicSettingsDialog</name>
+    <message>
+        <location filename="../src/ui/ComicSettingsDialog.cpp" line="31"/>
+        <source>Comic Settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ComicSettingsDialog.cpp" line="55"/>
+        <source>Browse...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ComicSettingsDialog.cpp" line="113"/>
+        <source>Fixed name color...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ComicSettingsDialog.cpp" line="146"/>
+        <source>Global nick assignments, one per line as nick=character</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ComicSettingsDialog.cpp" line="164"/>
+        <source>Filter bot commands and corrections</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ComicSettingsDialog.cpp" line="167"/>
+        <source>Command/correction prefixes (one per line):</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ComicSettingsDialog.cpp" line="172"/>
+        <source>Bot nicks never drawn (one per line):</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ComicSettingsDialog.cpp" line="211"/>
+        <source>Channel:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ComicSettingsDialog.cpp" line="262"/>
+        <source>Assign characters (this channel), one per line as nick=character:</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>maxchat::ui::DccTransfersDialog</name>
+    <message>
+        <location filename="../src/ui/DccTransfersDialog.cpp" line="83"/>
+        <source>File Transfers (DCC)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DccTransfersDialog.cpp" line="99"/>
+        <source>Accept</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DccTransfersDialog.cpp" line="100"/>
+        <source>Cancel Transfer</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DccTransfersDialog.cpp" line="101"/>
+        <source>Open folder</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DccTransfersDialog.cpp" line="102"/>
+        <source>Close</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>maxchat::ui::FriendsNotifyDialog</name>
+    <message>
+        <location filename="../src/ui/FriendsNotifyDialog.cpp" line="42"/>
+        <source>Friends / Notify</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/FriendsNotifyDialog.cpp" line="60"/>
+        <source>nickname</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/FriendsNotifyDialog.cpp" line="61"/>
+        <source>Add</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/FriendsNotifyDialog.cpp" line="63"/>
+        <source>Remove</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>maxchat::ui::IgnoreListDialog</name>
+    <message>
+        <location filename="../src/ui/IgnoreListDialog.cpp" line="42"/>
+        <source>Ignore List</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/IgnoreListDialog.cpp" line="46"/>
+        <source>Hidden senders - masks over nick!user@host, for example spammer!*@* or *!*@bad.host.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/IgnoreListDialog.cpp" line="60"/>
+        <source>nick or nick!user@host</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/IgnoreListDialog.cpp" line="61"/>
+        <source>Add</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/IgnoreListDialog.cpp" line="63"/>
+        <source>Remove</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>maxchat::ui::ImageViewerDialog</name>
+    <message>
+        <location filename="../src/ui/ImageViewerDialog.cpp" line="35"/>
+        <source>Loading image...</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>maxchat::ui::MainWindow</name>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="1374"/>
@@ -274,6 +601,655 @@
         <location filename="../src/ui/MainWindow.cpp" line="9233"/>
         <source>Show / Hide</source>
         <translation>Anzeigen / Verbergen</translation>
+    </message>
+</context>
+<context>
+    <name>maxchat::ui::MediaPlayerDialog</name>
+    <message>
+        <location filename="../src/ui/MediaPlayerDialog.cpp" line="66"/>
+        <source>Playback error: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>maxchat::ui::NetworkEditDialog</name>
+    <message>
+        <location filename="../src/ui/ServerListDialog.cpp" line="55"/>
+        <source>SSL/TLS</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ServerListDialog.cpp" line="57"/>
+        <source>Accept unsigned</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ServerListDialog.cpp" line="61"/>
+        <source>Allow invalid or self-signed TLS certificates for this network. Leave off unless needed.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ServerListDialog.cpp" line="76"/>
+        <source>one server per line - host:port or host:+port</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ServerListDialog.cpp" line="86"/>
+        <source>optional ident / username</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ServerListDialog.cpp" line="102"/>
+        <source>Allow plaintext auth</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ServerListDialog.cpp" line="106"/>
+        <source>Send PASS/SASL/NickServ passwords without SSL/TLS. Leave off unless this network has no TLS and you accept the risk.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ServerListDialog.cpp" line="111"/>
+        <source>#chan #other  (space/comma)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ServerListDialog.cpp" line="112"/>
+        <source>Connect on startup</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ServerListDialog.cpp" line="115"/>
+        <source>Auto-connect this network at launch. The master on/off switch is the auto-connect checkbox in the Server List.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ServerListDialog.cpp" line="157"/>
+        <source>127.0.0.1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ServerListDialog.cpp" line="168"/>
+        <location filename="../src/ui/ServerListDialog.cpp" line="172"/>
+        <source>optional</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>maxchat::ui::PreferencesDialog</name>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="164"/>
+        <source>Preferences</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="502"/>
+        <source>Timestamps</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="535"/>
+        <source>Nicknames</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="570"/>
+        <source>Text</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="590"/>
+        <source>Window</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="645"/>
+        <source>Suppress ALL notifications. Also toggleable from the Tools menu and the tray.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="665"/>
+        <source>extra words that highlight you (space/comma-separated)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="701"/>
+        <source>Play a chime when a notification fires — a built-in default, or your own if you drop a notify.wav in &lt;config&gt;/sounds/.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="715"/>
+        <source>Open dir</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="716"/>
+        <source>Open the custom sounds folder — drop your own .wav files here.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="726"/>
+        <source>Play .wav sounds others send via CTCP SOUND (mIRC/Comic Chat). Drop your own .wav files in the &apos;sounds&apos; folder under your config directory; a sound only plays if you have that file.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="740"/>
+        <source>Quietly check GitHub Releases for a newer MaxChat shortly after launch. Help &gt; Check for Updates works regardless of this setting.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="766"/>
+        <source>Test notification</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="767"/>
+        <source>Preview a toast with the settings selected above (no need to save first).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="772"/>
+        <source>Alerts fire only when the window isn’t focused (no sounds). Tray features need a system tray – most Linux desktops and Windows; not plain Wayland.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="792"/>
+        <source>Open Comic Settings...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="794"/>
+        <source>Browse characters...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="841"/>
+        <source>Scripts</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="848"/>
+        <source>Load</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="849"/>
+        <source>Unload</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="850"/>
+        <source>Reload</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="851"/>
+        <source>Edit</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="857"/>
+        <source>Open Folder</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="904"/>
+        <source>Script Permissions</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="907"/>
+        <source>Select a script above to configure its permissions.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1005"/>
+        <source>Folders scripts may read/write (the script&apos;s own data folder is always allowed):</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1021"/>
+        <source>Add folder...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1022"/>
+        <source>Add drive/path...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1023"/>
+        <source>Remove</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1058"/>
+        <source>Set all to JetBrains Mono</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1060"/>
+        <source>Set all to System Default</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1062"/>
+        <source>Uses the system UI font for chrome and the system fixed-width font for chat alignment.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1100"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1204"/>
+        <source>Bold</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1268"/>
+        <source>App - window / menus / chrome</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1315"/>
+        <source>Default</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1317"/>
+        <source>Turn themes off</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1324"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1447"/>
+        <source>Customize...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1328"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1449"/>
+        <source>Delete</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1330"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1451"/>
+        <source>Delete the selected user theme (built-ins can&apos;t be deleted)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1369"/>
+        <source>Chat area - message view + input</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1511"/>
+        <source>Wallpaper</source>
+        <translation type="unfinished">Hintergrundbild</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1526"/>
+        <source>Theme files - colors + fonts together</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1528"/>
+        <source>Save Theme...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1532"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2403"/>
+        <source>Import...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1534"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2401"/>
+        <source>Export...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1536"/>
+        <source>Open themes folder...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1778"/>
+        <source>Show server list on startup</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1783"/>
+        <source>Show member list on startup</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1788"/>
+        <source>Show buttons as tabs on startup</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1792"/>
+        <source>Auto-connect on startup</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1860"/>
+        <source>Allow DCC file transfers and chats. Off by default — most users don&apos;t need it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1889"/>
+        <source>Recommended: 5000 (forward this range in your router for active DCC)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1895"/>
+        <source>Recommended: 5010 (forward this range in your router for active DCC)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1899"/>
+        <source>&lt;config&gt;/downloads</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1900"/>
+        <source>Browse...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1938"/>
+        <source>CTCP Security</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1977"/>
+        <source>Image previews</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1980"/>
+        <source>Audio/video previews</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1983"/>
+        <source>X / Twitter cards</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1986"/>
+        <source>Website cards</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2003"/>
+        <source>Card fields to display:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2007"/>
+        <source>Site name</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2011"/>
+        <source>Title</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2015"/>
+        <source>Description</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2019"/>
+        <source>Photo (shown below card)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2066"/>
+        <source>Enable spellcheck</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2090"/>
+        <source>Replace a misspelled word with the top suggestion when you press space. Press Backspace right after to undo and keep your spelling.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2158"/>
+        <source>ImgBB</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2164"/>
+        <source>Opens imgbb.com in your browser</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2181"/>
+        <source>Paste your API key here</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2193"/>
+        <source>Imgur</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2199"/>
+        <source>Opens imgur.com in your browser</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2216"/>
+        <source>Paste your Client-ID here</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2228"/>
+        <source>Postimages</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2234"/>
+        <source>Opens postimages.org in your browser</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2251"/>
+        <source>Paste your API token here</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2263"/>
+        <source>Imgbox</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2269"/>
+        <source>Opens imgbox.com in your browser</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2287"/>
+        <source>Your username</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2294"/>
+        <source>Your password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2300"/>
+        <source>Show / hide password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2348"/>
+        <source>Open</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2358"/>
+        <source>Folders</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2367"/>
+        <source>Storage &amp;&amp; stats</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2371"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2372"/>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2373"/>
+        <source>computing...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2399"/>
+        <source>Configuration</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2405"/>
+        <source>Reset Server List...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2407"/>
+        <source>Reset to Defaults...</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>maxchat::ui::QuickConnectDialog</name>
+    <message>
+        <location filename="../src/ui/QuickConnectDialog.cpp" line="14"/>
+        <source>Quick Connect</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/QuickConnectDialog.cpp" line="22"/>
+        <source>irc.example.net</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/QuickConnectDialog.cpp" line="29"/>
+        <source>SSL/TLS</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/QuickConnectDialog.cpp" line="38"/>
+        <source>#channel #other</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>maxchat::ui::RawLogDialog</name>
+    <message>
+        <location filename="../src/ui/RawLogDialog.cpp" line="14"/>
+        <source>Raw Log</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>maxchat::ui::ScriptTerminalDialog</name>
+    <message>
+        <location filename="../src/ui/ScriptTerminalDialog.cpp" line="156"/>
+        <source>&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>maxchat::ui::ServerListDialog</name>
+    <message>
+        <location filename="../src/ui/ServerListDialog.cpp" line="406"/>
+        <source>Server List</source>
+        <translation type="unfinished">Serverliste</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ServerListDialog.cpp" line="419"/>
+        <source>Add...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ServerListDialog.cpp" line="420"/>
+        <source>Edit...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ServerListDialog.cpp" line="421"/>
+        <source>Delete</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ServerListDialog.cpp" line="422"/>
+        <source>Up</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ServerListDialog.cpp" line="423"/>
+        <source>Down</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ServerListDialog.cpp" line="424"/>
+        <source>Reset Defaults</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ServerListDialog.cpp" line="445"/>
+        <source>Auto-connect on startup</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ServerListDialog.cpp" line="449"/>
+        <source>Connect</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ServerListDialog.cpp" line="450"/>
+        <source>Homepage</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>maxchat::ui::ShortcutEditorDialog</name>
+    <message>
+        <location filename="../src/ui/ShortcutEditorDialog.cpp" line="30"/>
+        <source>Keyboard Shortcuts</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ShortcutEditorDialog.cpp" line="48"/>
+        <source>Default</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>maxchat::ui::ThemeEditorDialog</name>
+    <message>
+        <location filename="../src/ui/ThemeEditorDialog.cpp" line="105"/>
+        <source>Fixed-width (terminal) font</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ThemeEditorDialog.cpp" line="108"/>
+        <source>Monochrome nicks (irssi-style)</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>maxchat::ui::UrlListDialog</name>
+    <message>
+        <location filename="../src/ui/UrlListDialog.cpp" line="37"/>
+        <source>URL List</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 </TS>

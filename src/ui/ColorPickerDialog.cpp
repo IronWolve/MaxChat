@@ -29,10 +29,10 @@ constexpr MircColor MircColors[] = {
 } // namespace
 
 ColorPickerDialog::ColorPickerDialog(QWidget* parent) : QDialog(parent) {
-    setWindowTitle(QStringLiteral("Insert Color"));
+    setWindowTitle(tr("Insert Color"));
 
     auto* root = new QVBoxLayout(this);
-    auto* hint = new QLabel(QStringLiteral("Pick a text color (mIRC code)."), this);
+    auto* hint = new QLabel(tr("Pick a text color (mIRC code)."), this);
     root->addWidget(hint);
 
     auto* grid = new QGridLayout();
@@ -56,7 +56,7 @@ ColorPickerDialog::ColorPickerDialog(QWidget* parent) : QDialog(parent) {
     }
     root->addLayout(grid);
 
-    auto* cancel = new QPushButton(QStringLiteral("Cancel"), this);
+    auto* cancel = new QPushButton(tr("Cancel"), this);
     connect(cancel, &QPushButton::clicked, this, &QDialog::reject);
     auto* bottom = new QVBoxLayout();
     bottom->addWidget(cancel, 0, Qt::AlignRight);

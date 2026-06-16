@@ -11,7 +11,7 @@
 namespace maxchat::ui {
 
 RawLogDialog::RawLogDialog(QWidget* parent) : QDialog(parent) {
-    setWindowTitle(QStringLiteral("Raw Log"));
+    setWindowTitle(tr("Raw Log"));
     resize(780, 520);
 
     auto* layout = new QVBoxLayout(this);

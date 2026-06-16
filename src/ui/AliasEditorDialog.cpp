@@ -68,7 +68,7 @@ int rowForAlias(const QTableWidget *table, const QString &alias) {
 AliasEditorDialog::AliasEditorDialog(const QVariantMap &aliases,
                                      SaveCallback save, QWidget *parent)
     : QDialog(parent), save_(std::move(save)) {
-  setWindowTitle(QStringLiteral("Command Aliases"));
+  setWindowTitle(tr("Command Aliases"));
   resize(620, 420);
 
   auto *layout = new QVBoxLayout(this);
@@ -94,16 +94,16 @@ AliasEditorDialog::AliasEditorDialog(const QVariantMap &aliases,
   auto *entryRow = new QHBoxLayout();
   aliasEntry_ = new QLineEdit(this);
   aliasEntry_->setObjectName(QStringLiteral("alias_name"));
-  aliasEntry_->setPlaceholderText(QStringLiteral("alias"));
+  aliasEntry_->setPlaceholderText(tr("alias"));
   templateEntry_ = new QLineEdit(this);
   templateEntry_->setObjectName(QStringLiteral("alias_template"));
-  templateEntry_->setPlaceholderText(QStringLiteral("/command $*"));
-  auto *addButton = new QPushButton(QStringLiteral("Add / Update"), this);
+  templateEntry_->setPlaceholderText(tr("/command $*"));
+  auto *addButton = new QPushButton(tr("Add / Update"), this);
   addButton->setObjectName(QStringLiteral("alias_add_update"));
-  auto *removeButton = new QPushButton(QStringLiteral("Remove"), this);
+  auto *removeButton = new QPushButton(tr("Remove"), this);
   removeButton->setObjectName(QStringLiteral("alias_remove"));
   auto *restoreButton =
-      new QPushButton(QStringLiteral("Restore Defaults"), this);
+      new QPushButton(tr("Restore Defaults"), this);
   restoreButton->setObjectName(QStringLiteral("alias_restore_defaults"));
 
   connect(aliasEntry_, &QLineEdit::returnPressed, this,

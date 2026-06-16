@@ -39,11 +39,11 @@ bool hasMask(const QListWidget* list, const QString& mask) {
 
 IgnoreListDialog::IgnoreListDialog(const QStringList& ignores, SaveCallback save, QWidget* parent)
     : QDialog(parent), save_(std::move(save)) {
-    setWindowTitle(QStringLiteral("Ignore List"));
+    setWindowTitle(tr("Ignore List"));
 
     auto* layout = new QVBoxLayout(this);
     auto* intro =
-        new QLabel(QStringLiteral("Hidden senders - masks over nick!user@host, for example "
+        new QLabel(tr("Hidden senders - masks over nick!user@host, for example "
                                   "spammer!*@* or *!*@bad.host."),
                    this);
     intro->setWordWrap(true);
@@ -57,10 +57,10 @@ IgnoreListDialog::IgnoreListDialog(const QStringList& ignores, SaveCallback save
     auto* row = new QHBoxLayout();
     entry_ = new QLineEdit(this);
     entry_->setObjectName(QStringLiteral("ignore_entry"));
-    entry_->setPlaceholderText(QStringLiteral("nick or nick!user@host"));
-    auto* addButton = new QPushButton(QStringLiteral("Add"), this);
+    entry_->setPlaceholderText(tr("nick or nick!user@host"));
+    auto* addButton = new QPushButton(tr("Add"), this);
     addButton->setObjectName(QStringLiteral("ignore_add"));
-    auto* removeButton = new QPushButton(QStringLiteral("Remove"), this);
+    auto* removeButton = new QPushButton(tr("Remove"), this);
     removeButton->setObjectName(QStringLiteral("ignore_remove"));
     connect(entry_, &QLineEdit::returnPressed, this, &IgnoreListDialog::addMask);
     connect(addButton, &QPushButton::clicked, this, &IgnoreListDialog::addMask);

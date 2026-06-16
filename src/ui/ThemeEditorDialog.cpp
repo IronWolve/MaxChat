@@ -102,10 +102,10 @@ ThemeEditorDialog::ThemeEditorDialog(Scope scope, const QString& baseId, QWidget
     }
 
     if (scope == Scope::Chat) {
-        fixedFont_ = new QCheckBox(QStringLiteral("Fixed-width (terminal) font"), this);
+        fixedFont_ = new QCheckBox(tr("Fixed-width (terminal) font"), this);
         fixedFont_->setChecked(chatBase.fixedFont);
         form->addRow(QString(), fixedFont_);
-        monoNicks_ = new QCheckBox(QStringLiteral("Monochrome nicks (irssi-style)"), this);
+        monoNicks_ = new QCheckBox(tr("Monochrome nicks (irssi-style)"), this);
         monoNicks_->setChecked(chatBase.monoNicks);
         form->addRow(QString(), monoNicks_);
     }

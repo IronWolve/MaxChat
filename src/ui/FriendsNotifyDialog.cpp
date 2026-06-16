@@ -39,7 +39,7 @@ QString cleanNick(QString nick) {
 FriendsNotifyDialog::FriendsNotifyDialog(const QStringList& friends, SaveCallback save,
                                          QWidget* parent)
     : QDialog(parent), save_(std::move(save)) {
-    setWindowTitle(QStringLiteral("Friends / Notify"));
+    setWindowTitle(tr("Friends / Notify"));
 
     auto* layout = new QVBoxLayout(this);
     auto* intro = new QLabel(
@@ -57,10 +57,10 @@ FriendsNotifyDialog::FriendsNotifyDialog(const QStringList& friends, SaveCallbac
     auto* row = new QHBoxLayout();
     entry_ = new QLineEdit(this);
     entry_->setObjectName(QStringLiteral("friends_entry"));
-    entry_->setPlaceholderText(QStringLiteral("nickname"));
-    auto* addButton = new QPushButton(QStringLiteral("Add"), this);
+    entry_->setPlaceholderText(tr("nickname"));
+    auto* addButton = new QPushButton(tr("Add"), this);
     addButton->setObjectName(QStringLiteral("friends_add"));
-    auto* removeButton = new QPushButton(QStringLiteral("Remove"), this);
+    auto* removeButton = new QPushButton(tr("Remove"), this);
     removeButton->setObjectName(QStringLiteral("friends_remove"));
     connect(entry_, &QLineEdit::returnPressed, this, &FriendsNotifyDialog::addFriend);
     connect(addButton, &QPushButton::clicked, this, &FriendsNotifyDialog::addFriend);

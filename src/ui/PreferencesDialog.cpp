@@ -91,8 +91,8 @@ class ColorPick final : public QWidget {
         auto* layout = new QHBoxLayout(this);
         layout->setContentsMargins(0, 0, 0, 0);
         pick_ = new QPushButton(this);
-        auto* reset = new QPushButton(QStringLiteral("Default"), this);
-        reset->setToolTip(QStringLiteral("Back to the theme's own color."));
+        auto* reset = new QPushButton(tr("Default"), this);
+        reset->setToolTip(tr("Back to the theme's own color."));
         layout->addWidget(pick_);
         layout->addWidget(reset);
         layout->addStretch(1);
@@ -161,7 +161,7 @@ PreferencesDialog::PreferencesDialog(QVariantMap settings, QStringList loadedScr
       originalSettings_(settings_),
       loadedScripts_(std::move(loadedScripts)), scriptsDir_(std::move(scriptsDir)),
       soundsDir_(std::move(soundsDir)) {
-    setWindowTitle(QStringLiteral("Preferences"));
+    setWindowTitle(tr("Preferences"));
     resize(1000, 680);
 
     auto* root = new QVBoxLayout(this);
@@ -499,7 +499,7 @@ void PreferencesDialog::buildAppearanceTab(QWidget* tab) {
     outer->addLayout(columns);
     outer->addStretch(1);
 
-    auto* timestampBox = new QGroupBox(QStringLiteral("Timestamps"), tab);
+    auto* timestampBox = new QGroupBox(tr("Timestamps"), tab);
     auto* timestampForm = new QFormLayout(timestampBox);
     showTimestamps_ = new QCheckBox(QString(), tab);
     showTimestamps_->setObjectName(QStringLiteral("showTimestamps"));
@@ -532,7 +532,7 @@ void PreferencesDialog::buildAppearanceTab(QWidget* tab) {
     timestampForm->addRow(QStringLiteral("Clock / format"), timestampFormat_);
     leftColumn->addWidget(timestampBox);
 
-    auto* nickBox = new QGroupBox(QStringLiteral("Nicknames"), tab);
+    auto* nickBox = new QGroupBox(tr("Nicknames"), tab);
     auto* nickForm = new QFormLayout(nickBox);
     nickColorMode_ = new QComboBox(tab);
     nickColorMode_->setObjectName(QStringLiteral("nickColorMode"));
@@ -567,7 +567,7 @@ void PreferencesDialog::buildAppearanceTab(QWidget* tab) {
     leftColumn->addWidget(nickBox);
     leftColumn->addStretch(1);
 
-    auto* textBox = new QGroupBox(QStringLiteral("Text"), tab);
+    auto* textBox = new QGroupBox(tr("Text"), tab);
     auto* textForm = new QFormLayout(textBox);
     showFormatting_ = new QCheckBox(QString(), tab);
     showFormatting_->setObjectName(QStringLiteral("showFormatting"));
@@ -587,7 +587,7 @@ void PreferencesDialog::buildAppearanceTab(QWidget* tab) {
     textForm->addRow(QStringLiteral("Strip colors on copy"), stripColorCopy_);
     rightColumn->addWidget(textBox);
 
-    auto* windowBox = new QGroupBox(QStringLiteral("Window"), tab);
+    auto* windowBox = new QGroupBox(tr("Window"), tab);
     auto* windowForm = new QFormLayout(windowBox);
     trayIcon_ = new QComboBox(tab);
     trayIcon_->setObjectName(QStringLiteral("trayIcon"));
@@ -642,7 +642,7 @@ void PreferencesDialog::buildNotificationsTab(QWidget* tab) {
     // Do Not Disturb
     dnd_ = new QCheckBox(tab);
     dnd_->setChecked(settings_.value(QStringLiteral("dnd"), false).toBool());
-    dnd_->setToolTip(QStringLiteral("Suppress ALL notifications. Also toggleable from the Tools menu and the tray."));
+    dnd_->setToolTip(tr("Suppress ALL notifications. Also toggleable from the Tools menu and the tray."));
 
     // Popup style
     notifyPopup_ = new QComboBox(tab);
@@ -662,7 +662,7 @@ void PreferencesDialog::buildNotificationsTab(QWidget* tab) {
     // Highlight words
     highlightWords_ = new QLineEdit(tab);
     highlightWords_->setText(settings_.value(QStringLiteral("highlight_words")).toString());
-    highlightWords_->setPlaceholderText(QStringLiteral("extra words that highlight you (space/comma-separated)"));
+    highlightWords_->setPlaceholderText(tr("extra words that highlight you (space/comma-separated)"));
 
     // Taskbar flash
     notifyFlash_ = new QCheckBox(tab);
@@ -698,7 +698,7 @@ void PreferencesDialog::buildNotificationsTab(QWidget* tab) {
     // Sound on notification
     notifySound_ = new QCheckBox(tab);
     notifySound_->setChecked(settings_.value(QStringLiteral("notify_sound"), false).toBool());
-    notifySound_->setToolTip(QStringLiteral(
+    notifySound_->setToolTip(tr(
         "Play a chime when a notification fires \u2014 a built-in default, or your own "
         "if you drop a notify.wav in <config>/sounds/."));
 
@@ -712,8 +712,8 @@ void PreferencesDialog::buildNotificationsTab(QWidget* tab) {
     setComboByData(notifySoundFile_, settings_.value(QStringLiteral("notify_sound_file"), QStringLiteral("notify.wav")).toString());
     // Sound file picker is always enabled — user picks the sound even before enabling it.
     // "Open dir" button lets the user drop custom .wav files into the sounds folder.
-    auto* openSoundsDir = new QPushButton(QStringLiteral("Open dir"), tab);
-    openSoundsDir->setToolTip(QStringLiteral("Open the custom sounds folder — drop your own .wav files here."));
+    auto* openSoundsDir = new QPushButton(tr("Open dir"), tab);
+    openSoundsDir->setToolTip(tr("Open the custom sounds folder — drop your own .wav files here."));
     const QString soundsDirCapture = soundsDir_;
     connect(openSoundsDir, &QPushButton::clicked, this, [soundsDirCapture]() {
         QDir().mkpath(soundsDirCapture);
@@ -723,7 +723,7 @@ void PreferencesDialog::buildNotificationsTab(QWidget* tab) {
     // Play CTCP sounds
     ctcpSound_ = new QCheckBox(tab);
     ctcpSound_->setChecked(settings_.value(QStringLiteral("ctcp_sound"), false).toBool());
-    ctcpSound_->setToolTip(QStringLiteral(
+    ctcpSound_->setToolTip(tr(
         "Play .wav sounds others send via CTCP SOUND (mIRC/Comic Chat). Drop your own "
         ".wav files in the 'sounds' folder under your config directory; a sound only "
         "plays if you have that file."));
@@ -737,7 +737,7 @@ void PreferencesDialog::buildNotificationsTab(QWidget* tab) {
     updateCheck_ = new QCheckBox(tab);
     updateCheck_->setObjectName(QStringLiteral("updateCheck"));
     updateCheck_->setChecked(settings_.value(QStringLiteral("update_check"), false).toBool());
-    updateCheck_->setToolTip(QStringLiteral(
+    updateCheck_->setToolTip(tr(
         "Quietly check GitHub Releases for a newer MaxChat shortly after launch. "
         "Help > Check for Updates works regardless of this setting."));
 
@@ -763,13 +763,13 @@ void PreferencesDialog::buildNotificationsTab(QWidget* tab) {
     form->addRow(QStringLiteral("Check for updates on startup"), updateCheck_);
 
     // Test notification button
-    auto* testBtn = new QPushButton(QStringLiteral("Test notification"), tab);
-    testBtn->setToolTip(QStringLiteral("Preview a toast with the settings selected above (no need to save first)."));
+    auto* testBtn = new QPushButton(tr("Test notification"), tab);
+    testBtn->setToolTip(tr("Preview a toast with the settings selected above (no need to save first)."));
     connect(testBtn, &QPushButton::clicked, this, &PreferencesDialog::testNotificationRequested);
     form->addRow(QString(), testBtn);
 
     // Hint text
-    auto* hint = new QLabel(QStringLiteral(
+    auto* hint = new QLabel(tr(
         "Alerts fire only when the window isn\u2019t focused (no sounds). "
         "Tray features need a system tray \u2013 most Linux desktops and "
         "Windows; not plain Wayland."), tab);
@@ -789,9 +789,9 @@ void PreferencesDialog::buildComicTab(QWidget* tab) {
     root->addWidget(note);
 
     auto* buttons = new QHBoxLayout();
-    auto* openSettings = new QPushButton(QStringLiteral("Open Comic Settings..."), tab);
+    auto* openSettings = new QPushButton(tr("Open Comic Settings..."), tab);
     openSettings->setObjectName(QStringLiteral("openComicSettings"));
-    auto* browseChars = new QPushButton(QStringLiteral("Browse characters..."), tab);
+    auto* browseChars = new QPushButton(tr("Browse characters..."), tab);
     browseChars->setObjectName(QStringLiteral("browseCharacters"));
     buttons->addWidget(openSettings);
     buttons->addWidget(browseChars);
@@ -838,23 +838,23 @@ void PreferencesDialog::buildScriptsTab(QWidget* tab) {
     auto* root = new QVBoxLayout(tab);
 
     // ── Script list ──────────────────────────────────────────────────────────
-    auto* scriptsGroup = new QGroupBox(QStringLiteral("Scripts"), tab);
+    auto* scriptsGroup = new QGroupBox(tr("Scripts"), tab);
     auto* scriptsLayout = new QVBoxLayout(scriptsGroup);
 
     scriptList_ = new QListWidget(scriptsGroup);
     scriptsLayout->addWidget(scriptList_, 1);
 
     auto* scriptBtns = new QHBoxLayout();
-    auto* loadBtn   = new QPushButton(QStringLiteral("Load"),   scriptsGroup);
-    auto* unloadBtn = new QPushButton(QStringLiteral("Unload"), scriptsGroup);
-    auto* reloadBtn = new QPushButton(QStringLiteral("Reload"), scriptsGroup);
-    auto* editBtn   = new QPushButton(QStringLiteral("Edit"),   scriptsGroup);
+    auto* loadBtn   = new QPushButton(tr("Load"),   scriptsGroup);
+    auto* unloadBtn = new QPushButton(tr("Unload"), scriptsGroup);
+    auto* reloadBtn = new QPushButton(tr("Reload"), scriptsGroup);
+    auto* editBtn   = new QPushButton(tr("Edit"),   scriptsGroup);
     scriptBtns->addWidget(loadBtn);
     scriptBtns->addWidget(unloadBtn);
     scriptBtns->addWidget(reloadBtn);
     scriptBtns->addWidget(editBtn);
     if (!scriptsDir_.isEmpty()) {
-        auto* openBtn = new QPushButton(QStringLiteral("Open Folder"), scriptsGroup);
+        auto* openBtn = new QPushButton(tr("Open Folder"), scriptsGroup);
         openBtn->setToolTip(scriptsDir_);
         connect(openBtn, &QPushButton::clicked, this, [this]() {
             QDesktopServices::openUrl(QUrl::fromLocalFile(scriptsDir_));
@@ -901,10 +901,10 @@ void PreferencesDialog::buildScriptsTab(QWidget* tab) {
     root->addWidget(note);
 
     // ── Per-script permissions ───────────────────────────────────────────────
-    auto* permGroup = new QGroupBox(QStringLiteral("Script Permissions"), tab);
+    auto* permGroup = new QGroupBox(tr("Script Permissions"), tab);
     auto* permLayout = new QVBoxLayout(permGroup);
 
-    permLabel_ = new QLabel(QStringLiteral("Select a script above to configure its permissions."),
+    permLabel_ = new QLabel(tr("Select a script above to configure its permissions."),
                             permGroup);
     permLabel_->setWordWrap(true);
     permLayout->addWidget(permLabel_);
@@ -1002,7 +1002,7 @@ void PreferencesDialog::buildScriptsTab(QWidget* tab) {
     connect(scriptIrc_,     &QCheckBox::checkStateChanged, this, onPerm);
 
     auto* dirsLabel =
-        new QLabel(QStringLiteral("Folders scripts may read/write (the script's own data folder "
+        new QLabel(tr("Folders scripts may read/write (the script's own data folder "
                                   "is always allowed):"),
                    tab);
     dirsLabel->setWordWrap(true);
@@ -1018,9 +1018,9 @@ void PreferencesDialog::buildScriptsTab(QWidget* tab) {
     root->addWidget(scriptDirs_, 1);
 
     auto* dirButtons = new QHBoxLayout();
-    auto* addFolder = new QPushButton(QStringLiteral("Add folder..."), tab);
-    auto* addDrive = new QPushButton(QStringLiteral("Add drive/path..."), tab);
-    auto* removeDir = new QPushButton(QStringLiteral("Remove"), tab);
+    auto* addFolder = new QPushButton(tr("Add folder..."), tab);
+    auto* addDrive = new QPushButton(tr("Add drive/path..."), tab);
+    auto* removeDir = new QPushButton(tr("Remove"), tab);
     dirButtons->addWidget(addFolder);
     dirButtons->addWidget(addDrive);
     dirButtons->addWidget(removeDir);
@@ -1055,11 +1055,11 @@ void PreferencesDialog::buildFontsTab(QWidget* tab) {
     auto* root = new QVBoxLayout(tab);
 
     auto* presetRow = new QHBoxLayout();
-    auto* jetbrains = new QPushButton(QStringLiteral("Set all to JetBrains Mono"), tab);
+    auto* jetbrains = new QPushButton(tr("Set all to JetBrains Mono"), tab);
     jetbrains->setObjectName(QStringLiteral("setAllJetBrains"));
-    auto* system = new QPushButton(QStringLiteral("Set all to System Default"), tab);
+    auto* system = new QPushButton(tr("Set all to System Default"), tab);
     system->setObjectName(QStringLiteral("setAllSystem"));
-    system->setToolTip(QStringLiteral("Uses the system UI font for chrome and the system "
+    system->setToolTip(tr("Uses the system UI font for chrome and the system "
                                       "fixed-width font for chat alignment."));
     presetRow->addWidget(jetbrains);
     presetRow->addWidget(system);
@@ -1097,7 +1097,7 @@ void PreferencesDialog::buildFontsTab(QWidget* tab) {
         sizeOut->setRange(6, 48);
         const int size = settings_.value(sizeKey, 14).toInt();
         sizeOut->setValue(size > 0 ? size : 14);
-        boldOut = new QCheckBox(QStringLiteral("Bold"), box);
+        boldOut = new QCheckBox(tr("Bold"), box);
         boldOut->setObjectName(camel(boldKey));
         boldOut->setChecked(settings_.value(boldKey, true).toBool());
         auto* sizeRow = new QWidget(box);
@@ -1201,7 +1201,7 @@ void PreferencesDialog::buildFontsTab(QWidget* tab) {
     terminalFontSize_->setRange(0, 48);
     terminalFontSize_->setSpecialValueText(QStringLiteral("Profile default"));
     terminalFontSize_->setValue(settings_.value(QStringLiteral("terminal_font_size"), 12).toInt());
-    terminalFontBold_ = new QCheckBox(QStringLiteral("Bold"), terminalBox);
+    terminalFontBold_ = new QCheckBox(tr("Bold"), terminalBox);
     terminalFontBold_->setObjectName(QStringLiteral("terminalFontBold"));
     terminalFontBold_->setChecked(
         settings_.value(QStringLiteral("terminal_font_bold"), false).toBool());
@@ -1265,7 +1265,7 @@ void PreferencesDialog::buildFontsTab(QWidget* tab) {
 void PreferencesDialog::buildThemesTab(QWidget* tab) {
     auto* root = new QVBoxLayout(tab);
 
-    auto* appBox = new QGroupBox(QStringLiteral("App - window / menus / chrome"), tab);
+    auto* appBox = new QGroupBox(tr("App - window / menus / chrome"), tab);
     auto* appForm = new QFormLayout(appBox);
     theme_ = new QComboBox(appBox);
     theme_->setObjectName(QStringLiteral("theme"));
@@ -1312,22 +1312,22 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
     updateAppPreview();
 
     auto* appButtons = new QHBoxLayout();
-    auto* appDefault = new QPushButton(QStringLiteral("Default"), appBox);
+    auto* appDefault = new QPushButton(tr("Default"), appBox);
     appDefault->setObjectName(QStringLiteral("themeDefault"));
-    auto* appOff = new QPushButton(QStringLiteral("Turn themes off"), appBox);
+    auto* appOff = new QPushButton(tr("Turn themes off"), appBox);
     appOff->setObjectName(QStringLiteral("themeOff"));
     appButtons->addWidget(appDefault);
     appButtons->addWidget(appOff);
     appButtons->addStretch(1);
     appForm->addRow(QString(), appButtons);
     auto* appEditRow = new QHBoxLayout();
-    auto* appCustomize = new QPushButton(QStringLiteral("Customize..."), appBox);
+    auto* appCustomize = new QPushButton(tr("Customize..."), appBox);
     appCustomize->setObjectName(QStringLiteral("customizeAppTheme"));
     appCustomize->setToolTip(
         QStringLiteral("Edit a copy of the selected theme (saved as a user theme)"));
-    auto* appDelete = new QPushButton(QStringLiteral("Delete"), appBox);
+    auto* appDelete = new QPushButton(tr("Delete"), appBox);
     appDelete->setObjectName(QStringLiteral("deleteAppTheme"));
-    appDelete->setToolTip(QStringLiteral("Delete the selected user theme (built-ins can't be "
+    appDelete->setToolTip(tr("Delete the selected user theme (built-ins can't be "
                                          "deleted)"));
     appEditRow->addWidget(appCustomize);
     appEditRow->addWidget(appDelete);
@@ -1366,7 +1366,7 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
     appForm->addRow(QString(), appEditRow);
     root->addWidget(appBox);
 
-    auto* chatBox = new QGroupBox(QStringLiteral("Chat area - message view + input"), tab);
+    auto* chatBox = new QGroupBox(tr("Chat area - message view + input"), tab);
     auto* chatForm = new QFormLayout(chatBox);
     chatTheme_ = new QComboBox(chatBox);
     chatTheme_->setObjectName(QStringLiteral("chatTheme"));
@@ -1444,11 +1444,11 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
     updateChatPreview();
 
     auto* chatEditRow = new QHBoxLayout();
-    auto* chatCustomize = new QPushButton(QStringLiteral("Customize..."), chatBox);
+    auto* chatCustomize = new QPushButton(tr("Customize..."), chatBox);
     chatCustomize->setObjectName(QStringLiteral("customizeChatTheme"));
-    auto* chatDelete = new QPushButton(QStringLiteral("Delete"), chatBox);
+    auto* chatDelete = new QPushButton(tr("Delete"), chatBox);
     chatDelete->setObjectName(QStringLiteral("deleteChatTheme"));
-    chatDelete->setToolTip(QStringLiteral("Delete the selected user theme (built-ins can't be "
+    chatDelete->setToolTip(tr("Delete the selected user theme (built-ins can't be "
                                           "deleted)"));
     chatEditRow->addWidget(chatCustomize);
     chatEditRow->addWidget(chatDelete);
@@ -1508,7 +1508,7 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
     chatForm->addRow(QStringLiteral("Background opacity"), opacityRow);
     root->addWidget(chatBox);
 
-    auto* wallpaperBox = new QGroupBox(QStringLiteral("Wallpaper"), tab);
+    auto* wallpaperBox = new QGroupBox(tr("Wallpaper"), tab);
     auto* wallpaperForm = new QFormLayout(wallpaperBox);
     wallpaper_ = new QComboBox(wallpaperBox);
     wallpaper_->setObjectName(QStringLiteral("wallpaper"));
@@ -1523,17 +1523,17 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
     // Theme files: save the whole current look (app + chat colors, fonts,
     // wallpaper) as a named user theme, or move it between machines as a
     // single JSON "theme pack".
-    auto* fileBox = new QGroupBox(QStringLiteral("Theme files - colors + fonts together"), tab);
+    auto* fileBox = new QGroupBox(tr("Theme files - colors + fonts together"), tab);
     auto* fileRow = new QHBoxLayout(fileBox);
-    auto* saveTheme = new QPushButton(QStringLiteral("Save Theme..."), fileBox);
+    auto* saveTheme = new QPushButton(tr("Save Theme..."), fileBox);
     saveTheme->setObjectName(QStringLiteral("saveTheme"));
     saveTheme->setToolTip(
         QStringLiteral("Save the current app theme + font settings as a new user theme"));
-    auto* importTheme = new QPushButton(QStringLiteral("Import..."), fileBox);
+    auto* importTheme = new QPushButton(tr("Import..."), fileBox);
     importTheme->setObjectName(QStringLiteral("importTheme"));
-    auto* exportTheme = new QPushButton(QStringLiteral("Export..."), fileBox);
+    auto* exportTheme = new QPushButton(tr("Export..."), fileBox);
     exportTheme->setObjectName(QStringLiteral("exportTheme"));
-    auto* openThemesFolder = new QPushButton(QStringLiteral("Open themes folder..."), fileBox);
+    auto* openThemesFolder = new QPushButton(tr("Open themes folder..."), fileBox);
     openThemesFolder->setObjectName(QStringLiteral("openThemesFolder"));
     connect(openThemesFolder, &QPushButton::clicked, this, []() {
         const QString dir = userThemeDirectoryPath();
@@ -1775,21 +1775,21 @@ void PreferencesDialog::buildMessagesTab(QWidget* tab) {
 void PreferencesDialog::buildLayoutTab(QWidget* tab) {
     auto* root = new QVBoxLayout(tab);
 
-    serverListVisible_ = new QCheckBox(QStringLiteral("Show server list on startup"), tab);
+    serverListVisible_ = new QCheckBox(tr("Show server list on startup"), tab);
     serverListVisible_->setObjectName(QStringLiteral("serverListVisible"));
     serverListVisible_->setChecked(
         settings_.value(QStringLiteral("server_list_visible"), true).toBool());
 
-    memberListVisible_ = new QCheckBox(QStringLiteral("Show member list on startup"), tab);
+    memberListVisible_ = new QCheckBox(tr("Show member list on startup"), tab);
     memberListVisible_->setObjectName(QStringLiteral("memberListVisible"));
     memberListVisible_->setChecked(
         settings_.value(QStringLiteral("member_list_visible"), true).toBool());
 
-    buttonsAsTabs_ = new QCheckBox(QStringLiteral("Show buttons as tabs on startup"), tab);
+    buttonsAsTabs_ = new QCheckBox(tr("Show buttons as tabs on startup"), tab);
     buttonsAsTabs_->setObjectName(QStringLiteral("buttonsAsTabs"));
     buttonsAsTabs_->setChecked(settings_.value(QStringLiteral("buffer_tabs"), false).toBool());
 
-    connectOnStart_ = new QCheckBox(QStringLiteral("Auto-connect on startup"), tab);
+    connectOnStart_ = new QCheckBox(tr("Auto-connect on startup"), tab);
     connectOnStart_->setObjectName(QStringLiteral("connectOnStart"));
     connectOnStart_->setChecked(
         settings_.value(QStringLiteral("connect_on_start"), false).toBool());
@@ -1857,7 +1857,7 @@ void PreferencesDialog::buildFilesTab(QWidget* tab) {
     dccEnabled_ = new QCheckBox(QString(), tab);
     dccEnabled_->setObjectName(QStringLiteral("dccEnabled"));
     dccEnabled_->setChecked(settings_.value(QStringLiteral("dcc_enabled"), false).toBool());
-    dccEnabled_->setToolTip(QStringLiteral(
+    dccEnabled_->setToolTip(tr(
         "Allow DCC file transfers and chats. Off by default — most users don't need it."));
     form->addRow(QStringLiteral("Enable File Transfers"), dccEnabled_);
     form->addRow(new QFrame(tab)); // visual separator
@@ -1886,18 +1886,18 @@ void PreferencesDialog::buildFilesTab(QWidget* tab) {
     dccPortFirst_->setRange(0, 65535);
     dccPortFirst_->setSpecialValueText(QStringLiteral("any"));
     dccPortFirst_->setValue(settings_.value(QStringLiteral("dcc_port_first"), 0).toInt());
-    dccPortFirst_->setToolTip(QStringLiteral("Recommended: 5000 (forward this range in your router for active DCC)"));
+    dccPortFirst_->setToolTip(tr("Recommended: 5000 (forward this range in your router for active DCC)"));
     dccPortLast_ = new QSpinBox(tab);
     dccPortLast_->setObjectName(QStringLiteral("dccPortLast"));
     dccPortLast_->setRange(0, 65535);
     dccPortLast_->setSpecialValueText(QStringLiteral("any"));
     dccPortLast_->setValue(settings_.value(QStringLiteral("dcc_port_last"), 0).toInt());
-    dccPortLast_->setToolTip(QStringLiteral("Recommended: 5010 (forward this range in your router for active DCC)"));
+    dccPortLast_->setToolTip(tr("Recommended: 5010 (forward this range in your router for active DCC)"));
 
     dccDir_ = new QLineEdit(settings_.value(QStringLiteral("dcc_dir")).toString(), tab);
     dccDir_->setObjectName(QStringLiteral("dccDir"));
-    dccDir_->setPlaceholderText(QStringLiteral("<config>/downloads"));
-    auto* browse = new QPushButton(QStringLiteral("Browse..."), tab);
+    dccDir_->setPlaceholderText(tr("<config>/downloads"));
+    auto* browse = new QPushButton(tr("Browse..."), tab);
     connect(browse, &QPushButton::clicked, this, [this]() {
         const QString dir = QFileDialog::getExistingDirectory(
             this, QStringLiteral("Choose download folder"), dccDir_->text());
@@ -1935,7 +1935,7 @@ void PreferencesDialog::buildServicesTab(QWidget* tab) {
     auto* root = new QVBoxLayout(tab);
 
     // ── CTCP Security ─────────────────────────────────────────────────
-    auto* ctcpGroup = new QGroupBox(QStringLiteral("CTCP Security"), tab);
+    auto* ctcpGroup = new QGroupBox(tr("CTCP Security"), tab);
     auto* ctcpForm = new QFormLayout(ctcpGroup);
 
     // Moved from Messages:
@@ -1974,16 +1974,16 @@ void PreferencesDialog::buildServicesTab(QWidget* tab) {
     const QVariantMap services = contentServicesFromSettings(settings_);
 
     // ── Link preview types ────────────────────────────────────────────
-    linkImages_ = new QCheckBox(QStringLiteral("Image previews"), tab);
+    linkImages_ = new QCheckBox(tr("Image previews"), tab);
     linkImages_->setObjectName(QStringLiteral("linkImages"));
     linkImages_->setChecked(services.value(QStringLiteral("images")).toBool());
-    linkMedia_ = new QCheckBox(QStringLiteral("Audio/video previews"), tab);
+    linkMedia_ = new QCheckBox(tr("Audio/video previews"), tab);
     linkMedia_->setObjectName(QStringLiteral("linkMedia"));
     linkMedia_->setChecked(services.value(QStringLiteral("media")).toBool());
-    linkXCards_ = new QCheckBox(QStringLiteral("X / Twitter cards"), tab);
+    linkXCards_ = new QCheckBox(tr("X / Twitter cards"), tab);
     linkXCards_->setObjectName(QStringLiteral("linkXCards"));
     linkXCards_->setChecked(services.value(QStringLiteral("xcards")).toBool());
-    linkWebCards_ = new QCheckBox(QStringLiteral("Website cards"), tab);
+    linkWebCards_ = new QCheckBox(tr("Website cards"), tab);
     linkWebCards_->setObjectName(QStringLiteral("linkWebCards"));
     linkWebCards_->setChecked(services.value(QStringLiteral("webcards")).toBool());
     root->addWidget(linkImages_);
@@ -2000,23 +2000,23 @@ void PreferencesDialog::buildServicesTab(QWidget* tab) {
     root->addSpacing(4);
 
     // ── OG card fields ────────────────────────────────────────────────
-    auto* cardLabel = new QLabel(QStringLiteral("Card fields to display:"), tab);
+    auto* cardLabel = new QLabel(tr("Card fields to display:"), tab);
     root->addWidget(cardLabel);
     root->addSpacing(2);
 
-    ogShowSiteName_ = new QCheckBox(QStringLiteral("Site name"), tab);
+    ogShowSiteName_ = new QCheckBox(tr("Site name"), tab);
     ogShowSiteName_->setObjectName(QStringLiteral("ogShowSiteName"));
     ogShowSiteName_->setChecked(settings_.value(QStringLiteral("og_show_site_name"), true).toBool());
 
-    ogShowTitle_ = new QCheckBox(QStringLiteral("Title"), tab);
+    ogShowTitle_ = new QCheckBox(tr("Title"), tab);
     ogShowTitle_->setObjectName(QStringLiteral("ogShowTitle"));
     ogShowTitle_->setChecked(settings_.value(QStringLiteral("og_show_title"), true).toBool());
 
-    ogShowDescription_ = new QCheckBox(QStringLiteral("Description"), tab);
+    ogShowDescription_ = new QCheckBox(tr("Description"), tab);
     ogShowDescription_->setObjectName(QStringLiteral("ogShowDescription"));
     ogShowDescription_->setChecked(settings_.value(QStringLiteral("og_show_description"), true).toBool());
 
-    ogShowImage_ = new QCheckBox(QStringLiteral("Photo (shown below card)"), tab);
+    ogShowImage_ = new QCheckBox(tr("Photo (shown below card)"), tab);
     ogShowImage_->setObjectName(QStringLiteral("ogShowImage"));
     ogShowImage_->setChecked(settings_.value(QStringLiteral("og_show_image"), true).toBool());
 
@@ -2063,7 +2063,7 @@ void PreferencesDialog::buildSpellingTab(QWidget* tab) {
     auto* root = new QVBoxLayout(tab);
     auto* form = new QFormLayout();
 
-    spellcheckEnabled_ = new QCheckBox(QStringLiteral("Enable spellcheck"), tab);
+    spellcheckEnabled_ = new QCheckBox(tr("Enable spellcheck"), tab);
     spellcheckEnabled_->setObjectName(QStringLiteral("spellcheckEnabled"));
     spellcheckEnabled_->setChecked(settings_.value(QStringLiteral("spellcheck_enabled"), true).toBool());
 
@@ -2087,7 +2087,7 @@ void PreferencesDialog::buildSpellingTab(QWidget* tab) {
     autocorrectEnabled_ = new QCheckBox(
         QStringLiteral("Autocorrect words while typing"), tab);
     autocorrectEnabled_->setObjectName(QStringLiteral("autocorrectEnabled"));
-    autocorrectEnabled_->setToolTip(QStringLiteral(
+    autocorrectEnabled_->setToolTip(tr(
         "Replace a misspelled word with the top suggestion when you press space. "
         "Press Backspace right after to undo and keep your spelling."));
     autocorrectEnabled_->setChecked(
@@ -2155,13 +2155,13 @@ void PreferencesDialog::buildUploadsTab(QWidget* tab) {
 
     // Page 1 — ImgBB
     {
-        auto* panel = new QGroupBox(QStringLiteral("ImgBB"), tab);
+        auto* panel = new QGroupBox(tr("ImgBB"), tab);
         auto* vbox = new QVBoxLayout(panel);
 
         auto* signup = new QToolButton(panel);
         signup->setText(QStringLiteral("🌐  Open imgbb.com  —  create account / get API key"));
         signup->setAutoRaise(true);
-        signup->setToolTip(QStringLiteral("Opens imgbb.com in your browser"));
+        signup->setToolTip(tr("Opens imgbb.com in your browser"));
         connect(signup, &QToolButton::clicked, []() {
             QDesktopServices::openUrl(QUrl(QStringLiteral("https://imgbb.com")));
         });
@@ -2178,7 +2178,7 @@ void PreferencesDialog::buildUploadsTab(QWidget* tab) {
         auto* form = new QFormLayout(creds);
         imgbbKey_ = new QLineEdit(creds);
         imgbbKey_->setObjectName(QStringLiteral("imgbbKey"));
-        imgbbKey_->setPlaceholderText(QStringLiteral("Paste your API key here"));
+        imgbbKey_->setPlaceholderText(tr("Paste your API key here"));
         imgbbKey_->setText(settings_.value(QStringLiteral("imgbb_api_key")).toString());
         form->addRow(QStringLiteral("API key"), imgbbKey_);
         creds->setEnabled(imgbbTos_->isChecked());
@@ -2190,13 +2190,13 @@ void PreferencesDialog::buildUploadsTab(QWidget* tab) {
 
     // Page 2 — Imgur
     {
-        auto* panel = new QGroupBox(QStringLiteral("Imgur"), tab);
+        auto* panel = new QGroupBox(tr("Imgur"), tab);
         auto* vbox = new QVBoxLayout(panel);
 
         auto* signup = new QToolButton(panel);
         signup->setText(QStringLiteral("🌐  Open imgur.com  —  create account / register app"));
         signup->setAutoRaise(true);
-        signup->setToolTip(QStringLiteral("Opens imgur.com in your browser"));
+        signup->setToolTip(tr("Opens imgur.com in your browser"));
         connect(signup, &QToolButton::clicked, []() {
             QDesktopServices::openUrl(QUrl(QStringLiteral("https://imgur.com")));
         });
@@ -2213,7 +2213,7 @@ void PreferencesDialog::buildUploadsTab(QWidget* tab) {
         auto* form = new QFormLayout(creds);
         imgurClientId_ = new QLineEdit(creds);
         imgurClientId_->setObjectName(QStringLiteral("imgurClientId"));
-        imgurClientId_->setPlaceholderText(QStringLiteral("Paste your Client-ID here"));
+        imgurClientId_->setPlaceholderText(tr("Paste your Client-ID here"));
         imgurClientId_->setText(settings_.value(QStringLiteral("imgur_client_id")).toString());
         form->addRow(QStringLiteral("Client-ID"), imgurClientId_);
         creds->setEnabled(imgurTos_->isChecked());
@@ -2225,13 +2225,13 @@ void PreferencesDialog::buildUploadsTab(QWidget* tab) {
 
     // Page 3 — Postimages
     {
-        auto* panel = new QGroupBox(QStringLiteral("Postimages"), tab);
+        auto* panel = new QGroupBox(tr("Postimages"), tab);
         auto* vbox = new QVBoxLayout(panel);
 
         auto* signup = new QToolButton(panel);
         signup->setText(QStringLiteral("🌐  Open postimages.org  —  create account / get API token"));
         signup->setAutoRaise(true);
-        signup->setToolTip(QStringLiteral("Opens postimages.org in your browser"));
+        signup->setToolTip(tr("Opens postimages.org in your browser"));
         connect(signup, &QToolButton::clicked, []() {
             QDesktopServices::openUrl(QUrl(QStringLiteral("https://postimages.org")));
         });
@@ -2248,7 +2248,7 @@ void PreferencesDialog::buildUploadsTab(QWidget* tab) {
         auto* form = new QFormLayout(creds);
         postimagesToken_ = new QLineEdit(creds);
         postimagesToken_->setObjectName(QStringLiteral("postimagesToken"));
-        postimagesToken_->setPlaceholderText(QStringLiteral("Paste your API token here"));
+        postimagesToken_->setPlaceholderText(tr("Paste your API token here"));
         postimagesToken_->setText(settings_.value(QStringLiteral("postimages_token")).toString());
         form->addRow(QStringLiteral("API token"), postimagesToken_);
         creds->setEnabled(postimagesTos_->isChecked());
@@ -2260,13 +2260,13 @@ void PreferencesDialog::buildUploadsTab(QWidget* tab) {
 
     // Page 4 — Imgbox
     {
-        auto* panel = new QGroupBox(QStringLiteral("Imgbox"), tab);
+        auto* panel = new QGroupBox(tr("Imgbox"), tab);
         auto* vbox = new QVBoxLayout(panel);
 
         auto* signup = new QToolButton(panel);
         signup->setText(QStringLiteral("🌐  Open imgbox.com  —  create account"));
         signup->setAutoRaise(true);
-        signup->setToolTip(QStringLiteral("Opens imgbox.com in your browser"));
+        signup->setToolTip(tr("Opens imgbox.com in your browser"));
         connect(signup, &QToolButton::clicked, []() {
             QDesktopServices::openUrl(QUrl(QStringLiteral("https://imgbox.com")));
         });
@@ -2284,20 +2284,20 @@ void PreferencesDialog::buildUploadsTab(QWidget* tab) {
 
         imgboxUsername_ = new QLineEdit(creds);
         imgboxUsername_->setObjectName(QStringLiteral("imgboxUsername"));
-        imgboxUsername_->setPlaceholderText(QStringLiteral("Your username"));
+        imgboxUsername_->setPlaceholderText(tr("Your username"));
         imgboxUsername_->setText(settings_.value(QStringLiteral("imgbox_username")).toString());
         form->addRow(QStringLiteral("Username"), imgboxUsername_);
 
         imgboxPassword_ = new QLineEdit(creds);
         imgboxPassword_->setObjectName(QStringLiteral("imgboxPassword"));
         imgboxPassword_->setEchoMode(QLineEdit::Password);
-        imgboxPassword_->setPlaceholderText(QStringLiteral("Your password"));
+        imgboxPassword_->setPlaceholderText(tr("Your password"));
         imgboxPassword_->setText(settings_.value(QStringLiteral("imgbox_password")).toString());
 
         auto* pwdReveal = new QToolButton(creds);
         pwdReveal->setText(QStringLiteral("🔍"));
         pwdReveal->setCheckable(true);
-        pwdReveal->setToolTip(QStringLiteral("Show / hide password"));
+        pwdReveal->setToolTip(tr("Show / hide password"));
         connect(pwdReveal, &QToolButton::toggled, imgboxPassword_, [this](bool show) {
             imgboxPassword_->setEchoMode(show ? QLineEdit::Normal : QLineEdit::Password);
         });
@@ -2345,7 +2345,7 @@ void PreferencesDialog::buildDataTab(QWidget* tab) {
         layout->setContentsMargins(0, 0, 0, 0);
         auto* edit = new QLineEdit(QDir::toNativeSeparators(path), row);
         edit->setReadOnly(true);
-        auto* open = new QPushButton(QStringLiteral("Open"), row);
+        auto* open = new QPushButton(tr("Open"), row);
         connect(open, &QPushButton::clicked, row, [path]() {
             QDir().mkpath(path);
             QDesktopServices::openUrl(QUrl::fromLocalFile(path));
@@ -2355,7 +2355,7 @@ void PreferencesDialog::buildDataTab(QWidget* tab) {
         return row;
     };
 
-    auto* foldersBox = new QGroupBox(QStringLiteral("Folders"), tab);
+    auto* foldersBox = new QGroupBox(tr("Folders"), tab);
     auto* foldersForm = new QFormLayout(foldersBox);
     foldersForm->addRow(QStringLiteral("Config"), dirRow(paths.configDir));
     foldersForm->addRow(QStringLiteral("Cache"), dirRow(paths.cacheDir));
@@ -2364,13 +2364,13 @@ void PreferencesDialog::buildDataTab(QWidget* tab) {
     foldersForm->addRow(QStringLiteral("Scripts"), dirRow(scriptsDir));
     root->addWidget(foldersBox);
 
-    auto* statsBox = new QGroupBox(QStringLiteral("Storage && stats"), tab);
+    auto* statsBox = new QGroupBox(tr("Storage && stats"), tab);
     auto* statsForm = new QFormLayout(statsBox);
     // The three recursive directory walks are pure blocking I/O and were the
     // main reason Preferences felt slow to open — defer them past first paint.
-    auto* configSize = new QLabel(QStringLiteral("computing..."), tab);
-    auto* cacheSize = new QLabel(QStringLiteral("computing..."), tab);
-    auto* logsSize = new QLabel(QStringLiteral("computing..."), tab);
+    auto* configSize = new QLabel(tr("computing..."), tab);
+    auto* cacheSize = new QLabel(tr("computing..."), tab);
+    auto* logsSize = new QLabel(tr("computing..."), tab);
     statsForm->addRow(QStringLiteral("Config size"), configSize);
     statsForm->addRow(QStringLiteral("Cache size"), cacheSize);
     statsForm->addRow(QStringLiteral("Logs size"), logsSize);
@@ -2396,15 +2396,15 @@ void PreferencesDialog::buildDataTab(QWidget* tab) {
                                  tab));
     root->addWidget(statsBox);
 
-    auto* configBox = new QGroupBox(QStringLiteral("Configuration"), tab);
+    auto* configBox = new QGroupBox(tr("Configuration"), tab);
     auto* configRow = new QHBoxLayout(configBox);
-    auto* exportSettings = new QPushButton(QStringLiteral("Export..."), tab);
+    auto* exportSettings = new QPushButton(tr("Export..."), tab);
     exportSettings->setObjectName(QStringLiteral("exportSettings"));
-    auto* importSettings = new QPushButton(QStringLiteral("Import..."), tab);
+    auto* importSettings = new QPushButton(tr("Import..."), tab);
     importSettings->setObjectName(QStringLiteral("importSettings"));
-    auto* resetServers = new QPushButton(QStringLiteral("Reset Server List..."), tab);
+    auto* resetServers = new QPushButton(tr("Reset Server List..."), tab);
     resetServers->setObjectName(QStringLiteral("resetServerList"));
-    auto* resetAll = new QPushButton(QStringLiteral("Reset to Defaults..."), tab);
+    auto* resetAll = new QPushButton(tr("Reset to Defaults..."), tab);
     resetAll->setObjectName(QStringLiteral("resetAllSettings"));
     configRow->addWidget(exportSettings);
     configRow->addWidget(importSettings);
