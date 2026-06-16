@@ -916,7 +916,7 @@ MainWindow::MainWindow(QWidget* parent)
                                          true, false, false);
             });
     connect(m_dccManager, &DccManager::status, this,
-            [this](const QString& message) { appendSystemLine(QStringLiteral("! %1").arg(message)); });
+            [this](const QString& message) { appendSystemLine(tr("! %1").arg(message)); });
     connect(m_dccManager, &DccManager::chatLineReceived, this,
             [this](const QString& peer, const QString& line) {
                 appendSystemLineToTarget(QStringLiteral("=%1").arg(peer),
@@ -1451,7 +1451,7 @@ void maxchat::ui::MainWindow::buildMenus() {
         QVariantMap settings = m_settings.loadWithDefaults();
         settings.insert(QStringLiteral("dnd"), enabled);
         if (!m_settings.saveRaw(settings)) {
-            appendSystemLine(QStringLiteral("! Could not save Do Not Disturb."));
+            appendSystemLine(tr("! Could not save Do Not Disturb."));
             return;
         }
         appendSystemLine(enabled ? QStringLiteral("! Do Not Disturb enabled.")
@@ -1552,7 +1552,7 @@ void maxchat::ui::MainWindow::buildMenus() {
         QVariantMap settings = m_settings.loadWithDefaults();
         settings.insert(QStringLiteral("comic_captions"), enabled);
         if (!m_settings.saveRaw(settings)) {
-            appendSystemLine(QStringLiteral("! Could not save comic caption setting."));
+            appendSystemLine(tr("! Could not save comic caption setting."));
             return;
         }
         statusBar()->showMessage(enabled ? QStringLiteral("Character names on.")
@@ -1945,7 +1945,7 @@ void maxchat::ui::MainWindow::openServerList() {
                     maxchat::core::networkConfigListToVariantList(dialog.networks()));
     settings.insert(QStringLiteral("connect_on_start"), dialog.connectOnStart());
     if (!m_settings.saveRaw(settings)) {
-        appendSystemLine(QStringLiteral("! Could not save server list."));
+        appendSystemLine(tr("! Could not save server list."));
         return;
     }
 
@@ -1971,7 +1971,7 @@ void maxchat::ui::MainWindow::openServerList() {
     }
     if (dialog.connectWasRequested()) {
         if (mergedDefaults) {
-            appendSystemLine(QStringLiteral("! Server list was updated with bundled defaults."));
+            appendSystemLine(tr("! Server list was updated with bundled defaults."));
         }
         const auto network = dialog.selectedNetwork();
         startConnection(network);
@@ -2141,11 +2141,11 @@ void maxchat::ui::MainWindow::openPreferences() {
         merged.insert(it.key(), it.value());
     }
     if (!m_settings.saveRaw(merged)) {
-        appendSystemLine(QStringLiteral("! Could not save preferences."));
+        appendSystemLine(tr("! Could not save preferences."));
         return;
     }
     applyCurrentSettings();
-    appendSystemLine(QStringLiteral("! Preferences saved."));
+    appendSystemLine(tr("! Preferences saved."));
 }
 
 void maxchat::ui::MainWindow::openAliases() {
@@ -2159,7 +2159,7 @@ void maxchat::ui::MainWindow::openAliases() {
     QVariantMap settings = m_settings.loadWithDefaults();
     settings.insert(QStringLiteral("command_aliases"), m_commandAliases);
     if (!m_settings.saveRaw(settings)) {
-        appendSystemLine(QStringLiteral("! Could not save command aliases."));
+        appendSystemLine(tr("! Could not save command aliases."));
         return;
     }
     appendSystemLine(
@@ -2181,7 +2181,7 @@ void maxchat::ui::MainWindow::openIgnoreList() {
             QVariantMap settings = m_settings.loadWithDefaults();
             settings.insert(QStringLiteral("ignores"), m_ignoreMasks);
             if (!m_settings.saveRaw(settings)) {
-                appendSystemLine(QStringLiteral("! Could not save ignore list."));
+                appendSystemLine(tr("! Could not save ignore list."));
                 return;
             }
             m_connection.setIgnoreMasks(m_ignoreMasks);
@@ -2213,7 +2213,7 @@ void maxchat::ui::MainWindow::openFriendsNotify() {
             QVariantMap settings = m_settings.loadWithDefaults();
             settings.insert(QStringLiteral("friends"), m_friendNicks);
             if (!m_settings.saveRaw(settings)) {
-                appendSystemLine(QStringLiteral("! Could not save notify list."));
+                appendSystemLine(tr("! Could not save notify list."));
                 return;
             }
             m_onlineFriends.clear();
@@ -2237,7 +2237,7 @@ void maxchat::ui::MainWindow::openFriendsNotify() {
 void maxchat::ui::MainWindow::openChannelModes() {
     const QString channel = m_currentTarget.trimmed();
     if (!connection().isConnected() || !isChannelTarget(channel)) {
-        appendSystemLine(QStringLiteral("! Select a channel before opening channel modes."));
+        appendSystemLine(tr("! Select a channel before opening channel modes."));
         return;
     }
 
@@ -2255,7 +2255,7 @@ void maxchat::ui::MainWindow::openBanList(const QString& channel) {
     const QString target =
         channel.trimmed().isEmpty() ? m_currentTarget.trimmed() : channel.trimmed();
     if (!connection().isConnected() || !isChannelTarget(target)) {
-        appendSystemLine(QStringLiteral("! Select a channel before opening the ban list."));
+        appendSystemLine(tr("! Select a channel before opening the ban list."));
         return;
     }
 
@@ -2299,7 +2299,7 @@ void maxchat::ui::MainWindow::openChannelList(bool reset) {
             m_pendingChannels.clear();
             m_channelListDialog->clearChannels();
             if (!connection().sendRaw(QStringLiteral("LIST"))) {
-                appendSystemLine(QStringLiteral("! Could not send LIST — not connected."));
+                appendSystemLine(tr("! Could not send LIST — not connected."));
                 m_channelListDialog->setComplete(true);
             }
         });
@@ -2355,7 +2355,7 @@ void maxchat::ui::MainWindow::openRawLog() {
     m_rawLogDialog->setLines(m_rawLogLines);
     connect(m_rawLogDialog, &RawLogDialog::clearRequested, this, [this]() {
         m_rawLogLines.clear();
-        appendSystemLine(QStringLiteral("! Raw log cleared."));
+        appendSystemLine(tr("! Raw log cleared."));
     });
     m_rawLogDialog->show();
 }
@@ -2373,7 +2373,7 @@ void maxchat::ui::MainWindow::openUrlList() {
     m_urlListDialog->setUrls(m_urlList);
     connect(m_urlListDialog, &UrlListDialog::clearRequested, this, [this]() {
         m_urlList.clear();
-        appendSystemLine(QStringLiteral("! URL list cleared."));
+        appendSystemLine(tr("! URL list cleared."));
     });
     m_urlListDialog->show();
 }
@@ -2555,7 +2555,7 @@ QStringList maxchat::ui::MainWindow::channelsFor(const QString& network) {
 
 void maxchat::ui::MainWindow::handleScriptsCommand(const QString& command, const QString& arg) {
     if (!ScriptBridge::scriptingAvailable()) {
-        appendSystemLine(QStringLiteral("! This build has no scripting support."));
+        appendSystemLine(tr("! This build has no scripting support."));
         return;
     }
     const QString scriptsDir = m_scripts->scriptsDirectory();
@@ -2565,12 +2565,12 @@ void maxchat::ui::MainWindow::handleScriptsCommand(const QString& command, const
         appendSystemLine(names.isEmpty()
                              ? QStringLiteral("* No scripts loaded.")
                              : QStringLiteral("* Loaded scripts: %1").arg(names.join(QStringLiteral(", "))));
-        appendSystemLine(QStringLiteral("* Scripts folder: %1").arg(scriptsDir));
+        appendSystemLine(tr("* Scripts folder: %1").arg(scriptsDir));
         return;
     }
 
     if (arg.isEmpty()) {
-        appendSystemLine(QStringLiteral("! Usage: /%1 <script>").arg(command));
+        appendSystemLine(tr("! Usage: /%1 <script>").arg(command));
         return;
     }
     const QString name = QFileInfo(arg).completeBaseName(); // tolerate "foo" or "foo.lua"
@@ -2589,7 +2589,7 @@ void maxchat::ui::MainWindow::handleScriptsCommand(const QString& command, const
 
 void maxchat::ui::MainWindow::openScriptsManager() {
     if (!ScriptBridge::scriptingAvailable()) {
-        appendSystemLine(QStringLiteral(
+        appendSystemLine(tr(
             "! Scripts are unavailable: this build was compiled without scripting support."));
         return;
     }
@@ -2731,11 +2731,11 @@ void maxchat::ui::MainWindow::openScriptsManager() {
 void maxchat::ui::MainWindow::leaveCurrentChannel() {
     const QString channel = m_currentTarget.trimmed();
     if (!connection().isConnected()) {
-        appendSystemLine(QStringLiteral("! Not connected."));
+        appendSystemLine(tr("! Not connected."));
         return;
     }
     if (!isChannelTarget(channel)) {
-        appendSystemLine(QStringLiteral("! Select a channel before leaving."));
+        appendSystemLine(tr("! Select a channel before leaving."));
         return;
     }
     sendCommandOrMessage(QStringLiteral("/part %1").arg(channel));
@@ -2748,7 +2748,7 @@ void maxchat::ui::MainWindow::leaveAllChannels(const QString& network) {
         irc = &m_connection;
     }
     if (!irc->isConnected()) {
-        appendSystemLine(QStringLiteral("! Not connected."));
+        appendSystemLine(tr("! Not connected."));
         return;
     }
     QStringList channels;
@@ -2761,7 +2761,7 @@ void maxchat::ui::MainWindow::leaveAllChannels(const QString& network) {
         }
     }
     if (channels.isEmpty()) {
-        appendSystemLine(QStringLiteral("! No joined channels on %1.").arg(net));
+        appendSystemLine(tr("! No joined channels on %1.").arg(net));
         return;
     }
     for (const QString& channel : channels) {
@@ -2856,7 +2856,7 @@ void maxchat::ui::MainWindow::clearCurrentChat() {
     const bool cleared = m_chatBuffers.clearLines(bufferIdForTarget(m_currentTarget));
     Q_UNUSED(cleared);
     updateNetworkTreeLabels();
-    statusBar()->showMessage(QStringLiteral("Cleared current chat view."));
+    statusBar()->showMessage(tr("Cleared current chat view."));
 }
 
 void maxchat::ui::MainWindow::clearAllChats() {
@@ -2867,7 +2867,7 @@ void maxchat::ui::MainWindow::clearAllChats() {
     }
     renderActiveBuffer();
     updateNetworkTreeLabels();
-    appendSystemLine(QStringLiteral("* All chats cleared."));
+    appendSystemLine(tr("* All chats cleared."));
 }
 
 void maxchat::ui::MainWindow::showUptime() {
@@ -2888,7 +2888,7 @@ void maxchat::ui::MainWindow::showUptime() {
 
 void maxchat::ui::MainWindow::showNetInfo() {
     if (!m_hasConnectionPlan) {
-        appendSystemLine(QStringLiteral("* No network selected."));
+        appendSystemLine(tr("* No network selected."));
         return;
     }
 
@@ -2900,7 +2900,7 @@ void maxchat::ui::MainWindow::showNetInfo() {
                                     : QStringLiteral("%1:%2").arg(server.host).arg(server.port);
 
     if (info.isEmpty()) {
-        appendSystemLine(QStringLiteral("* %1 (%2): no ISUPPORT received yet")
+        appendSystemLine(tr("* %1 (%2): no ISUPPORT received yet")
                              .arg(m_connectionPlan.networkName, serverLabel));
         return;
     }
@@ -3002,7 +3002,7 @@ void maxchat::ui::MainWindow::appendReplyLineForNetwork(const QString& network, 
 void maxchat::ui::MainWindow::closeTarget(const QString& target) {
     const QString cleanTarget = target.trimmed();
     if (cleanTarget.isEmpty() || isTreeStatusTarget(cleanTarget)) {
-        appendSystemLine(QStringLiteral("! No channel or query is selected to close."));
+        appendSystemLine(tr("! No channel or query is selected to close."));
         return;
     }
 
@@ -3025,7 +3025,7 @@ void maxchat::ui::MainWindow::closeTarget(const QString& target) {
                                : QStringLiteral("Not connected"));
     }
     rebuildNetworkTree();
-    statusBar()->showMessage(QStringLiteral("Closed %1.").arg(cleanTarget));
+    statusBar()->showMessage(tr("Closed %1.").arg(cleanTarget));
 }
 
 void maxchat::ui::MainWindow::setServerListVisible(const bool visible, const bool save) {
@@ -3036,7 +3036,7 @@ void maxchat::ui::MainWindow::setServerListVisible(const bool visible, const boo
     if (visible && tabsOn) {
         if (save) {
             saveViewVisibilitySetting(QStringLiteral("server_list_visible"), true);
-            statusBar()->showMessage(QStringLiteral(
+            statusBar()->showMessage(tr(
                 "Server list saved — it will show when Buttons as Tabs is turned off."));
         }
         if (m_serverListVisibleAction != nullptr && m_serverListVisibleAction->isChecked()) {
@@ -3144,12 +3144,12 @@ void maxchat::ui::MainWindow::setNickColumnWidth(const int nickWidth, const bool
         QVariantMap settings = m_settings.loadWithDefaults();
         settings.insert(QStringLiteral("nick_width"), m_nickColumnWidth);
         if (!m_settings.saveRaw(settings)) {
-            statusBar()->showMessage(QStringLiteral("Could not save nick column width."));
+            statusBar()->showMessage(tr("Could not save nick column width."));
         }
     }
     renderActiveBuffer();
     updateChatSeparatorGuide();
-    statusBar()->showMessage(QStringLiteral("Nick column width: %1").arg(m_nickColumnWidth));
+    statusBar()->showMessage(tr("Nick column width: %1").arg(m_nickColumnWidth));
 }
 
 void maxchat::ui::MainWindow::setSplitterPanelVisible(const int index, const bool visible, const bool save) {
@@ -3304,7 +3304,7 @@ void maxchat::ui::MainWindow::syncPanelActionsFromSplitter(const bool save) {
         }
         settings.insert(QStringLiteral("splitter_sizes"), savedSizes);
         if (!m_settings.saveRaw(settings)) {
-            statusBar()->showMessage(QStringLiteral("Could not save panel layout."));
+            statusBar()->showMessage(tr("Could not save panel layout."));
         }
     }
 }
@@ -3336,7 +3336,7 @@ void maxchat::ui::MainWindow::saveViewVisibilitySetting(const QString& key, cons
     QVariantMap settings = m_settings.loadWithDefaults();
     settings.insert(key, visible);
     if (!m_settings.saveRaw(settings)) {
-        statusBar()->showMessage(QStringLiteral("Could not save view setting."));
+        statusBar()->showMessage(tr("Could not save view setting."));
     }
 }
 
@@ -3354,7 +3354,7 @@ void maxchat::ui::MainWindow::saveSplitterSizes() {
     QVariantMap settings = m_settings.loadWithDefaults();
     settings.insert(QStringLiteral("splitter_sizes"), savedSizes);
     if (!m_settings.saveRaw(settings)) {
-        statusBar()->showMessage(QStringLiteral("Could not save panel layout."));
+        statusBar()->showMessage(tr("Could not save panel layout."));
     }
 }
 
@@ -3391,17 +3391,17 @@ void maxchat::ui::MainWindow::exportSettings() {
 
     QSaveFile file(path);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        appendSystemLine(QStringLiteral("! Could not open settings export file."));
+        appendSystemLine(tr("! Could not open settings export file."));
         return;
     }
 
     const QJsonDocument document = QJsonDocument::fromVariant(settings);
     file.write(document.toJson(QJsonDocument::Indented));
     if (!file.commit()) {
-        appendSystemLine(QStringLiteral("! Could not write settings export file."));
+        appendSystemLine(tr("! Could not write settings export file."));
         return;
     }
-    appendSystemLine(QStringLiteral("! Settings exported to %1.").arg(path));
+    appendSystemLine(tr("! Settings exported to %1.").arg(path));
 }
 
 void maxchat::ui::MainWindow::importSettings() {
@@ -3414,14 +3414,14 @@ void maxchat::ui::MainWindow::importSettings() {
 
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) {
-        appendSystemLine(QStringLiteral("! Could not open settings import file."));
+        appendSystemLine(tr("! Could not open settings import file."));
         return;
     }
 
     QJsonParseError error;
     const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &error);
     if (error.error != QJsonParseError::NoError || !document.isObject()) {
-        appendSystemLine(QStringLiteral("! Settings import file is not valid JSON."));
+        appendSystemLine(tr("! Settings import file is not valid JSON."));
         return;
     }
 
@@ -3463,19 +3463,19 @@ void maxchat::ui::MainWindow::importSettings() {
 
     const QVariantMap prepared = m_settings.prepareImportedSettings(rawImported);
     if (!m_settings.saveRaw(prepared)) {
-        appendSystemLine(QStringLiteral("! Could not save imported settings."));
+        appendSystemLine(tr("! Could not save imported settings."));
         return;
     }
     applyCurrentSettings();
-    appendSystemLine(QStringLiteral("! Settings imported from %1.").arg(path));
+    appendSystemLine(tr("! Settings imported from %1.").arg(path));
 }
 
 void maxchat::ui::MainWindow::resetServerList() {
     if (!m_settings.resetServerList()) {
-        appendSystemLine(QStringLiteral("! Could not reset server list."));
+        appendSystemLine(tr("! Could not reset server list."));
         return;
     }
-    appendSystemLine(QStringLiteral("! Server list reset to bundled defaults."));
+    appendSystemLine(tr("! Server list reset to bundled defaults."));
 }
 
 void maxchat::ui::MainWindow::saveActiveNetworkState() {
@@ -3609,7 +3609,7 @@ void maxchat::ui::MainWindow::startConfiguredStartupConnection() {
     const auto networks =
         maxchat::core::networkConfigListFromVariant(settings.value(QStringLiteral("networks")));
     if (mergedDefaults) {
-        appendSystemLine(QStringLiteral("! Server list was updated with bundled defaults."));
+        appendSystemLine(tr("! Server list was updated with bundled defaults."));
     }
 
     // Networks flagged "Connect on startup" all come up (staggered, in Server
@@ -3639,7 +3639,7 @@ void maxchat::ui::MainWindow::startConfiguredStartupConnection() {
         }
     }
 
-    appendSystemLine(QStringLiteral("! Auto-connect is enabled, but no server is available."));
+    appendSystemLine(tr("! Auto-connect is enabled, but no server is available."));
 }
 
 void maxchat::ui::MainWindow::setupConnectionSignals() {
@@ -3664,7 +3664,7 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
             appendSystemLineToTarget(
                 QStringLiteral("server"),
                 QStringLiteral("! Socket connected. Registering with IRC server..."));
-            showConnectionStatus(QStringLiteral("Registering with IRC server..."));
+            showConnectionStatus(tr("Registering with IRC server..."));
         });
     });
     connect(irc, &maxchat::irc::IrcConnection::registered, this, [this, runInContext]() {
@@ -3767,7 +3767,7 @@ void maxchat::ui::MainWindow::setupConnectionSignals(const QString& network, max
     connect(
         irc, &maxchat::irc::IrcConnection::lagMeasured, this, [this, runInContext](double seconds) {
             runInContext([&]() {
-                appendSystemLine(QStringLiteral("* Lag: %1 ms").arg(qRound64(seconds * 1000.0)));
+                appendSystemLine(tr("* Lag: %1 ms").arg(qRound64(seconds * 1000.0)));
             });
         });
     connect(irc, &maxchat::irc::IrcConnection::listReply, this,
@@ -4231,7 +4231,7 @@ void maxchat::ui::MainWindow::startConnection(const maxchat::core::NetworkConfig
     const maxchat::core::NetworkConnectionPlan plan =
         maxchat::core::connectionPlanFromNetwork(network);
     if (!maxchat::core::hasConnectableServer(plan)) {
-        appendSystemLine(QStringLiteral("! Saved network has no usable server."));
+        appendSystemLine(tr("! Saved network has no usable server."));
         return;
     }
 
@@ -4292,16 +4292,16 @@ void maxchat::ui::MainWindow::startConnection(const maxchat::core::NetworkConfig
 void maxchat::ui::MainWindow::connectNextServer(const QString& network, const bool forceNext) {
     withNetworkContext(network, [this, network, forceNext]() {
         if (!m_hasConnectionPlan || !maxchat::core::hasConnectableServer(m_connectionPlan)) {
-            appendSystemLine(QStringLiteral("! No server is available to connect."));
+            appendSystemLine(tr("! No server is available to connect."));
             return;
         }
 
         const QString signalNetwork = activeNetworkName();
         const int attempts = m_initialConnectAttemptsByNetwork.value(signalNetwork, 0);
         if (!m_registered && attempts >= maxInitialConnectAttempts(signalNetwork)) {
-            appendSystemLine(QStringLiteral("! Connection attempts exhausted for %1.")
+            appendSystemLine(tr("! Connection attempts exhausted for %1.")
                                  .arg(m_connectionPlan.networkName));
-            showConnectionStatus(QStringLiteral("Not connected"));
+            showConnectionStatus(tr("Not connected"));
             return;
         }
 
@@ -4309,7 +4309,7 @@ void maxchat::ui::MainWindow::connectNextServer(const QString& network, const bo
         const maxchat::irc::ServerEndpoint server =
             maxchat::irc::chooseReconnectServer(plan.reconnect, forceNext);
         if (server.host.trimmed().isEmpty()) {
-            appendSystemLine(QStringLiteral("! No server is available to connect."));
+            appendSystemLine(tr("! No server is available to connect."));
             return;
         }
         m_connectionPlan = plan;
@@ -4319,7 +4319,7 @@ void maxchat::ui::MainWindow::connectNextServer(const QString& network, const bo
         m_initialConnectAttempts = nextAttempts;
         m_initialConnectAttemptsByNetwork.insert(signalNetwork, nextAttempts);
         const QString tlsText = server.tls ? QStringLiteral(" SSL/TLS") : QString();
-        appendSystemLine(QStringLiteral("! Connecting to %1 (%2:%3%4), attempt %5 of %6.")
+        appendSystemLine(tr("! Connecting to %1 (%2:%3%4), attempt %5 of %6.")
                              .arg(m_connectionPlan.networkName, server.host)
                              .arg(server.port)
                              .arg(tlsText)
@@ -4330,7 +4330,7 @@ void maxchat::ui::MainWindow::connectNextServer(const QString& network, const bo
 
         maxchat::irc::IrcConnection* irc = ensureConnectionForNetwork(signalNetwork);
         if (irc == nullptr) {
-            appendSystemLine(QStringLiteral("! Could not create network connection."));
+            appendSystemLine(tr("! Could not create network connection."));
             return;
         }
         irc->connectTo(connectConfigFor(server, m_connectionPlan));
@@ -4344,7 +4344,7 @@ void maxchat::ui::MainWindow::connectNextServer(bool forceNext) {
 void maxchat::ui::MainWindow::reconnectNetwork(const QString& network) {
     withNetworkContext(network, [this]() {
         if (!m_hasConnectionPlan || !maxchat::core::hasConnectableServer(m_connectionPlan)) {
-            appendSystemLine(QStringLiteral("! No saved connection is available to reconnect."));
+            appendSystemLine(tr("! No saved connection is available to reconnect."));
             return;
         }
 
@@ -4393,8 +4393,8 @@ void maxchat::ui::MainWindow::disconnectNetwork(const QString& network) {
                 connection().disconnectFromServer();
             }
         } else {
-            appendSystemLine(QStringLiteral("! Not connected."));
-            showConnectionStatus(QStringLiteral("Not connected"));
+            appendSystemLine(tr("! Not connected."));
+            showConnectionStatus(tr("Not connected"));
         }
     });
 }
@@ -4504,7 +4504,7 @@ void maxchat::ui::MainWindow::closeNetwork(const QString& network) {
         updateNickLabel();
     }
     rebuildNetworkTree();
-    statusBar()->showMessage(QStringLiteral("Closed %1.").arg(net));
+    statusBar()->showMessage(tr("Closed %1.").arg(net));
 }
 
 void maxchat::ui::MainWindow::handleDisconnected(const QString& network, const QString& reason) {
@@ -4512,8 +4512,8 @@ void maxchat::ui::MainWindow::handleDisconnected(const QString& network, const Q
 }
 
 void maxchat::ui::MainWindow::handleDisconnected(const QString& reason) {
-    appendSystemLine(QStringLiteral("! Disconnected: %1").arg(reason));
-    showConnectionStatus(QStringLiteral("Not connected"));
+    appendSystemLine(tr("! Disconnected: %1").arg(reason));
+    showConnectionStatus(tr("Not connected"));
     const QString networkKeyPrefix = QStringLiteral("%1/").arg(activeNetworkName().toCaseFolded());
     for (const QString& key : m_pendingNamesByChannel.keys()) {
         if (key.startsWith(networkKeyPrefix)) {
@@ -4554,7 +4554,7 @@ void maxchat::ui::MainWindow::handleDisconnected(const QString& reason) {
         return;
     }
     if (wasRegistered && !m_autoReconnect) {
-        appendSystemLine(QStringLiteral("! Auto reconnect is disabled."));
+        appendSystemLine(tr("! Auto reconnect is disabled."));
         return;
     }
     if (wasRegistered) {
@@ -4562,7 +4562,7 @@ void maxchat::ui::MainWindow::handleDisconnected(const QString& reason) {
         m_initialConnectAttemptsByNetwork.insert(network, 0);
         m_connectionPlan.reconnect.serverAttempt = 0;
         m_connectionPlansByNetwork.insert(network, m_connectionPlan);
-        appendSystemLine(QStringLiteral("! Reconnecting to %1.").arg(m_connectionPlan.networkName));
+        appendSystemLine(tr("! Reconnecting to %1.").arg(m_connectionPlan.networkName));
     }
     connectNextServer(network);
 }
@@ -4724,7 +4724,7 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
     }
     if (parsed.type == maxchat::irc::UserCommandType::Disconnect) {
         if (!connection().isConnected()) {
-            appendSystemLine(QStringLiteral("! Not connected."));
+            appendSystemLine(tr("! Not connected."));
             return;
         }
         disconnectFromCurrentServer();
@@ -4780,7 +4780,7 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
             const QString target =
                 args.size() > 1 ? args.at(1).trimmed() : m_currentTarget.trimmed();
             if (!connection().isConnected() || target.isEmpty() || isTreeStatusTarget(target)) {
-                appendSystemLine(QStringLiteral("! Usage: /sysinfo send [#channel|nick] "
+                appendSystemLine(tr("! Usage: /sysinfo send [#channel|nick] "
                                                 "(needs a connection and a target)."));
                 return;
             }
@@ -4790,11 +4790,11 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
                 appendSystemLineToTarget(target, QStringLiteral("<%1> %2").arg(nick, info), true,
                                          true);
             } else {
-                appendSystemLine(QStringLiteral("! Could not send sysinfo."));
+                appendSystemLine(tr("! Could not send sysinfo."));
             }
             return;
         }
-        appendSystemLine(QStringLiteral("* %1").arg(info));
+        appendSystemLine(tr("* %1").arg(info));
         return;
     }
     if (parsed.type == maxchat::irc::UserCommandType::Scripts) {
@@ -4806,11 +4806,11 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
         return;
     }
     if (parsed.type == maxchat::irc::UserCommandType::Error) {
-        appendSystemLine(QStringLiteral("! %1").arg(parsed.errorText));
+        appendSystemLine(tr("! %1").arg(parsed.errorText));
         return;
     }
     if (!connection().isConnected()) {
-        appendSystemLine(QStringLiteral("! Not connected."));
+        appendSystemLine(tr("! Not connected."));
         return;
     }
 
@@ -4821,7 +4821,7 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
     case maxchat::irc::UserCommandType::Empty:
         return;
     case maxchat::irc::UserCommandType::Error:
-        appendSystemLine(QStringLiteral("! %1").arg(parsed.errorText));
+        appendSystemLine(tr("! %1").arg(parsed.errorText));
         return;
     case maxchat::irc::UserCommandType::Clear:
         clearCurrentChat();
@@ -4843,9 +4843,9 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
         return;
     case maxchat::irc::UserCommandType::Lag:
         if (connection().measureLag()) {
-            appendSystemLine(QStringLiteral("* Measuring lag..."));
+            appendSystemLine(tr("* Measuring lag..."));
         } else {
-            appendSystemLine(QStringLiteral("! Could not send lag probe."));
+            appendSystemLine(tr("! Could not send lag probe."));
         }
         return;
     case maxchat::irc::UserCommandType::Uptime:
@@ -4864,7 +4864,7 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
         return;
     case maxchat::irc::UserCommandType::Text:
         if (parsed.targets.isEmpty()) {
-            appendSystemLine(QStringLiteral("! Join a channel or use /msg before sending text."));
+            appendSystemLine(tr("! Join a channel or use /msg before sending text."));
             return;
         }
         if (connection().privmsg(parsed.targets.first(), parsed.text)) {
@@ -4880,7 +4880,7 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
         rebuildNetworkTree();
         if (!connection().sendRaw(
                 QStringLiteral("JOIN %1").arg(parsed.targets.join(QLatin1Char(','))))) {
-            appendSystemLine(QStringLiteral("! Could not send JOIN."));
+            appendSystemLine(tr("! Could not send JOIN."));
         }
         return;
     case maxchat::irc::UserCommandType::Part: {
@@ -4907,11 +4907,11 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
             raw += QStringLiteral(" :%1").arg(parsed.text);
         }
         if (!connection().sendRaw(raw)) {
-            appendSystemLine(QStringLiteral("! Could not send PART."));
+            appendSystemLine(tr("! Could not send PART."));
             return;
         }
         if (!connection().sendRaw(QStringLiteral("JOIN %1").arg(target))) {
-            appendSystemLine(QStringLiteral("! Could not send JOIN."));
+            appendSystemLine(tr("! Could not send JOIN."));
             return;
         }
         rememberTarget(target);
@@ -4933,7 +4933,7 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
         return;
     case maxchat::irc::UserCommandType::Query:
         activateBufferTarget(parsed.targets.first());
-        showConnectionStatus(QStringLiteral("%1 - %2 as %3")
+        showConnectionStatus(tr("%1 - %2 as %3")
                                .arg(m_connectionPlan.networkName, m_currentTarget, nick));
         rebuildNetworkTree();
         if (!parsed.text.isEmpty() && connection().privmsg(parsed.targets.first(), parsed.text) &&
@@ -4950,13 +4950,13 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
                 QStringLiteral("-%1:%2- %3").arg(nick, parsed.targets.first(), parsed.text), true,
                 true);
         } else {
-            appendSystemLine(QStringLiteral("! Could not send NOTICE."));
+            appendSystemLine(tr("! Could not send NOTICE."));
         }
         return;
     case maxchat::irc::UserCommandType::BroadcastMessage: {
         const QStringList channels = joinedChannelTargets();
         if (channels.isEmpty()) {
-            appendSystemLine(QStringLiteral("! No joined channels to message."));
+            appendSystemLine(tr("! No joined channels to message."));
             return;
         }
         for (const QString& channel : channels) {
@@ -4975,7 +4975,7 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
     case maxchat::irc::UserCommandType::BroadcastAction: {
         const QStringList channels = joinedChannelTargets();
         if (channels.isEmpty()) {
-            appendSystemLine(QStringLiteral("! No joined channels for action."));
+            appendSystemLine(tr("! No joined channels for action."));
             return;
         }
         for (const QString& channel : channels) {
@@ -4997,7 +4997,7 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
             appendSystemLineToTarget(channel, QStringLiteral("-> -%1- %2").arg(target, parsed.text),
                                      true, true, false, false);
         } else {
-            appendSystemLine(QStringLiteral("! Could not send op notice."));
+            appendSystemLine(tr("! Could not send op notice."));
         }
         return;
     }
@@ -5019,13 +5019,13 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
                           .arg(parsed.rawLine, parsed.text, parsed.targets.first()),
                 true, true);
         } else {
-            appendSystemLine(QStringLiteral("! Could not send CTCP."));
+            appendSystemLine(tr("! Could not send CTCP."));
         }
         return;
     case maxchat::irc::UserCommandType::Sound: {
         const QString soundTarget = parsed.targets.first();
         if (isTreeStatusTarget(soundTarget)) {
-            appendSystemLine(QStringLiteral("! /sound needs a channel or query."));
+            appendSystemLine(tr("! /sound needs a channel or query."));
             return;
         }
         // Send the CTCP SOUND to the room (wire parity with Python). Local
@@ -5039,7 +5039,7 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
                 QStringLiteral("* [sound] %1").arg(soundArgs), true, true, false,
                 false);
         } else {
-            appendSystemLine(QStringLiteral("! Could not send sound."));
+            appendSystemLine(tr("! Could not send sound."));
         }
         return;
     }
@@ -5050,34 +5050,34 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
             const int textStart = redactedLine.indexOf(QStringLiteral(" :"));
             const QString displayText =
                 textStart < 0 ? parsed.text : redactedLine.mid(textStart + 2);
-            appendSystemLine(QStringLiteral("-> %1: %2").arg(parsed.targets.first(), displayText));
+            appendSystemLine(tr("-> %1: %2").arg(parsed.targets.first(), displayText));
         } else {
-            appendSystemLine(QStringLiteral("! Could not message %1.").arg(parsed.targets.first()));
+            appendSystemLine(tr("! Could not message %1.").arg(parsed.targets.first()));
         }
         return;
     case maxchat::irc::UserCommandType::Nick:
         if (!connection().sendRaw(QStringLiteral("NICK %1").arg(parsed.text))) {
-            appendSystemLine(QStringLiteral("! Could not change nick."));
+            appendSystemLine(tr("! Could not change nick."));
         }
         return;
     case maxchat::irc::UserCommandType::Whois:
         if (!connection().sendRaw(QStringLiteral("WHOIS %1").arg(parsed.targets.first()))) {
-            appendSystemLine(QStringLiteral("! Could not send WHOIS."));
+            appendSystemLine(tr("! Could not send WHOIS."));
         }
         return;
     case maxchat::irc::UserCommandType::Who:
         if (!connection().sendRaw(QStringLiteral("WHO %1").arg(parsed.targets.first()))) {
-            appendSystemLine(QStringLiteral("! Could not send WHO."));
+            appendSystemLine(tr("! Could not send WHO."));
         }
         return;
     case maxchat::irc::UserCommandType::Whowas:
         if (!connection().sendRaw(QStringLiteral("WHOWAS %1").arg(parsed.targets.first()))) {
-            appendSystemLine(QStringLiteral("! Could not send WHOWAS."));
+            appendSystemLine(tr("! Could not send WHOWAS."));
         }
         return;
     case maxchat::irc::UserCommandType::Names:
         if (!connection().sendRaw(QStringLiteral("NAMES %1").arg(parsed.targets.first()))) {
-            appendSystemLine(QStringLiteral("! Could not send NAMES."));
+            appendSystemLine(tr("! Could not send NAMES."));
         }
         return;
     case maxchat::irc::UserCommandType::ChannelList:
@@ -5085,7 +5085,7 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
         if (!connection().sendRaw(parsed.text.trimmed().isEmpty()
                                       ? QStringLiteral("LIST")
                                       : QStringLiteral("LIST %1").arg(parsed.text.trimmed()))) {
-            appendSystemLine(QStringLiteral("! Could not send LIST."));
+            appendSystemLine(tr("! Could not send LIST."));
             if (m_channelListDialog != nullptr) {
                 m_channelListDialog->setComplete(true);
             }
@@ -5098,19 +5098,19 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
             raw += QStringLiteral(" :%1").arg(parsed.text);
         }
         if (!connection().sendRaw(raw)) {
-            appendSystemLine(QStringLiteral("! Could not send TOPIC."));
+            appendSystemLine(tr("! Could not send TOPIC."));
         }
         return;
     }
     case maxchat::irc::UserCommandType::Mode:
         if (!connection().sendRaw(parsed.rawLine)) {
-            appendSystemLine(QStringLiteral("! Could not send MODE."));
+            appendSystemLine(tr("! Could not send MODE."));
         }
         return;
     case maxchat::irc::UserCommandType::Invite:
         if (!connection().sendRaw(
                 QStringLiteral("INVITE %1 %2").arg(parsed.targets.at(0), parsed.targets.at(1)))) {
-            appendSystemLine(QStringLiteral("! Could not send INVITE."));
+            appendSystemLine(tr("! Could not send INVITE."));
         }
         return;
     case maxchat::irc::UserCommandType::Kick: {
@@ -5119,14 +5119,14 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
             raw += QStringLiteral(" :%1").arg(parsed.text);
         }
         if (!connection().sendRaw(raw)) {
-            appendSystemLine(QStringLiteral("! Could not send KICK."));
+            appendSystemLine(tr("! Could not send KICK."));
         }
         return;
     }
     case maxchat::irc::UserCommandType::Ban:
         if (!connection().sendRaw(
                 QStringLiteral("MODE %1 +b %2").arg(parsed.targets.at(0), parsed.targets.at(2)))) {
-            appendSystemLine(QStringLiteral("! Could not send ban."));
+            appendSystemLine(tr("! Could not send ban."));
         }
         return;
     case maxchat::irc::UserCommandType::KickBan: {
@@ -5134,13 +5134,13 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
         const QString nickOrMask = parsed.targets.at(1);
         const QString mask = parsed.targets.at(2);
         if (!connection().sendRaw(QStringLiteral("MODE %1 +b %2").arg(channel, mask))) {
-            appendSystemLine(QStringLiteral("! Could not send ban."));
+            appendSystemLine(tr("! Could not send ban."));
             return;
         }
         const QString reason = parsed.text.isEmpty() ? nickOrMask : parsed.text;
         if (!connection().sendRaw(
                 QStringLiteral("KICK %1 %2 :%3").arg(channel, nickOrMask, reason))) {
-            appendSystemLine(QStringLiteral("! Could not send KICK."));
+            appendSystemLine(tr("! Could not send KICK."));
         }
         return;
     }
@@ -5148,7 +5148,7 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
         if (!connection().sendRaw(parsed.text.isEmpty()
                                       ? QStringLiteral("AWAY")
                                       : QStringLiteral("AWAY :%1").arg(parsed.text))) {
-            appendSystemLine(QStringLiteral("! Could not send AWAY."));
+            appendSystemLine(tr("! Could not send AWAY."));
         }
         return;
     case maxchat::irc::UserCommandType::Ignore:
@@ -5179,7 +5179,7 @@ void maxchat::ui::MainWindow::sendCommandOrMessage(const QString& text) {
         return;
     case maxchat::irc::UserCommandType::Raw:
         if (!connection().sendRaw(parsed.rawLine)) {
-            appendSystemLine(QStringLiteral("! Could not send raw command."));
+            appendSystemLine(tr("! Could not send raw command."));
         }
         return;
     case maxchat::irc::UserCommandType::Quit:
@@ -5481,7 +5481,7 @@ void maxchat::ui::MainWindow::showMemberContextMenu(const QPoint& pos) {
             }
             settings.insert(QStringLiteral("comic_chars"), chars);
             if (!m_settings.saveRaw(settings)) {
-                appendSystemLine(QStringLiteral("! Could not save comic character."));
+                appendSystemLine(tr("! Could not save comic character."));
                 return;
             }
             appendSystemLine(choice == options.first()
@@ -5585,7 +5585,7 @@ void maxchat::ui::MainWindow::sendModeChange(const QString& channel, const QStri
         return;
     }
     if (!connection().sendRaw(QStringLiteral("MODE %1 %2").arg(channel, change.trimmed()))) {
-        appendSystemLine(QStringLiteral("! Could not send MODE."));
+        appendSystemLine(tr("! Could not send MODE."));
     }
 }
 
@@ -5597,7 +5597,7 @@ void maxchat::ui::MainWindow::kickNick(const QString& channel, const QString& ni
     const QString kickReason = reason.trimmed().isEmpty() ? cleanNick : reason.trimmed();
     if (!connection().sendRaw(
             QStringLiteral("KICK %1 %2 :%3").arg(channel, cleanNick, kickReason))) {
-        appendSystemLine(QStringLiteral("! Could not send KICK."));
+        appendSystemLine(tr("! Could not send KICK."));
     }
 }
 
@@ -5620,7 +5620,7 @@ void maxchat::ui::MainWindow::addIgnoreMask(const QString& mask) {
         return;
     }
     if (containsCaseInsensitive(m_ignoreMasks, normalized)) {
-        appendSystemLine(QStringLiteral("! Already ignoring %1.").arg(normalized));
+        appendSystemLine(tr("! Already ignoring %1.").arg(normalized));
         return;
     }
 
@@ -5628,7 +5628,7 @@ void maxchat::ui::MainWindow::addIgnoreMask(const QString& mask) {
     QVariantMap settings = m_settings.loadWithDefaults();
     settings.insert(QStringLiteral("ignores"), m_ignoreMasks);
     if (!m_settings.saveRaw(settings)) {
-        appendSystemLine(QStringLiteral("! Could not save ignore list."));
+        appendSystemLine(tr("! Could not save ignore list."));
         return;
     }
     m_connection.setIgnoreMasks(m_ignoreMasks);
@@ -5637,7 +5637,7 @@ void maxchat::ui::MainWindow::addIgnoreMask(const QString& mask) {
             irc->setIgnoreMasks(m_ignoreMasks);
         }
     }
-    appendSystemLine(QStringLiteral("! Ignoring %1.").arg(normalized));
+    appendSystemLine(tr("! Ignoring %1.").arg(normalized));
 }
 
 void maxchat::ui::MainWindow::removeIgnoreMask(const QString& mask) {
@@ -5646,7 +5646,7 @@ void maxchat::ui::MainWindow::removeIgnoreMask(const QString& mask) {
         return;
     }
     if (!containsCaseInsensitive(m_ignoreMasks, normalized)) {
-        appendSystemLine(QStringLiteral("! %1 is not in the ignore list.").arg(normalized));
+        appendSystemLine(tr("! %1 is not in the ignore list.").arg(normalized));
         return;
     }
 
@@ -5654,7 +5654,7 @@ void maxchat::ui::MainWindow::removeIgnoreMask(const QString& mask) {
     QVariantMap settings = m_settings.loadWithDefaults();
     settings.insert(QStringLiteral("ignores"), m_ignoreMasks);
     if (!m_settings.saveRaw(settings)) {
-        appendSystemLine(QStringLiteral("! Could not save ignore list."));
+        appendSystemLine(tr("! Could not save ignore list."));
         return;
     }
     m_connection.setIgnoreMasks(m_ignoreMasks);
@@ -5663,13 +5663,13 @@ void maxchat::ui::MainWindow::removeIgnoreMask(const QString& mask) {
             irc->setIgnoreMasks(m_ignoreMasks);
         }
     }
-    appendSystemLine(QStringLiteral("! No longer ignoring %1.").arg(normalized));
+    appendSystemLine(tr("! No longer ignoring %1.").arg(normalized));
 }
 
 void maxchat::ui::MainWindow::addMutedChannel(const QString& channel) {
     const QString key = mutedChannelKey(channel);
     if (key.isEmpty()) {
-        appendSystemLine(QStringLiteral("! Usage: /mute [#channel]"));
+        appendSystemLine(tr("! Usage: /mute [#channel]"));
         return;
     }
     if (containsCaseInsensitive(m_mutedChannelKeys, key)) {
@@ -5683,19 +5683,19 @@ void maxchat::ui::MainWindow::addMutedChannel(const QString& channel) {
     QVariantMap settings = m_settings.loadWithDefaults();
     settings.insert(QStringLiteral("muted_channels"), next);
     if (!m_settings.saveRaw(settings)) {
-        appendSystemLine(QStringLiteral("! Could not save muted channels."));
+        appendSystemLine(tr("! Could not save muted channels."));
         return;
     }
 
     m_mutedChannelKeys = next;
-    appendSystemLine(QStringLiteral("! Muted highlights for %1 on %2.")
+    appendSystemLine(tr("! Muted highlights for %1 on %2.")
                          .arg(channel.trimmed(), activeNetworkName()));
 }
 
 void maxchat::ui::MainWindow::removeMutedChannel(const QString& channel) {
     const QString key = mutedChannelKey(channel);
     if (key.isEmpty()) {
-        appendSystemLine(QStringLiteral("! Usage: /unmute [#channel]"));
+        appendSystemLine(tr("! Usage: /unmute [#channel]"));
         return;
     }
     if (!containsCaseInsensitive(m_mutedChannelKeys, key)) {
@@ -5708,12 +5708,12 @@ void maxchat::ui::MainWindow::removeMutedChannel(const QString& channel) {
     QVariantMap settings = m_settings.loadWithDefaults();
     settings.insert(QStringLiteral("muted_channels"), next);
     if (!m_settings.saveRaw(settings)) {
-        appendSystemLine(QStringLiteral("! Could not save muted channels."));
+        appendSystemLine(tr("! Could not save muted channels."));
         return;
     }
 
     m_mutedChannelKeys = next;
-    appendSystemLine(QStringLiteral("! Unmuted highlights for %1 on %2.")
+    appendSystemLine(tr("! Unmuted highlights for %1 on %2.")
                          .arg(channel.trimmed(), activeNetworkName()));
 }
 
@@ -5819,13 +5819,13 @@ QString MainWindow::mutedChannelKey(const QString& channel) const {
 
 void maxchat::ui::MainWindow::showAliasList() {
     if (m_commandAliases.isEmpty()) {
-        appendSystemLine(QStringLiteral("! No command aliases are defined."));
+        appendSystemLine(tr("! No command aliases are defined."));
         return;
     }
 
     QStringList keys = m_commandAliases.keys();
     keys.sort(Qt::CaseInsensitive);
-    appendSystemLine(QStringLiteral("! Command aliases:"));
+    appendSystemLine(tr("! Command aliases:"));
     for (const QString& key : keys) {
         appendSystemLine(
             QStringLiteral("! /%1 = %2").arg(key, m_commandAliases.value(key).toString()));
@@ -5839,7 +5839,7 @@ void maxchat::ui::MainWindow::setAliasCommand(const QString& name, const QString
     }
     const QString cleanExpansion = expansion.trimmed();
     if (cleanName.isEmpty() || cleanExpansion.isEmpty()) {
-        appendSystemLine(QStringLiteral("! Usage: /alias name command"));
+        appendSystemLine(tr("! Usage: /alias name command"));
         return;
     }
 
@@ -5847,10 +5847,10 @@ void maxchat::ui::MainWindow::setAliasCommand(const QString& name, const QString
     QVariantMap settings = m_settings.loadWithDefaults();
     settings.insert(QStringLiteral("command_aliases"), m_commandAliases);
     if (!m_settings.saveRaw(settings)) {
-        appendSystemLine(QStringLiteral("! Could not save command aliases."));
+        appendSystemLine(tr("! Could not save command aliases."));
         return;
     }
-    appendSystemLine(QStringLiteral("! Alias /%1 = %2").arg(cleanName, cleanExpansion));
+    appendSystemLine(tr("! Alias /%1 = %2").arg(cleanName, cleanExpansion));
 }
 
 void maxchat::ui::MainWindow::removeAliasCommand(const QString& name) {
@@ -5859,11 +5859,11 @@ void maxchat::ui::MainWindow::removeAliasCommand(const QString& name) {
         cleanName.remove(0, 1);
     }
     if (cleanName.isEmpty()) {
-        appendSystemLine(QStringLiteral("! Usage: /unalias name"));
+        appendSystemLine(tr("! Usage: /unalias name"));
         return;
     }
     if (!m_commandAliases.contains(cleanName)) {
-        appendSystemLine(QStringLiteral("! Alias /%1 is not defined.").arg(cleanName));
+        appendSystemLine(tr("! Alias /%1 is not defined.").arg(cleanName));
         return;
     }
 
@@ -5871,10 +5871,10 @@ void maxchat::ui::MainWindow::removeAliasCommand(const QString& name) {
     QVariantMap settings = m_settings.loadWithDefaults();
     settings.insert(QStringLiteral("command_aliases"), m_commandAliases);
     if (!m_settings.saveRaw(settings)) {
-        appendSystemLine(QStringLiteral("! Could not save command aliases."));
+        appendSystemLine(tr("! Could not save command aliases."));
         return;
     }
-    appendSystemLine(QStringLiteral("! Removed alias /%1.").arg(cleanName));
+    appendSystemLine(tr("! Removed alias /%1.").arg(cleanName));
 }
 
 void maxchat::ui::MainWindow::addFriendNick(const QString& nick) {
@@ -5883,7 +5883,7 @@ void maxchat::ui::MainWindow::addFriendNick(const QString& nick) {
         return;
     }
     if (containsCaseInsensitive(m_friendNicks, cleanNick)) {
-        appendSystemLine(QStringLiteral("! %1 is already on the notify list.").arg(cleanNick));
+        appendSystemLine(tr("! %1 is already on the notify list.").arg(cleanNick));
         return;
     }
 
@@ -5891,7 +5891,7 @@ void maxchat::ui::MainWindow::addFriendNick(const QString& nick) {
     QVariantMap settings = m_settings.loadWithDefaults();
     settings.insert(QStringLiteral("friends"), m_friendNicks);
     if (!m_settings.saveRaw(settings)) {
-        appendSystemLine(QStringLiteral("! Could not save notify list."));
+        appendSystemLine(tr("! Could not save notify list."));
         return;
     }
     m_haveFriendSnapshot = false;
@@ -5900,7 +5900,7 @@ void maxchat::ui::MainWindow::addFriendNick(const QString& nick) {
     if (anyNetworkConnectionIsConnected()) {
         m_friendPollTimer.start();
     }
-    appendSystemLine(QStringLiteral("! Added %1 to the notify list.").arg(cleanNick));
+    appendSystemLine(tr("! Added %1 to the notify list.").arg(cleanNick));
 }
 
 void maxchat::ui::MainWindow::removeFriendNick(const QString& nick) {
@@ -5909,7 +5909,7 @@ void maxchat::ui::MainWindow::removeFriendNick(const QString& nick) {
         return;
     }
     if (!containsCaseInsensitive(m_friendNicks, cleanNick)) {
-        appendSystemLine(QStringLiteral("! %1 is not on the notify list.").arg(cleanNick));
+        appendSystemLine(tr("! %1 is not on the notify list.").arg(cleanNick));
         return;
     }
 
@@ -5917,7 +5917,7 @@ void maxchat::ui::MainWindow::removeFriendNick(const QString& nick) {
     QVariantMap settings = m_settings.loadWithDefaults();
     settings.insert(QStringLiteral("friends"), m_friendNicks);
     if (!m_settings.saveRaw(settings)) {
-        appendSystemLine(QStringLiteral("! Could not save notify list."));
+        appendSystemLine(tr("! Could not save notify list."));
         return;
     }
     m_onlineFriends.remove(cleanNick.toCaseFolded());
@@ -5931,7 +5931,7 @@ void maxchat::ui::MainWindow::removeFriendNick(const QString& nick) {
     } else {
         pollFriends();
     }
-    appendSystemLine(QStringLiteral("! Removed %1 from the notify list.").arg(cleanNick));
+    appendSystemLine(tr("! Removed %1 from the notify list.").arg(cleanNick));
 }
 
 void maxchat::ui::MainWindow::pollFriends() {
@@ -6019,7 +6019,7 @@ bool MainWindow::shouldDropForFlood(const QString& sender, const QString& ownNic
     }
 
     addIgnoreMask(cleanSender);
-    appendSystemLine(QStringLiteral("! Auto-ignored %1 for flooding. Use /unignore %1 to undo.")
+    appendSystemLine(tr("! Auto-ignored %1 for flooding. Use /unignore %1 to undo.")
                          .arg(cleanSender));
     return true;
 }
@@ -6028,7 +6028,7 @@ bool MainWindow::findInChat(const QString& text, bool backwards, bool caseSensit
                             bool wrapSearch) {
     const QString needle = text.trimmed();
     if (m_chatView == nullptr || needle.isEmpty()) {
-        statusBar()->showMessage(QStringLiteral("Enter text to find."));
+        statusBar()->showMessage(tr("Enter text to find."));
         return false;
     }
 
@@ -6042,7 +6042,7 @@ bool MainWindow::findInChat(const QString& text, bool backwards, bool caseSensit
 
     const QTextCursor originalCursor = m_chatView->textCursor();
     if (m_chatView->find(needle, flags)) {
-        statusBar()->showMessage(QStringLiteral("Found \"%1\".").arg(needle));
+        statusBar()->showMessage(tr("Found \"%1\".").arg(needle));
         return true;
     }
 
@@ -6055,13 +6055,13 @@ bool MainWindow::findInChat(const QString& text, bool backwards, bool caseSensit
         }
         m_chatView->setTextCursor(cursor);
         if (m_chatView->find(needle, flags)) {
-            statusBar()->showMessage(QStringLiteral("Found \"%1\".").arg(needle));
+            statusBar()->showMessage(tr("Found \"%1\".").arg(needle));
             return true;
         }
     }
 
     m_chatView->setTextCursor(originalCursor);
-    statusBar()->showMessage(QStringLiteral("No matches for \"%1\".").arg(needle));
+    statusBar()->showMessage(tr("No matches for \"%1\".").arg(needle));
     return false;
 }
 
@@ -7053,7 +7053,7 @@ void maxchat::ui::MainWindow::jumpToNextActivity() {
             }
         }
     }
-    statusBar()->showMessage(QStringLiteral("No unread activity."));
+    statusBar()->showMessage(tr("No unread activity."));
 }
 
 void maxchat::ui::MainWindow::openShortcutEditor() {
@@ -7067,11 +7067,11 @@ void maxchat::ui::MainWindow::openShortcutEditor() {
     QVariantMap settings = m_settings.loadWithDefaults();
     settings.insert(QStringLiteral("shortcuts"), dialog.overrides());
     if (!m_settings.saveRaw(settings)) {
-        appendSystemLine(QStringLiteral("! Could not save shortcuts."));
+        appendSystemLine(tr("! Could not save shortcuts."));
         return;
     }
     applyNavShortcutOverrides(settings);
-    appendSystemLine(QStringLiteral("! Shortcuts saved."));
+    appendSystemLine(tr("! Shortcuts saved."));
 }
 
 void maxchat::ui::MainWindow::rebuildLooksMenu() {
@@ -7122,11 +7122,11 @@ void maxchat::ui::MainWindow::saveCurrentLook() {
     looks.insert(name, look);
     settings.insert(QStringLiteral("looks"), looks);
     if (!m_settings.saveRaw(settings)) {
-        appendSystemLine(QStringLiteral("! Could not save look."));
+        appendSystemLine(tr("! Could not save look."));
         return;
     }
     rebuildLooksMenu();
-    appendSystemLine(QStringLiteral("! Look \"%1\" saved.").arg(name));
+    appendSystemLine(tr("! Look \"%1\" saved.").arg(name));
 }
 
 void maxchat::ui::MainWindow::applyLook(const QString& name) {
@@ -7134,7 +7134,7 @@ void maxchat::ui::MainWindow::applyLook(const QString& name) {
     const QVariantMap look =
         settings.value(QStringLiteral("looks")).toMap().value(name).toMap();
     if (look.isEmpty()) {
-        appendSystemLine(QStringLiteral("! Look \"%1\" was not found.").arg(name));
+        appendSystemLine(tr("! Look \"%1\" was not found.").arg(name));
         rebuildLooksMenu();
         return;
     }
@@ -7143,11 +7143,11 @@ void maxchat::ui::MainWindow::applyLook(const QString& name) {
         settings.insert(it.key(), it.value());
     }
     if (!m_settings.saveRaw(settings)) {
-        appendSystemLine(QStringLiteral("! Could not apply look."));
+        appendSystemLine(tr("! Could not apply look."));
         return;
     }
     applyCurrentSettings();
-    appendSystemLine(QStringLiteral("! Look \"%1\" applied.").arg(name));
+    appendSystemLine(tr("! Look \"%1\" applied.").arg(name));
 }
 
 void maxchat::ui::MainWindow::deleteLook(const QString& name) {
@@ -7159,11 +7159,11 @@ void maxchat::ui::MainWindow::deleteLook(const QString& name) {
     }
     settings.insert(QStringLiteral("looks"), looks);
     if (!m_settings.saveRaw(settings)) {
-        appendSystemLine(QStringLiteral("! Could not delete look."));
+        appendSystemLine(tr("! Could not delete look."));
         return;
     }
     rebuildLooksMenu();
-    appendSystemLine(QStringLiteral("! Look \"%1\" deleted.").arg(name));
+    appendSystemLine(tr("! Look \"%1\" deleted.").arg(name));
 }
 
 void maxchat::ui::MainWindow::appendUnreadMarkerLine() {
@@ -7253,7 +7253,7 @@ void maxchat::ui::MainWindow::openDccTransfers() {
 
 void maxchat::ui::MainWindow::handleDccCommand(const QStringList& args) {
     if (!m_dccEnabled) {
-        appendSystemLine(QStringLiteral(
+        appendSystemLine(tr(
             "! File transfers are disabled. Enable them in Preferences → Files (DCC)."));
         return;
     }
@@ -7275,7 +7275,7 @@ void maxchat::ui::MainWindow::handleDccCommand(const QStringList& args) {
         m_dccManager->offerChat(args.at(1));
     } else if (sub == QStringLiteral("list")) {
         const auto transfers = m_dccManager->transfers();
-        appendSystemLine(QStringLiteral("! %1 DCC transfer(s).").arg(transfers.size()));
+        appendSystemLine(tr("! %1 DCC transfer(s).").arg(transfers.size()));
         openDccTransfers();
     } else if (sub == QStringLiteral("close") || sub == QStringLiteral("cancel")) {
         const QString target = m_currentTarget.trimmed();
@@ -7285,10 +7285,10 @@ void maxchat::ui::MainWindow::handleDccCommand(const QStringList& args) {
             for (const auto& t : m_dccManager->transfers()) {
                 m_dccManager->cancelTransfer(t.id);
             }
-            appendSystemLine(QStringLiteral("! Cancelled active DCC transfers."));
+            appendSystemLine(tr("! Cancelled active DCC transfers."));
         }
     } else {
-        appendSystemLine(QStringLiteral(
+        appendSystemLine(tr(
             "! Usage: /dcc send <nick> [file] | /dcc chat <nick> | /dcc list | /dcc close"));
     }
 }
@@ -7317,19 +7317,19 @@ void maxchat::ui::MainWindow::openComicSettings() {
         return;
     }
     if (!m_settings.saveRaw(dialog.settings())) {
-        appendSystemLine(QStringLiteral("! Could not save comic settings."));
+        appendSystemLine(tr("! Could not save comic settings."));
         return;
     }
     m_comicArtDirLoaded.clear(); // force art rescan
     m_comicBgCache.clear();
     refreshComic();
-    appendSystemLine(QStringLiteral("! Comic settings saved."));
+    appendSystemLine(tr("! Comic settings saved."));
 }
 
 void maxchat::ui::MainWindow::openCharacterGallery() {
     ensureComicArt();
     if (m_comicCharacterPaths.isEmpty()) {
-        appendSystemLine(QStringLiteral("! No comic art found - set your comic art folder in "
+        appendSystemLine(tr("! No comic art found - set your comic art folder in "
                                         "Comic > Comic Settings first."));
         return;
     }
@@ -7469,7 +7469,7 @@ void maxchat::ui::MainWindow::openEmotionPicker() {
 
 void maxchat::ui::MainWindow::saveComic() {
     if (m_comicView == nullptr || !m_comicView->hasPanels()) {
-        appendSystemLine(QStringLiteral("! No comic to save yet."));
+        appendSystemLine(tr("! No comic to save yet."));
         return;
     }
     const QPixmap sheet = m_comicView->sheet();
@@ -7490,9 +7490,9 @@ void maxchat::ui::MainWindow::saveComic() {
         path += QStringLiteral(".png");
     }
     if (sheet.save(path, "PNG")) {
-        appendSystemLine(QStringLiteral("! Comic saved to %1").arg(path));
+        appendSystemLine(tr("! Comic saved to %1").arg(path));
     } else {
-        appendSystemLine(QStringLiteral("! Could not save the comic image."));
+        appendSystemLine(tr("! Could not save the comic image."));
     }
 }
 
@@ -7535,7 +7535,7 @@ void maxchat::ui::MainWindow::setComicMode(bool enabled) {
         ensureComicArt();
         refreshComic();
         if (!backendWasOn && m_comicCharacterPaths.isEmpty()) {
-            appendSystemLine(QStringLiteral(
+            appendSystemLine(tr(
                 "! Comic Mode: no art loaded. Set your Comic Chat art folder in "
                 "Comic > Comic Settings (the folder with the .avb/.bgb files)."));
         }
@@ -8030,12 +8030,12 @@ void maxchat::ui::MainWindow::resetAllSettings() {
         return;
     }
     if (!m_settings.saveRaw(maxchat::core::SettingsStore::defaultSettings(), false)) {
-        appendSystemLine(QStringLiteral("! Could not reset settings."));
+        appendSystemLine(tr("! Could not reset settings."));
         return;
     }
     applyCurrentSettings();
     rebuildLooksMenu();
-    appendSystemLine(QStringLiteral("! Settings were reset to defaults."));
+    appendSystemLine(tr("! Settings were reset to defaults."));
 }
 
 void maxchat::ui::MainWindow::memberListChanged() {
@@ -8062,7 +8062,7 @@ void maxchat::ui::MainWindow::setNickColorOverride(const QString& nick) {
     QVariantMap settings = m_settings.loadWithDefaults();
     settings.insert(QStringLiteral("nick_colors"), m_nickColorOverrides);
     if (!m_settings.saveRaw(settings)) {
-        appendSystemLine(QStringLiteral("! Could not save nick colors."));
+        appendSystemLine(tr("! Could not save nick colors."));
     }
     recolorMemberList();
     renderActiveBuffer();
@@ -8076,7 +8076,7 @@ void maxchat::ui::MainWindow::clearNickColorOverride(const QString& nick) {
     QVariantMap settings = m_settings.loadWithDefaults();
     settings.insert(QStringLiteral("nick_colors"), m_nickColorOverrides);
     if (!m_settings.saveRaw(settings)) {
-        appendSystemLine(QStringLiteral("! Could not save nick colors."));
+        appendSystemLine(tr("! Could not save nick colors."));
     }
     recolorMemberList();
     renderActiveBuffer();
@@ -8490,7 +8490,7 @@ void maxchat::ui::MainWindow::addWordToPersonalDictionary(const QString& word) {
     if (m_input != nullptr) {
         m_input->viewport()->update();
     }
-    statusBar()->showMessage(QStringLiteral("Added “%1” to your dictionary.").arg(cleaned));
+    statusBar()->showMessage(tr("Added “%1” to your dictionary.").arg(cleaned));
 }
 
 void maxchat::ui::MainWindow::updateChannelModeButton() {
@@ -8643,13 +8643,13 @@ void maxchat::ui::MainWindow::configureSpellcheck(const QVariantMap& settings) {
     auto hunspell = std::make_unique<maxchat::spell::HunspellSpellchecker>();
     if (!hunspell->loadDictionary(languageIt->affPath, languageIt->dicPath)) {
         disableSpell();
-        statusBar()->showMessage(QStringLiteral("Failed to load the spelling dictionary."));
+        statusBar()->showMessage(tr("Failed to load the spelling dictionary."));
         return;
     }
     m_spellchecker = std::move(hunspell);
     wireActiveSpeller();
     if (osUnavailable) {
-        statusBar()->showMessage(QStringLiteral(
+        statusBar()->showMessage(tr(
             "OS spell engine isn't in this build; using the internal dictionary "
             "(rebuild without the noosspell flag for the native engine)."));
     }
@@ -8763,7 +8763,7 @@ void maxchat::ui::MainWindow::setTheme(const QString& theme, const bool save) {
             settings.insert(it.key(), it.value());
         }
         if (!m_settings.saveRaw(settings)) {
-            appendSystemLine(QStringLiteral("! Could not save theme."));
+            appendSystemLine(tr("! Could not save theme."));
         }
         if (!themeFonts.isEmpty()) {
             applyCurrentSettings(); // picks up the bundled fonts
@@ -8793,7 +8793,7 @@ void maxchat::ui::MainWindow::setChatTheme(const QString& chatTheme, const bool 
         QVariantMap settings = m_settings.loadWithDefaults();
         settings.insert(QStringLiteral("chat_theme"), normalized);
         if (!m_settings.saveRaw(settings)) {
-            appendSystemLine(QStringLiteral("! Could not save chat theme."));
+            appendSystemLine(tr("! Could not save chat theme."));
         }
     }
     m_currentChatTheme = normalized;
@@ -8821,7 +8821,7 @@ void maxchat::ui::MainWindow::setWallpaper(const QString& wallpaper, const bool 
         QVariantMap settings = m_settings.loadWithDefaults();
         settings.insert(QStringLiteral("wallpaper"), normalized);
         if (!m_settings.saveRaw(settings)) {
-            appendSystemLine(QStringLiteral("! Could not save wallpaper."));
+            appendSystemLine(tr("! Could not save wallpaper."));
         }
     }
     m_currentWallpaper = normalized;
