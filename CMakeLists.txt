@@ -82,6 +82,7 @@ add_library(maxchat_scripting STATIC
     src/scripting/LuaEngine.cpp
     src/scripting/LuaEngine.h
     src/scripting/ScriptHost.h
+    src/scripting/ScriptPermissions.h
 )
 target_include_directories(maxchat_scripting PUBLIC
      "${CMAKE_CURRENT_SOURCE_DIR}/src")

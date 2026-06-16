@@ -52,6 +52,7 @@ build.bat            # MinGW default
 build.bat msvc       # MSVC
 build.bat noterm     # without the terminal / BBS UI (vanilla IRC client)
 build.bat osspell    # with Windows ISpellChecker COM backend
+build.bat tests      # build, then run the ctest suite
 ```
 
 ## Features
