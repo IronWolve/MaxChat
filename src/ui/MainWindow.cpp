@@ -2166,16 +2166,16 @@ void maxchat::ui::MainWindow::openUrlList() {
 
 void maxchat::ui::MainWindow::openCommandHelp() {
     QMessageBox::information(
-        this, QStringLiteral("Commands & Shortcuts"),
+        this, tr("Commands & Shortcuts"),
         QStringList{
-            QStringLiteral("Core: /join, /part, /cycle, /msg, /query, /notice, /me, /nick, /topic, "
+            tr("Core: /join, /part, /cycle, /msg, /query, /notice, /me, /nick, /topic, "
                            "/names, /list"),
-            QStringLiteral("Info: /whois, /who, /whowas, /lag, /uptime, /netinfo, /ctcp"),
-            QStringLiteral("Local: /alias, /unalias, /ignore, /unignore, /notify, /unnotify, "
+            tr("Info: /whois, /who, /whowas, /lag, /uptime, /netinfo, /ctcp"),
+            tr("Local: /alias, /unalias, /ignore, /unignore, /notify, /unnotify, "
                            "/mute, /unmute, /clear, /clearall, /close, /sysinfo"),
-            QStringLiteral("Connection: /connect, /server, /reconnect, /disconnect, /quit, /raw, "
+            tr("Connection: /connect, /server, /reconnect, /disconnect, /quit, /raw, "
                            "/quote, /away, /back"),
-            QStringLiteral("Shortcuts: Ctrl+S server list, Ctrl+J join, Ctrl+P preferences, Ctrl+F "
+            tr("Shortcuts: Ctrl+S server list, Ctrl+J join, Ctrl+P preferences, Ctrl+F "
                            "find, F1 help"),
         }
             .join(QStringLiteral("\n\n")));
@@ -2184,8 +2184,8 @@ void maxchat::ui::MainWindow::openCommandHelp() {
 
 void maxchat::ui::MainWindow::openAbout() {
     QMessageBox::about(
-        this, QStringLiteral("About %1").arg(app::displayName()),
-        QStringLiteral("<b>%1 %2</b><br><br>"
+        this, tr("About %1").arg(app::displayName()),
+        tr("<b>%1 %2</b><br><br>"
                        "Native C++/Qt port of MaxChat.<br><br>"
                        "A full IRC client: multi-network, server list, link previews, "
                        "inline media, spellcheck, logging, DCC, scripting, and Comic Chat "

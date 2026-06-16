@@ -31,20 +31,20 @@ QString comicKey(const QString& network, const QString& target) {
 
 void ComicController::openComicHelp() {
     QMessageBox::information(
-        &m_window, QStringLiteral("Comic Chat Guide"),
+        &m_window, tr("Comic Chat Guide"),
         QStringList{
-            QStringLiteral("Comic Mode turns the channel into a comic strip. Turn it on per "
+            tr("Comic Mode turns the channel into a comic strip. Turn it on per "
                            "channel from the Comic menu (Ctrl+M), and set your art folder in "
                            "Comic ▸ Comic Settings."),
-            QStringLiteral("HOW YOUR MESSAGE BECOMES A BALLOON:"),
-            QStringLiteral("• Normal text → a speech balloon."),
-            QStringLiteral("• (text in parentheses) → a thought cloud (the fluffy one)."),
-            QStringLiteral("• ALL CAPS or ending in !! → a jagged shout balloon."),
-            QStringLiteral("• /me action → a narration caption box (e.g. \"/me waves\")."),
-            QStringLiteral("EXPRESSIONS: your character's face is guessed from your text — "
+            tr("HOW YOUR MESSAGE BECOMES A BALLOON:"),
+            tr("• Normal text → a speech balloon."),
+            tr("• (text in parentheses) → a thought cloud (the fluffy one)."),
+            tr("• ALL CAPS or ending in !! → a jagged shout balloon."),
+            tr("• /me action → a narration caption box (e.g. \"/me waves\")."),
+            tr("EXPRESSIONS: your character's face is guessed from your text — "
                            "smileys :) :( ;) :D, emoji, and words like lol/grr/zzz/omg. "
                            "Set a fixed expression with Comic ▸ Emotion."),
-            QStringLiteral("TIPS: double-click a panel to zoom; right-click to copy or save "
+            tr("TIPS: double-click a panel to zoom; right-click to copy or save "
                            "panels. Balloon font, speaker tinting, and panel count are in "
                            "Comic Settings."),
         }
@@ -98,8 +98,8 @@ void ComicController::saveComic() {
             .arg(QString(m_window.m_currentTarget).remove(QLatin1Char('#')).remove(QLatin1Char('&')).replace(
                      QLatin1Char('/'), QLatin1Char('_')),
                  QDate::currentDate().toString(QStringLiteral("yyyy-MM-dd")));
-    QString path = QFileDialog::getSaveFileName(&m_window, QStringLiteral("Save comic image"),
-                                                defaultName, QStringLiteral("PNG image (*.png)"));
+    QString path = QFileDialog::getSaveFileName(&m_window, tr("Save comic image"),
+                                                defaultName, tr("PNG image (*.png)"));
     if (path.isEmpty()) {
         return;
     }
