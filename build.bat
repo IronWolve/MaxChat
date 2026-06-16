@@ -82,13 +82,16 @@ set "CONFIG_ARGS=-DCMAKE_BUILD_TYPE=Release"
 rem A bare "build.bat" builds EVERY optional feature (Lua scripting + the native
 rem OS speller). Opt out with one or more flags, in any order:
 rem   build.bat nolua            - skip the Lua scripting engine
+rem   build.bat noterm           - skip the script terminal / BBS UI (vanilla IRC)
 rem   build.bat noosspell        - skip the native OS speller (Hunspell only)
-rem   build.bat nolua noosspell  - leanest build (both off)
+rem   build.bat nolua noosspell  - leanest build (everything off)
 set "MAXCHAT_LUA=ON"
+set "MAXCHAT_TERMINAL=ON"
 set "MAXCHAT_OS_SPELL=ON"
 :parse_args
 if "%~1"=="" goto args_done
 if /I "%~1"=="nolua"     set "MAXCHAT_LUA=OFF"
+if /I "%~1"=="noterm"    set "MAXCHAT_TERMINAL=OFF"
 if /I "%~1"=="noosspell" set "MAXCHAT_OS_SPELL=OFF"
 rem Back-compat: "osspell" used to be the opt-in; it is now the default, so
 rem accept it as a harmless no-op rather than erroring on old muscle memory.
@@ -96,8 +99,12 @@ if /I "%~1"=="osspell"   set "MAXCHAT_OS_SPELL=ON"
 shift
 goto parse_args
 :args_done
+rem The terminal UI needs Lua; keep the flags consistent (CMake also enforces this).
+if /I "%MAXCHAT_LUA%"=="OFF" set "MAXCHAT_TERMINAL=OFF"
 set "CONFIG_ARGS=%CONFIG_ARGS% -DMAXCHAT_LUA=%MAXCHAT_LUA%"
 echo Lua scripting: %MAXCHAT_LUA%
+set "CONFIG_ARGS=%CONFIG_ARGS% -DMAXCHAT_TERMINAL=%MAXCHAT_TERMINAL%"
+echo Terminal/BBS UI: %MAXCHAT_TERMINAL%
 set "CONFIG_ARGS=%CONFIG_ARGS% -DMAXCHAT_OS_SPELL=%MAXCHAT_OS_SPELL%"
 echo OS spell engine: %MAXCHAT_OS_SPELL%
 set "BUILD_ARGS="

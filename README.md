@@ -50,6 +50,7 @@ cmake -S . -B build-lean -G Ninja -DCMAKE_BUILD_TYPE=Release \
 build.bat            # MinGW default
 build.bat msvc       # MSVC
 build.bat nolua      # without Lua scripting
+build.bat noterm     # without the terminal / BBS UI (vanilla IRC client)
 build.bat osspell    # with Windows ISpellChecker COM backend
 ```
 
