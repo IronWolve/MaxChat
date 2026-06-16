@@ -331,6 +331,8 @@ qt_add_executable(maxchat-c
     src/ui/MainWindowHost.h
     src/ui/ChatPane.cpp
     src/ui/ChatPane.h
+    src/ui/PreviewFetcher.cpp
+    src/ui/PreviewFetcher.h
     src/ui/MediaController.cpp
     src/ui/MediaController.h
     src/ui/ScriptBridge.cpp
@@ -1182,6 +1184,8 @@ qt_add_executable(main_window_link_preview_test
     src/ui/MainWindowHost.h
     src/ui/ChatPane.cpp
     src/ui/ChatPane.h
+    src/ui/PreviewFetcher.cpp
+    src/ui/PreviewFetcher.h
     src/ui/MediaController.cpp
     src/ui/MediaController.h
     src/ui/ScriptBridge.cpp

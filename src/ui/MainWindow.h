@@ -14,6 +14,7 @@
 #include "services/OpenGraphFetcher.h"
 #include "ui/ChatPane.h"
 #include "ui/MainWindowHost.h"
+#include "ui/PreviewFetcher.h"
 #include "ui/SoundPlayer.h"
 #include "spell/Speller.h" // backend-neutral; OS speller works without Hunspell
 #include "ui/ChannelListDialog.h"
@@ -74,7 +75,10 @@ class ScriptBridge;
 class SpellTextEdit;
 class UrlListDialog;
 
-class MainWindow final : public QMainWindow, public MainWindowHost, public ChatPaneDelegate {
+class MainWindow final : public QMainWindow,
+                        public MainWindowHost,
+                        public ChatPaneDelegate,
+                        public PreviewFetcherDelegate {
     // White-box test access without `#define private public` (which gives this
     // header a different layout in the test TU than in the app TU — an ODR
     // violation). A friend grants the same access cleanly.
@@ -133,6 +137,16 @@ class MainWindow final : public QMainWindow, public MainWindowHost, public ChatP
     void previewImageNeeded(const QUrl& url) override { m_imageFetcher.fetch(url); }
     [[nodiscard]] bool activeBufferReferencesImage(const QString& url) override;
     void rerenderActiveBuffer() override { renderActiveBuffer(); }
+
+    // --- PreviewFetcherDelegate — where rendered link-preview cards land (2b) ---
+    void appendPreviewHtmlToActiveBuffer(const QString& html) override { appendPreviewHtml(html); }
+    void appendPreviewHtmlToBuffer(const QString& network, const QString& target,
+                                   const QString& html) override {
+        appendPreviewHtmlToNetworkTarget(network, target, html);
+    }
+    [[nodiscard]] QString previewOriginNetwork() override { return currentLogNetwork(); }
+    [[nodiscard]] QString previewOriginTarget() override { return m_currentTarget; }
+    [[nodiscard]] bool isReplayingLog() override { return m_replayingLog; }
 
     bool selfTest() const;
 
@@ -336,9 +350,6 @@ class MainWindow final : public QMainWindow, public MainWindowHost, public ChatP
                                            const QString& line);
     void appendChatLogLineForTarget(const QString& target, const QString& line);
     void rememberUrlsFromLine(const QString& line);
-    void queueLinkPreviewsFromLine(const QString& line);
-    void handlePreviewCardFetched(const QUrl& url, const maxchat::services::OpenGraphCard& card);
-    void handlePreviewFetchFailed(const QUrl& url, const QString& reason);
     void showConnectionStatus(const QString& line);
     [[nodiscard]] maxchat::core::ChatBufferId bufferIdForTarget(const QString& target);
     [[nodiscard]] bool isActiveBufferTarget(const QString& target) const;
@@ -437,7 +448,7 @@ class MainWindow final : public QMainWindow, public MainWindowHost, public ChatP
     QNetworkAccessManager m_updateNetworkManager;
     SoundPlayer m_soundPlayer;
     ScriptBridge* m_scripts = nullptr; // owns LuaEngine + ScriptTerminalManager
-    maxchat::services::OpenGraphFetcher m_openGraphFetcher;
+    PreviewFetcher* m_previewFetcher = nullptr; // link-preview card fetch (Phase 2b)
     maxchat::services::ImageFetcher m_imageFetcher;
     maxchat::core::NetworkConnectionPlan m_connectionPlan;
     QString m_currentTarget;
@@ -478,9 +489,9 @@ class MainWindow final : public QMainWindow, public MainWindowHost, public ChatP
     int m_nickColumnWidth = 16;
     QString m_timestampFormat = QStringLiteral("%I:%M %p");
     QVariantMap m_commandAliases;
-    maxchat::services::LinkPreviewToggles m_linkPreviewToggles;
+    // Kept for the inline-image scaling in handlePreviewImageFetched; the link-
+    // preview card fetch + its toggles/candidates live in PreviewFetcher (2b).
     maxchat::services::LinkPreviewRenderOptions m_ogRenderOptions;
-    QHash<QString, maxchat::services::LinkPreviewCandidate> m_pendingPreviewCandidates;
     QHash<QString, QStringList> m_pendingNamesByChannel;
     QHash<QString, QString> m_channelModeLines;
     QHash<QString, maxchat::core::NetworkConnectionPlan> m_connectionPlansByNetwork;
