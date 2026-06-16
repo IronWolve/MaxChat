@@ -152,6 +152,7 @@ target_link_libraries(maxchat_network
 )
 
 add_library(maxchat_upload STATIC
+    src/upload/ImageUploader.cpp
     src/upload/ImageUploader.h
     src/upload/ImgbbUploader.cpp
     src/upload/ImgbbUploader.h
