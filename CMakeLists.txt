@@ -35,7 +35,7 @@ if(CCACHE_PROGRAM)
 endif()
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Test Multimedia
-                                     MultimediaWidgets)
+                                     MultimediaWidgets LinguistTools)
 # Spellcheck uses a VENDORED Hunspell (third_party/hunspell) so the internal
 # engine works on every platform (incl. Windows/MinGW) without a system package.
 # Define the same HUNSPELL_* variables the downstream targets already consume.
@@ -398,6 +398,14 @@ endif()
 if(MAXCHAT_TERMINAL)
     target_link_libraries(maxchat-c PRIVATE maxchat_terminal)
 endif()
+
+# Translations: lrelease compiles translations/*.ts → .qm and embeds them in the
+# binary under :/i18n (the loader in main.cpp reads from there). Regenerate the
+# .ts after adding tr() strings with:  cmake --build build --target update_translations
+qt_add_translations(maxchat-c
+    TS_FILES translations/maxchat_de.ts
+    RESOURCE_PREFIX "/i18n"
+)
 
 enable_testing()
 

@@ -1371,67 +1371,67 @@ bool maxchat::ui::MainWindow::undoAutocorrect() {
 void maxchat::ui::MainWindow::buildMenus() {
     const QVariantMap initialSettings = m_settings.loadWithDefaults();
 
-    auto* serverMenu = menuBar()->addMenu(QStringLiteral("&Server"));
+    auto* serverMenu = menuBar()->addMenu(tr("&Server"));
     QAction* serverListAction =
-        serverMenu->addAction(QStringLiteral("Server List..."), this, &MainWindow::openServerList);
+        serverMenu->addAction(tr("Server List..."), this, &MainWindow::openServerList);
     serverListAction->setShortcut(QKeySequence(QStringLiteral("Ctrl+S")));
-    serverMenu->addAction(QStringLiteral("Quick Connect..."), this, &MainWindow::openQuickConnect);
-    serverMenu->addAction(QStringLiteral("Disconnect"), this,
+    serverMenu->addAction(tr("Quick Connect..."), this, &MainWindow::openQuickConnect);
+    serverMenu->addAction(tr("Disconnect"), this,
                           &MainWindow::disconnectFromCurrentServer);
-    serverMenu->addAction(QStringLiteral("Disconnect"), this,
+    serverMenu->addAction(tr("Disconnect"), this,
                           &MainWindow::disconnectFromCurrentServer);
-    serverMenu->addAction(QStringLiteral("Reconnect"), this,
+    serverMenu->addAction(tr("Reconnect"), this,
                           &MainWindow::reconnectCurrentServer);
     serverMenu->addSeparator();
     QAction* joinAction =
-        serverMenu->addAction(QStringLiteral("Join..."), this, &MainWindow::openJoinDialog);
+        serverMenu->addAction(tr("Join..."), this, &MainWindow::openJoinDialog);
     joinAction->setShortcut(QKeySequence(QStringLiteral("Ctrl+J")));
-    serverMenu->addAction(QStringLiteral("Leave Channel"), this, &MainWindow::leaveCurrentChannel);
-    serverMenu->addAction(QStringLiteral("Leave All Channels"), this,
+    serverMenu->addAction(tr("Leave Channel"), this, &MainWindow::leaveCurrentChannel);
+    serverMenu->addAction(tr("Leave All Channels"), this,
                           [this]() { leaveAllChannels(QString()); });
     serverMenu->addSeparator();
-    QAction* channelListAction = serverMenu->addAction(QStringLiteral("Channels..."), this,
+    QAction* channelListAction = serverMenu->addAction(tr("Channels..."), this,
                                                        [this]() { openChannelList(false); });
     serverMenu->addSeparator();
-    serverMenu->addAction(QStringLiteral("Quit"), qApp, &QApplication::quit);
+    serverMenu->addAction(tr("Quit"), qApp, &QApplication::quit);
 
-    auto* viewMenu = menuBar()->addMenu(QStringLiteral("&View"));
-    m_buttonBarAction = viewMenu->addAction(QStringLiteral("Button Bar"));
+    auto* viewMenu = menuBar()->addMenu(tr("&View"));
+    m_buttonBarAction = viewMenu->addAction(tr("Button Bar"));
     m_buttonBarAction->setCheckable(true);
     m_buttonBarAction->setChecked(true);
     connect(m_buttonBarAction, &QAction::toggled, this,
             [this](const bool visible) { setButtonBarVisible(visible, true); });
     viewMenu->addSeparator();
-    m_serverListVisibleAction = viewMenu->addAction(QStringLiteral("Server List"));
+    m_serverListVisibleAction = viewMenu->addAction(tr("Server List"));
     m_serverListVisibleAction->setCheckable(true);
     m_serverListVisibleAction->setChecked(true);
     connect(m_serverListVisibleAction, &QAction::toggled, this,
             [this](const bool visible) { setServerListVisible(visible, true); });
-    m_membersVisibleAction = viewMenu->addAction(QStringLiteral("Member List"));
+    m_membersVisibleAction = viewMenu->addAction(tr("Member List"));
     m_membersVisibleAction->setCheckable(true);
     m_membersVisibleAction->setChecked(true);
     connect(m_membersVisibleAction, &QAction::toggled, this,
             [this](const bool visible) { setMembersVisible(visible, true); });
-    m_buttonsAsTabsAction = viewMenu->addAction(QStringLiteral("Buttons as Tabs"));
+    m_buttonsAsTabsAction = viewMenu->addAction(tr("Buttons as Tabs"));
     m_buttonsAsTabsAction->setCheckable(true);
     m_buttonsAsTabsAction->setChecked(
         initialSettings.value(QStringLiteral("buffer_tabs"), false).toBool());
     connect(m_buttonsAsTabsAction, &QAction::toggled, this,
             [this](const bool visible) { setBufferTabsVisible(visible, true); });
-    m_chatSeparatorAction = viewMenu->addAction(QStringLiteral("Chat Separator"));
+    m_chatSeparatorAction = viewMenu->addAction(tr("Chat Separator"));
     m_chatSeparatorAction->setCheckable(true);
     m_chatSeparatorAction->setChecked(true);
     connect(m_chatSeparatorAction, &QAction::toggled, this,
             [this](const bool visible) { setChatSeparatorVisible(visible, true); });
     viewMenu->addSeparator();
-    viewMenu->addAction(QStringLiteral("Clear Current Chat"), this, &MainWindow::clearCurrentChat);
-    viewMenu->addAction(QStringLiteral("Mark All Read"), this, &MainWindow::markAllRead);
+    viewMenu->addAction(tr("Clear Current Chat"), this, &MainWindow::clearCurrentChat);
+    viewMenu->addAction(tr("Mark All Read"), this, &MainWindow::markAllRead);
 
-    auto* toolsMenu = menuBar()->addMenu(QStringLiteral("&Tools"));
+    auto* toolsMenu = menuBar()->addMenu(tr("&Tools"));
     auto* findAction =
-        toolsMenu->addAction(QStringLiteral("Find in Chat..."), this, &MainWindow::openChatFind);
+        toolsMenu->addAction(tr("Find in Chat..."), this, &MainWindow::openChatFind);
     findAction->setShortcut(QKeySequence::Find);
-    toolsMenu->addAction(QStringLiteral("Open Log Folder"), this, [this]() {
+    toolsMenu->addAction(tr("Open Log Folder"), this, [this]() {
         const QString logDir =
             QDir(m_settings.paths().configDir).filePath(QStringLiteral("logs"));
         QDir().mkpath(logDir);
@@ -1439,10 +1439,10 @@ void maxchat::ui::MainWindow::buildMenus() {
     });
     toolsMenu->addSeparator();
     QAction* urlListAction =
-        toolsMenu->addAction(QStringLiteral("URL List..."), this, &MainWindow::openUrlList);
-    toolsMenu->addAction(QStringLiteral("Raw Log..."), this, &MainWindow::openRawLog);
+        toolsMenu->addAction(tr("URL List..."), this, &MainWindow::openUrlList);
+    toolsMenu->addAction(tr("Raw Log..."), this, &MainWindow::openRawLog);
     toolsMenu->addSeparator();
-    m_doNotDisturbAction = toolsMenu->addAction(QStringLiteral("Do Not Disturb"));
+    m_doNotDisturbAction = toolsMenu->addAction(tr("Do Not Disturb"));
     m_doNotDisturbAction->setCheckable(true);
     m_doNotDisturbAction->setChecked(initialSettings.value(QStringLiteral("dnd"), false).toBool());
     m_doNotDisturbAction->setToolTip(
@@ -1458,15 +1458,15 @@ void maxchat::ui::MainWindow::buildMenus() {
                                  : QStringLiteral("! Do Not Disturb disabled."));
     });
 
-    auto* settingsMenu = menuBar()->addMenu(QStringLiteral("&Settings"));
-    QAction* prefsAction = settingsMenu->addAction(QStringLiteral("Preferences..."), this,
+    auto* settingsMenu = menuBar()->addMenu(tr("&Settings"));
+    QAction* prefsAction = settingsMenu->addAction(tr("Preferences..."), this,
                                                    &MainWindow::openPreferences);
     prefsAction->setShortcut(QKeySequence(QStringLiteral("Ctrl+P")));
-    settingsMenu->addAction(QStringLiteral("Ignore List..."), this, &MainWindow::openIgnoreList);
-    settingsMenu->addAction(QStringLiteral("Aliases..."), this, &MainWindow::openAliases);
+    settingsMenu->addAction(tr("Ignore List..."), this, &MainWindow::openIgnoreList);
+    settingsMenu->addAction(tr("Aliases..."), this, &MainWindow::openAliases);
     settingsMenu->addSeparator();
-    QMenu* themesMenu = settingsMenu->addMenu(QStringLiteral("Themes"));
-    QMenu* themeMenu = themesMenu->addMenu(QStringLiteral("Theme"));
+    QMenu* themesMenu = settingsMenu->addMenu(tr("Themes"));
+    QMenu* themeMenu = themesMenu->addMenu(tr("Theme"));
     auto* themeGroup = new QActionGroup(this);
     themeGroup->setExclusive(true);
     for (const AppThemeDefinition& theme : appThemes()) {
@@ -1477,7 +1477,7 @@ void maxchat::ui::MainWindow::buildMenus() {
         m_themeActions.append(action);
         connect(action, &QAction::triggered, this, [this, id = theme.id]() { setTheme(id, true); });
     }
-    QMenu* chatThemeMenu = themesMenu->addMenu(QStringLiteral("Chat Theme"));
+    QMenu* chatThemeMenu = themesMenu->addMenu(tr("Chat Theme"));
     auto* chatThemeGroup = new QActionGroup(this);
     chatThemeGroup->setExclusive(true);
     for (const ChatThemeDefinition& theme : chatThemes()) {
@@ -1489,7 +1489,7 @@ void maxchat::ui::MainWindow::buildMenus() {
         connect(action, &QAction::triggered, this,
                 [this, id = theme.id]() { setChatTheme(id, true); });
     }
-    QMenu* wallpaperMenu = themesMenu->addMenu(QStringLiteral("Wallpaper"));
+    QMenu* wallpaperMenu = themesMenu->addMenu(tr("Wallpaper"));
     auto* wallpaperGroup = new QActionGroup(this);
     wallpaperGroup->setExclusive(true);
     for (const WallpaperDefinition& wallpaper : wallpaperChoices()) {
@@ -1502,7 +1502,7 @@ void maxchat::ui::MainWindow::buildMenus() {
                 [this, value = wallpaper.value]() { setWallpaper(value, true); });
     }
     wallpaperMenu->addSeparator();
-    wallpaperMenu->addAction(QStringLiteral("Load Image..."), this, [this]() {
+    wallpaperMenu->addAction(tr("Load Image..."), this, [this]() {
         const QString wallPath =
             QFileDialog::getOpenFileName(this, QStringLiteral("Choose Wallpaper"), QString(),
                                          QStringLiteral("Images (*.png *.jpg *.jpeg *.webp)"));
@@ -1510,41 +1510,41 @@ void maxchat::ui::MainWindow::buildMenus() {
             setWallpaper(wallPath, true);
         }
     });
-    m_looksMenu = themesMenu->addMenu(QStringLiteral("Saved Looks"));
+    m_looksMenu = themesMenu->addMenu(tr("Saved Looks"));
     rebuildLooksMenu();
     settingsMenu->addSeparator();
-    settingsMenu->addAction(QStringLiteral("Keyboard Shortcuts..."), this,
+    settingsMenu->addAction(tr("Keyboard Shortcuts..."), this,
                             &MainWindow::openShortcutEditor);
-    settingsMenu->addAction(QStringLiteral("Friends / Notify..."), this,
+    settingsMenu->addAction(tr("Friends / Notify..."), this,
                             &MainWindow::openFriendsNotify);
-    settingsMenu->addAction(QStringLiteral("Scripts..."), this, &MainWindow::openScriptsManager);
+    settingsMenu->addAction(tr("Scripts..."), this, &MainWindow::openScriptsManager);
     QAction* transfersAction =
-        settingsMenu->addAction(QStringLiteral("File Transfers..."), this,
+        settingsMenu->addAction(tr("File Transfers..."), this,
                                 &MainWindow::openDccTransfers);
     settingsMenu->addSeparator();
-    settingsMenu->addAction(QStringLiteral("Import Settings..."), this,
+    settingsMenu->addAction(tr("Import Settings..."), this,
                             &MainWindow::importSettings);
-    settingsMenu->addAction(QStringLiteral("Export Settings..."), this,
+    settingsMenu->addAction(tr("Export Settings..."), this,
                             &MainWindow::exportSettings);
-    settingsMenu->addAction(QStringLiteral("Reset Server List"), this,
+    settingsMenu->addAction(tr("Reset Server List"), this,
                             &MainWindow::resetServerList);
 
-    auto* comicMenu = menuBar()->addMenu(QStringLiteral("&Comic"));
-    m_comicModeAction = comicMenu->addAction(QStringLiteral("Comic Mode"));
+    auto* comicMenu = menuBar()->addMenu(tr("&Comic"));
+    m_comicModeAction = comicMenu->addAction(tr("Comic Mode"));
     m_comicModeAction->setCheckable(true);
     m_comicModeAction->setEnabled(false); // per channel — enabled on buffer switch
     connect(m_comicModeAction, &QAction::toggled, this, &MainWindow::setComicMode);
     QAction* comicModeAction = m_comicModeAction;
     comicModeAction->setShortcut(QKeySequence(QStringLiteral("Ctrl+M")));
     QAction* emotionAction =
-        comicMenu->addAction(QStringLiteral("Emotion..."), this, &MainWindow::openEmotionPicker);
+        comicMenu->addAction(tr("Emotion..."), this, &MainWindow::openEmotionPicker);
     comicMenu->addSeparator();
-    comicMenu->addAction(QStringLiteral("Comic Settings..."), this, &MainWindow::openComicSettings);
-    comicMenu->addAction(QStringLiteral("Browse Characters..."), this,
+    comicMenu->addAction(tr("Comic Settings..."), this, &MainWindow::openComicSettings);
+    comicMenu->addAction(tr("Browse Characters..."), this,
                          &MainWindow::openCharacterGallery);
-    comicMenu->addAction(QStringLiteral("Save Comic..."), this, &MainWindow::saveComic);
+    comicMenu->addAction(tr("Save Comic..."), this, &MainWindow::saveComic);
     comicMenu->addSeparator();
-    m_comicCaptionsAction = comicMenu->addAction(QStringLiteral("Character Names"));
+    m_comicCaptionsAction = comicMenu->addAction(tr("Character Names"));
     m_comicCaptionsAction->setCheckable(true);
     m_comicCaptionsAction->setChecked(
         initialSettings.value(QStringLiteral("comic_captions"), true).toBool());
@@ -1560,16 +1560,16 @@ void maxchat::ui::MainWindow::buildMenus() {
         refreshComic();
     });
 
-    auto* helpMenu = menuBar()->addMenu(QStringLiteral("&Help"));
-    QAction* helpAction = helpMenu->addAction(QStringLiteral("Commands && Shortcuts..."), this,
+    auto* helpMenu = menuBar()->addMenu(tr("&Help"));
+    QAction* helpAction = helpMenu->addAction(tr("Commands && Shortcuts..."), this,
                                               &MainWindow::openCommandHelp);
-    helpMenu->addAction(QStringLiteral("Comic Chat Guide..."), this,
+    helpMenu->addAction(tr("Comic Chat Guide..."), this,
                         &MainWindow::openComicHelp);
     helpAction->setShortcut(QKeySequence(Qt::Key_F1));
     helpMenu->addSeparator();
-    helpMenu->addAction(QStringLiteral("Check for Updates..."), this,
+    helpMenu->addAction(tr("Check for Updates..."), this,
                         [this]() { checkForUpdates(/*manual=*/true); });
-    helpMenu->addAction(QStringLiteral("About"), this, &MainWindow::openAbout);
+    helpMenu->addAction(tr("About"), this, &MainWindow::openAbout);
 
     m_buttonBar = addToolBar(QStringLiteral("Button Bar"));
     m_buttonBar->setObjectName(QStringLiteral("mainToolbar"));
@@ -9230,7 +9230,7 @@ void maxchat::ui::MainWindow::setupTrayIcon() {
     m_tray = new ::QSystemTrayIcon(this);
     m_trayMenu = new QMenu(this);
 
-    m_trayMenu->addAction(QStringLiteral("Show / Hide"), this, &MainWindow::toggleWindowVisibility);
+    m_trayMenu->addAction(tr("Show / Hide"), this, &MainWindow::toggleWindowVisibility);
     m_trayMenu->addSeparator();
 
     // Reuse the menu-bar DND action so both stay in sync (matches Python)
@@ -9238,7 +9238,7 @@ void maxchat::ui::MainWindow::setupTrayIcon() {
         m_trayMenu->addAction(m_doNotDisturbAction);
     }
     m_trayMenu->addSeparator();
-    m_trayMenu->addAction(QStringLiteral("Quit"), this, &QWidget::close);
+    m_trayMenu->addAction(tr("Quit"), this, &QWidget::close);
 
     m_tray->setContextMenu(m_trayMenu);
     connect(m_tray, &::QSystemTrayIcon::activated, this, [this](::QSystemTrayIcon::ActivationReason r) {
