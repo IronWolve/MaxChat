@@ -156,7 +156,7 @@ class MainWindowLinkPreviewTest final : public QObject {
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(chatView != nullptr);
 
-        window.m_linkPreviewToggles.images = true;
+        window.m_previewFetcher->toggles().images = true;
         window.appendSystemLine(QStringLiteral("<nick> https://images.example.net/picture.jpg"));
 
         const QString html = chatView->toHtml();
@@ -170,7 +170,7 @@ class MainWindowLinkPreviewTest final : public QObject {
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(chatView != nullptr);
 
-        window.m_linkPreviewToggles.images = false;
+        window.m_previewFetcher->toggles().images = false;
         window.appendSystemLine(QStringLiteral("<nick> https://images.example.net/picture.jpg"));
 
         QVERIFY(!chatView->toHtml().contains(QStringLiteral("<img")));
@@ -182,7 +182,7 @@ class MainWindowLinkPreviewTest final : public QObject {
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(chatView != nullptr);
 
-        window.m_linkPreviewToggles.images = true;
+        window.m_previewFetcher->toggles().images = true;
         window.appendSystemLine(QStringLiteral("<-- :server.example NOTICE * "
                                                ":https://images.example.net/raw.jpg"),
                                 false);
@@ -212,11 +212,11 @@ class MainWindowLinkPreviewTest final : public QObject {
         auto* chatView = window.findChild<QTextBrowser*>(QStringLiteral("chatView"));
         QVERIFY(chatView != nullptr);
 
-        window.m_linkPreviewToggles.media = true;
+        window.m_previewFetcher->toggles().media = true;
         window.appendSystemLine(QStringLiteral("<nick> https://media.example.net/song.mp3"));
         QVERIFY(chatView->toHtml().contains(QStringLiteral("song.mp3")));
 
-        window.m_linkPreviewToggles.media = false;
+        window.m_previewFetcher->toggles().media = false;
         window.appendSystemLine(QStringLiteral("<nick> https://media.example.net/clip.mp4"));
         QVERIFY(!chatView->toHtml().contains(QStringLiteral("Video")));
     }
@@ -229,7 +229,7 @@ class MainWindowLinkPreviewTest final : public QObject {
 
         window.m_hasConnectionPlan = true;
         window.m_connectionPlan.networkName = QStringLiteral("Libera.Chat");
-        window.m_linkPreviewToggles.images = true;
+        window.m_previewFetcher->toggles().images = true;
         window.m_showTimestamps = false;
         window.m_alignNicks = true;
         window.m_separatorLine = true;

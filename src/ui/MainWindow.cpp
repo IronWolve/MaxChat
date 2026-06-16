@@ -386,10 +386,6 @@ QStringList removeCaseInsensitive(QStringList values, const QString& needle) {
     return values;
 }
 
-QString previewKey(const QUrl& url) {
-    return url.toString(QUrl::FullyEncoded).toCaseFolded();
-}
-
 QString inputText(const QTextEdit* input) {
     return input == nullptr ? QString() : input->toPlainText();
 }
@@ -708,10 +704,12 @@ QString labelWithTreeCounts(const QString& label, const int unreadCount, const i
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent),
       m_chatLogStore(QDir(m_settings.paths().configDir).filePath(QStringLiteral("logs"))),
-      m_openGraphFetcher(&m_previewNetworkManager),
       m_imageFetcher(&m_previewNetworkManager),
       m_osNotifyAvailable(false) {
     m_appUptime.start();
+    // Link-preview card fetcher (decomp Phase 2b). Constructed first so any early
+    // appendSystemLine that queues a preview has it available.
+    m_previewFetcher = new PreviewFetcher(*this, m_previewNetworkManager, this);
     // Inline media + image upload controller. Constructed before buildLayout()
     // because the chat view's anchor-click handler and the audio bar wire into it.
     m_media = new MediaController(*this, this);
@@ -753,10 +751,8 @@ MainWindow::MainWindow(QWidget* parent)
                       QStringLiteral("string:org.freedesktop.Notifications")});
     }
 #endif
-    connect(&m_openGraphFetcher, &maxchat::services::OpenGraphFetcher::cardFetched, this,
-            &MainWindow::handlePreviewCardFetched);
-    connect(&m_openGraphFetcher, &maxchat::services::OpenGraphFetcher::fetchFailed, this,
-            &MainWindow::handlePreviewFetchFailed);
+    // OpenGraph card fetch lives in PreviewFetcher now (decomp Phase 2b); it wires
+    // its own fetcher signals. The image fetcher stays here, feeding ChatPane (R3).
     connect(&m_imageFetcher, &maxchat::services::ImageFetcher::imageFetched, this,
             &MainWindow::handlePreviewImageFetched);
     connect(&m_imageFetcher, &maxchat::services::ImageFetcher::imageFetchFailed, this,
@@ -6151,7 +6147,7 @@ void maxchat::ui::MainWindow::appendSystemLineToNetworkTarget(const QString& net
         }
     }
     if (active && shouldQueuePreviews) {
-        queueLinkPreviewsFromLine(display.plainText);
+        m_previewFetcher->queueFromLine(display.plainText);
     }
     // The status bar is for transient status (connect/find/etc.), not a mirror of
     // chat — echoing every appended line here is what put your own "<nick> msg"
@@ -6231,82 +6227,6 @@ void maxchat::ui::MainWindow::rememberUrlsFromLine(const QString& line) {
             m_urlListDialog->appendUrls(newUrls);
         }
     }
-}
-
-void maxchat::ui::MainWindow::queueLinkPreviewsFromLine(const QString& line) {
-    if (m_chatView == nullptr || m_replayingLog) {
-        return;
-    }
-
-    const QStringList urls = maxchat::core::extractUrls(line);
-    for (const QString& urlText : urls) {
-        const maxchat::services::LinkPreviewCandidate candidate =
-            maxchat::services::classifyLinkPreview(urlText);
-        if (!candidate.isPreviewable() ||
-            !maxchat::services::isLinkPreviewEnabled(candidate, m_linkPreviewToggles)) {
-            continue;
-        }
-
-        switch (candidate.kind) {
-        case maxchat::services::LinkPreviewKind::DirectImage:
-            appendPreviewHtml(maxchat::services::renderDirectImagePreviewHtml(candidate));
-            break;
-        case maxchat::services::LinkPreviewKind::DirectAudio:
-        case maxchat::services::LinkPreviewKind::DirectVideo:
-            appendPreviewHtml(maxchat::services::renderDirectMediaPreviewHtml(candidate));
-            break;
-        case maxchat::services::LinkPreviewKind::OpenGraph:
-        case maxchat::services::LinkPreviewKind::XPost:
-        case maxchat::services::LinkPreviewKind::MastodonPost: {
-            const QString key = previewKey(candidate.fetchUrl);
-            if (m_pendingPreviewCandidates.contains(key)) {
-                break;
-            }
-            maxchat::services::LinkPreviewCandidate tagged = candidate;
-            tagged.originNetwork = currentLogNetwork();
-            tagged.originTarget  = m_currentTarget;
-            m_pendingPreviewCandidates.insert(key, tagged);
-            m_openGraphFetcher.fetch(candidate.fetchUrl);
-            break;
-        }
-        case maxchat::services::LinkPreviewKind::None:
-            break;
-        }
-    }
-}
-
-void maxchat::ui::MainWindow::handlePreviewCardFetched(const QUrl& url,
-                                          const maxchat::services::OpenGraphCard& card) {
-    const QString key = previewKey(url);
-    const auto iterator = m_pendingPreviewCandidates.find(key);
-    if (iterator == m_pendingPreviewCandidates.end()) {
-        return;
-    }
-
-    const maxchat::services::LinkPreviewCandidate candidate = iterator.value();
-    m_pendingPreviewCandidates.erase(iterator);
-    if (!maxchat::services::isLinkPreviewEnabled(candidate, m_linkPreviewToggles)) {
-        return;
-    }
-
-    maxchat::services::OpenGraphCard displayCard = card;
-    if (displayCard.imageUrl.isValid() &&
-        !maxchat::services::isAllowedPreviewFetchUrl(displayCard.imageUrl)) {
-        displayCard.imageUrl = QUrl();
-    }
-    const QString html = maxchat::services::renderOpenGraphPreviewHtml(
-        candidate, displayCard, m_ogRenderOptions);
-    // Route to the buffer that posted the URL, not the currently-visible one.
-    const QString net = candidate.originNetwork.isEmpty()
-                            ? currentLogNetwork() : candidate.originNetwork;
-    const QString tgt = candidate.originTarget.isEmpty()
-                            ? m_currentTarget : candidate.originTarget;
-    appendPreviewHtmlToNetworkTarget(net, tgt, html);
-}
-
-void maxchat::ui::MainWindow::handlePreviewFetchFailed(const QUrl& url, const QString& reason) {
-    Q_UNUSED(reason);
-    m_pendingPreviewCandidates.remove(previewKey(url));
 }
 
 void maxchat::ui::MainWindow::showConnectionStatus(const QString& line) {
@@ -8324,7 +8244,6 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
     // down, and recolouring with the stale theme made chat and member list
     // briefly disagree. The renderActiveBufferMetadata() call at the end of
     // this function recolours with the fresh theme.
-    m_linkPreviewToggles = maxchat::services::linkPreviewTogglesFromSettings(settings);
     m_ogRenderOptions.showSiteName    = settings.value(QStringLiteral("og_show_site_name"),    true).toBool();
     m_ogRenderOptions.showTitle       = settings.value(QStringLiteral("og_show_title"),        true).toBool();
     m_ogRenderOptions.showDescription = settings.value(QStringLiteral("og_show_description"),  true).toBool();
@@ -8334,6 +8253,10 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
         m_ogRenderOptions.darkChat =
             (0.299 * bg.red() + 0.587 * bg.green() + 0.114 * bg.blue()) < 150.0;
     }
+    // m_ogRenderOptions stays here for the inline-image scaling in
+    // handlePreviewImageFetched; the card fetcher gets its own copy + the toggles.
+    m_previewFetcher->toggles() = maxchat::services::linkPreviewTogglesFromSettings(settings);
+    m_previewFetcher->renderOptions() = m_ogRenderOptions;
     if (m_mainSplitter != nullptr) {
         const QVariantList savedSizes = settings.value(QStringLiteral("splitter_sizes")).toList();
         if (savedSizes.size() >= 3) {
