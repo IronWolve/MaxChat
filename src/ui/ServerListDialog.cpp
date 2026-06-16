@@ -146,9 +146,9 @@ class NetworkEditDialog final : public QDialog {
 
         proxyType_ = new QComboBox(this);
         proxyType_->setObjectName(QStringLiteral("proxyType"));
-        proxyType_->addItem(QStringLiteral("No proxy"), QStringLiteral("none"));
-        proxyType_->addItem(QStringLiteral("SOCKS5"), QStringLiteral("socks5"));
-        proxyType_->addItem(QStringLiteral("HTTP CONNECT"), QStringLiteral("http"));
+        proxyType_->addItem(tr("No proxy"), QStringLiteral("none"));
+        proxyType_->addItem(tr("SOCKS5"), QStringLiteral("socks5"));
+        proxyType_->addItem(tr("HTTP CONNECT"), QStringLiteral("http"));
         const QString proxyType =
             network_.value(QStringLiteral("proxy_type")).toString().trimmed().toLower();
         const int proxyIndex = proxyType_->findData(proxyType);

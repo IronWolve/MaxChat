@@ -69,7 +69,7 @@ ComicSettingsDialog::ComicSettingsDialog(QVariantMap settings, const QStringList
     gf->addRow(tr("Comic art folder"), artRow);
 
     defaultBg_ = new QComboBox(global);
-    defaultBg_->addItem(QStringLiteral("(first available)"), QString());
+    defaultBg_->addItem(tr("(first available)"), QString());
     for (const QString& file : backgroundFiles) {
         defaultBg_->addItem(QFileInfo(file).completeBaseName(), file);
     }
@@ -78,7 +78,7 @@ ComicSettingsDialog::ComicSettingsDialog(QVariantMap settings, const QStringList
     gf->addRow(tr("Default background"), defaultBg_);
 
     selfChar_ = new QComboBox(global);
-    selfChar_->addItem(QStringLiteral("(random per nick)"), QString());
+    selfChar_->addItem(tr("(random per nick)"), QString());
     for (const QString& stem : characterStems) {
         selfChar_->addItem(stem, stem);
     }
@@ -104,8 +104,8 @@ ComicSettingsDialog::ComicSettingsDialog(QVariantMap settings, const QStringList
     captions_->setChecked(settings_.value(QStringLiteral("comic_captions"), true).toBool());
     gf->addRow(tr("Show character names"), captions_);
     captionMode_ = new QComboBox(global);
-    captionMode_->addItem(QStringLiteral("Match speaker color"), QStringLiteral("nick"));
-    captionMode_->addItem(QStringLiteral("Fixed color"), QStringLiteral("fixed"));
+    captionMode_->addItem(tr("Match speaker color"), QStringLiteral("nick"));
+    captionMode_->addItem(tr("Fixed color"), QStringLiteral("fixed"));
     const int cmIdx = captionMode_->findData(
         settings_.value(QStringLiteral("comic_caption_mode"), QStringLiteral("nick")).toString());
     captionMode_->setCurrentIndex(cmIdx >= 0 ? cmIdx : 0);
@@ -119,9 +119,9 @@ ComicSettingsDialog::ComicSettingsDialog(QVariantMap settings, const QStringList
     });
     gf->addRow(QString(), fixedColorBtn);
     captionScale_ = new QComboBox(global);
-    captionScale_->addItem(QStringLiteral("Small"), 0.8);
-    captionScale_->addItem(QStringLiteral("Normal"), 1.0);
-    captionScale_->addItem(QStringLiteral("Large"), 1.3);
+    captionScale_->addItem(tr("Small"), 0.8);
+    captionScale_->addItem(tr("Normal"), 1.0);
+    captionScale_->addItem(tr("Large"), 1.3);
     const double scaleVal = settings_.value(QStringLiteral("comic_caption_scale"), 1.0).toDouble();
     captionScale_->setCurrentIndex(scaleVal < 0.9 ? 0 : scaleVal > 1.1 ? 2 : 1);
     gf->addRow(tr("Name size"), captionScale_);
@@ -251,7 +251,7 @@ void ComicSettingsDialog::loadChannel(int index) {
     auto* form = new QFormLayout(holder);
 
     chanBg_ = new QComboBox(holder);
-    chanBg_->addItem(QStringLiteral("(use global default)"), QString());
+    chanBg_->addItem(tr("(use global default)"), QString());
     for (const QString& file : backgroundFiles_) {
         chanBg_->addItem(QFileInfo(file).completeBaseName(), file);
     }
