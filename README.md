@@ -25,10 +25,11 @@ ctest --test-dir build-release --output-on-failure
 
 ### Build options
 
+Lua scripting is a core dependency and is always built.
+
 | Option | Default | Effect when OFF |
 |--------|---------|-----------------|
-| `MAXCHAT_LUA` | ON | No Lua scripting engine; `api.*` unavailable. |
-| `MAXCHAT_TERMINAL` | ON | No script terminal / BBS UI — a lean "vanilla IRC client". Bundled BBS scripts degrade gracefully (`api.terminal_*` return false). Auto-off when `MAXCHAT_LUA` is off. |
+| `MAXCHAT_TERMINAL` | ON | No script terminal / BBS UI — a lean "vanilla IRC client". Bundled BBS scripts degrade gracefully (`api.terminal_*` return false). |
 | `MAXCHAT_OS_SPELL` | OFF | (Windows only) native ISpellChecker backend instead of the bundled engine. |
 
 ```bash
@@ -49,7 +50,6 @@ cmake -S . -B build-lean -G Ninja -DCMAKE_BUILD_TYPE=Release \
 ```cmd
 build.bat            # MinGW default
 build.bat msvc       # MSVC
-build.bat nolua      # without Lua scripting
 build.bat noterm     # without the terminal / BBS UI (vanilla IRC client)
 build.bat osspell    # with Windows ISpellChecker COM backend
 ```

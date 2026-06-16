@@ -20,9 +20,8 @@ struct ScriptTimer;  // defined in LuaEngine.cpp (a QTimer + its Lua callback re
 // Loads and runs user Lua scripts in a sandbox, dispatching hooks and exposing
 // the `api` table. One isolated lua_State per script (unload == close state).
 //
-// The header is deliberately Lua-free so it can be included regardless of the
-// MAXCHAT_LUA build flag; when the flag is off, the .cpp compiles to inert
-// stubs and available() returns false.
+// The header is deliberately Lua-free (no lua.h) so widgets can include it
+// without pulling the interpreter headers.
 class LuaEngine final : public QObject {
     Q_OBJECT
 
@@ -31,7 +30,8 @@ class LuaEngine final : public QObject {
               QObject* parent = nullptr);
     ~LuaEngine() override;
 
-    // True when built with -DMAXCHAT_LUA=ON (i.e. scripting actually works).
+    // Always true — scripting is a core dependency. Retained as a stable call
+    // site for the (now unconditional) availability guards.
     [[nodiscard]] static bool available();
 
     // Load one .lua file with explicit per-script permissions. If already loaded, reloads.

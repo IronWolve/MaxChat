@@ -39,6 +39,20 @@ When adding anything that should survive a buffer switch, store it in the model.
   **Lesson: header-inline host overrides may only touch types complete in the
   header; anything reaching into a forward-declared member goes in the .cpp.**
 
+## Lua is now a core dependency — dropped MAXCHAT_LUA=OFF (2026-06-15)
+
+We always ship with scripting, so the `MAXCHAT_LUA=OFF` lean build was an unused
+configuration that could only rot (nobody built it, so a missing guard would
+break it unnoticed). Removed it: the `option(MAXCHAT_LUA)`, the `#ifdef
+MAXCHAT_LUA` / `#else` inert-stub half of `LuaEngine.cpp` (~120 lines), the
+`MAXCHAT_LUA=1` compile define, the `if(MAXCHAT_LUA)` CMake wrappers (Lua lib +
+scripting lib + lua tests now unconditional), and `build.bat nolua`.
+`LuaEngine::available()` stays (always returns true) as a stable call site for
+the now-unconditional guards. `MAXCHAT_TERMINAL` (the genuinely useful gate)
+stays. Verified: default 56/56, `-DMAXCHAT_TERMINAL=OFF` 52/52. **Principle: an
+option you never build is a liability, not a feature — keep only the configs you
+actually ship and test.**
+
 ## MAXCHAT_TERMINAL build option (2026-06-15)
 
 Made the script terminal / BBS UI a compile-time option (`MAXCHAT_TERMINAL`,
