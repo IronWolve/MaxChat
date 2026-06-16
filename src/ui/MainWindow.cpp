@@ -702,133 +702,6 @@ QString labelWithTreeCounts(const QString& label, const int unreadCount, const i
     return QStringLiteral("%1 [%2]").arg(label).arg(unreadCount);
 }
 
-class ChatTextView final : public QTextBrowser {
-  public:
-    using SeparatorMovedHandler = std::function<void(int)>;
-
-    explicit ChatTextView(QWidget* parent = nullptr) : QTextBrowser(parent) {}
-
-    void setSeparatorMovedHandler(SeparatorMovedHandler handler) {
-        separatorMovedHandler_ = std::move(handler);
-    }
-
-    // When true, copying yields plain text only (no rich-text colour runs),
-    // matching the Python "strip colors on copy" option.
-    void setStripColorsOnCopy(bool strip) { stripColorsOnCopy_ = strip; }
-
-    void setSeparatorGuide(double timestampColumns, int nickWidth, bool visible, QColor color,
-                           double pixelX = -1.0) {
-        timestampColumns_ = std::max(0.0, timestampColumns);
-        nickWidth_ = std::clamp(nickWidth, 4, 40);
-        separatorColumns_ =
-            visible ? timestampColumns_ + static_cast<double>(nickWidth_) + 1.0 : 0.0;
-        // Exact pixel position measured from the real rendered prefix: the
-        // space-width × columns estimate drifts with proportional fonts and
-        // digit widths, putting the line inside the nick column.
-        separatorPixelX_ = visible ? pixelX : -1.0;
-        color.setAlpha(130);
-        separatorColor_ = color;
-        viewport()->update();
-    }
-
-  protected:
-    void mousePressEvent(QMouseEvent* event) override {
-        if (event->button() == Qt::LeftButton && nearSeparator(event->position().x())) {
-            draggingSeparator_ = true;
-            event->accept();
-            return;
-        }
-        QTextBrowser::mousePressEvent(event);
-    }
-
-    void mouseMoveEvent(QMouseEvent* event) override {
-        if (draggingSeparator_) {
-            const double spaceWidth =
-                std::max(1.0, QFontMetricsF(font()).horizontalAdvance(QLatin1Char(' ')));
-            const double columns =
-                (event->position().x() - document()->documentMargin()) / spaceWidth;
-            separatorColumns_ = std::max(timestampColumns_ + 5.0, columns);
-            viewport()->update();
-            event->accept();
-            return;
-        }
-        if (nearSeparator(event->position().x())) {
-            viewport()->setCursor(Qt::SplitHCursor);
-            event->accept();
-            return;
-        }
-        viewport()->setCursor(Qt::IBeamCursor);
-        QTextBrowser::mouseMoveEvent(event);
-    }
-
-    void mouseReleaseEvent(QMouseEvent* event) override {
-        if (draggingSeparator_) {
-            draggingSeparator_ = false;
-            const int nextWidth = std::clamp(
-                static_cast<int>(std::lround(separatorColumns_ - timestampColumns_ - 1.0)), 4, 40);
-            if (separatorMovedHandler_) {
-                separatorMovedHandler_(nextWidth);
-            }
-            event->accept();
-            return;
-        }
-        QTextBrowser::mouseReleaseEvent(event);
-    }
-
-    void leaveEvent(QEvent* event) override {
-        if (!draggingSeparator_) {
-            viewport()->unsetCursor();
-        }
-        QTextBrowser::leaveEvent(event);
-    }
-
-    void paintEvent(QPaintEvent* event) override {
-        QTextBrowser::paintEvent(event);
-        if (separatorColumns_ <= 0.0) {
-            return;
-        }
-        QPainter painter(viewport());
-        painter.setPen(separatorColor_);
-        const int x = static_cast<int>(std::lround(separatorX()));
-        painter.drawLine(x, 0, x, viewport()->height());
-    }
-
-    QMimeData* createMimeDataFromSelection() const override {
-        QMimeData* mime = QTextBrowser::createMimeDataFromSelection();
-        if (stripColorsOnCopy_ && mime != nullptr) {
-            // Drop the HTML/colour payload; keep the plain text only. The
-            // aligned-nick padding is &nbsp; (U+00A0) — normalise to plain
-            // spaces or pastes into terminals/IRC carry invisible junk.
-            QString plain = mime->text();
-            plain.replace(QChar(QChar::Nbsp), QLatin1Char(' '));
-            mime->clear();
-            mime->setText(plain);
-        }
-        return mime;
-    }
-
-  private:
-    [[nodiscard]] double separatorX() const {
-        if (separatorPixelX_ > 0.0) {
-            return document()->documentMargin() + separatorPixelX_;
-        }
-        return document()->documentMargin() +
-               QFontMetricsF(font()).horizontalAdvance(QLatin1Char(' ')) * separatorColumns_;
-    }
-
-    [[nodiscard]] bool nearSeparator(double x) const {
-        return separatorColumns_ > 0.0 && std::abs(x - separatorX()) <= 5.0;
-    }
-
-    bool stripColorsOnCopy_ = true;
-    SeparatorMovedHandler separatorMovedHandler_;
-    double timestampColumns_ = 0.0;
-    double separatorColumns_ = 0.0;
-    double separatorPixelX_ = -1.0; // measured prefix width; -1 = column estimate
-    int nickWidth_ = 16;
-    QColor separatorColor_ = QColor(127, 127, 127, 130);
-    bool draggingSeparator_ = false;
-};
 
 } // namespace
 
@@ -1771,18 +1644,15 @@ void maxchat::ui::MainWindow::buildLayout() {
     chatLayout->setContentsMargins(0, 0, 0, 0);
     chatLayout->setSpacing(4);
 
-    auto* chatView = new ChatTextView(chatColumn);
-    chatView->setSeparatorMovedHandler(
-        [this](const int nickWidth) { setNickColumnWidth(nickWidth, true); });
-    m_chatView = chatView;
-    m_chatView->setObjectName(QStringLiteral("chatView"));
-    m_chatView->setReadOnly(true);
-    // Anchor clicks route through handleChatAnchorClicked so image/audio/video
-    // links open the inline viewers instead of an external browser.
-    m_chatView->setOpenExternalLinks(false);
-    m_chatView->setOpenLinks(false);
-    connect(m_chatView, &QTextBrowser::anchorClicked, this,
-            [this](const QUrl& url) { m_media->handleAnchorClicked(url); });
+    // The chat view + its append primitives live in ChatPane now (render-
+    // pipeline R1). MainWindow keeps the buffer model + render orchestration and
+    // borrows m_chatView for the find/scroll code not yet moved. Anchor-click +
+    // separator-drag route back through ChatPaneDelegate (this). The view's
+    // parent is chatColumn (passed to the ChatPane ctor), so it drops into the
+    // existing splitter exactly where the raw view used to sit.
+    m_chatPane = new ChatPane(chatColumn);
+    m_chatPane->setDelegate(this);
+    m_chatView = m_chatPane->view();
     m_chatView->setPlainText(
         QStringLiteral("Not connected. Open Server > Server List... or Quick Connect... to get started."));
 
@@ -3309,8 +3179,7 @@ void maxchat::ui::MainWindow::syncPanelActionsFromSplitter(const bool save) {
 }
 
 void maxchat::ui::MainWindow::updateChatSeparatorGuide() {
-    auto* chatView = dynamic_cast<ChatTextView*>(m_chatView);
-    if (chatView == nullptr) {
+    if (m_chatPane == nullptr) {
         return;
     }
 
@@ -3327,8 +3196,8 @@ void maxchat::ui::MainWindow::updateChatSeparatorGuide() {
                               ? -1.0
                               : metrics.horizontalAdvance(column.prefixPlain) -
                                     metrics.horizontalAdvance(QLatin1Char(' ')) / 2.0;
-    chatView->setSeparatorGuide(timestampColumns, m_nickColumnWidth,
-                                m_separatorLine && m_alignNicks, color, pixelX);
+    m_chatPane->setSeparatorGuide(timestampColumns, m_nickColumnWidth,
+                                  m_separatorLine && m_alignNicks, color, pixelX);
 }
 
 void maxchat::ui::MainWindow::saveViewVisibilitySetting(const QString& key, const bool visible) {
@@ -6156,120 +6025,35 @@ QString MainWindow::timestampText() const {
     return QDateTime::currentDateTime().toString(qtDateTimeFormat(m_timestampFormat));
 }
 
+// These four are thin forwarders to ChatPane, which owns the document-insert
+// logic now (render-pipeline R1). MainWindow still computes the per-line format/
+// indent and the preview cache registration; ChatPane does the DOM work.
 void maxchat::ui::MainWindow::appendPlainChatLine(const QString& line) {
-    if (m_chatView == nullptr) {
-        return;
-    }
-
-    QTextCursor cursor = m_chatView->textCursor();
-    cursor.movePosition(QTextCursor::End);
-    QTextBlockFormat blockFormat;
-    if (!m_chatView->document()->isEmpty()) {
-        cursor.insertBlock(blockFormat);
-    } else {
-        cursor.setBlockFormat(blockFormat);
-    }
-    cursor.insertText(line);
-    m_chatView->setTextCursor(cursor);
-    m_chatView->ensureCursorVisible();
+    m_chatPane->appendPlain(line);
 }
 
 void maxchat::ui::MainWindow::appendHtmlChatLine(const QString& html) {
-    if (m_chatView == nullptr) {
-        return;
-    }
-
-    QTextCursor cursor = m_chatView->textCursor();
-    cursor.movePosition(QTextCursor::End);
-    QTextBlockFormat blockFormat;
-    if (!m_chatView->document()->isEmpty()) {
-        cursor.insertBlock(blockFormat);
-    } else {
-        cursor.setBlockFormat(blockFormat);
-    }
-    cursor.insertHtml(html);
-    m_chatView->setTextCursor(cursor);
-    m_chatView->ensureCursorVisible();
+    m_chatPane->appendHtml(html);
 }
 
 void maxchat::ui::MainWindow::appendFormattedChatLine(const maxchat::core::FormattedChatLine& line) {
-    if (m_chatView == nullptr) {
-        return;
-    }
-
-    QTextCursor cursor = m_chatView->textCursor();
-    cursor.movePosition(QTextCursor::End);
-
-    QTextBlockFormat blockFormat;
-    if (m_indentWrap && line.hangingIndent && !line.prefixPlain.isEmpty()) {
-        const int indent = QFontMetrics(m_chatView->font()).horizontalAdvance(line.prefixPlain);
-        if (indent > 0) {
-            blockFormat.setLeftMargin(indent);
-            blockFormat.setTextIndent(-indent);
-        }
-    }
-
-    if (!m_chatView->document()->isEmpty()) {
-        cursor.insertBlock(blockFormat);
-    } else {
-        cursor.setBlockFormat(blockFormat);
-    }
-    cursor.insertHtml(line.html);
-    cursor.mergeBlockFormat(blockFormat);
-    m_chatView->setTextCursor(cursor);
-    m_chatView->ensureCursorVisible();
+    m_chatPane->appendFormatted(line, m_indentWrap);
 }
 
 void maxchat::ui::MainWindow::appendPreviewHtmlLine(const QString& html) {
-    if (m_chatView == nullptr) {
+    if (m_chatPane == nullptr) {
         return;
     }
-
-    QTextCursor cursor = m_chatView->textCursor();
-    cursor.movePosition(QTextCursor::End);
-
-    QTextBlockFormat blockFormat;
+    // The indent prefix is the (empty-line) timestamp+nick column; ChatPane
+    // measures its pixel width and indents the card to align with chat text.
     const maxchat::core::FormattedChatLine column =
         maxchat::core::formatChatLine(QString(), chatLineFormatOptions());
-    if (!column.prefixPlain.isEmpty()) {
-        const int indent = QFontMetrics(m_chatView->font()).horizontalAdvance(column.prefixPlain);
-        if (indent > 0) {
-            blockFormat.setLeftMargin(indent);
-        }
-    }
-
-    if (!m_chatView->document()->isEmpty()) {
-        cursor.insertBlock(blockFormat);
-    } else {
-        cursor.setBlockFormat(blockFormat);
-    }
     // QTextBrowser never fetches remote <img src> over the network: a referenced
     // image only renders if it's a registered document resource. Add any already
-    // cached images now, and kick off downloads for the rest (which re-render
-    // this buffer on arrival).
+    // cached images now (before the insert), and kick off downloads for the rest
+    // (which re-render this buffer on arrival).
     registerCachedImagesIn(html);
-
-    // insertHtml with block-level elements (<div>, <p>) creates multiple
-    // QTextBlocks. The blockFormat set above only applies to the first one;
-    // subsequent blocks get default formatting (leftMargin=0), so the card
-    // text renders at the left edge instead of aligned with chat text.
-    // Fix: walk every block that insertHtml created and apply the format.
-    const int insertStart = cursor.position();
-    cursor.insertHtml(html);
-    const int insertEnd = cursor.position();
-
-    if (blockFormat.leftMargin() > 0.0) {
-        QTextDocument* doc = m_chatView->document();
-        QTextBlock block = doc->findBlock(insertStart);
-        while (block.isValid() && block.position() <= insertEnd) {
-            QTextCursor bc(block);
-            bc.mergeBlockFormat(blockFormat);
-            block = block.next();
-        }
-    }
-
-    m_chatView->setTextCursor(cursor);
-    m_chatView->ensureCursorVisible();
+    m_chatPane->appendPreviewHtml(html, column.prefixPlain);
     requestPreviewImagesIn(html);
 }
 
@@ -6294,15 +6078,14 @@ QStringList imageSourcesInHtml(const QString& html) {
 } // namespace
 
 void maxchat::ui::MainWindow::registerCachedImagesIn(const QString& html) {
-    if (m_chatView == nullptr) {
+    if (m_chatPane == nullptr) {
         return;
     }
     const QStringList sources = imageSourcesInHtml(html);
     for (const QString& src : sources) {
         const auto cached = m_previewImageCache.constFind(src);
         if (cached != m_previewImageCache.constEnd()) {
-            m_chatView->document()->addResource(
-                QTextDocument::ImageResource, QUrl(src), QVariant(cached.value()));
+            m_chatPane->addImageResource(QUrl(src), cached.value());
         }
     }
 }
@@ -7123,39 +6906,19 @@ void maxchat::ui::MainWindow::appendUnreadMarkerLine() {
 }
 
 void maxchat::ui::MainWindow::appendCenteredDivider(const QString& text, const QString& color) {
-    if (m_chatView == nullptr) {
+    if (m_chatPane == nullptr) {
         return;
     }
-    QTextCursor cursor = m_chatView->textCursor();
-    cursor.movePosition(QTextCursor::End);
-    QTextBlockFormat blockFormat; // fresh format: centered, no inherited margins
-    blockFormat.setAlignment(Qt::AlignHCenter);
-    blockFormat.setTopMargin(8);
-    blockFormat.setBottomMargin(6);
     // With aligned nicks, content lives right of the nick column / separator
     // bar. Centre the divider within THAT area — a full-width divider crosses
-    // the bar and visually collides with the nick column.
+    // the bar and visually collides with the nick column. ChatPane indents by
+    // the pixel width of this prefix (empty = full-width centre).
+    QString prefixPlain;
     if (m_alignNicks) {
-        const maxchat::core::FormattedChatLine column =
-            maxchat::core::formatChatLine(QString(), chatLineFormatOptions());
-        if (!column.prefixPlain.isEmpty()) {
-            const int indent =
-                QFontMetrics(m_chatView->font()).horizontalAdvance(column.prefixPlain);
-            if (indent > 0) {
-                blockFormat.setLeftMargin(indent);
-            }
-        }
+        prefixPlain =
+            maxchat::core::formatChatLine(QString(), chatLineFormatOptions()).prefixPlain;
     }
-    if (!m_chatView->document()->isEmpty()) {
-        cursor.insertBlock(blockFormat);
-    } else {
-        cursor.setBlockFormat(blockFormat);
-    }
-    QTextCharFormat charFormat;
-    charFormat.setForeground(QColor(color));
-    cursor.setCharFormat(charFormat);
-    cursor.insertText(text);
-    m_chatView->setTextCursor(cursor);
+    m_chatPane->appendCenteredDivider(text, color, prefixPlain);
 }
 
 void maxchat::ui::MainWindow::noteUnreadBoundary(const maxchat::core::ChatBufferId& id,
@@ -8654,6 +8417,16 @@ void maxchat::ui::MainWindow::setMenuBarFont(const QFont& font) {
     }
 }
 
+// --- ChatPaneDelegate (render-pipeline R1) — out-of-line because MediaController
+// is incomplete in the header ---
+void maxchat::ui::MainWindow::chatAnchorClicked(const QUrl& url) {
+    m_media->handleAnchorClicked(url);
+}
+
+void maxchat::ui::MainWindow::chatSeparatorMoved(int nickWidth) {
+    setNickColumnWidth(nickWidth, true);
+}
+
 void maxchat::ui::MainWindow::applyCurrentSettings() {
     const QVariantMap settings = m_settings.loadWithDefaults();
     m_commandAliases = settings.value(QStringLiteral("command_aliases")).toMap();
@@ -8691,8 +8464,8 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
         settings.value(QStringLiteral("sort_status"),
                        settings.value(QStringLiteral("sort_users_by_status"), true))
             .toBool();
-    if (auto* chatView = dynamic_cast<ChatTextView*>(m_chatView)) {
-        chatView->setStripColorsOnCopy(
+    if (m_chatPane != nullptr) {
+        m_chatPane->setStripColorsOnCopy(
             settings.value(QStringLiteral("strip_color_copy"), true).toBool());
     }
     m_pasteGuard = settings.value(QStringLiteral("paste_guard"), true).toBool();

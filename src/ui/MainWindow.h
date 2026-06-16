@@ -12,6 +12,7 @@
 #include "services/LinkPreviewRenderer.h"
 #include "services/ImageFetcher.h"
 #include "services/OpenGraphFetcher.h"
+#include "ui/ChatPane.h"
 #include "ui/MainWindowHost.h"
 #include "ui/SoundPlayer.h"
 #include "spell/Speller.h" // backend-neutral; OS speller works without Hunspell
@@ -73,7 +74,7 @@ class ScriptBridge;
 class SpellTextEdit;
 class UrlListDialog;
 
-class MainWindow final : public QMainWindow, public MainWindowHost {
+class MainWindow final : public QMainWindow, public MainWindowHost, public ChatPaneDelegate {
     // White-box test access without `#define private public` (which gives this
     // header a different layout in the test TU than in the app TU — an ODR
     // violation). A friend grants the same access cleanly.
@@ -125,6 +126,10 @@ class MainWindow final : public QMainWindow, public MainWindowHost {
     // auto-satisfy the pure virtuals; these two the window doesn't already have:
     void setMenuBarFont(const QFont& font) override; // QMenuBar incomplete in header
     void applyAllSettings() override { applyCurrentSettings(); }
+
+    // --- ChatPaneDelegate — gestures from the chat view (render-pipeline R1) ---
+    void chatAnchorClicked(const QUrl& url) override; // MediaController incomplete here
+    void chatSeparatorMoved(int nickWidth) override;
 
     bool selfTest() const;
 
@@ -560,7 +565,8 @@ class MainWindow final : public QMainWindow, public MainWindowHost {
     QSplitter* m_chatSplitter = nullptr;
     QTreeWidget* m_networkTree = nullptr;
     QTabBar* m_bufferTabBar = nullptr;
-    QTextBrowser* m_chatView = nullptr;
+    ChatPane* m_chatPane = nullptr;             // owns the chat view + append primitives
+    QTextBrowser* m_chatView = nullptr;         // borrowed = m_chatPane->view() (narrowing)
     AudioPlayerBar* m_audioBar = nullptr;
     QWidget* m_memberPanel = nullptr;
     QListWidget* m_memberList = nullptr;
