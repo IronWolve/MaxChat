@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QString>
 
+#include "core/ChatBufferStore.h"  // maxchat::core::ChatBufferSnapshot
 #include "core/ChatLineFormatter.h" // maxchat::core::FormattedChatLine
 
 class QImage;
@@ -21,6 +22,11 @@ class ChatPaneDelegate {
     virtual ~ChatPaneDelegate() = default;
     virtual void chatAnchorClicked(const QUrl& url) = 0;  // → MediaController
     virtual void chatSeparatorMoved(int nickWidth) = 0;   // → persist nick column
+    // A cached preview/OG-card line encountered while rendering a buffer. The
+    // preview image cache + fetch still live in MainWindow (render-pipeline R3
+    // moves them here), so showBuffer routes these back up; the owner registers
+    // cached images, computes the indent, and calls back into appendPreviewHtml.
+    virtual void renderPreviewHtmlLine(const QString& html) = 0;
 };
 
 // Owns the chat QTextBrowser (a ChatTextView with the separator guide +
@@ -44,6 +50,19 @@ class ChatPane : public QObject {
   public:
     explicit ChatPane(QWidget* parent = nullptr);
 
+    // Resolved inputs for rendering one buffer's whole line model into the view
+    // (render-pipeline R2). MainWindow still owns the model + theme decisions and
+    // hands these down; ChatPane does the unread-marker / dim-replay / per-line
+    // formatting loop.
+    struct BufferRenderOptions {
+        maxchat::core::ChatLineFormatOptions baseOptions; // = chatLineFormatOptions()
+        QString timestampFormat;   // resolved Qt format for per-line (replayed) timestamps
+        bool markerLine = true;    // show the unread / replay→live "new" marker
+        int markerCount = -1;      // line index of the unread boundary (-1 = none)
+        bool indentWrap = true;    // hanging-indent wrapped lines
+        bool alignNicks = true;    // indent centred dividers to the content column
+    };
+
     void setDelegate(ChatPaneDelegate* delegate) { delegate_ = delegate; }
 
     // The chat view widget. MainWindow inserts it into its layout and the
@@ -52,6 +71,11 @@ class ChatPane : public QObject {
     [[nodiscard]] QTextBrowser* view() const { return view_; }
 
     void clear();
+
+    // Clear the view and render a buffer's entire line model (R2). Does not touch
+    // the comic view — MainWindow refreshes that after, until R4 folds it in.
+    void showBuffer(const maxchat::core::ChatBufferSnapshot& snapshot,
+                    const BufferRenderOptions& options);
 
     // Forwarded to the underlying ChatTextView.
     void setStripColorsOnCopy(bool strip);

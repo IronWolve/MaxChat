@@ -127,9 +127,10 @@ class MainWindow final : public QMainWindow, public MainWindowHost, public ChatP
     void setMenuBarFont(const QFont& font) override; // QMenuBar incomplete in header
     void applyAllSettings() override { applyCurrentSettings(); }
 
-    // --- ChatPaneDelegate — gestures from the chat view (render-pipeline R1) ---
+    // --- ChatPaneDelegate — gestures from the chat view (render-pipeline R1/R2) ---
     void chatAnchorClicked(const QUrl& url) override; // MediaController incomplete here
     void chatSeparatorMoved(int nickWidth) override;
+    void renderPreviewHtmlLine(const QString& html) override { appendPreviewHtmlLine(html); }
 
     bool selfTest() const;
 
@@ -352,9 +353,6 @@ class MainWindow final : public QMainWindow, public MainWindowHost, public ChatP
     QHash<QString, int> m_bufferMarkerCount;
     void noteUnreadBoundary(const maxchat::core::ChatBufferId& id, bool active,
                             int lineCountBeforeAppend);
-    // A centered, dim full-width divider (the "Chat ended" resume rule and the
-    // "new" unread marker). Painted directly; callers come from renderActiveBuffer.
-    void appendCenteredDivider(const QString& text, const QString& color);
     void setComicMode(bool enabled);
     void refreshComic();
     void ensureComicArt();
@@ -369,7 +367,6 @@ class MainWindow final : public QMainWindow, public MainWindowHost, public ChatP
     void handleDccCommand(const QStringList& args);
     void configureDcc();
     void recolorMemberList();
-    void appendUnreadMarkerLine();
     void rebuildLooksMenu();
     void saveCurrentLook();
     void applyLook(const QString& name);

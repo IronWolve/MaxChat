@@ -6507,88 +6507,26 @@ void maxchat::ui::MainWindow::activateBufferTarget(const QString& target) {
 }
 
 void maxchat::ui::MainWindow::renderActiveBuffer() {
-    if (m_chatView == nullptr) {
+    if (m_chatPane == nullptr) {
         return;
     }
-
-    m_chatView->clear();
+    // ChatPane owns the unread-marker / dim-replay / per-line formatting loop now
+    // (render-pipeline R2). MainWindow keeps the model + theme decisions and hands
+    // down the resolved render inputs; the comic view is still refreshed here
+    // until R4 folds it in.
     const maxchat::core::ChatBufferId currentId = bufferIdForTarget(m_currentTarget);
     const maxchat::core::ChatBufferSnapshot snapshot = m_chatBuffers.snapshot(currentId);
-    // The `──── new ────` marker sits before the first line that arrived since we
-    // last left this buffer; the boundary is stored per buffer so it survives
-    // switching and shows in every channel that has new activity.
     const QString markerKey = currentId.network + QChar(0x1f) + currentId.target;
-    const int markerCount = m_bufferMarkerCount.value(markerKey, -1);
-    const qsizetype markerIndex =
-        m_markerLine && markerCount > 0 && markerCount < snapshot.lines.size() ? markerCount : -1;
-    qsizetype lineIndex = 0;
-    const maxchat::core::ChatLineFormatOptions baseOptions = chatLineFormatOptions();
-    // Dimmed palette for replayed history (matches seedReplayForBuffer): whole
-    // line in the timestamp grey, no nick colours, formatting stripped.
-    const QString dim =
-        baseOptions.timestampColor.isEmpty() ? QStringLiteral("#8a8a8a") : baseOptions.timestampColor;
-    maxchat::core::ChatLineFormatOptions dimOptions = baseOptions;
-    dimOptions.defaultForeground = dim;
-    dimOptions.systemColor = dim;
-    dimOptions.bracketColor = dim;
-    dimOptions.bodyColor = dim; // actually dims the message text, not just trim
-    // Nick colors stay ON in replayed history (inherited from baseOptions):
-    // the user reads nick identity by color, and history nicks must match the
-    // member list / live lines. The dim text + dividers still mark it as
-    // replay. (This used to force colorNicks=false — after a restart the
-    // whole scrollback looked like chat and the users bar disagreed.)
-    dimOptions.renderFormatting = false;
-    // Structural replay→live boundary: "new" always appears right after the
-    // "Chat ended" divider, even when an explicit unread marker exists further
-    // down (e.g. you joined, watched some live messages, then switched away —
-    // the unread marker would be set mid-live-content, not at the boundary).
-    // Rule: the structural path fires at the first live line after any dimmed
-    // content; the explicit unread marker is suppressed once replay has been
-    // seen (seenDimmed=true) because the structural one already covers it.
-    bool seenDimmed = false;
-    bool replayMarkerInserted = false;
-    for (const maxchat::core::ChatBufferLine& line : snapshot.lines) {
-        // Explicit unread marker — only when there is no replay content ahead
-        // of it; once we've passed dimmed lines the structural marker takes over.
-        if (lineIndex++ == markerIndex && !seenDimmed) {
-            appendUnreadMarkerLine();
-            replayMarkerInserted = true;
-        }
-        // Structural replay→live boundary: first live line after dimmed content.
-        if (m_markerLine && !line.dimmed && seenDimmed && !replayMarkerInserted) {
-            appendUnreadMarkerLine();
-            replayMarkerInserted = true;
-        }
-        if (line.dimmed) {
-            seenDimmed = true;
-        }
-        if (line.dimmed && line.systemLine && !line.sourceText.isEmpty()) {
-            // The "Chat ended" resume rule is a centered divider (like "new").
-            appendCenteredDivider(line.sourceText, dim);
-        } else if (!line.sourceText.isEmpty()) {
-            maxchat::core::ChatLineFormatOptions options = line.dimmed ? dimOptions : baseOptions;
-            options.systemLine = line.systemLine;
-            // Replayed lines keep their original time; live lines use the
-            // default (current) timestamp already baked into baseOptions. A
-            // dimmed line with no timestamp (the "Chat ended" divider, whose
-            // date+time is in its text) must NOT fall back to the current time.
-            if (line.timestamp.isValid()) {
-                // Stored as UTC (ChatBufferStore) — format in LOCAL time or
-                // every re-render shifts all gutters by the UTC offset.
-                options.timestamp =
-                    line.timestamp.toLocalTime().toString(qtDateTimeFormat(m_timestampFormat));
-            } else if (line.dimmed) {
-                options.timestamp.clear();
-            }
-            const maxchat::core::FormattedChatLine display =
-                maxchat::core::formatChatLine(line.sourceText, options);
-            appendFormattedChatLine(display);
-        } else if (!line.htmlText.isEmpty()) {
-            appendPreviewHtmlLine(line.htmlText);
-        } else if (!line.plainText.isEmpty()) {
-            appendPlainChatLine(line.plainText);
-        }
-    }
+
+    ChatPane::BufferRenderOptions options;
+    options.baseOptions = chatLineFormatOptions();
+    options.timestampFormat = qtDateTimeFormat(m_timestampFormat);
+    options.markerLine = m_markerLine;
+    options.markerCount = m_bufferMarkerCount.value(markerKey, -1);
+    options.indentWrap = m_indentWrap;
+    options.alignNicks = m_alignNicks;
+    m_chatPane->showBuffer(snapshot, options);
+
     refreshComic();
 }
 
@@ -6895,31 +6833,6 @@ void maxchat::ui::MainWindow::deleteLook(const QString& name) {
     appendSystemLine(tr("! Look \"%1\" deleted.").arg(name));
 }
 
-void maxchat::ui::MainWindow::appendUnreadMarkerLine() {
-    if (m_chatView == nullptr) {
-        return;
-    }
-    const maxchat::core::ChatLineFormatOptions opts = chatLineFormatOptions();
-    const QString dim =
-        opts.timestampColor.isEmpty() ? QStringLiteral("#8a8a8a") : opts.timestampColor;
-    appendCenteredDivider(QStringLiteral("──────────  new  ──────────"), dim);
-}
-
-void maxchat::ui::MainWindow::appendCenteredDivider(const QString& text, const QString& color) {
-    if (m_chatPane == nullptr) {
-        return;
-    }
-    // With aligned nicks, content lives right of the nick column / separator
-    // bar. Centre the divider within THAT area — a full-width divider crosses
-    // the bar and visually collides with the nick column. ChatPane indents by
-    // the pixel width of this prefix (empty = full-width centre).
-    QString prefixPlain;
-    if (m_alignNicks) {
-        prefixPlain =
-            maxchat::core::formatChatLine(QString(), chatLineFormatOptions()).prefixPlain;
-    }
-    m_chatPane->appendCenteredDivider(text, color, prefixPlain);
-}
 
 void maxchat::ui::MainWindow::noteUnreadBoundary(const maxchat::core::ChatBufferId& id,
                                                  const bool active, const int lineCountBeforeAppend) {
