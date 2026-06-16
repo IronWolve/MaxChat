@@ -340,6 +340,8 @@ qt_add_executable(maxchat-c
     src/ui/IrcRoutingHelpers.h
     src/ui/MediaController.cpp
     src/ui/MediaController.h
+    src/ui/NotificationController.cpp
+    src/ui/NotificationController.h
     src/ui/ScriptBridge.cpp
     src/ui/ScriptBridge.h
     src/ui/PreferencesDialog.cpp
@@ -1198,6 +1200,8 @@ qt_add_executable(main_window_link_preview_test
     src/ui/IrcRoutingHelpers.h
     src/ui/MediaController.cpp
     src/ui/MediaController.h
+    src/ui/NotificationController.cpp
+    src/ui/NotificationController.h
     src/ui/ScriptBridge.cpp
     src/ui/ScriptBridge.h
     src/ui/PreferencesDialog.cpp

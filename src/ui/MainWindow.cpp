@@ -46,6 +46,7 @@
 #include "ui/ComicController.h"
 #include "ui/IrcRouter.h"
 #include "ui/IrcRoutingHelpers.h"
+#include "ui/NotificationController.h"
 #include "ui/ScriptBridge.h"
 #include "ui/ScriptTerminalManager.h"
 #include "ui/SpellTextEdit.h"
@@ -634,6 +635,8 @@ MainWindow::MainWindow(QWidget* parent)
     m_ircRouter = new IrcRouter(*this, this);
     // Comic Mode backend (decomp Phase 5).
     m_comicController = new ComicController(*this, this);
+    // Notification + tray subsystem (decomp Phase 4).
+    m_notifyController = new NotificationController(*this, this);
     // Inline media + image upload controller. Constructed before buildLayout()
     // because the chat view's anchor-click handler and the audio bar wire into it.
     m_media = new MediaController(*this, this);
@@ -642,7 +645,7 @@ MainWindow::MainWindow(QWidget* parent)
     buildMenus();
     buildLayout();
     setupConnectionSignals();
-    setupTrayIcon();
+    m_notifyController->setupTrayIcon();
     m_notifier = new Notifier(this);
     // OS native notifications post through the VISIBLE tray icon (showMessage on
     // a never-shown tray is a silent no-op), so they require m_tray to exist.
@@ -7224,7 +7227,7 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
     }
 
     updateTrayIcon();
-    updateMinimizeToTrayFromSettings();
+    m_notifyController->updateMinimizeToTrayFromSettings();
     m_highlightWords = settings.value(QStringLiteral("highlight_words")).toString().split(
         QRegularExpression(QStringLiteral("[,\\s]+")), Qt::SkipEmptyParts);
     m_notifyPm = settings.value(QStringLiteral("notify_pm"), true).toBool();
@@ -7243,152 +7246,8 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
     updateChannelModeButton();
     // Script permissions are updated live via scriptPermissionChanged signal — no batch reload needed.
     }
-void maxchat::ui::MainWindow::notify(const QString& title, const QString& text,
-                        const QString& network, const QString& target) {
-    // Don't notify if window is active or DND is on (matches Python)
-    if (isActiveWindow() || !m_notifier) return;
-    if (m_settings.loadWithDefaults().value(QStringLiteral("dnd"), false).toBool()) return;
 
-    // Taskbar flash
-    if (m_notifyFlash) {
-        QApplication::alert(this, 0);
-    }
 
-    // Sound — the user's chosen .wav (or a bundled default) via QSoundEffect,
-    // falling back to the system beep if no .wav is available.
-    if (m_notifySound) {
-        const QString soundsDir =
-            QDir(m_settings.paths().configDir).filePath(QStringLiteral("sounds"));
-        const QString bundled = QDir(QCoreApplication::applicationDirPath())
-                                    .filePath(QStringLiteral("assets/sounds"));
-        const QString selectedSound = m_settings.loadWithDefaults().value(QStringLiteral("notify_sound_file"), QStringLiteral("notify.wav")).toString();
-        if (!m_soundPlayer.play(notifySoundPath(soundsDir, bundled, selectedSound))) {
-            QApplication::beep();
-        }
-    }
-
-    // Popup style
-    if (m_notifyStyle == QLatin1String("off")) return;
-
-    // OS native notification - post through the visible tray icon (showMessage
-    // on a hidden tray is a no-op), available only when a daemon/tray accepts it.
-    if (m_notifyStyle == QLatin1String("system") && m_osNotifyAvailable && m_tray != nullptr) {
-        // Remember where this notification points so messageClicked can open
-        // the right buffer (clicks used to do nothing on the system path).
-        m_lastNotifyNetwork = network;
-        m_lastNotifyTarget = target;
-        m_tray->showMessage(title, text, m_tray->icon(),
-                            std::max(1, m_notifyDuration) * 1000);
-        return;
-    }
-
-    // Custom toast (also fallback when system tray unavailable)
-    const AppThemeDefinition& themeDef = m_appearance->appTheme();
-    QColor followBg = themeDef.panel.isValid() ? themeDef.panel : QColor(QStringLiteral("#2b2b2b"));
-    QColor followFg = themeDef.text.isValid() ? themeDef.text : QColor(QStringLiteral("#e8e8e8"));
-    QColor followAccent = themeDef.accent.isValid() ? themeDef.accent : QColor(QStringLiteral("#4a9eff"));
-
-    QColor bg = Notifier::paletteBg(m_notifyTheme, followBg);
-    QColor fg = Notifier::paletteFg(m_notifyTheme, followFg);
-    QColor accent = Notifier::paletteAccent(m_notifyTheme, followAccent);
-
-    const int durationMs = m_notifyDuration * 1000;
-
-    QIcon icon;
-    icon = ui::AppIcon::makeIcon(
-        m_settings.loadWithDefaults().value(QStringLiteral("tray_icon"), QStringLiteral("bubble")).toString(),
-        accent);
-
-    std::function<void()> onClick;
-    if (!network.isEmpty() && !target.isEmpty()) {
-        QString net = network;
-        QString tgt = target;
-        onClick = [this, net, tgt]() {
-            if (isMinimized()) {
-                showNormal();
-            } else {
-                show();
-            }
-            raise();
-            activateWindow();
-            setActiveNetwork(net);
-            activateBufferTarget(tgt);
-        };
-    } else {
-        onClick = [this]() {
-            if (isMinimized()) {
-                showNormal();
-            } else {
-                show();
-            }
-            raise();
-            activateWindow();
-        };
-    }
-
-    m_notifier->show(title, text, bg, fg, accent, m_notifyCorner, durationMs, icon, std::move(onClick));
-}
-
-void maxchat::ui::MainWindow::setupTrayIcon() {
-    if (!QSystemTrayIcon::isSystemTrayAvailable()) {
-        m_tray = nullptr;
-        return;
-    }
-
-    m_tray = new ::QSystemTrayIcon(this);
-    m_trayMenu = new QMenu(this);
-
-    m_trayMenu->addAction(tr("Show / Hide"), this, &MainWindow::toggleWindowVisibility);
-    m_trayMenu->addSeparator();
-
-    // Reuse the menu-bar DND action so both stay in sync (matches Python)
-    if (m_doNotDisturbAction) {
-        m_trayMenu->addAction(m_doNotDisturbAction);
-    }
-    m_trayMenu->addSeparator();
-    m_trayMenu->addAction(tr("Quit"), this, &QWidget::close);
-
-    m_tray->setContextMenu(m_trayMenu);
-    connect(m_tray, &::QSystemTrayIcon::activated, this, [this](::QSystemTrayIcon::ActivationReason r) {
-        if (r == ::QSystemTrayIcon::Trigger) {
-            toggleWindowVisibility();
-        }
-    });
-
-    connect(m_tray, &QSystemTrayIcon::messageClicked, this, [this]() {
-        if (isMinimized()) {
-            showNormal();
-        } else {
-            show();
-        }
-        raise();
-        activateWindow();
-        if (!m_lastNotifyTarget.isEmpty()) {
-            setActiveNetwork(m_lastNotifyNetwork);
-            activateBufferTarget(m_lastNotifyTarget);
-        }
-    });
-
-    updateTrayIcon();
-    m_tray->show();
-}
-
-void maxchat::ui::MainWindow::updateTrayIcon() {
-    if (!m_tray) return;
-
-    // Pull accent from current theme, fallback to default blue
-    QColor accent = m_appearance->appTheme().accent;
-    if (!accent.isValid()) {
-        accent = QColor(QStringLiteral("#4a9eff"));
-    }
-
-    QString choice = m_settings.loadWithDefaults()
-        .value(QStringLiteral("tray_icon"), QStringLiteral("bubble")).toString();
-
-    QIcon icon = ui::AppIcon::makeIcon(choice, accent);
-    m_tray->setIcon(icon);
-    m_tray->setToolTip(app::displayName());
-}
 
 void maxchat::ui::MainWindow::toggleWindowVisibility() {
     if (isVisible() && !isMinimized()) {
@@ -7407,9 +7266,17 @@ void maxchat::ui::MainWindow::toggleWindowVisibility() {
 }
 
 
-void maxchat::ui::MainWindow::updateMinimizeToTrayFromSettings() {
-    auto s = m_settings.loadWithDefaults();
-    m_minimizeToTray = s.value(QStringLiteral("minimize_to_tray"), false).toBool();
-}
 
 } // namespace maxchat::ui
+
+// Thin forwarders into NotificationController (decomp Phase 4). notify() has
+// external callers (notifyUser host hook, IrcRouter); updateTrayIcon() is the
+// MainWindowHost override AppearanceController drives.
+void maxchat::ui::MainWindow::notify(const QString& title, const QString& text,
+                                     const QString& network, const QString& target) {
+    m_notifyController->notify(title, text, network, target);
+}
+
+void maxchat::ui::MainWindow::updateTrayIcon() {
+    m_notifyController->updateTrayIcon();
+}
