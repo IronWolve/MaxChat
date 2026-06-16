@@ -631,6 +631,10 @@ path) lands in Phase 7. Build + 54/54 ctest green.
   the Python and C++ apps). The C++ app is the future and is NOT constrained by
   Python compat; if a C++-only key ever needs Python to *act* on it (not just
   preserve it), that's a small **Python backport**, not a config-file fork.
+  Logged the one concrete Python-side hardening as **BP-12** in
+  `../maxchat/DEVDOCS/BACKPORTS.md`: make Python's `save_settings` merge-on-write
+  (mirror C++ `saveRaw`) so the store itself can't clobber maxchat-c-only keys,
+  instead of relying on every caller to load-merge first.
 
 - **2026-06-10 — Scripting/plugins: use embedded Lua (supersedes the earlier
   defer).** Python ships a Python plugin API; embedding CPython in a C++/Qt app
