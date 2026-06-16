@@ -185,36 +185,36 @@ PreferencesDialog::PreferencesDialog(QVariantMap settings, QStringList loadedScr
 
     // Page order mirrors the Python app, with the port-only Layout page kept
     // right after Appearance.
-    addPage(QStringLiteral("Appearance"), [this](QWidget* page) { buildAppearanceTab(page); });
+    addPage(tr("Appearance"), [this](QWidget* page) { buildAppearanceTab(page); });
 
-    addPage(QStringLiteral("Layout"), [this](QWidget* page) { buildLayoutTab(page); });
+    addPage(tr("Layout"), [this](QWidget* page) { buildLayoutTab(page); });
 
-    addPage(QStringLiteral("Messages"), [this](QWidget* page) { buildMessagesTab(page); });
+    addPage(tr("Messages"), [this](QWidget* page) { buildMessagesTab(page); });
 
-    addPage(QStringLiteral("Notifications"),
+    addPage(tr("Notifications"),
             [this](QWidget* page) { buildNotificationsTab(page); });
 
-    addPage(QStringLiteral("Protection"), [this](QWidget* page) { buildProtectionTab(page); });
+    addPage(tr("Protection"), [this](QWidget* page) { buildProtectionTab(page); });
 
-    addPage(QStringLiteral("Files (DCC)"), [this](QWidget* page) { buildFilesTab(page); });
+    addPage(tr("Files (DCC)"), [this](QWidget* page) { buildFilesTab(page); });
 
-    addPage(QStringLiteral("Themes"), [this](QWidget* page) { buildThemesTab(page); });
+    addPage(tr("Themes"), [this](QWidget* page) { buildThemesTab(page); });
 
-    addPage(QStringLiteral("Fonts"), [this](QWidget* page) { buildFontsTab(page); });
+    addPage(tr("Fonts"), [this](QWidget* page) { buildFontsTab(page); });
 
-    addPage(QStringLiteral("Spelling"), [this](QWidget* page) { buildSpellingTab(page); });
+    addPage(tr("Spelling"), [this](QWidget* page) { buildSpellingTab(page); });
 
-    addPage(QStringLiteral("Localization"), [this](QWidget* page) { buildLocalizationTab(page); });
+    addPage(tr("Localization"), [this](QWidget* page) { buildLocalizationTab(page); });
 
-    addPage(QStringLiteral("Comic"), [this](QWidget* page) { buildComicTab(page); });
+    addPage(tr("Comic"), [this](QWidget* page) { buildComicTab(page); });
 
-    addPage(QStringLiteral("Scripts"), [this](QWidget* page) { buildScriptsTab(page); });
+    addPage(tr("Scripts"), [this](QWidget* page) { buildScriptsTab(page); });
 
-    addPage(QStringLiteral("CTCP/Services"), [this](QWidget* page) { buildServicesTab(page); });
+    addPage(tr("CTCP/Services"), [this](QWidget* page) { buildServicesTab(page); });
 
-    addPage(QStringLiteral("Image Hosting"), [this](QWidget* page) { buildUploadsTab(page); });
+    addPage(tr("Image Hosting"), [this](QWidget* page) { buildUploadsTab(page); });
 
-    addPage(QStringLiteral("Data"), [this](QWidget* page) { buildDataTab(page); });
+    addPage(tr("Data"), [this](QWidget* page) { buildDataTab(page); });
 
     // Fit the nav to its longest label (plus the QSS item padding/margins) so
     // entries like "Localization" never truncate.
@@ -528,8 +528,8 @@ void PreferencesDialog::buildAppearanceTab(QWidget* tab) {
     } else {
         timestampFormat_->setEditText(currentFmt);
     }
-    timestampForm->addRow(QStringLiteral("Show timestamps"), showTimestamps_);
-    timestampForm->addRow(QStringLiteral("Clock / format"), timestampFormat_);
+    timestampForm->addRow(tr("Show timestamps"), showTimestamps_);
+    timestampForm->addRow(tr("Clock / format"), timestampFormat_);
     leftColumn->addWidget(timestampBox);
 
     auto* nickBox = new QGroupBox(tr("Nicknames"), tab);
@@ -560,10 +560,10 @@ void PreferencesDialog::buildAppearanceTab(QWidget* tab) {
     separatorLine_ = new QCheckBox(QString(), tab);
     separatorLine_->setObjectName(QStringLiteral("separatorLine"));
     separatorLine_->setChecked(settings_.value(QStringLiteral("separator_line"), true).toBool());
-    nickForm->addRow(QStringLiteral("Color nicknames"), nickColorMode_);
-    nickForm->addRow(QStringLiteral("Align nick column"), alignNicks_);
-    nickForm->addRow(QStringLiteral("Nick column width"), nickWidth_);
-    nickForm->addRow(QStringLiteral("Nick separator line"), separatorLine_);
+    nickForm->addRow(tr("Color nicknames"), nickColorMode_);
+    nickForm->addRow(tr("Align nick column"), alignNicks_);
+    nickForm->addRow(tr("Nick column width"), nickWidth_);
+    nickForm->addRow(tr("Nick separator line"), separatorLine_);
     leftColumn->addWidget(nickBox);
     leftColumn->addStretch(1);
 
@@ -581,10 +581,10 @@ void PreferencesDialog::buildAppearanceTab(QWidget* tab) {
     stripColorCopy_ = new QCheckBox(QString(), tab);
     stripColorCopy_->setObjectName(QStringLiteral("stripColorCopy"));
     stripColorCopy_->setChecked(settings_.value(QStringLiteral("strip_color_copy"), true).toBool());
-    textForm->addRow(QStringLiteral("Show colors && formatting"), showFormatting_);
-    textForm->addRow(QStringLiteral("Word wrap"), wordWrap_);
-    textForm->addRow(QStringLiteral("Indent wrapped lines"), indentWrap_);
-    textForm->addRow(QStringLiteral("Strip colors on copy"), stripColorCopy_);
+    textForm->addRow(tr("Show colors && formatting"), showFormatting_);
+    textForm->addRow(tr("Word wrap"), wordWrap_);
+    textForm->addRow(tr("Indent wrapped lines"), indentWrap_);
+    textForm->addRow(tr("Strip colors on copy"), stripColorCopy_);
     rightColumn->addWidget(textBox);
 
     auto* windowBox = new QGroupBox(tr("Window"), tab);
@@ -626,11 +626,11 @@ void PreferencesDialog::buildAppearanceTab(QWidget* tab) {
     sortByStatus_ = new QCheckBox(QString(), tab);
     sortByStatus_->setObjectName(QStringLiteral("sortByStatus"));
     sortByStatus_->setChecked(settings_.value(QStringLiteral("sort_status"), true).toBool());
-    windowForm->addRow(QStringLiteral("Window / tray icon"), trayIcon_);
-    windowForm->addRow(QStringLiteral("Show button bar"), buttonBarVisible_);
-    windowForm->addRow(QStringLiteral("Message-box hint text"), inputHint_);
-    windowForm->addRow(QStringLiteral("Unread marker line"), markerLine_);
-    windowForm->addRow(QStringLiteral("Sort users by status"), sortByStatus_);
+    windowForm->addRow(tr("Window / tray icon"), trayIcon_);
+    windowForm->addRow(tr("Show button bar"), buttonBarVisible_);
+    windowForm->addRow(tr("Message-box hint text"), inputHint_);
+    windowForm->addRow(tr("Unread marker line"), markerLine_);
+    windowForm->addRow(tr("Sort users by status"), sortByStatus_);
     rightColumn->addWidget(windowBox);
     rightColumn->addStretch(1);
 }
@@ -741,26 +741,26 @@ void PreferencesDialog::buildNotificationsTab(QWidget* tab) {
         "Quietly check GitHub Releases for a newer MaxChat shortly after launch. "
         "Help > Check for Updates works regardless of this setting."));
 
-    form->addRow(QStringLiteral("Do Not Disturb"), dnd_);
-    form->addRow(QStringLiteral("Popup style"), notifyPopup_);
-    form->addRow(QStringLiteral("Notify on PMs"), notifyPm_);
-    form->addRow(QStringLiteral("Notify on highlights"), notifyHighlight_);
-    form->addRow(QStringLiteral("Highlight words"), highlightWords_);
-    form->addRow(QStringLiteral("Taskbar flash"), notifyFlash_);
-    form->addRow(QStringLiteral("Toast corner"), notifyCorner_);
-    form->addRow(QStringLiteral("Toast duration (s)"), notifyDuration_);
-    form->addRow(QStringLiteral("Toast theme"), notifyTheme_);
-    form->addRow(QStringLiteral("Beep on highlight / PM"), beepHighlight_);
-    form->addRow(QStringLiteral("Sound on notification"), notifySound_);
+    form->addRow(tr("Do Not Disturb"), dnd_);
+    form->addRow(tr("Popup style"), notifyPopup_);
+    form->addRow(tr("Notify on PMs"), notifyPm_);
+    form->addRow(tr("Notify on highlights"), notifyHighlight_);
+    form->addRow(tr("Highlight words"), highlightWords_);
+    form->addRow(tr("Taskbar flash"), notifyFlash_);
+    form->addRow(tr("Toast corner"), notifyCorner_);
+    form->addRow(tr("Toast duration (s)"), notifyDuration_);
+    form->addRow(tr("Toast theme"), notifyTheme_);
+    form->addRow(tr("Beep on highlight / PM"), beepHighlight_);
+    form->addRow(tr("Sound on notification"), notifySound_);
     auto* soundFileRow = new QWidget(tab);
     auto* soundFileLayout = new QHBoxLayout(soundFileRow);
     soundFileLayout->setContentsMargins(0, 0, 0, 0);
     soundFileLayout->addWidget(notifySoundFile_);
     soundFileLayout->addWidget(openSoundsDir);
-    form->addRow(QStringLiteral("Sound file"), soundFileRow);
-    form->addRow(QStringLiteral("Play CTCP sounds"), ctcpSound_);
-    form->addRow(QStringLiteral("Minimize to tray"), minimizeToTray_);
-    form->addRow(QStringLiteral("Check for updates on startup"), updateCheck_);
+    form->addRow(tr("Sound file"), soundFileRow);
+    form->addRow(tr("Play CTCP sounds"), ctcpSound_);
+    form->addRow(tr("Minimize to tray"), minimizeToTray_);
+    form->addRow(tr("Check for updates on startup"), updateCheck_);
 
     // Test notification button
     auto* testBtn = new QPushButton(tr("Test notification"), tab);
@@ -916,21 +916,21 @@ void PreferencesDialog::buildScriptsTab(QWidget* tab) {
         permLayout->addWidget(box);
         return box;
     };
-    scriptRead_ = makeCheck(QStringLiteral("Read files"),
+    scriptRead_ = makeCheck(tr("Read files"),
                             QStringLiteral("Allow io.open() to read files inside the allowed "
                                            "folders below."));
-    scriptWrite_ = makeCheck(QStringLiteral("Write files"),
+    scriptWrite_ = makeCheck(tr("Write files"),
                              QStringLiteral("Allow io.open() to create/modify files inside the "
                                             "allowed folders below."));
-    scriptExec_ = makeCheck(QStringLiteral("Run programs"),
+    scriptExec_ = makeCheck(tr("Run programs"),
                             QStringLiteral("Allow os.execute / io.popen — scripts can launch "
                                            "other programs. High risk."));
-    scriptModules_ = makeCheck(QStringLiteral("Load modules"),
+    scriptModules_ = makeCheck(tr("Load modules"),
                                QStringLiteral("Allow require()/load() — scripts can pull in other "
                                               "Lua or native libraries."));
-    scriptNetwork_ = makeCheck(QStringLiteral("Network access"),
+    scriptNetwork_ = makeCheck(tr("Network access"),
                                QStringLiteral("Adds api.http_get(url) for fetching web content."));
-    scriptIrc_ = makeCheck(QStringLiteral("IRC send"),
+    scriptIrc_ = makeCheck(tr("IRC send"),
                            QStringLiteral("Allow api.say / send_raw / mc_send — the script can "
                                           "emit messages onto your IRC connection. Bundled "
                                           "scripts default on; new scripts off."));
@@ -1106,8 +1106,8 @@ void PreferencesDialog::buildFontsTab(QWidget* tab) {
         sizeLayout->addWidget(sizeOut);
         sizeLayout->addWidget(boldOut);
         sizeLayout->addStretch(1);
-        form->addRow(QStringLiteral("Font"), familyOut);
-        form->addRow(QStringLiteral("Size"), sizeRow);
+        form->addRow(tr("Font"), familyOut);
+        form->addRow(tr("Size"), sizeRow);
         return box;
     };
 
@@ -1128,8 +1128,8 @@ void PreferencesDialog::buildFontsTab(QWidget* tab) {
     chatTextColor_ =
         new ColorPick(settings_.value(QStringLiteral("chat_text_color")).toString(), tab);
     eventColor_ = new ColorPick(settings_.value(QStringLiteral("event_color")).toString(), tab);
-    chatForm->addRow(QStringLiteral("Text color"), chatTextColor_);
-    chatForm->addRow(QStringLiteral("Event lines"), eventColor_);
+    chatForm->addRow(tr("Text color"), chatTextColor_);
+    chatForm->addRow(tr("Event lines"), eventColor_);
     leftColumn->addWidget(chatBox);
 
     auto* appBox = makeFontGroup(QString::fromUtf8("App  \xC2\xB7  window / menus / chrome"),
@@ -1147,8 +1147,8 @@ void PreferencesDialog::buildFontsTab(QWidget* tab) {
     treeColor_ = new ColorPick(settings_.value(QStringLiteral("tree_color")).toString(), tab);
     userlistColor_ =
         new ColorPick(settings_.value(QStringLiteral("userlist_color")).toString(), tab);
-    listForm->addRow(QStringLiteral("Tree color"), treeColor_);
-    listForm->addRow(QStringLiteral("Users color"), userlistColor_);
+    listForm->addRow(tr("Tree color"), treeColor_);
+    listForm->addRow(tr("Users color"), userlistColor_);
     leftColumn->addWidget(listBox);
     leftColumn->addStretch(1);
 
@@ -1160,7 +1160,7 @@ void PreferencesDialog::buildFontsTab(QWidget* tab) {
     auto* nickForm = qobject_cast<QFormLayout*>(nickBox->layout());
     nickLabelColor_ =
         new ColorPick(settings_.value(QStringLiteral("nick_label_color")).toString(), tab);
-    nickForm->addRow(QStringLiteral("Color"), nickLabelColor_);
+    nickForm->addRow(tr("Color"), nickLabelColor_);
     rightColumn->addWidget(nickBox);
 
     auto* statusBox = makeFontGroup(QStringLiteral("Status bar"),
@@ -1171,7 +1171,7 @@ void PreferencesDialog::buildFontsTab(QWidget* tab) {
     auto* statusForm = qobject_cast<QFormLayout*>(statusBox->layout());
     statusColor_ =
         new ColorPick(settings_.value(QStringLiteral("status_text_color")).toString(), tab);
-    statusForm->addRow(QStringLiteral("Color"), statusColor_);
+    statusForm->addRow(tr("Color"), statusColor_);
     rightColumn->addWidget(statusBox);
 
     auto* topicBox = makeFontGroup(QStringLiteral("Channel topic"),
@@ -1181,7 +1181,7 @@ void PreferencesDialog::buildFontsTab(QWidget* tab) {
                                    topicFontSize_, topicFontBold_);
     auto* topicForm = qobject_cast<QFormLayout*>(topicBox->layout());
     topicColor_ = new ColorPick(settings_.value(QStringLiteral("topic_color")).toString(), tab);
-    topicForm->addRow(QStringLiteral("Color"), topicColor_);
+    topicForm->addRow(tr("Color"), topicColor_);
     rightColumn->addWidget(topicBox);
 
     // Script / BBS terminals. Size 0 means "use the terminal profile's own size"
@@ -1211,15 +1211,15 @@ void PreferencesDialog::buildFontsTab(QWidget* tab) {
     terminalSizeLayout->addWidget(terminalFontSize_);
     terminalSizeLayout->addWidget(terminalFontBold_);
     terminalSizeLayout->addStretch(1);
-    terminalForm->addRow(QStringLiteral("Font"), terminalFontFamily_);
-    terminalForm->addRow(QStringLiteral("Size"), terminalSizeRow);
+    terminalForm->addRow(tr("Font"), terminalFontFamily_);
+    terminalForm->addRow(tr("Size"), terminalSizeRow);
     terminalGrid_ = new QComboBox(terminalBox);
     terminalGrid_->setObjectName(QStringLiteral("terminalGrid"));
     terminalGrid_->addItem(QStringLiteral("80 x 25"), 25);
     terminalGrid_->addItem(QStringLiteral("80 x 40"), 40);
     terminalGrid_->setCurrentIndex(
         settings_.value(QStringLiteral("terminal_rows"), 25).toInt() == 40 ? 1 : 0);
-    terminalForm->addRow(QStringLiteral("Default size"), terminalGrid_);
+    terminalForm->addRow(tr("Default size"), terminalGrid_);
     rightColumn->addWidget(terminalBox);
     rightColumn->addStretch(1);
 
@@ -1272,7 +1272,7 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
     const QString activeAppId = normalizeThemeId(
         settings_.value(QStringLiteral("theme"), QStringLiteral("synthwave")).toString());
     refillThemeCombo(theme_, false, activeAppId);
-    appForm->addRow(QStringLiteral("Theme"), theme_);
+    appForm->addRow(tr("Theme"), theme_);
 
     // Make the active theme obvious: name it, and preview whatever is selected.
     auto* appActive = new QLabel(
@@ -1282,7 +1282,7 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
     auto* appPreview = new QLabel(appBox);
     appPreview->setObjectName(QStringLiteral("appThemePreview"));
     appPreview->setTextFormat(Qt::RichText);
-    appForm->addRow(QStringLiteral("Preview"), appPreview);
+    appForm->addRow(tr("Preview"), appPreview);
     const auto chip = [](const QColor& bg, const QColor& fg, const QString& text) {
         return QStringLiteral(
                    "<span style=\"background-color:%1;color:%2;\">&nbsp;&nbsp;%3&nbsp;&nbsp;"
@@ -1373,7 +1373,7 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
     const QString activeChatId = normalizeChatThemeId(
         settings_.value(QStringLiteral("chat_theme"), QStringLiteral("follow")).toString());
     refillThemeCombo(chatTheme_, true, activeChatId);
-    chatForm->addRow(QStringLiteral("Theme"), chatTheme_);
+    chatForm->addRow(tr("Theme"), chatTheme_);
     auto* chatActive = new QLabel(
         QStringLiteral("Active now: <b>%1</b>").arg(chatThemeById(activeChatId).label), chatBox);
     chatActive->setObjectName(QStringLiteral("activeChatTheme"));
@@ -1381,7 +1381,7 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
     auto* chatPreview = new QLabel(chatBox);
     chatPreview->setObjectName(QStringLiteral("chatThemePreview"));
     chatPreview->setTextFormat(Qt::RichText);
-    chatForm->addRow(QStringLiteral("Preview"), chatPreview);
+    chatForm->addRow(tr("Preview"), chatPreview);
     // A miniature fake conversation in the real colors, instead of bare chips.
     const auto updateChatPreview = [this, chatPreview]() {
         const ChatThemeDefinition def = chatThemeById(chatTheme_->currentData().toString());
@@ -1505,7 +1505,7 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
             [opacityValue, opacityText](int value) { opacityValue->setText(opacityText(value)); });
     opacityLayout->addWidget(chatOpacity_, 1);
     opacityLayout->addWidget(opacityValue);
-    chatForm->addRow(QStringLiteral("Background opacity"), opacityRow);
+    chatForm->addRow(tr("Background opacity"), opacityRow);
     root->addWidget(chatBox);
 
     auto* wallpaperBox = new QGroupBox(tr("Wallpaper"), tab);
@@ -1517,7 +1517,7 @@ void PreferencesDialog::buildThemesTab(QWidget* tab) {
     }
     setComboByData(wallpaper_, normalizeWallpaperValue(
                                    settings_.value(QStringLiteral("wallpaper")).toString()));
-    wallpaperForm->addRow(QStringLiteral("Image"), wallpaper_);
+    wallpaperForm->addRow(tr("Image"), wallpaper_);
     root->addWidget(wallpaperBox);
 
     // Theme files: save the whole current look (app + chat colors, fonts,
@@ -1757,17 +1757,17 @@ void PreferencesDialog::buildMessagesTab(QWidget* tab) {
     scrollback_->setSingleStep(100);
     scrollback_->setValue(settings_.value(QStringLiteral("scrollback"), 2000).toInt());
 
-    form->addRow(QStringLiteral("Hide join / part / quit"), hideJoinPart_);
-    form->addRow(QStringLiteral("Show mode changes"), showMode_);
-    form->addRow(QStringLiteral("Private msgs in server tab && chat"), pmEcho_);
-    form->addRow(QStringLiteral("Log conversations to disk"), loggingEnabled_);
-    form->addRow(QStringLiteral("Log filename mask"), logMask_);
-    form->addRow(QStringLiteral("Replay last log on open"), replayLogEnabled_);
-    form->addRow(QStringLiteral("Lines to replay"), replayLines_);
-    form->addRow(QStringLiteral("Auto-reconnect on disconnect"), autoReconnect_);
-    form->addRow(QStringLiteral("Auto-rejoin after kick"), autoRejoin_);
-    form->addRow(QStringLiteral("Confirm before quitting"), confirmQuit_);
-    form->addRow(QStringLiteral("Scrollback (lines)"), scrollback_);
+    form->addRow(tr("Hide join / part / quit"), hideJoinPart_);
+    form->addRow(tr("Show mode changes"), showMode_);
+    form->addRow(tr("Private msgs in server tab && chat"), pmEcho_);
+    form->addRow(tr("Log conversations to disk"), loggingEnabled_);
+    form->addRow(tr("Log filename mask"), logMask_);
+    form->addRow(tr("Replay last log on open"), replayLogEnabled_);
+    form->addRow(tr("Lines to replay"), replayLines_);
+    form->addRow(tr("Auto-reconnect on disconnect"), autoReconnect_);
+    form->addRow(tr("Auto-rejoin after kick"), autoRejoin_);
+    form->addRow(tr("Confirm before quitting"), confirmQuit_);
+    form->addRow(tr("Scrollback (lines)"), scrollback_);
     root->addLayout(form);
     root->addStretch(1);
 }
@@ -1831,13 +1831,13 @@ void PreferencesDialog::buildProtectionTab(QWidget* tab) {
     ignoreInvites_->setObjectName(QStringLiteral("ignoreInvites"));
     ignoreInvites_->setChecked(settings_.value(QStringLiteral("ignore_invites"), false).toBool());
 
-    form->addRow(QStringLiteral("Flood protection (auto-ignore)"), floodProtect_);
-    form->addRow(QStringLiteral("Flood: max messages"), floodMessages_);
-    form->addRow(QStringLiteral("Flood: within"), floodSeconds_);
-    form->addRow(QStringLiteral("Large-paste guard"), pasteGuard_);
-    form->addRow(QStringLiteral("Paste guard: lines"), pasteLines_);
-    form->addRow(QStringLiteral("Auto-ignore invite spam"), inviteProtect_);
-    form->addRow(QStringLiteral("Ignore all channel invites"), ignoreInvites_);
+    form->addRow(tr("Flood protection (auto-ignore)"), floodProtect_);
+    form->addRow(tr("Flood: max messages"), floodMessages_);
+    form->addRow(tr("Flood: within"), floodSeconds_);
+    form->addRow(tr("Large-paste guard"), pasteGuard_);
+    form->addRow(tr("Paste guard: lines"), pasteLines_);
+    form->addRow(tr("Auto-ignore invite spam"), inviteProtect_);
+    form->addRow(tr("Ignore all channel invites"), ignoreInvites_);
     root->addLayout(form);
 
     auto* hint = new QLabel(
@@ -1859,7 +1859,7 @@ void PreferencesDialog::buildFilesTab(QWidget* tab) {
     dccEnabled_->setChecked(settings_.value(QStringLiteral("dcc_enabled"), false).toBool());
     dccEnabled_->setToolTip(tr(
         "Allow DCC file transfers and chats. Off by default — most users don't need it."));
-    form->addRow(QStringLiteral("Enable File Transfers"), dccEnabled_);
+    form->addRow(tr("Enable File Transfers"), dccEnabled_);
     form->addRow(new QFrame(tab)); // visual separator
 
     dccAccept_ = new QComboBox(tab);
@@ -1911,13 +1911,13 @@ void PreferencesDialog::buildFilesTab(QWidget* tab) {
     dirLayout->addWidget(dccDir_, 1);
     dirLayout->addWidget(browse);
 
-    form->addRow(QStringLiteral("Incoming files"), dccAccept_);
-    form->addRow(QStringLiteral("Trusted nicks (auto-accept)"), dccTrusted_);
-    form->addRow(QStringLiteral("Passive / reverse DCC (NAT-friendly)"), dccPassive_);
-    form->addRow(QStringLiteral("Your DCC IP (for active DCC)"), dccIp_);
-    form->addRow(QStringLiteral("Listen port from"), dccPortFirst_);
-    form->addRow(QStringLiteral("Listen port to"), dccPortLast_);
-    form->addRow(QStringLiteral("Download folder"), dirRow);
+    form->addRow(tr("Incoming files"), dccAccept_);
+    form->addRow(tr("Trusted nicks (auto-accept)"), dccTrusted_);
+    form->addRow(tr("Passive / reverse DCC (NAT-friendly)"), dccPassive_);
+    form->addRow(tr("Your DCC IP (for active DCC)"), dccIp_);
+    form->addRow(tr("Listen port from"), dccPortFirst_);
+    form->addRow(tr("Listen port to"), dccPortLast_);
+    form->addRow(tr("Download folder"), dirRow);
     root->addLayout(form);
 
     auto* hint = new QLabel(
@@ -1942,7 +1942,7 @@ void PreferencesDialog::buildServicesTab(QWidget* tab) {
     hideVersion_ = new QCheckBox(tab);
     hideVersion_->setObjectName(QStringLiteral("hideVersion"));
     hideVersion_->setChecked(settings_.value(QStringLiteral("hide_version"), false).toBool());
-    ctcpForm->addRow(QStringLiteral("Hide CTCP VERSION replies"), hideVersion_);
+    ctcpForm->addRow(tr("Hide CTCP VERSION replies"), hideVersion_);
 
     ctcpVersion_ = new QLineEdit(settings_.value(QStringLiteral("ctcp_version")).toString(), tab);
     ctcpVersion_->setObjectName(QStringLiteral("ctcpVersion"));
@@ -1950,23 +1950,23 @@ void PreferencesDialog::buildServicesTab(QWidget* tab) {
         QStringLiteral("custom CTCP VERSION reply (blank = MaxChat <version>)"));
     QObject::connect(hideVersion_, &QCheckBox::toggled, ctcpVersion_, &QWidget::setDisabled);
     ctcpVersion_->setDisabled(hideVersion_->isChecked());
-    ctcpForm->addRow(QStringLiteral("Custom CTCP VERSION"), ctcpVersion_);
+    ctcpForm->addRow(tr("Custom CTCP VERSION"), ctcpVersion_);
 
     // New CTCP security options:
     ctcpRespondPing_ = new QCheckBox(tab);
     ctcpRespondPing_->setObjectName(QStringLiteral("ctcpRespondPing"));
     ctcpRespondPing_->setChecked(settings_.value(QStringLiteral("ctcp_respond_ping"), true).toBool());
-    ctcpForm->addRow(QStringLiteral("Reply to CTCP PING"), ctcpRespondPing_);
+    ctcpForm->addRow(tr("Reply to CTCP PING"), ctcpRespondPing_);
 
     ctcpRespondTime_ = new QCheckBox(tab);
     ctcpRespondTime_->setObjectName(QStringLiteral("ctcpRespondTime"));
     ctcpRespondTime_->setChecked(settings_.value(QStringLiteral("ctcp_respond_time"), true).toBool());
-    ctcpForm->addRow(QStringLiteral("Reply to CTCP TIME"), ctcpRespondTime_);
+    ctcpForm->addRow(tr("Reply to CTCP TIME"), ctcpRespondTime_);
 
     ctcpRespondClientInfo_ = new QCheckBox(tab);
     ctcpRespondClientInfo_->setObjectName(QStringLiteral("ctcpRespondClientInfo"));
     ctcpRespondClientInfo_->setChecked(settings_.value(QStringLiteral("ctcp_respond_clientinfo"), true).toBool());
-    ctcpForm->addRow(QStringLiteral("Reply to CTCP CLIENTINFO"), ctcpRespondClientInfo_);
+    ctcpForm->addRow(tr("Reply to CTCP CLIENTINFO"), ctcpRespondClientInfo_);
 
     root->addWidget(ctcpGroup);
     root->addSpacing(8);
@@ -2054,7 +2054,7 @@ void PreferencesDialog::buildLocalizationTab(QWidget* tab) {
     setComboByData(interfaceLanguage_,
                    settings_.value(QStringLiteral("interface_language"), QStringLiteral("system")));
 
-    form->addRow(QStringLiteral("Interface Language"), interfaceLanguage_);
+    form->addRow(tr("Interface Language"), interfaceLanguage_);
     root->addLayout(form);
     root->addStretch(1);
 }
@@ -2110,10 +2110,10 @@ void PreferencesDialog::buildSpellingTab(QWidget* tab) {
     distanceHelp->setStyleSheet(QStringLiteral("color: palette(mid);"));
 
     form->addRow(QString(), spellcheckEnabled_);
-    form->addRow(QStringLiteral("Spell Engine"), spellBackend_);
-    form->addRow(QStringLiteral("Dictionary"), spellLanguage_);
+    form->addRow(tr("Spell Engine"), spellBackend_);
+    form->addRow(tr("Dictionary"), spellLanguage_);
     form->addRow(QString(), autocorrectEnabled_);
-    form->addRow(QStringLiteral("Autocorrect strength"), autocorrectDistance_);
+    form->addRow(tr("Autocorrect strength"), autocorrectDistance_);
     form->addRow(QString(), distanceHelp);
     root->addLayout(form);
     root->addStretch(1);
@@ -2134,7 +2134,7 @@ void PreferencesDialog::buildUploadsTab(QWidget* tab) {
                    settings_.value(QStringLiteral("image_upload_service"), QString()));
 
     auto* svcForm = new QFormLayout();
-    svcForm->addRow(QStringLiteral("Service"), uploadService_);
+    svcForm->addRow(tr("Service"), uploadService_);
     root->addLayout(svcForm);
     root->addSpacing(8);
 
@@ -2180,7 +2180,7 @@ void PreferencesDialog::buildUploadsTab(QWidget* tab) {
         imgbbKey_->setObjectName(QStringLiteral("imgbbKey"));
         imgbbKey_->setPlaceholderText(tr("Paste your API key here"));
         imgbbKey_->setText(settings_.value(QStringLiteral("imgbb_api_key")).toString());
-        form->addRow(QStringLiteral("API key"), imgbbKey_);
+        form->addRow(tr("API key"), imgbbKey_);
         creds->setEnabled(imgbbTos_->isChecked());
         connect(imgbbTos_, &QCheckBox::toggled, creds, &QWidget::setEnabled);
         vbox->addWidget(creds);
@@ -2215,7 +2215,7 @@ void PreferencesDialog::buildUploadsTab(QWidget* tab) {
         imgurClientId_->setObjectName(QStringLiteral("imgurClientId"));
         imgurClientId_->setPlaceholderText(tr("Paste your Client-ID here"));
         imgurClientId_->setText(settings_.value(QStringLiteral("imgur_client_id")).toString());
-        form->addRow(QStringLiteral("Client-ID"), imgurClientId_);
+        form->addRow(tr("Client-ID"), imgurClientId_);
         creds->setEnabled(imgurTos_->isChecked());
         connect(imgurTos_, &QCheckBox::toggled, creds, &QWidget::setEnabled);
         vbox->addWidget(creds);
@@ -2250,7 +2250,7 @@ void PreferencesDialog::buildUploadsTab(QWidget* tab) {
         postimagesToken_->setObjectName(QStringLiteral("postimagesToken"));
         postimagesToken_->setPlaceholderText(tr("Paste your API token here"));
         postimagesToken_->setText(settings_.value(QStringLiteral("postimages_token")).toString());
-        form->addRow(QStringLiteral("API token"), postimagesToken_);
+        form->addRow(tr("API token"), postimagesToken_);
         creds->setEnabled(postimagesTos_->isChecked());
         connect(postimagesTos_, &QCheckBox::toggled, creds, &QWidget::setEnabled);
         vbox->addWidget(creds);
@@ -2286,7 +2286,7 @@ void PreferencesDialog::buildUploadsTab(QWidget* tab) {
         imgboxUsername_->setObjectName(QStringLiteral("imgboxUsername"));
         imgboxUsername_->setPlaceholderText(tr("Your username"));
         imgboxUsername_->setText(settings_.value(QStringLiteral("imgbox_username")).toString());
-        form->addRow(QStringLiteral("Username"), imgboxUsername_);
+        form->addRow(tr("Username"), imgboxUsername_);
 
         imgboxPassword_ = new QLineEdit(creds);
         imgboxPassword_->setObjectName(QStringLiteral("imgboxPassword"));
@@ -2306,7 +2306,7 @@ void PreferencesDialog::buildUploadsTab(QWidget* tab) {
         pwdRow->setContentsMargins(0, 0, 0, 0);
         pwdRow->addWidget(imgboxPassword_);
         pwdRow->addWidget(pwdReveal);
-        form->addRow(QStringLiteral("Password"), pwdRow);
+        form->addRow(tr("Password"), pwdRow);
 
         creds->setEnabled(imgboxTos_->isChecked());
         connect(imgboxTos_, &QCheckBox::toggled, creds, &QWidget::setEnabled);
@@ -2357,11 +2357,11 @@ void PreferencesDialog::buildDataTab(QWidget* tab) {
 
     auto* foldersBox = new QGroupBox(tr("Folders"), tab);
     auto* foldersForm = new QFormLayout(foldersBox);
-    foldersForm->addRow(QStringLiteral("Config"), dirRow(paths.configDir));
-    foldersForm->addRow(QStringLiteral("Cache"), dirRow(paths.cacheDir));
-    foldersForm->addRow(QStringLiteral("Logs"), dirRow(logsDir));
-    foldersForm->addRow(QStringLiteral("Downloads"), dirRow(downloadsDir));
-    foldersForm->addRow(QStringLiteral("Scripts"), dirRow(scriptsDir));
+    foldersForm->addRow(tr("Config"), dirRow(paths.configDir));
+    foldersForm->addRow(tr("Cache"), dirRow(paths.cacheDir));
+    foldersForm->addRow(tr("Logs"), dirRow(logsDir));
+    foldersForm->addRow(tr("Downloads"), dirRow(downloadsDir));
+    foldersForm->addRow(tr("Scripts"), dirRow(scriptsDir));
     root->addWidget(foldersBox);
 
     auto* statsBox = new QGroupBox(tr("Storage && stats"), tab);
@@ -2371,9 +2371,9 @@ void PreferencesDialog::buildDataTab(QWidget* tab) {
     auto* configSize = new QLabel(tr("computing..."), tab);
     auto* cacheSize = new QLabel(tr("computing..."), tab);
     auto* logsSize = new QLabel(tr("computing..."), tab);
-    statsForm->addRow(QStringLiteral("Config size"), configSize);
-    statsForm->addRow(QStringLiteral("Cache size"), cacheSize);
-    statsForm->addRow(QStringLiteral("Logs size"), logsSize);
+    statsForm->addRow(tr("Config size"), configSize);
+    statsForm->addRow(tr("Cache size"), cacheSize);
+    statsForm->addRow(tr("Logs size"), logsSize);
     const QString configDir = paths.configDir;
     const QString cacheDir = paths.cacheDir;
     QTimer::singleShot(50, this, [configSize, cacheSize, logsSize, configDir, cacheDir,
@@ -2389,7 +2389,7 @@ void PreferencesDialog::buildDataTab(QWidget* tab) {
         QStringLiteral("Saved networks"),
         new QLabel(QString::number(settings_.value(QStringLiteral("networks")).toList().size()),
                    tab));
-    statsForm->addRow(QStringLiteral("Ignored masks"),
+    statsForm->addRow(tr("Ignored masks"),
                       new QLabel(QString::number(settings_.value(QStringLiteral("ignores"))
                                                      .toStringList()
                                                      .size()),

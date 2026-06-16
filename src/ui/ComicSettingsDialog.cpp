@@ -66,7 +66,7 @@ ComicSettingsDialog::ComicSettingsDialog(QVariantMap settings, const QStringList
     artLayout->setContentsMargins(0, 0, 0, 0);
     artLayout->addWidget(artDir_, 1);
     artLayout->addWidget(browse);
-    gf->addRow(QStringLiteral("Comic art folder"), artRow);
+    gf->addRow(tr("Comic art folder"), artRow);
 
     defaultBg_ = new QComboBox(global);
     defaultBg_->addItem(QStringLiteral("(first available)"), QString());
@@ -75,7 +75,7 @@ ComicSettingsDialog::ComicSettingsDialog(QVariantMap settings, const QStringList
     }
     const int bgIdx = defaultBg_->findData(settings_.value(QStringLiteral("comic_bg")).toString());
     defaultBg_->setCurrentIndex(bgIdx >= 0 ? bgIdx : 0);
-    gf->addRow(QStringLiteral("Default background"), defaultBg_);
+    gf->addRow(tr("Default background"), defaultBg_);
 
     selfChar_ = new QComboBox(global);
     selfChar_->addItem(QStringLiteral("(random per nick)"), QString());
@@ -85,31 +85,31 @@ ComicSettingsDialog::ComicSettingsDialog(QVariantMap settings, const QStringList
     const int selfIdx =
         selfChar_->findData(settings_.value(QStringLiteral("comic_self_char")).toString());
     selfChar_->setCurrentIndex(selfIdx >= 0 ? selfIdx : 0);
-    gf->addRow(QStringLiteral("Your character"), selfChar_);
+    gf->addRow(tr("Your character"), selfChar_);
 
     panels_ = new QSpinBox(global);
     panels_->setRange(1, 6);
     panels_->setValue(settings_.value(QStringLiteral("comic_panels"), 4).toInt());
-    gf->addRow(QStringLiteral("Comic panels"), panels_);
+    gf->addRow(tr("Comic panels"), panels_);
     perPanel_ = new QSpinBox(global);
     perPanel_->setRange(1, 6);
     perPanel_->setValue(settings_.value(QStringLiteral("comic_per_panel"), 4).toInt());
-    gf->addRow(QStringLiteral("Max bubbles per panel"), perPanel_);
+    gf->addRow(tr("Max bubbles per panel"), perPanel_);
     minFont_ = new QSpinBox(global);
     minFont_->setRange(6, 13);
     minFont_->setValue(settings_.value(QStringLiteral("comic_min_font"), 9).toInt());
-    gf->addRow(QStringLiteral("Min text size (spill)"), minFont_);
+    gf->addRow(tr("Min text size (spill)"), minFont_);
 
     captions_ = new QCheckBox(global);
     captions_->setChecked(settings_.value(QStringLiteral("comic_captions"), true).toBool());
-    gf->addRow(QStringLiteral("Show character names"), captions_);
+    gf->addRow(tr("Show character names"), captions_);
     captionMode_ = new QComboBox(global);
     captionMode_->addItem(QStringLiteral("Match speaker color"), QStringLiteral("nick"));
     captionMode_->addItem(QStringLiteral("Fixed color"), QStringLiteral("fixed"));
     const int cmIdx = captionMode_->findData(
         settings_.value(QStringLiteral("comic_caption_mode"), QStringLiteral("nick")).toString());
     captionMode_->setCurrentIndex(cmIdx >= 0 ? cmIdx : 0);
-    gf->addRow(QStringLiteral("Name color"), captionMode_);
+    gf->addRow(tr("Name color"), captionMode_);
     auto* fixedColorBtn = new QPushButton(tr("Fixed name color..."), global);
     connect(fixedColorBtn, &QPushButton::clicked, this, [this]() {
         const QColor c = QColorDialog::getColor(QColor(captionColor_), this);
@@ -124,19 +124,19 @@ ComicSettingsDialog::ComicSettingsDialog(QVariantMap settings, const QStringList
     captionScale_->addItem(QStringLiteral("Large"), 1.3);
     const double scaleVal = settings_.value(QStringLiteral("comic_caption_scale"), 1.0).toDouble();
     captionScale_->setCurrentIndex(scaleVal < 0.9 ? 0 : scaleVal > 1.1 ? 2 : 1);
-    gf->addRow(QStringLiteral("Name size"), captionScale_);
+    gf->addRow(tr("Name size"), captionScale_);
     randomBg_ = new QCheckBox(global);
     randomBg_->setChecked(settings_.value(QStringLiteral("comic_random_bg"), false).toBool());
-    gf->addRow(QStringLiteral("Random background (unset rooms)"), randomBg_);
+    gf->addRow(tr("Random background (unset rooms)"), randomBg_);
 
     balloonTint_ = new QCheckBox(global);
     balloonTint_->setChecked(settings_.value(QStringLiteral("comic_balloon_tint"), true).toBool());
-    gf->addRow(QStringLiteral("Tint balloons by speaker color"), balloonTint_);
+    gf->addRow(tr("Tint balloons by speaker color"), balloonTint_);
 
     comicFont_ = new QFontComboBox(global);
     comicFont_->setCurrentFont(QFont(
         settings_.value(QStringLiteral("comic_font"), QStringLiteral("Comic Relief")).toString()));
-    gf->addRow(QStringLiteral("Balloon font"), comicFont_);
+    gf->addRow(tr("Balloon font"), comicFont_);
 
     addPage(QStringLiteral("Global"), global);
 
@@ -177,7 +177,7 @@ ComicSettingsDialog::ComicSettingsDialog(QVariantMap settings, const QStringList
     auto* reRow = new QFormLayout();
     excludeRegex_ = new QLineEdit(settings_.value(QStringLiteral("comic_exclude_regex")).toString(),
                                   bots);
-    reRow->addRow(QStringLiteral("Advanced regex"), excludeRegex_);
+    reRow->addRow(tr("Advanced regex"), excludeRegex_);
     bv->addLayout(reRow);
     addPage(QStringLiteral("Bots"), bots);
 
@@ -257,7 +257,7 @@ void ComicSettingsDialog::loadChannel(int index) {
     }
     const int bgIdx = chanBg_->findData(cfg.value(QStringLiteral("bg")).toString());
     chanBg_->setCurrentIndex(bgIdx >= 0 ? bgIdx : 0);
-    form->addRow(QStringLiteral("Background"), chanBg_);
+    form->addRow(tr("Background"), chanBg_);
 
     form->addRow(new QLabel(tr("Assign characters (this channel), one per line as "
                                            "nick=character:"),
@@ -279,7 +279,7 @@ void ComicSettingsDialog::loadChannel(int index) {
     chanIgnore_->setText(ignore.join(QLatin1Char(' ')));
     chanIgnore_->setPlaceholderText(
         QStringLiteral("nicks hidden from the comic in this channel — still shown in chat"));
-    form->addRow(QStringLiteral("Hide from comic"), chanIgnore_);
+    form->addRow(tr("Hide from comic"), chanIgnore_);
 
     hostLayout->addWidget(holder);
 }

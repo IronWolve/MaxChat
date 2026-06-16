@@ -62,7 +62,7 @@ ThemeEditorDialog::ThemeEditorDialog(Scope scope, const QString& baseId, QWidget
     const ChatThemeDefinition chatBase = chatThemeById(baseId);
     const QString baseLabel = scope == Scope::App ? appBase.label : chatBase.label;
     name_ = new QLineEdit(QStringLiteral("%1 (custom)").arg(baseLabel), this);
-    form->addRow(QStringLiteral("Name"), name_);
+    form->addRow(tr("Name"), name_);
 
     // Seed editable colors from the base theme.
     if (scope == Scope::App) {

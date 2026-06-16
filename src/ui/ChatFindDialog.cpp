@@ -21,7 +21,7 @@ ChatFindDialog::ChatFindDialog(QWidget* parent) : QDialog(parent) {
     auto* form = new QFormLayout();
     m_searchInput = new QLineEdit(this);
     m_searchInput->setObjectName(QStringLiteral("searchInput"));
-    form->addRow(QStringLiteral("Find:"), m_searchInput);
+    form->addRow(tr("Find:"), m_searchInput);
     layout->addLayout(form);
 
     auto* options = new QHBoxLayout();
