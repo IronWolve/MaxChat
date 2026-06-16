@@ -72,6 +72,7 @@ class BanListDialog;
 class ChatFindDialog;
 class ComicController;
 class IrcRouter;
+class NotificationController;
 class RawLogDialog;
 class ScriptBridge;
 class SpellTextEdit;
@@ -90,6 +91,7 @@ class MainWindow final : public QMainWindow,
     // private access the handlers had when they lived here.
     friend class IrcRouter;
     friend class ComicController; // same: relocated comic backend drives m_comic* state
+    friend class NotificationController; // same: relocated tray/notify drives m_tray/m_notif*
 
   public:
     explicit MainWindow(QWidget* parent = nullptr);
@@ -396,10 +398,8 @@ class MainWindow final : public QMainWindow,
     void renameMemberInChannelBuffers(const QString& network, const QString& oldNick,
                                       const QString& newNick);
     void renameMemberInChannelBuffers(const QString& oldNick, const QString& newNick);
-    void setupTrayIcon();
-    void updateTrayIcon();
+    void updateTrayIcon(); // forwarder → NotificationController (host hook)
     void toggleWindowVisibility();
-    void updateMinimizeToTrayFromSettings();
     void notify(const QString& title, const QString& text,
                 const QString& network = {}, const QString& target = {});
     [[nodiscard]] QStringList channelTargetsContainingMember(const QString& network,
@@ -448,6 +448,7 @@ class MainWindow final : public QMainWindow,
     ScriptBridge* m_scripts = nullptr; // owns LuaEngine + ScriptTerminalManager
     IrcRouter* m_ircRouter = nullptr;  // IRC signal → handler wiring (Phase 7)
     ComicController* m_comicController = nullptr; // Comic Mode backend (Phase 5)
+    NotificationController* m_notifyController = nullptr; // tray + notify (Phase 4)
     PreviewFetcher* m_previewFetcher = nullptr; // link-preview card fetch (Phase 2b)
     maxchat::services::ImageFetcher m_imageFetcher;
     maxchat::core::NetworkConnectionPlan m_connectionPlan;
