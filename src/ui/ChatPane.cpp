@@ -15,6 +15,9 @@
 #include <QMouseEvent>
 #include <QPaintEvent>
 #include <QPainter>
+#include <QRegularExpression>
+#include <QScrollBar>
+#include <QStringList>
 #include <QTextBlock>
 #include <QTextBlockFormat>
 #include <QTextBrowser>
@@ -24,6 +27,8 @@
 #include <QUrl>
 #include <QVariant>
 #include <QWidget>
+
+#include "services/LinkPreviewClassifier.h" // maxchat::services::canFetchPreviewUrl
 
 namespace maxchat::ui {
 
@@ -165,6 +170,22 @@ class ChatTextView final : public QTextBrowser {
     return static_cast<ChatTextView*>(view);
 }
 
+// Pull the src URLs out of <img ...> tags in a preview HTML snippet.
+[[nodiscard]] QStringList imageSourcesInHtml(const QString& html) {
+    static const QRegularExpression imgSrc(
+        QStringLiteral(R"RX(<img\b[^>]*\bsrc\s*=\s*"([^"]+)")RX"),
+        QRegularExpression::CaseInsensitiveOption);
+    QStringList sources;
+    auto it = imgSrc.globalMatch(html);
+    while (it.hasNext()) {
+        const QString src = it.next().captured(1).trimmed();
+        if (!src.isEmpty() && !sources.contains(src)) {
+            sources.append(src);
+        }
+    }
+    return sources;
+}
+
 } // namespace
 
 ChatPane::ChatPane(QWidget* parent) : QObject(parent) {
@@ -291,6 +312,11 @@ void ChatPane::appendPreviewHtml(const QString& html, const QString& prefixPlain
     } else {
         cursor.setBlockFormat(blockFormat);
     }
+    // QTextBrowser never fetches remote <img src> over the network: a referenced
+    // image only renders if it's a registered document resource. Add any already
+    // cached images now (before the insert), and kick off downloads for the rest
+    // (which re-render this buffer on arrival).
+    registerCachedImages(html);
 
     // insertHtml with block-level elements (<div>, <p>) creates multiple
     // QTextBlocks. The blockFormat set above only applies to the first one;
@@ -313,6 +339,72 @@ void ChatPane::appendPreviewHtml(const QString& html, const QString& prefixPlain
 
     view_->setTextCursor(cursor);
     view_->ensureCursorVisible();
+    requestPreviewImages(html);
+}
+
+void ChatPane::registerCachedImages(const QString& html) {
+    if (view_ == nullptr) {
+        return;
+    }
+    const QStringList sources = imageSourcesInHtml(html);
+    for (const QString& src : sources) {
+        const auto cached = previewImageCache_.constFind(src);
+        if (cached != previewImageCache_.constEnd()) {
+            addImageResource(QUrl(src), cached.value());
+        }
+    }
+}
+
+void ChatPane::requestPreviewImages(const QString& html) {
+    const QStringList sources = imageSourcesInHtml(html);
+    for (const QString& src : sources) {
+        if (previewImageCache_.contains(src) || previewImagePending_.contains(src) ||
+            previewImageFailed_.contains(src)) {
+            continue;
+        }
+        const QUrl url(src);
+        if (!maxchat::services::canFetchPreviewUrl(url)) {
+            continue;
+        }
+        previewImagePending_.insert(src);
+        if (delegate_ != nullptr) {
+            delegate_->previewImageNeeded(url); // owner runs the actual fetch
+        }
+    }
+}
+
+void ChatPane::onPreviewImageReady(const QUrl& url, const QImage& scaledImage) {
+    const QString key = url.toString();
+    previewImagePending_.remove(key);
+    if (scaledImage.isNull()) {
+        return;
+    }
+    if (previewImageCache_.size() > 64) {
+        // Decoded images are big; cheap full flush beats LRU bookkeeping.
+        // Evicted images simply re-fetch if their line scrolls back into view.
+        previewImageCache_.clear();
+    }
+    previewImageCache_.insert(key, scaledImage);
+    // The image landed after the line was already laid out with a broken <img>.
+    // Re-render the active buffer (preserving scroll position) so it now shows.
+    if (view_ != nullptr && delegate_ != nullptr && delegate_->activeBufferReferencesImage(key)) {
+        QScrollBar* bar = view_->verticalScrollBar();
+        const bool atBottom = bar != nullptr && bar->value() >= bar->maximum() - 4;
+        const int previous = bar != nullptr ? bar->value() : 0;
+        delegate_->rerenderActiveBuffer();
+        if (bar != nullptr) {
+            bar->setValue(atBottom ? bar->maximum() : qMin(previous, bar->maximum()));
+        }
+    }
+}
+
+void ChatPane::onPreviewImageFailed(const QUrl& url) {
+    const QString key = url.toString();
+    previewImagePending_.remove(key);
+    if (previewImageFailed_.size() > 512) {
+        previewImageFailed_.clear(); // add-only set; cap it for week-long sessions
+    }
+    previewImageFailed_.insert(key); // don't hammer a 404/blocked URL on every render
 }
 
 void ChatPane::appendCenteredDivider(const QString& text, const QString& color,
@@ -375,11 +467,12 @@ void ChatPane::showBuffer(const maxchat::core::ChatBufferSnapshot& snapshot,
     // list / live lines. The dim text + dividers still mark it as replay.
     dimOptions.renderFormatting = false;
 
-    // With aligned nicks, centred dividers indent to the content column so they
-    // don't cross the nick gutter / separator bar.
-    const QString alignPrefix =
-        options.alignNicks ? maxchat::core::formatChatLine(QString(), baseOptions).prefixPlain
-                           : QString();
+    // The empty-line timestamp+nick prefix. Preview cards always indent to it;
+    // centred dividers do so only when aligning nicks (else they full-width
+    // centre, which would cross the nick gutter / separator bar).
+    const QString contentPrefix =
+        maxchat::core::formatChatLine(QString(), baseOptions).prefixPlain;
+    const QString alignPrefix = options.alignNicks ? contentPrefix : QString();
     static const QString kUnreadMarker = QStringLiteral("──────────  new  ──────────");
 
     // Structural replay→live boundary: "new" always appears right after the
@@ -425,10 +518,8 @@ void ChatPane::showBuffer(const maxchat::core::ChatBufferSnapshot& snapshot,
                 maxchat::core::formatChatLine(line.sourceText, opts);
             appendFormatted(display, options.indentWrap);
         } else if (!line.htmlText.isEmpty()) {
-            // Preview/OG cards: the image cache still lives in MainWindow (R3).
-            if (delegate_ != nullptr) {
-                delegate_->renderPreviewHtmlLine(line.htmlText);
-            }
+            // Preview/OG card: ChatPane owns the image cache + fetch request (R3).
+            appendPreviewHtml(line.htmlText, contentPrefix);
         } else if (!line.plainText.isEmpty()) {
             appendPlain(line.plainText);
         }

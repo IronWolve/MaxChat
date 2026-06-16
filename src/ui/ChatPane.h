@@ -1,7 +1,10 @@
 #pragma once
 
 #include <QColor>
+#include <QHash>
+#include <QImage>
 #include <QObject>
+#include <QSet>
 #include <QString>
 
 #include "core/ChatBufferStore.h"  // maxchat::core::ChatBufferSnapshot
@@ -22,11 +25,17 @@ class ChatPaneDelegate {
     virtual ~ChatPaneDelegate() = default;
     virtual void chatAnchorClicked(const QUrl& url) = 0;  // → MediaController
     virtual void chatSeparatorMoved(int nickWidth) = 0;   // → persist nick column
-    // A cached preview/OG-card line encountered while rendering a buffer. The
-    // preview image cache + fetch still live in MainWindow (render-pipeline R3
-    // moves them here), so showBuffer routes these back up; the owner registers
-    // cached images, computes the indent, and calls back into appendPreviewHtml.
-    virtual void renderPreviewHtmlLine(const QString& html) = 0;
+    // ChatPane owns the preview image cache (R3) but not the network fetch: it
+    // asks the owner to fetch a missing image (owner runs it through ImageFetcher
+    // and reports back via onPreviewImageReady/onPreviewImageFailed).
+    virtual void previewImageNeeded(const QUrl& url) = 0;
+    // Model query: does the active buffer reference this image URL? (Skip the
+    // re-render if a now-arrived image isn't even on screen.) The buffer model
+    // lives in MainWindow.
+    [[nodiscard]] virtual bool activeBufferReferencesImage(const QString& url) = 0;
+    // Rebuild the active buffer's document (owner calls back into showBuffer).
+    // ChatPane wraps this with scroll preservation when an image lands.
+    virtual void rerenderActiveBuffer() = 0;
 };
 
 // Owns the chat QTextBrowser (a ChatTextView with the separator guide +
@@ -86,6 +95,12 @@ class ChatPane : public QObject {
     // referenced <img src> resolves (QTextBrowser never fetches over the net).
     void addImageResource(const QUrl& url, const QImage& image);
 
+    // A requested preview image arrived (already scaled by the owner) — cache it
+    // and, if the active buffer references it, re-render preserving scroll.
+    void onPreviewImageReady(const QUrl& url, const QImage& scaledImage);
+    // A requested preview image failed — stop retrying it this session.
+    void onPreviewImageFailed(const QUrl& url);
+
     // --- Low-level append primitives (one line / block into the document) ---
     void appendPlain(const QString& line);
     void appendHtml(const QString& html);
@@ -99,8 +114,16 @@ class ChatPane : public QObject {
                                const QString& prefixPlain);
 
   private:
+    // Register cached <img src> images into the document (before insert); request
+    // the rest from the owner (after insert). Owned preview cache (R3).
+    void registerCachedImages(const QString& html);
+    void requestPreviewImages(const QString& html);
+
     QTextBrowser* view_ = nullptr;        // a ChatTextView (private impl detail)
     ChatPaneDelegate* delegate_ = nullptr;
+    QHash<QString, QImage> previewImageCache_; // url -> decoded, scaled image
+    QSet<QString> previewImagePending_;        // in-flight image fetches
+    QSet<QString> previewImageFailed_;         // gave up — don't retry this session
 };
 
 } // namespace maxchat::ui
