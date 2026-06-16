@@ -536,9 +536,9 @@ void PreferencesDialog::buildAppearanceTab(QWidget* tab) {
     auto* nickForm = new QFormLayout(nickBox);
     nickColorMode_ = new QComboBox(tab);
     nickColorMode_->setObjectName(QStringLiteral("nickColorMode"));
-    nickColorMode_->addItem(QStringLiteral("Off - plain text color"), QStringLiteral("off"));
-    nickColorMode_->addItem(QStringLiteral("Theme palette"), QStringLiteral("palette"));
-    nickColorMode_->addItem(QStringLiteral("Classic IRC colors"), QStringLiteral("irc"));
+    nickColorMode_->addItem(tr("Off - plain text color"), QStringLiteral("off"));
+    nickColorMode_->addItem(tr("Theme palette"), QStringLiteral("palette"));
+    nickColorMode_->addItem(tr("Classic IRC colors"), QStringLiteral("irc"));
     {
         // Legacy installs only have the colored_nicks bool.
         const QString mode =
@@ -646,9 +646,9 @@ void PreferencesDialog::buildNotificationsTab(QWidget* tab) {
 
     // Popup style
     notifyPopup_ = new QComboBox(tab);
-    notifyPopup_->addItem(QStringLiteral("Off"), QStringLiteral("off"));
-    notifyPopup_->addItem(QStringLiteral("Custom toast (in-app)"), QStringLiteral("custom"));
-    notifyPopup_->addItem(QStringLiteral("System / OS native"), QStringLiteral("system"));
+    notifyPopup_->addItem(tr("Off"), QStringLiteral("off"));
+    notifyPopup_->addItem(tr("Custom toast (in-app)"), QStringLiteral("custom"));
+    notifyPopup_->addItem(tr("System / OS native"), QStringLiteral("system"));
     setComboByData(notifyPopup_, settings_.value(QStringLiteral("notify_popup"), QStringLiteral("custom")).toString());
 
     // Notify on PMs
@@ -670,10 +670,10 @@ void PreferencesDialog::buildNotificationsTab(QWidget* tab) {
 
     // Toast corner
     notifyCorner_ = new QComboBox(tab);
-    notifyCorner_->addItem(QStringLiteral("Top-left"), QStringLiteral("tl"));
-    notifyCorner_->addItem(QStringLiteral("Top-right"), QStringLiteral("tr"));
-    notifyCorner_->addItem(QStringLiteral("Bottom-left"), QStringLiteral("bl"));
-    notifyCorner_->addItem(QStringLiteral("Bottom-right"), QStringLiteral("br"));
+    notifyCorner_->addItem(tr("Top-left"), QStringLiteral("tl"));
+    notifyCorner_->addItem(tr("Top-right"), QStringLiteral("tr"));
+    notifyCorner_->addItem(tr("Bottom-left"), QStringLiteral("bl"));
+    notifyCorner_->addItem(tr("Bottom-right"), QStringLiteral("br"));
     setComboByData(notifyCorner_, settings_.value(QStringLiteral("notify_corner"), QStringLiteral("br")).toString());
 
     // Toast duration
@@ -684,11 +684,11 @@ void PreferencesDialog::buildNotificationsTab(QWidget* tab) {
 
     // Toast theme
     notifyTheme_ = new QComboBox(tab);
-    notifyTheme_->addItem(QStringLiteral("Follow app theme"), QStringLiteral("follow"));
-    notifyTheme_->addItem(QStringLiteral("Dark"), QStringLiteral("dark"));
-    notifyTheme_->addItem(QStringLiteral("Light"), QStringLiteral("light"));
-    notifyTheme_->addItem(QStringLiteral("Solarized dark"), QStringLiteral("solar-dark"));
-    notifyTheme_->addItem(QStringLiteral("Solarized light"), QStringLiteral("solar-light"));
+    notifyTheme_->addItem(tr("Follow app theme"), QStringLiteral("follow"));
+    notifyTheme_->addItem(tr("Dark"), QStringLiteral("dark"));
+    notifyTheme_->addItem(tr("Light"), QStringLiteral("light"));
+    notifyTheme_->addItem(tr("Solarized dark"), QStringLiteral("solar-dark"));
+    notifyTheme_->addItem(tr("Solarized light"), QStringLiteral("solar-light"));
     setComboByData(notifyTheme_, settings_.value(QStringLiteral("notify_theme"), QStringLiteral("follow")).toString());
 
     // Beep on highlight / PM
@@ -704,11 +704,11 @@ void PreferencesDialog::buildNotificationsTab(QWidget* tab) {
 
     // Sound file picker
     notifySoundFile_ = new QComboBox(tab);
-    notifySoundFile_->addItem(QStringLiteral("Default (notify)"), QStringLiteral("notify.wav"));
-    notifySoundFile_->addItem(QStringLiteral("Bell (classic)"), QStringLiteral("bell.wav"));
-    notifySoundFile_->addItem(QStringLiteral("Soft ping"), QStringLiteral("ping.wav"));
-    notifySoundFile_->addItem(QStringLiteral("Sci-fi chirp"), QStringLiteral("scifi_chirp.wav"));
-    notifySoundFile_->addItem(QStringLiteral("Trek communicator"), QStringLiteral("trek_hail.wav"));
+    notifySoundFile_->addItem(tr("Default (notify)"), QStringLiteral("notify.wav"));
+    notifySoundFile_->addItem(tr("Bell (classic)"), QStringLiteral("bell.wav"));
+    notifySoundFile_->addItem(tr("Soft ping"), QStringLiteral("ping.wav"));
+    notifySoundFile_->addItem(tr("Sci-fi chirp"), QStringLiteral("scifi_chirp.wav"));
+    notifySoundFile_->addItem(tr("Trek communicator"), QStringLiteral("trek_hail.wav"));
     setComboByData(notifySoundFile_, settings_.value(QStringLiteral("notify_sound_file"), QStringLiteral("notify.wav")).toString());
     // Sound file picker is always enabled — user picks the sound even before enabling it.
     // "Open dir" button lets the user drop custom .wav files into the sounds folder.
@@ -1215,8 +1215,8 @@ void PreferencesDialog::buildFontsTab(QWidget* tab) {
     terminalForm->addRow(tr("Size"), terminalSizeRow);
     terminalGrid_ = new QComboBox(terminalBox);
     terminalGrid_->setObjectName(QStringLiteral("terminalGrid"));
-    terminalGrid_->addItem(QStringLiteral("80 x 25"), 25);
-    terminalGrid_->addItem(QStringLiteral("80 x 40"), 40);
+    terminalGrid_->addItem(tr("80 x 25"), 25);
+    terminalGrid_->addItem(tr("80 x 40"), 40);
     terminalGrid_->setCurrentIndex(
         settings_.value(QStringLiteral("terminal_rows"), 25).toInt() == 40 ? 1 : 0);
     terminalForm->addRow(tr("Default size"), terminalGrid_);
@@ -1864,9 +1864,9 @@ void PreferencesDialog::buildFilesTab(QWidget* tab) {
 
     dccAccept_ = new QComboBox(tab);
     dccAccept_->setObjectName(QStringLiteral("dccAccept"));
-    dccAccept_->addItem(QStringLiteral("Ask each time"), QStringLiteral("ask"));
-    dccAccept_->addItem(QStringLiteral("Auto-accept trusted nicks"), QStringLiteral("trusted"));
-    dccAccept_->addItem(QStringLiteral("Auto-accept everything (careful)"), QStringLiteral("all"));
+    dccAccept_->addItem(tr("Ask each time"), QStringLiteral("ask"));
+    dccAccept_->addItem(tr("Auto-accept trusted nicks"), QStringLiteral("trusted"));
+    dccAccept_->addItem(tr("Auto-accept everything (careful)"), QStringLiteral("all"));
     setComboByData(dccAccept_,
                    settings_.value(QStringLiteral("dcc_accept"), QStringLiteral("ask")).toString());
     dccTrusted_ = new QLineEdit(
@@ -2033,24 +2033,24 @@ void PreferencesDialog::buildLocalizationTab(QWidget* tab) {
 
     interfaceLanguage_ = new QComboBox(tab);
     interfaceLanguage_->setObjectName(QStringLiteral("interfaceLanguage"));
-    interfaceLanguage_->addItem(QStringLiteral("System default"), QStringLiteral("system"));
-    interfaceLanguage_->addItem(QStringLiteral("English"), QStringLiteral("en"));
-    interfaceLanguage_->addItem(QStringLiteral("Arabic"), QStringLiteral("ar"));
-    interfaceLanguage_->addItem(QStringLiteral("German"), QStringLiteral("de"));
-    interfaceLanguage_->addItem(QStringLiteral("Spanish"), QStringLiteral("es"));
-    interfaceLanguage_->addItem(QStringLiteral("French"), QStringLiteral("fr"));
-    interfaceLanguage_->addItem(QStringLiteral("Hindi"), QStringLiteral("hi"));
-    interfaceLanguage_->addItem(QStringLiteral("Italian"), QStringLiteral("it"));
-    interfaceLanguage_->addItem(QStringLiteral("Japanese"), QStringLiteral("ja"));
-    interfaceLanguage_->addItem(QStringLiteral("Korean"), QStringLiteral("ko"));
-    interfaceLanguage_->addItem(QStringLiteral("Dutch"), QStringLiteral("nl"));
-    interfaceLanguage_->addItem(QStringLiteral("Polish"), QStringLiteral("pl"));
-    interfaceLanguage_->addItem(QStringLiteral("Portuguese (Brazil)"), QStringLiteral("pt_BR"));
-    interfaceLanguage_->addItem(QStringLiteral("Russian"), QStringLiteral("ru"));
-    interfaceLanguage_->addItem(QStringLiteral("Turkish"), QStringLiteral("tr"));
-    interfaceLanguage_->addItem(QStringLiteral("Ukrainian"), QStringLiteral("uk"));
-    interfaceLanguage_->addItem(QStringLiteral("Chinese (Simplified)"), QStringLiteral("zh_CN"));
-    interfaceLanguage_->addItem(QStringLiteral("Chinese (Traditional)"), QStringLiteral("zh_TW"));
+    interfaceLanguage_->addItem(tr("System default"), QStringLiteral("system"));
+    interfaceLanguage_->addItem(tr("English"), QStringLiteral("en"));
+    interfaceLanguage_->addItem(tr("Arabic"), QStringLiteral("ar"));
+    interfaceLanguage_->addItem(tr("German"), QStringLiteral("de"));
+    interfaceLanguage_->addItem(tr("Spanish"), QStringLiteral("es"));
+    interfaceLanguage_->addItem(tr("French"), QStringLiteral("fr"));
+    interfaceLanguage_->addItem(tr("Hindi"), QStringLiteral("hi"));
+    interfaceLanguage_->addItem(tr("Italian"), QStringLiteral("it"));
+    interfaceLanguage_->addItem(tr("Japanese"), QStringLiteral("ja"));
+    interfaceLanguage_->addItem(tr("Korean"), QStringLiteral("ko"));
+    interfaceLanguage_->addItem(tr("Dutch"), QStringLiteral("nl"));
+    interfaceLanguage_->addItem(tr("Polish"), QStringLiteral("pl"));
+    interfaceLanguage_->addItem(tr("Portuguese (Brazil)"), QStringLiteral("pt_BR"));
+    interfaceLanguage_->addItem(tr("Russian"), QStringLiteral("ru"));
+    interfaceLanguage_->addItem(tr("Turkish"), QStringLiteral("tr"));
+    interfaceLanguage_->addItem(tr("Ukrainian"), QStringLiteral("uk"));
+    interfaceLanguage_->addItem(tr("Chinese (Simplified)"), QStringLiteral("zh_CN"));
+    interfaceLanguage_->addItem(tr("Chinese (Traditional)"), QStringLiteral("zh_TW"));
     setComboByData(interfaceLanguage_,
                    settings_.value(QStringLiteral("interface_language"), QStringLiteral("system")));
 
@@ -2069,8 +2069,8 @@ void PreferencesDialog::buildSpellingTab(QWidget* tab) {
 
     spellBackend_ = new QComboBox(tab);
     spellBackend_->setObjectName(QStringLiteral("spellBackend"));
-    spellBackend_->addItem(QStringLiteral("Internal (Hunspell)"), QStringLiteral("internal"));
-    spellBackend_->addItem(QStringLiteral("Operating system"), QStringLiteral("os"));
+    spellBackend_->addItem(tr("Internal (Hunspell)"), QStringLiteral("internal"));
+    spellBackend_->addItem(tr("Operating system"), QStringLiteral("os"));
     setComboByData(spellBackend_,
                    settings_.value(QStringLiteral("spellcheck_backend"), QStringLiteral("internal")));
 
@@ -2125,11 +2125,11 @@ void PreferencesDialog::buildUploadsTab(QWidget* tab) {
     // Service selector
     uploadService_ = new QComboBox(tab);
     uploadService_->setObjectName(QStringLiteral("uploadService"));
-    uploadService_->addItem(QStringLiteral("Disabled"),   QString());
-    uploadService_->addItem(QStringLiteral("ImgBB"),      QStringLiteral("imgbb"));
-    uploadService_->addItem(QStringLiteral("Imgur"),      QStringLiteral("imgur"));
-    uploadService_->addItem(QStringLiteral("Postimages"), QStringLiteral("postimages"));
-    uploadService_->addItem(QStringLiteral("Imgbox"),     QStringLiteral("imgbox"));
+    uploadService_->addItem(tr("Disabled"),   QString());
+    uploadService_->addItem(tr("ImgBB"),      QStringLiteral("imgbb"));
+    uploadService_->addItem(tr("Imgur"),      QStringLiteral("imgur"));
+    uploadService_->addItem(tr("Postimages"), QStringLiteral("postimages"));
+    uploadService_->addItem(tr("Imgbox"),     QStringLiteral("imgbox"));
     setComboByData(uploadService_,
                    settings_.value(QStringLiteral("image_upload_service"), QString()));
 

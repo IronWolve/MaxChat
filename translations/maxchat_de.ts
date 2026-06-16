@@ -216,8 +216,18 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../src/ui/ComicSettingsDialog.cpp" line="72"/>
+        <source>(first available)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../src/ui/ComicSettingsDialog.cpp" line="78"/>
         <source>Default background</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ComicSettingsDialog.cpp" line="81"/>
+        <source>(random per nick)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -246,6 +256,16 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../src/ui/ComicSettingsDialog.cpp" line="107"/>
+        <source>Match speaker color</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ComicSettingsDialog.cpp" line="108"/>
+        <source>Fixed color</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../src/ui/ComicSettingsDialog.cpp" line="112"/>
         <source>Name color</source>
         <translation type="unfinished"></translation>
@@ -253,6 +273,21 @@
     <message>
         <location filename="../src/ui/ComicSettingsDialog.cpp" line="113"/>
         <source>Fixed name color...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ComicSettingsDialog.cpp" line="122"/>
+        <source>Small</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ComicSettingsDialog.cpp" line="123"/>
+        <source>Normal</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ComicSettingsDialog.cpp" line="124"/>
+        <source>Large</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -303,6 +338,11 @@
     <message>
         <location filename="../src/ui/ComicSettingsDialog.cpp" line="211"/>
         <source>Channel:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ComicSettingsDialog.cpp" line="254"/>
+        <source>(use global default)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1540,6 +1580,21 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../src/ui/ServerListDialog.cpp" line="149"/>
+        <source>No proxy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ServerListDialog.cpp" line="150"/>
+        <source>SOCKS5</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ServerListDialog.cpp" line="151"/>
+        <source>HTTP CONNECT</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../src/ui/ServerListDialog.cpp" line="157"/>
         <source>127.0.0.1</source>
         <translation type="unfinished"></translation>
@@ -1746,6 +1801,21 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="539"/>
+        <source>Off - plain text color</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="540"/>
+        <source>Theme palette</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="541"/>
+        <source>Classic IRC colors</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../src/ui/PreferencesDialog.cpp" line="563"/>
         <source>Color nicknames</source>
         <translation type="unfinished"></translation>
@@ -1808,6 +1878,91 @@
     <message>
         <location filename="../src/ui/PreferencesDialog.cpp" line="633"/>
         <source>Sort users by status</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="649"/>
+        <source>Off</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="650"/>
+        <source>Custom toast (in-app)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="651"/>
+        <source>System / OS native</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="673"/>
+        <source>Top-left</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="674"/>
+        <source>Top-right</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="675"/>
+        <source>Bottom-left</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="676"/>
+        <source>Bottom-right</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="687"/>
+        <source>Follow app theme</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="688"/>
+        <source>Dark</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="689"/>
+        <source>Light</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="690"/>
+        <source>Solarized dark</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="691"/>
+        <source>Solarized light</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="707"/>
+        <source>Default (notify)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="708"/>
+        <source>Bell (classic)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="709"/>
+        <source>Soft ping</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="710"/>
+        <source>Sci-fi chirp</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="711"/>
+        <source>Trek communicator</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2031,6 +2186,16 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1218"/>
+        <source>80 x 25</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1219"/>
+        <source>80 x 40</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../src/ui/PreferencesDialog.cpp" line="1222"/>
         <source>Default size</source>
         <translation type="unfinished"></translation>
@@ -2248,6 +2413,21 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1867"/>
+        <source>Ask each time</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1868"/>
+        <source>Auto-accept trusted nicks</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="1869"/>
+        <source>Auto-accept everything (careful)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../src/ui/PreferencesDialog.cpp" line="1889"/>
         <source>Recommended: 5000 (forward this range in your router for active DCC)</source>
         <translation type="unfinished"></translation>
@@ -2378,6 +2558,96 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2036"/>
+        <source>System default</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2037"/>
+        <source>English</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2038"/>
+        <source>Arabic</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2039"/>
+        <source>German</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2040"/>
+        <source>Spanish</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2041"/>
+        <source>French</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2042"/>
+        <source>Hindi</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2043"/>
+        <source>Italian</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2044"/>
+        <source>Japanese</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2045"/>
+        <source>Korean</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2046"/>
+        <source>Dutch</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2047"/>
+        <source>Polish</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2048"/>
+        <source>Portuguese (Brazil)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2049"/>
+        <source>Russian</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2050"/>
+        <source>Turkish</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2051"/>
+        <source>Ukrainian</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2052"/>
+        <source>Chinese (Simplified)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2053"/>
+        <source>Chinese (Traditional)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../src/ui/PreferencesDialog.cpp" line="2057"/>
         <source>Interface Language</source>
         <translation type="unfinished"></translation>
@@ -2385,6 +2655,16 @@
     <message>
         <location filename="../src/ui/PreferencesDialog.cpp" line="2066"/>
         <source>Enable spellcheck</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2072"/>
+        <source>Internal (Hunspell)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2073"/>
+        <source>Operating system</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2408,11 +2688,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2128"/>
+        <source>Disabled</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../src/ui/PreferencesDialog.cpp" line="2137"/>
         <source>Service</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2129"/>
         <location filename="../src/ui/PreferencesDialog.cpp" line="2158"/>
         <source>ImgBB</source>
         <translation type="unfinished"></translation>
@@ -2433,6 +2719,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2130"/>
         <location filename="../src/ui/PreferencesDialog.cpp" line="2193"/>
         <source>Imgur</source>
         <translation type="unfinished"></translation>
@@ -2453,6 +2740,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2131"/>
         <location filename="../src/ui/PreferencesDialog.cpp" line="2228"/>
         <source>Postimages</source>
         <translation type="unfinished"></translation>
@@ -2473,6 +2761,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../src/ui/PreferencesDialog.cpp" line="2132"/>
         <location filename="../src/ui/PreferencesDialog.cpp" line="2263"/>
         <source>Imgbox</source>
         <translation type="unfinished"></translation>
