@@ -1,11 +1,9 @@
 #include "upload/ImgbbUploader.h"
 
-#include <QBuffer>
 #include <QByteArray>
 #include <QHttpMultiPart>
 #include <QHttpPart>
 #include <QImage>
-#include <QJsonDocument>
 #include <QJsonObject>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -25,11 +23,8 @@ void ImgbbUploader::upload(const QImage &image) {
         return;
     }
 
-    QByteArray pngData;
-    QBuffer buf(&pngData);
-    buf.open(QIODevice::WriteOnly);
-    if (!image.save(&buf, "PNG")) {
-        emit uploadFailed(QStringLiteral("Failed to encode image as PNG"));
+    const QByteArray pngData = encodePng(image);
+    if (pngData.isEmpty()) {
         return;
     }
 
@@ -49,36 +44,19 @@ void ImgbbUploader::upload(const QImage &image) {
     QNetworkRequest request(url);
     auto *reply = manager_->post(request, multipart);
     multipart->setParent(reply);
-    armUploadTimeout(reply);
 
-    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-        reply->deleteLater();
-        if (reply->error() != QNetworkReply::NoError) {
-            emit uploadFailed(reply->property("maxchat_timeout").toBool()
-                                  ? QStringLiteral("Upload timed out")
-                                  : reply->errorString());
-            return;
-        }
-        const QJsonObject root =
-            QJsonDocument::fromJson(readCappedBody(reply)).object();
+    handleJsonReply(reply, [this](const QJsonObject &root) {
         if (!root.value(QStringLiteral("success")).toBool()) {
-            emit uploadFailed(
-                root.value(QStringLiteral("error"))
-                    .toObject()
-                    .value(QStringLiteral("message"))
-                    .toString(QStringLiteral("Upload failed")));
+            emit uploadFailed(root.value(QStringLiteral("error"))
+                                  .toObject()
+                                  .value(QStringLiteral("message"))
+                                  .toString(QStringLiteral("Upload failed")));
             return;
         }
-        const QString directUrl =
-            root.value(QStringLiteral("data"))
-                .toObject()
-                .value(QStringLiteral("url"))
-                .toString();
-        if (!isHttpsUrl(directUrl)) {
-            emit uploadFailed(QStringLiteral("Upload response had no valid https URL"));
-        } else {
-            emit uploaded(directUrl);
-        }
+        finishWithHttpsUrl(root.value(QStringLiteral("data"))
+                               .toObject()
+                               .value(QStringLiteral("url"))
+                               .toString());
     });
 }
 

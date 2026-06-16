@@ -1,6 +1,5 @@
 #include "upload/ImgboxUploader.h"
 
-#include <QBuffer>
 #include <QByteArray>
 #include <QHttpMultiPart>
 #include <QHttpPart>
@@ -26,11 +25,8 @@ void ImgboxUploader::upload(const QImage &image) {
         return;
     }
 
-    QByteArray pngData;
-    QBuffer buf(&pngData);
-    buf.open(QIODevice::WriteOnly);
-    if (!image.save(&buf, "PNG")) {
-        emit uploadFailed(QStringLiteral("Failed to encode image as PNG"));
+    const QByteArray pngData = encodePng(image);
+    if (pngData.isEmpty()) {
         return;
     }
 
@@ -46,35 +42,21 @@ void ImgboxUploader::upload(const QImage &image) {
                            QStringLiteral("application/json"));
     auto *tokenReply = manager_->post(tokenRequest,
                                       QJsonDocument(credentials).toJson(QJsonDocument::Compact));
-    armUploadTimeout(tokenReply);
 
-    connect(tokenReply, &QNetworkReply::finished, this,
-            [this, tokenReply, pngData]() {
-                tokenReply->deleteLater();
-                if (tokenReply->error() != QNetworkReply::NoError) {
-                    emit uploadFailed(tokenReply->property("maxchat_timeout").toBool()
-                                          ? QStringLiteral("Upload timed out")
-                                          : tokenReply->errorString());
-                    return;
-                }
-                const QJsonObject root =
-                    QJsonDocument::fromJson(readCappedBody(tokenReply)).object();
-                if (root.value(QStringLiteral("success")).toInt() != 1) {
-                    emit uploadFailed(
-                        root.value(QStringLiteral("message"))
-                            .toString(QStringLiteral("Token creation failed")));
-                    return;
-                }
-                const QString tokenId =
-                    root.value(QStringLiteral("token_id")).toString();
-                const QString tokenSecret =
-                    root.value(QStringLiteral("token_secret")).toString();
-                if (tokenId.isEmpty() || tokenSecret.isEmpty()) {
-                    emit uploadFailed(QStringLiteral("Invalid token in response"));
-                    return;
-                }
-                doUpload(pngData, tokenId, tokenSecret);
-            });
+    handleJsonReply(tokenReply, [this, pngData](const QJsonObject &root) {
+        if (root.value(QStringLiteral("success")).toInt() != 1) {
+            emit uploadFailed(root.value(QStringLiteral("message"))
+                                  .toString(QStringLiteral("Token creation failed")));
+            return;
+        }
+        const QString tokenId = root.value(QStringLiteral("token_id")).toString();
+        const QString tokenSecret = root.value(QStringLiteral("token_secret")).toString();
+        if (tokenId.isEmpty() || tokenSecret.isEmpty()) {
+            emit uploadFailed(QStringLiteral("Invalid token in response"));
+            return;
+        }
+        doUpload(pngData, tokenId, tokenSecret);
+    });
 }
 
 void ImgboxUploader::doUpload(const QByteArray &pngData,
@@ -108,21 +90,11 @@ void ImgboxUploader::doUpload(const QByteArray &pngData,
     QNetworkRequest request(QUrl(QStringLiteral("https://imgbox.com/api/v1/images/upload")));
     auto *reply = manager_->post(request, multipart);
     multipart->setParent(reply);
-    armUploadTimeout(reply);
 
-    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-        reply->deleteLater();
-        if (reply->error() != QNetworkReply::NoError) {
-            emit uploadFailed(reply->property("maxchat_timeout").toBool()
-                                  ? QStringLiteral("Upload timed out")
-                                  : reply->errorString());
-            return;
-        }
-        const QJsonObject root = QJsonDocument::fromJson(readCappedBody(reply)).object();
+    handleJsonReply(reply, [this](const QJsonObject &root) {
         if (root.value(QStringLiteral("success")).toInt() != 1) {
             emit uploadFailed(
-                root.value(QStringLiteral("message"))
-                    .toString(QStringLiteral("Upload failed")));
+                root.value(QStringLiteral("message")).toString(QStringLiteral("Upload failed")));
             return;
         }
         // images[] array; each entry has "original_url" for the full-size image.
@@ -131,13 +103,7 @@ void ImgboxUploader::doUpload(const QByteArray &pngData,
             emit uploadFailed(QStringLiteral("Upload response had no images"));
             return;
         }
-        const QString url =
-            images.first().toObject().value(QStringLiteral("original_url")).toString();
-        if (!isHttpsUrl(url)) {
-            emit uploadFailed(QStringLiteral("Upload response had no valid https URL"));
-        } else {
-            emit uploaded(url);
-        }
+        finishWithHttpsUrl(images.first().toObject().value(QStringLiteral("original_url")).toString());
     });
 }
 

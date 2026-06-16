@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QByteArray>
 #include <QObject>
 #include <QPointer>
 #include <QNetworkReply>
@@ -8,7 +9,10 @@
 #include <QUrl>
 #include <QtGlobal>
 
+#include <functional>
+
 class QImage;
+class QJsonObject;
 class QNetworkAccessManager;
 
 namespace maxchat::upload {
@@ -62,6 +66,21 @@ class ImageUploader : public QObject {
     static bool isHttpsUrl(const QString &url) {
         return QUrl(url).scheme().compare(QStringLiteral("https"), Qt::CaseInsensitive) == 0;
     }
+
+    // --- Shared upload flow (every backend repeats this skeleton) ----------
+    // Encode `image` as PNG. On failure, emits uploadFailed() and returns {} —
+    // callers should `if (data.isEmpty()) return;`.
+    [[nodiscard]] QByteArray encodePng(const QImage &image);
+
+    // Arm the timeout on `reply`, then on finish handle transport error/timeout
+    // uniformly, parse the capped body as a JSON object, and hand it to `onJson`
+    // (which does the service-specific success check + URL extraction). Any
+    // transport/timeout error emits uploadFailed() and `onJson` is not called.
+    void handleJsonReply(QNetworkReply *reply,
+                         const std::function<void(const QJsonObject &)> &onJson);
+
+    // Validate `url` is https → emit uploaded(); otherwise emit uploadFailed().
+    void finishWithHttpsUrl(const QString &url);
 };
 
 } // namespace maxchat::upload
