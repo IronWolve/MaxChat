@@ -17,6 +17,7 @@ struct ScriptPermissions {
     bool loadModules = false; // require/package + load/loadfile/dofile
     bool network = false;     // api.http_get
     bool ircSend = false;     // api.say / send_raw / mc_send / mc_reply
+    bool loadAtStart = false; // auto-load this script when MaxChat starts
     // Runtime-only: filled from the global `script_dirs` setting at load time
     // (see MainWindow::buildScriptPermissionsFor); intentionally NOT serialized
     // in to/fromMap — it is derived state, not per-script persisted data.
@@ -27,7 +28,8 @@ struct ScriptPermissions {
     bool operator==(const ScriptPermissions& o) const {
         return readFiles == o.readFiles && writeFiles == o.writeFiles &&
                runPrograms == o.runPrograms && loadModules == o.loadModules &&
-               network == o.network && ircSend == o.ircSend && allowedDirs == o.allowedDirs;
+               network == o.network && ircSend == o.ircSend &&
+               loadAtStart == o.loadAtStart && allowedDirs == o.allowedDirs;
     }
     bool operator!=(const ScriptPermissions& o) const { return !(*this == o); }
 
@@ -39,20 +41,19 @@ struct ScriptPermissions {
             {QStringLiteral("modules"), loadModules},
             {QStringLiteral("network"), network},
             {QStringLiteral("irc"),     ircSend},
+            {QStringLiteral("load_start"), loadAtStart},
         };
     }
 
-    // ircSendDefault: bundled scripts default to allowed (they exist to talk on
-    // IRC); user-added scripts default off until the user grants it.
-    [[nodiscard]] static ScriptPermissions fromMap(const QVariantMap& m,
-                                                   bool ircSendDefault = false) {
+    [[nodiscard]] static ScriptPermissions fromMap(const QVariantMap& m) {
         ScriptPermissions p;
         p.readFiles   = m.value(QStringLiteral("read"),    false).toBool();
         p.writeFiles  = m.value(QStringLiteral("write"),   false).toBool();
         p.runPrograms = m.value(QStringLiteral("exec"),    false).toBool();
         p.loadModules = m.value(QStringLiteral("modules"), false).toBool();
         p.network     = m.value(QStringLiteral("network"), false).toBool();
-        p.ircSend     = m.value(QStringLiteral("irc"),     ircSendDefault).toBool();
+        p.ircSend     = m.value(QStringLiteral("irc"),     false).toBool();
+        p.loadAtStart = m.value(QStringLiteral("load_start"), false).toBool();
         return p;
     }
 };

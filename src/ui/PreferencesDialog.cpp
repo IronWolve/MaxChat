@@ -842,6 +842,7 @@ void PreferencesDialog::buildScriptsTab(QWidget* tab) {
     auto* scriptsLayout = new QVBoxLayout(scriptsGroup);
 
     scriptList_ = new QListWidget(scriptsGroup);
+    scriptList_->setObjectName(QStringLiteral("scriptList"));
     scriptsLayout->addWidget(scriptList_, 1);
 
     auto* scriptBtns = new QHBoxLayout();
@@ -916,24 +917,34 @@ void PreferencesDialog::buildScriptsTab(QWidget* tab) {
         permLayout->addWidget(box);
         return box;
     };
+    scriptLoadStart_ = makeCheck(tr("Load at start"),
+                                 QStringLiteral("Automatically load this script when MaxChat "
+                                                "starts. Manual Load still works when unchecked."));
+    scriptLoadStart_->setObjectName(QStringLiteral("scriptLoadAtStart"));
     scriptRead_ = makeCheck(tr("Read files"),
                             QStringLiteral("Allow io.open() to read files inside the allowed "
                                            "folders below."));
+    scriptRead_->setObjectName(QStringLiteral("scriptReadFiles"));
     scriptWrite_ = makeCheck(tr("Write files"),
                              QStringLiteral("Allow io.open() to create/modify files inside the "
                                             "allowed folders below."));
+    scriptWrite_->setObjectName(QStringLiteral("scriptWriteFiles"));
     scriptExec_ = makeCheck(tr("Run programs"),
                             QStringLiteral("Allow os.execute / io.popen — scripts can launch "
                                            "other programs. High risk."));
+    scriptExec_->setObjectName(QStringLiteral("scriptRunPrograms"));
     scriptModules_ = makeCheck(tr("Load modules"),
                                QStringLiteral("Allow require()/load() — scripts can pull in other "
                                               "Lua or native libraries."));
-    scriptNetwork_ = makeCheck(tr("Network access"),
-                               QStringLiteral("Adds api.http_get(url) for fetching web content."));
+    scriptModules_->setObjectName(QStringLiteral("scriptLoadModules"));
+    scriptNetwork_ = makeCheck(tr("Web/HTTP access"),
+                               QStringLiteral("Adds api.http_get(url) for fetching web content. "
+                                              "This is separate from sending IRC messages."));
+    scriptNetwork_->setObjectName(QStringLiteral("scriptNetworkAccess"));
     scriptIrc_ = makeCheck(tr("IRC send"),
                            QStringLiteral("Allow api.say / send_raw / mc_send — the script can "
-                                          "emit messages onto your IRC connection. Bundled "
-                                          "scripts default on; new scripts off."));
+                                          "emit messages onto your IRC connection."));
+    scriptIrc_->setObjectName(QStringLiteral("scriptIrcSend"));
     root->addWidget(permGroup);
 
     // Update checkboxes when the selected script changes.
@@ -942,6 +953,7 @@ void PreferencesDialog::buildScriptsTab(QWidget* tab) {
                 updatingPerms_ = true;
                 const QString name = item ? item->data(Qt::UserRole).toString() : QString();
                 const bool has = !name.isEmpty();
+                scriptLoadStart_->setEnabled(has);
                 scriptRead_->setEnabled(has);
                 scriptWrite_->setEnabled(has);
                 scriptExec_->setEnabled(has);
@@ -955,6 +967,8 @@ void PreferencesDialog::buildScriptsTab(QWidget* tab) {
                 if (has) {
                     const QVariantMap p =
                         settings_.value(QStringLiteral("scriptPerms")).toMap().value(name).toMap();
+                    scriptLoadStart_->setChecked(
+                        p.value(QStringLiteral("load_start"), false).toBool());
                     scriptRead_->setChecked(p.value(QStringLiteral("read"), false).toBool());
                     scriptWrite_->setChecked(p.value(QStringLiteral("write"), false).toBool());
                     scriptExec_->setChecked(p.value(QStringLiteral("exec"), false).toBool());
@@ -962,11 +976,15 @@ void PreferencesDialog::buildScriptsTab(QWidget* tab) {
                         p.value(QStringLiteral("modules"), false).toBool());
                     scriptNetwork_->setChecked(
                         p.value(QStringLiteral("network"), false).toBool());
-                    // ircSend defaults on for bundled scripts (a .bundled
-                    // snapshot exists), off for user scripts.
-                    const bool bundled = QFile::exists(
-                        QDir(scriptsDir_).filePath(QStringLiteral(".bundled/%1.lua").arg(name)));
-                    scriptIrc_->setChecked(p.value(QStringLiteral("irc"), bundled).toBool());
+                    scriptIrc_->setChecked(p.value(QStringLiteral("irc"), false).toBool());
+                } else {
+                    scriptLoadStart_->setChecked(false);
+                    scriptRead_->setChecked(false);
+                    scriptWrite_->setChecked(false);
+                    scriptExec_->setChecked(false);
+                    scriptModules_->setChecked(false);
+                    scriptNetwork_->setChecked(false);
+                    scriptIrc_->setChecked(false);
                 }
                 updatingPerms_ = false;
             });
@@ -982,6 +1000,7 @@ void PreferencesDialog::buildScriptsTab(QWidget* tab) {
             return;
         }
         QVariantMap newPerms;
+        newPerms.insert(QStringLiteral("load_start"), scriptLoadStart_->isChecked());
         newPerms.insert(QStringLiteral("read"),    scriptRead_->isChecked());
         newPerms.insert(QStringLiteral("write"),   scriptWrite_->isChecked());
         newPerms.insert(QStringLiteral("exec"),    scriptExec_->isChecked());
@@ -994,6 +1013,7 @@ void PreferencesDialog::buildScriptsTab(QWidget* tab) {
         emit scriptPermissionChanged(name, newPerms);
     };
     const auto onPerm = [onPermChanged](Qt::CheckState) { onPermChanged(); };
+    connect(scriptLoadStart_, &QCheckBox::checkStateChanged, this, onPerm);
     connect(scriptRead_,    &QCheckBox::checkStateChanged, this, onPerm);
     connect(scriptWrite_,   &QCheckBox::checkStateChanged, this, onPerm);
     connect(scriptExec_,    &QCheckBox::checkStateChanged, this, onPerm);

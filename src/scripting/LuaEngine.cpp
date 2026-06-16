@@ -867,7 +867,7 @@ static int installApi(lua_State* L, LuaEngine* engine, const QString& dataDir,
     reg("append_file", l_append_file);
     reg("read_file", l_read_file);
     // IRC-send APIs are gated: a script must hold the ircSend permission to emit
-    // anything onto the network (bundled scripts default on, user scripts off).
+    // anything onto the network.
     if (perms.ircSend) {
         reg("say", l_say);
         reg("send_raw", l_send_raw);
@@ -1006,7 +1006,7 @@ bool LuaEngine::load(const QString& path, const ScriptPermissions& perms) {
     return true;
 }
 
-int LuaEngine::loadAll(const QHash<QString, ScriptPermissions>& permsMap) {
+int LuaEngine::loadAll(const QHash<QString, ScriptPermissions>& permsMap, const bool startupOnly) {
     QDir dir(scriptsDir_);
     int count = 0;
     const QFileInfoList files =
@@ -1016,7 +1016,11 @@ int LuaEngine::loadAll(const QHash<QString, ScriptPermissions>& permsMap) {
             continue; // leading underscore = manual-load only
         }
         const QString name = fi.completeBaseName();
-        if (load(fi.absoluteFilePath(), permsMap.value(name))) {
+        const ScriptPermissions perms = permsMap.value(name);
+        if (startupOnly && !perms.loadAtStart) {
+            continue;
+        }
+        if (load(fi.absoluteFilePath(), perms)) {
             ++count;
         }
     }
@@ -1055,4 +1059,3 @@ ScriptPermissions LuaEngine::permsForScript(const QString& name) const {
 }
 
 } // namespace maxchat::scripting
-

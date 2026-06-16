@@ -36,7 +36,7 @@ class LuaEngine final : public QObject {
 
     // Load one .lua file with explicit per-script permissions. If already loaded, reloads.
     bool load(const QString& path, const ScriptPermissions& perms = {});
-    int loadAll(const QHash<QString, ScriptPermissions>& permsMap = {});
+    int loadAll(const QHash<QString, ScriptPermissions>& permsMap = {}, bool startupOnly = false);
     bool unload(const QString& name);   // name = filename without .lua
     bool reload(const QString& name);   // reloads with the script's stored permissions
     [[nodiscard]] ScriptPermissions permsForScript(const QString& name) const;

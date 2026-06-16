@@ -5755,7 +5755,7 @@ void maxchat::ui::MainWindow::renderActiveBufferMetadata() {
                                                            .arg(group.second.toUpper())
                                                            .arg(names.size()));
                     header->setFlags(Qt::ItemIsEnabled);
-                    QFont headerFont = header->font();
+                    QFont headerFont = m_memberList->font();
                     headerFont.setBold(true);
                     header->setFont(headerFont);
                     header->setData(Qt::UserRole + 1, true);
@@ -5807,11 +5807,17 @@ namespace {
 
 const QStringList& savedLookKeys() {
     static const QStringList keys = {
-        QStringLiteral("theme"),           QStringLiteral("chat_theme"),
-        QStringLiteral("wallpaper"),       QStringLiteral("app_font_family"),
-        QStringLiteral("app_font_size"),   QStringLiteral("app_font_bold"),
+        QStringLiteral("theme"),            QStringLiteral("chat_theme"),
+        QStringLiteral("wallpaper"),        QStringLiteral("app_font_family"),
+        QStringLiteral("app_font_size"),    QStringLiteral("app_font_bold"),
         QStringLiteral("chat_font_family"), QStringLiteral("chat_font_size"),
-        QStringLiteral("chat_font_bold"),
+        QStringLiteral("chat_font_bold"),   QStringLiteral("list_font_family"),
+        QStringLiteral("list_font_size"),   QStringLiteral("list_font_bold"),
+        QStringLiteral("nick_font_family"), QStringLiteral("nick_font_size"),
+        QStringLiteral("nick_font_bold"),   QStringLiteral("status_font_family"),
+        QStringLiteral("status_font_size"), QStringLiteral("status_font_bold"),
+        QStringLiteral("topic_font_family"), QStringLiteral("topic_font_size"),
+        QStringLiteral("topic_font_bold"),
     };
     return keys;
 }
@@ -7207,6 +7213,14 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
     }
     if (m_memberList != nullptr) {
         m_memberList->setFont(
+            areaFont("list_font_family", "list_font_size", "list_font_bold", baseFont));
+    }
+    if (m_membersHeader != nullptr) {
+        m_membersHeader->setFont(
+            areaFont("list_font_family", "list_font_size", "list_font_bold", baseFont));
+    }
+    if (m_channelModesButton != nullptr) {
+        m_channelModesButton->setFont(
             areaFont("list_font_family", "list_font_size", "list_font_bold", baseFont));
     }
     if (m_topicLabel != nullptr) {

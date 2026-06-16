@@ -103,8 +103,7 @@ class FakeHost final : public ScriptHost {
     QString scriptHttpGet(const QString&) override { return QStringLiteral("BODY"); }
 };
 
-// Permissions granting IRC send (say/send_raw/mc_send/mc_reply), which is now
-// gated — bundled scripts default on, but test scripts load with defaults off.
+// Permissions granting IRC send (say/send_raw/mc_send/mc_reply).
 maxchat::scripting::ScriptPermissions ircPerms() {
     maxchat::scripting::ScriptPermissions p;
     p.ircSend = true;
@@ -169,6 +168,25 @@ class LuaEngineTest final : public QObject {
         FakeHost host;
         LuaEngine engine(&host, dir.path(), dir.path());
         QCOMPARE(engine.loadAll(), 1);
+        QCOMPARE(engine.loaded(), QStringList{QStringLiteral("auto")});
+    }
+
+    void startupLoadAllRequiresLoadAtStart() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QDir d(dir.path());
+        writeScript(d, QStringLiteral("auto.lua"), QStringLiteral("function on_load(a) end\n"));
+        writeScript(d, QStringLiteral("manual.lua"), QStringLiteral("function on_load(a) end\n"));
+
+        QHash<QString, maxchat::scripting::ScriptPermissions> perms;
+        maxchat::scripting::ScriptPermissions autoPerms;
+        autoPerms.loadAtStart = true;
+        perms.insert(QStringLiteral("auto"), autoPerms);
+        perms.insert(QStringLiteral("manual"), maxchat::scripting::ScriptPermissions{});
+
+        FakeHost host;
+        LuaEngine engine(&host, dir.path(), dir.path());
+        QCOMPARE(engine.loadAll(perms, true), 1);
         QCOMPARE(engine.loaded(), QStringList{QStringLiteral("auto")});
     }
 
