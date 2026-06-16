@@ -11,7 +11,7 @@
 namespace maxchat::ui {
 
 QuickConnectDialog::QuickConnectDialog(QWidget* parent) : QDialog(parent) {
-    setWindowTitle(QStringLiteral("Quick Connect"));
+    setWindowTitle(tr("Quick Connect"));
     resize(420, 220);
 
     auto* root = new QVBoxLayout(this);
@@ -19,14 +19,14 @@ QuickConnectDialog::QuickConnectDialog(QWidget* parent) : QDialog(parent) {
 
     host_ = new QLineEdit(this);
     host_->setObjectName(QStringLiteral("host"));
-    host_->setPlaceholderText(QStringLiteral("irc.example.net"));
+    host_->setPlaceholderText(tr("irc.example.net"));
 
     port_ = new QSpinBox(this);
     port_->setObjectName(QStringLiteral("port"));
     port_->setRange(1, 65535);
     port_->setValue(6697);
 
-    tls_ = new QCheckBox(QStringLiteral("SSL/TLS"), this);
+    tls_ = new QCheckBox(tr("SSL/TLS"), this);
     tls_->setObjectName(QStringLiteral("tls"));
     tls_->setChecked(true);
 
@@ -35,7 +35,7 @@ QuickConnectDialog::QuickConnectDialog(QWidget* parent) : QDialog(parent) {
 
     channels_ = new QLineEdit(this);
     channels_->setObjectName(QStringLiteral("channels"));
-    channels_->setPlaceholderText(QStringLiteral("#channel #other"));
+    channels_->setPlaceholderText(tr("#channel #other"));
 
     form->addRow(QStringLiteral("Server"), host_);
     form->addRow(QStringLiteral("Port"), port_);

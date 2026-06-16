@@ -80,7 +80,7 @@ bool isTerminal(DccTransfer::State state) {
 
 DccTransfersDialog::DccTransfersDialog(DccManager* manager, QWidget* parent)
     : QDialog(parent), manager_(manager) {
-    setWindowTitle(QStringLiteral("File Transfers (DCC)"));
+    setWindowTitle(tr("File Transfers (DCC)"));
     resize(560, 320);
 
     auto* root = new QVBoxLayout(this);
@@ -96,10 +96,10 @@ DccTransfersDialog::DccTransfersDialog(DccManager* manager, QWidget* parent)
     root->addWidget(table_, 1);
 
     auto* buttons = new QHBoxLayout();
-    auto* accept = new QPushButton(QStringLiteral("Accept"), this);
-    auto* cancel = new QPushButton(QStringLiteral("Cancel Transfer"), this);
-    auto* openFolder = new QPushButton(QStringLiteral("Open folder"), this);
-    auto* close = new QPushButton(QStringLiteral("Close"), this);
+    auto* accept = new QPushButton(tr("Accept"), this);
+    auto* cancel = new QPushButton(tr("Cancel Transfer"), this);
+    auto* openFolder = new QPushButton(tr("Open folder"), this);
+    auto* close = new QPushButton(tr("Close"), this);
     buttons->addWidget(accept);
     buttons->addWidget(cancel);
     buttons->addWidget(openFolder);

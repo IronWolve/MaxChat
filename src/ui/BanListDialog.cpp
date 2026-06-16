@@ -33,10 +33,10 @@ BanListDialog::BanListDialog(const QString& channel, const QString& networkName,
                              BanCallback removeBan, QWidget* parent)
     : QDialog(parent), channel_(channel), addBan_(std::move(addBan)),
       removeBan_(std::move(removeBan)) {
-    setWindowTitle(QStringLiteral("Ban List - %1").arg(channel_));
+    setWindowTitle(tr("Ban List - %1").arg(channel_));
 
     auto* layout = new QVBoxLayout(this);
-    auto* heading = new QLabel(QStringLiteral("<b>%1</b> - %2").arg(channel_, networkName), this);
+    auto* heading = new QLabel(tr("<b>%1</b> - %2").arg(channel_, networkName), this);
     layout->addWidget(heading);
 
     table_ = new QTableWidget(0, 2, this);
@@ -52,10 +52,10 @@ BanListDialog::BanListDialog(const QString& channel, const QString& networkName,
     auto* row = new QHBoxLayout();
     entry_ = new QLineEdit(this);
     entry_->setObjectName(QStringLiteral("ban_entry"));
-    entry_->setPlaceholderText(QStringLiteral("nick!user@host or *!*@host"));
-    auto* addButton = new QPushButton(QStringLiteral("Add"), this);
+    entry_->setPlaceholderText(tr("nick!user@host or *!*@host"));
+    auto* addButton = new QPushButton(tr("Add"), this);
     addButton->setObjectName(QStringLiteral("ban_add"));
-    auto* removeButton = new QPushButton(QStringLiteral("Remove"), this);
+    auto* removeButton = new QPushButton(tr("Remove"), this);
     removeButton->setObjectName(QStringLiteral("ban_remove"));
     connect(entry_, &QLineEdit::returnPressed, this, &BanListDialog::addEnteredMask);
     connect(addButton, &QPushButton::clicked, this, &BanListDialog::addEnteredMask);
@@ -65,7 +65,7 @@ BanListDialog::BanListDialog(const QString& channel, const QString& networkName,
     row->addWidget(removeButton);
     layout->addLayout(row);
 
-    status_ = new QLabel(QStringLiteral("Requesting ban list..."), this);
+    status_ = new QLabel(tr("Requesting ban list..."), this);
     status_->setObjectName(QStringLiteral("ban_status"));
     layout->addWidget(status_);
 

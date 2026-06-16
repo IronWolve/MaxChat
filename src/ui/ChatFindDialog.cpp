@@ -11,7 +11,7 @@
 namespace maxchat::ui {
 
 ChatFindDialog::ChatFindDialog(QWidget* parent) : QDialog(parent) {
-    setWindowTitle(QStringLiteral("Find in Chat"));
+    setWindowTitle(tr("Find in Chat"));
     resize(420, 130);
 
     auto* layout = new QVBoxLayout(this);
@@ -25,9 +25,9 @@ ChatFindDialog::ChatFindDialog(QWidget* parent) : QDialog(parent) {
     layout->addLayout(form);
 
     auto* options = new QHBoxLayout();
-    m_caseSensitive = new QCheckBox(QStringLiteral("Case sensitive"), this);
+    m_caseSensitive = new QCheckBox(tr("Case sensitive"), this);
     m_caseSensitive->setObjectName(QStringLiteral("caseSensitive"));
-    m_wrapSearch = new QCheckBox(QStringLiteral("Wrap"), this);
+    m_wrapSearch = new QCheckBox(tr("Wrap"), this);
     m_wrapSearch->setObjectName(QStringLiteral("wrapSearch"));
     m_wrapSearch->setChecked(true);
     options->addWidget(m_caseSensitive);

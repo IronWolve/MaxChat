@@ -109,15 +109,15 @@ ChannelModesDialog::ChannelModesDialog(const QString& channel, const QString& ne
     key_ = state.key;
     limit_ = state.limit;
 
-    setWindowTitle(QStringLiteral("Channel Modes - %1").arg(channel_));
+    setWindowTitle(tr("Channel Modes - %1").arg(channel_));
 
     auto* layout = new QVBoxLayout(this);
-    auto* heading = new QLabel(QStringLiteral("<b>%1</b> - %2").arg(channel_, networkName), this);
+    auto* heading = new QLabel(tr("<b>%1</b> - %2").arg(channel_, networkName), this);
     layout->addWidget(heading);
 
     for (const SimpleMode& simpleMode : kSimpleModes) {
         auto* checkBox =
-            new QCheckBox(QStringLiteral("%1 (+%2)")
+            new QCheckBox(tr("%1 (+%2)")
                               .arg(QString::fromLatin1(simpleMode.label), QString(simpleMode.mode)),
                           this);
         checkBox->setObjectName(QStringLiteral("mode_%1").arg(QString(simpleMode.mode)));
@@ -132,13 +132,13 @@ ChannelModesDialog::ChannelModesDialog(const QString& channel, const QString& ne
     }
 
     auto* keyRow = new QHBoxLayout();
-    keyEnabled_ = new QCheckBox(QStringLiteral("Key (+k)"), this);
+    keyEnabled_ = new QCheckBox(tr("Key (+k)"), this);
     keyEnabled_->setObjectName(QStringLiteral("key_enabled"));
     keyEnabled_->setChecked(!key_.isEmpty());
     keyEdit_ = new QLineEdit(key_, this);
     keyEdit_->setObjectName(QStringLiteral("key_edit"));
-    keyEdit_->setPlaceholderText(QStringLiteral("password"));
-    auto* keySetButton = new QPushButton(QStringLiteral("Set"), this);
+    keyEdit_->setPlaceholderText(tr("password"));
+    auto* keySetButton = new QPushButton(tr("Set"), this);
     connect(keyEnabled_, &QCheckBox::toggled, this, &ChannelModesDialog::setKeyMode);
     connect(keySetButton, &QPushButton::clicked, this, &ChannelModesDialog::applyKeyValue);
     keyRow->addWidget(keyEnabled_);
@@ -147,14 +147,14 @@ ChannelModesDialog::ChannelModesDialog(const QString& channel, const QString& ne
     layout->addLayout(keyRow);
 
     auto* limitRow = new QHBoxLayout();
-    limitEnabled_ = new QCheckBox(QStringLiteral("User limit (+l)"), this);
+    limitEnabled_ = new QCheckBox(tr("User limit (+l)"), this);
     limitEnabled_->setObjectName(QStringLiteral("limit_enabled"));
     limitEnabled_->setChecked(limit_ > 0);
     limitSpin_ = new QSpinBox(this);
     limitSpin_->setObjectName(QStringLiteral("limit_spin"));
     limitSpin_->setRange(1, 99999);
     limitSpin_->setValue(limit_ > 0 ? limit_ : 50);
-    auto* limitSetButton = new QPushButton(QStringLiteral("Set"), this);
+    auto* limitSetButton = new QPushButton(tr("Set"), this);
     connect(limitEnabled_, &QCheckBox::toggled, this, &ChannelModesDialog::setLimitMode);
     connect(limitSetButton, &QPushButton::clicked, this, &ChannelModesDialog::applyLimitValue);
     limitRow->addWidget(limitEnabled_);

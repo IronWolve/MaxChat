@@ -52,13 +52,13 @@ class NetworkEditDialog final : public QDialog {
         port_ = new QSpinBox(this);
         port_->setRange(1, 65535);
         port_->setValue(network_.value(QStringLiteral("port"), 6667).toInt());
-        tls_ = new QCheckBox(QStringLiteral("SSL/TLS"), this);
+        tls_ = new QCheckBox(tr("SSL/TLS"), this);
         tls_->setChecked(network_.value(QStringLiteral("tls")).toBool());
-        acceptCert_ = new QCheckBox(QStringLiteral("Accept unsigned"), this);
+        acceptCert_ = new QCheckBox(tr("Accept unsigned"), this);
         acceptCert_->setObjectName(QStringLiteral("acceptInvalidCert"));
         acceptCert_->setChecked(network_.value(QStringLiteral("accept_invalid_cert")).toBool());
         acceptCert_->setEnabled(tls_->isChecked());
-        acceptCert_->setToolTip(QStringLiteral(
+        acceptCert_->setToolTip(tr(
             "Allow invalid or self-signed TLS certificates for this network. Leave off unless "
             "needed."));
         connect(tls_, &QCheckBox::toggled, acceptCert_, &QCheckBox::setEnabled);
@@ -73,7 +73,7 @@ class NetworkEditDialog final : public QDialog {
         servers_->setPlainText(
             network_.value(QStringLiteral("servers")).toStringList().join(QLatin1Char('\n')));
         servers_->setMinimumHeight(64);
-        servers_->setPlaceholderText(QStringLiteral("one server per line - host:port or host:+port"));
+        servers_->setPlaceholderText(tr("one server per line - host:port or host:+port"));
 
         nick_ = new QLineEdit(
             network_.value(QStringLiteral("nick"), QStringLiteral("comicfan")).toString(), this);
@@ -83,7 +83,7 @@ class NetworkEditDialog final : public QDialog {
             QStringLiteral("optional - shown in /whois (defaults to your nick)"));
         username_ = new QLineEdit(network_.value(QStringLiteral("username")).toString(), this);
         username_->setObjectName(QStringLiteral("username"));
-        username_->setPlaceholderText(QStringLiteral("optional ident / username"));
+        username_->setPlaceholderText(tr("optional ident / username"));
 
         account_ = new QLineEdit(network_.value(QStringLiteral("account")).toString(), this);
         account_->setObjectName(QStringLiteral("nickservAccount"));
@@ -99,20 +99,20 @@ class NetworkEditDialog final : public QDialog {
         serverPass_->setEchoMode(QLineEdit::Password);
         serverPass_->setPlaceholderText(
             QStringLiteral("server PASS - bouncers/private servers (ZNC, soju, etc.)"));
-        allowInsecureAuth_ = new QCheckBox(QStringLiteral("Allow plaintext auth"), this);
+        allowInsecureAuth_ = new QCheckBox(tr("Allow plaintext auth"), this);
         allowInsecureAuth_->setObjectName(QStringLiteral("allowInsecureAuth"));
         allowInsecureAuth_->setChecked(
             network_.value(QStringLiteral("allow_insecure_auth")).toBool());
-        allowInsecureAuth_->setToolTip(QStringLiteral(
+        allowInsecureAuth_->setToolTip(tr(
             "Send PASS/SASL/NickServ passwords without SSL/TLS. Leave off unless this network "
             "has no TLS and you accept the risk."));
 
         channels_ = new QLineEdit(network_.value(QStringLiteral("channels")).toString(), this);
-        channels_->setPlaceholderText(QStringLiteral("#chan #other  (space/comma)"));
-        autostart_ = new QCheckBox(QStringLiteral("Connect on startup"), this);
+        channels_->setPlaceholderText(tr("#chan #other  (space/comma)"));
+        autostart_ = new QCheckBox(tr("Connect on startup"), this);
         autostart_->setObjectName(QStringLiteral("autoconnect"));
         autostart_->setChecked(network_.value(QStringLiteral("autoconnect")).toBool());
-        autostart_->setToolTip(QStringLiteral(
+        autostart_->setToolTip(tr(
             "Auto-connect this network at launch. The master on/off switch is the "
             "auto-connect checkbox in the Server List."));
         perform_ = new QPlainTextEdit(this);
@@ -154,7 +154,7 @@ class NetworkEditDialog final : public QDialog {
         const int proxyIndex = proxyType_->findData(proxyType);
         proxyType_->setCurrentIndex(proxyIndex >= 0 ? proxyIndex : 0);
         proxyHost_ = new QLineEdit(network_.value(QStringLiteral("proxy_host")).toString(), this);
-        proxyHost_->setPlaceholderText(QStringLiteral("127.0.0.1"));
+        proxyHost_->setPlaceholderText(tr("127.0.0.1"));
         proxyPort_ = new QSpinBox(this);
         proxyPort_->setRange(1, 65535);
         proxyPort_->setValue(network_.value(QStringLiteral("proxy_port"), 1080).toInt());
@@ -165,11 +165,11 @@ class NetworkEditDialog final : public QDialog {
         proxyServerLayout->addWidget(proxyPort_);
         proxyUser_ =
             new QLineEdit(network_.value(QStringLiteral("proxy_username")).toString(), this);
-        proxyUser_->setPlaceholderText(QStringLiteral("optional"));
+        proxyUser_->setPlaceholderText(tr("optional"));
         proxyPassword_ =
             new QLineEdit(network_.value(QStringLiteral("proxy_password")).toString(), this);
         proxyPassword_->setEchoMode(QLineEdit::Password);
-        proxyPassword_->setPlaceholderText(QStringLiteral("optional"));
+        proxyPassword_->setPlaceholderText(tr("optional"));
         const auto syncProxyFields = [this]() {
             const bool enabled = proxyType_->currentData().toString() != QStringLiteral("none");
             proxyHost_->setEnabled(enabled);
@@ -403,7 +403,7 @@ void ServerListDialog::syncSelection() {
 }
 
 void ServerListDialog::buildUi() {
-    setWindowTitle(QStringLiteral("Server List"));
+    setWindowTitle(tr("Server List"));
     auto* root = new QVBoxLayout(this);
 
     countLabel_ = new QLabel(this);
@@ -416,12 +416,12 @@ void ServerListDialog::buildUi() {
     root->addWidget(list_);
 
     auto* tools = new QHBoxLayout();
-    auto* addButton = new QPushButton(QStringLiteral("Add..."), this);
-    editButton_ = new QPushButton(QStringLiteral("Edit..."), this);
-    deleteButton_ = new QPushButton(QStringLiteral("Delete"), this);
-    upButton_ = new QPushButton(QStringLiteral("Up"), this);
-    downButton_ = new QPushButton(QStringLiteral("Down"), this);
-    auto* resetButton = new QPushButton(QStringLiteral("Reset Defaults"), this);
+    auto* addButton = new QPushButton(tr("Add..."), this);
+    editButton_ = new QPushButton(tr("Edit..."), this);
+    deleteButton_ = new QPushButton(tr("Delete"), this);
+    upButton_ = new QPushButton(tr("Up"), this);
+    downButton_ = new QPushButton(tr("Down"), this);
+    auto* resetButton = new QPushButton(tr("Reset Defaults"), this);
     tools->addWidget(addButton);
     tools->addWidget(editButton_);
     tools->addWidget(deleteButton_);
@@ -442,12 +442,12 @@ void ServerListDialog::buildUi() {
             [this]() { [[maybe_unused]] const bool moved = moveCurrentNetwork(1); });
     connect(resetButton, &QPushButton::clicked, this, &ServerListDialog::resetToDefaults);
 
-    connectOnStart_ = new QCheckBox(QStringLiteral("Auto-connect on startup"), this);
+    connectOnStart_ = new QCheckBox(tr("Auto-connect on startup"), this);
     root->addWidget(connectOnStart_);
 
     auto* bottom = new QHBoxLayout();
-    connectButton_ = new QPushButton(QStringLiteral("Connect"), this);
-    homepageButton_ = new QPushButton(QStringLiteral("Homepage"), this);
+    connectButton_ = new QPushButton(tr("Connect"), this);
+    homepageButton_ = new QPushButton(tr("Homepage"), this);
     bottom->addWidget(connectButton_);
     bottom->addStretch(1);
     bottom->addWidget(homepageButton_);

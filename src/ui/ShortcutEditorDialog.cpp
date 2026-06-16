@@ -27,7 +27,7 @@ QList<NavShortcutSpec> navShortcutSpecs() {
 
 ShortcutEditorDialog::ShortcutEditorDialog(QVariantMap overrides, QWidget* parent)
     : QDialog(parent) {
-    setWindowTitle(QStringLiteral("Keyboard Shortcuts"));
+    setWindowTitle(tr("Keyboard Shortcuts"));
 
     auto* root = new QVBoxLayout(this);
     auto* hint = new QLabel(
@@ -45,7 +45,7 @@ ShortcutEditorDialog::ShortcutEditorDialog(QVariantMap overrides, QWidget* paren
         edit->setObjectName(spec.id);
         const QString bound = overrides.value(spec.id, spec.defaultKey).toString();
         edit->setKeySequence(QKeySequence(bound));
-        auto* reset = new QPushButton(QStringLiteral("Default"), this);
+        auto* reset = new QPushButton(tr("Default"), this);
         connect(reset, &QPushButton::clicked, edit, [edit, spec]() {
             edit->setKeySequence(QKeySequence(spec.defaultKey));
         });

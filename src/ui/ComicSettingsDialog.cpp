@@ -28,7 +28,7 @@ ComicSettingsDialog::ComicSettingsDialog(QVariantMap settings, const QStringList
                                          const QStringList& channelKeys, QWidget* parent)
     : QDialog(parent), settings_(std::move(settings)), characterStems_(characterStems),
       backgroundFiles_(backgroundFiles), channelKeys_(channelKeys) {
-    setWindowTitle(QStringLiteral("Comic Settings"));
+    setWindowTitle(tr("Comic Settings"));
     resize(640, 560);
     captionColor_ = settings_.value(QStringLiteral("comic_caption_color"),
                                     QStringLiteral("#363636")).toString();
@@ -52,7 +52,7 @@ ComicSettingsDialog::ComicSettingsDialog(QVariantMap settings, const QStringList
     auto* global = new QWidget(this);
     auto* gf = new QFormLayout(global);
     artDir_ = new QLineEdit(settings_.value(QStringLiteral("comic_art_dir")).toString(), global);
-    auto* browse = new QPushButton(QStringLiteral("Browse..."), global);
+    auto* browse = new QPushButton(tr("Browse..."), global);
     connect(browse, &QPushButton::clicked, this, [this]() {
         const QString dir = QFileDialog::getExistingDirectory(
             this, QStringLiteral("Comic art folder"), artDir_->text());
@@ -110,7 +110,7 @@ ComicSettingsDialog::ComicSettingsDialog(QVariantMap settings, const QStringList
         settings_.value(QStringLiteral("comic_caption_mode"), QStringLiteral("nick")).toString());
     captionMode_->setCurrentIndex(cmIdx >= 0 ? cmIdx : 0);
     gf->addRow(QStringLiteral("Name color"), captionMode_);
-    auto* fixedColorBtn = new QPushButton(QStringLiteral("Fixed name color..."), global);
+    auto* fixedColorBtn = new QPushButton(tr("Fixed name color..."), global);
     connect(fixedColorBtn, &QPushButton::clicked, this, [this]() {
         const QColor c = QColorDialog::getColor(QColor(captionColor_), this);
         if (c.isValid()) {
@@ -143,7 +143,7 @@ ComicSettingsDialog::ComicSettingsDialog(QVariantMap settings, const QStringList
     // ---- Characters (global nick -> stem map, one per line "nick=stem") ----
     auto* charsPage = new QWidget(this);
     auto* cv = new QVBoxLayout(charsPage);
-    cv->addWidget(new QLabel(QStringLiteral("Global nick assignments, one per line as nick=character"),
+    cv->addWidget(new QLabel(tr("Global nick assignments, one per line as nick=character"),
                              charsPage));
     charMap_ = new QPlainTextEdit(charsPage);
     QStringList charLines;
@@ -161,15 +161,15 @@ ComicSettingsDialog::ComicSettingsDialog(QVariantMap settings, const QStringList
     // ---- Bots / filtering ----
     auto* bots = new QWidget(this);
     auto* bv = new QVBoxLayout(bots);
-    ignoreCmds_ = new QCheckBox(QStringLiteral("Filter bot commands and corrections"), bots);
+    ignoreCmds_ = new QCheckBox(tr("Filter bot commands and corrections"), bots);
     ignoreCmds_->setChecked(settings_.value(QStringLiteral("comic_ignore_cmds"), true).toBool());
     bv->addWidget(ignoreCmds_);
-    bv->addWidget(new QLabel(QStringLiteral("Command/correction prefixes (one per line):"), bots));
+    bv->addWidget(new QLabel(tr("Command/correction prefixes (one per line):"), bots));
     botPatterns_ = new QPlainTextEdit(bots);
     botPatterns_->setPlainText(
         settings_.value(QStringLiteral("comic_bot_patterns")).toStringList().join(QLatin1Char('\n')));
     bv->addWidget(botPatterns_);
-    bv->addWidget(new QLabel(QStringLiteral("Bot nicks never drawn (one per line):"), bots));
+    bv->addWidget(new QLabel(tr("Bot nicks never drawn (one per line):"), bots));
     botNicks_ = new QPlainTextEdit(bots);
     botNicks_->setPlainText(
         settings_.value(QStringLiteral("comic_ignore")).toStringList().join(QLatin1Char('\n')));
@@ -208,7 +208,7 @@ QWidget* ComicSettingsDialog::buildChannelsPage() {
     }
 
     auto* sel = new QHBoxLayout();
-    sel->addWidget(new QLabel(QStringLiteral("Channel:"), page));
+    sel->addWidget(new QLabel(tr("Channel:"), page));
     chanSelect_ = new QComboBox(page);
     for (const QString& key : channelKeys_) {
         chanSelect_->addItem(key, key);
@@ -259,7 +259,7 @@ void ComicSettingsDialog::loadChannel(int index) {
     chanBg_->setCurrentIndex(bgIdx >= 0 ? bgIdx : 0);
     form->addRow(QStringLiteral("Background"), chanBg_);
 
-    form->addRow(new QLabel(QStringLiteral("Assign characters (this channel), one per line as "
+    form->addRow(new QLabel(tr("Assign characters (this channel), one per line as "
                                            "nick=character:"),
                             holder));
     chanChars_ = new QPlainTextEdit(holder);

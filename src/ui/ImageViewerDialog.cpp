@@ -32,7 +32,7 @@ ImageViewerDialog::ImageViewerDialog(const QUrl& imageUrl, QWidget* parent)
     root->setContentsMargins(0, 0, 0, 0);
     scrollArea_ = new QScrollArea(this);
     scrollArea_->setWidgetResizable(true);
-    imageLabel_ = new QLabel(QStringLiteral("Loading image..."), this);
+    imageLabel_ = new QLabel(tr("Loading image..."), this);
     imageLabel_->setAlignment(Qt::AlignCenter);
     scrollArea_->setWidget(imageLabel_);
     root->addWidget(scrollArea_);

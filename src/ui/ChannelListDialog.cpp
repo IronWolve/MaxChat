@@ -49,7 +49,7 @@ QString rowText(const QTableWidget *table, int row) {
 } // namespace
 
 ChannelListDialog::ChannelListDialog(QWidget *parent) : QDialog(parent) {
-  setWindowTitle(QStringLiteral("Channel List"));
+  setWindowTitle(tr("Channel List"));
   resize(820, 560);
 
   auto *layout = new QVBoxLayout(this);
@@ -57,27 +57,27 @@ ChannelListDialog::ChannelListDialog(QWidget *parent) : QDialog(parent) {
   // ── Top bar: Get List | filter | Min users ─────────────────────────────
   auto *topBar = new QHBoxLayout();
 
-  m_getListButton = new QPushButton(QStringLiteral("Get List"), this);
+  m_getListButton = new QPushButton(tr("Get List"), this);
   m_getListButton->setObjectName(QStringLiteral("get_list_button"));
-  m_getListButton->setToolTip(QStringLiteral("Fetch channel list from the server (/LIST)"));
+  m_getListButton->setToolTip(tr("Fetch channel list from the server (/LIST)"));
   topBar->addWidget(m_getListButton);
 
   topBar->addSpacing(8);
 
   m_filterEdit = new QLineEdit(this);
   m_filterEdit->setObjectName(QStringLiteral("channel_filter"));
-  m_filterEdit->setPlaceholderText(QStringLiteral("Search channels or topics"));
+  m_filterEdit->setPlaceholderText(tr("Search channels or topics"));
   m_filterEdit->setClearButtonEnabled(true);
   topBar->addWidget(m_filterEdit, 1);
 
   topBar->addSpacing(8);
-  topBar->addWidget(new QLabel(QStringLiteral("Min users:"), this));
+  topBar->addWidget(new QLabel(tr("Min users:"), this));
 
   m_minUsers = new QSpinBox(this);
   m_minUsers->setObjectName(QStringLiteral("min_users"));
   m_minUsers->setRange(0, 999999);
   m_minUsers->setValue(3);
-  m_minUsers->setToolTip(QStringLiteral("Hide channels with fewer than this many users"));
+  m_minUsers->setToolTip(tr("Hide channels with fewer than this many users"));
   topBar->addWidget(m_minUsers);
 
   layout->addLayout(topBar);
@@ -105,7 +105,7 @@ ChannelListDialog::ChannelListDialog(QWidget *parent) : QDialog(parent) {
   layout->addWidget(m_table, 1);
 
   // ── Status + buttons ───────────────────────────────────────────────────
-  m_statusLabel = new QLabel(QStringLiteral("No channels loaded — click Get List"), this);
+  m_statusLabel = new QLabel(tr("No channels loaded — click Get List"), this);
   layout->addWidget(m_statusLabel);
 
   auto *buttons = new QDialogButtonBox(this);
