@@ -29,6 +29,33 @@ QFont fontFromSettings(const QVariantMap& settings, const QString& familyKey,
     return font;
 }
 
+QString sanitizedFontFamily(QString family) {
+    family = family.trimmed();
+    if (family.isEmpty()) {
+        family = QStringLiteral("JetBrains Mono");
+    }
+    family.remove(QLatin1Char('"'));
+    family.remove(QLatin1Char('\''));
+    return family;
+}
+
+QString fontCssRule(const QVariantMap& settings, const QString& selector, const QString& prefix,
+                    const QString& fallbackFamily = QStringLiteral("JetBrains Mono"),
+                    int fallbackSize = 14, bool fallbackBold = true) {
+    const QString family = sanitizedFontFamily(
+        settings.value(prefix + QStringLiteral("_font_family"), fallbackFamily).toString());
+    int pointSize = settings.value(prefix + QStringLiteral("_font_size"), fallbackSize).toInt();
+    if (pointSize <= 0) {
+        pointSize = fallbackSize;
+    }
+    const bool bold =
+        settings.value(prefix + QStringLiteral("_font_bold"), fallbackBold).toBool();
+    return QStringLiteral("\n%1 { font-family:'%2'; font-size:%3pt; font-weight:%4; }")
+        .arg(selector, family)
+        .arg(pointSize)
+        .arg(bold ? 700 : 400);
+}
+
 QStringList classicIrcNickPalette() {
     return {QStringLiteral("#009300"), QStringLiteral("#ff0000"), QStringLiteral("#7f0000"),
             QStringLiteral("#9c009c"), QStringLiteral("#fc7f00"), QStringLiteral("#ffff00"),
@@ -165,17 +192,24 @@ void AppearanceController::applyTheme(const QString& theme) {
     // the menu bar / toolbar to the system font. A stylesheet rule cannot be
     // dropped that way.
     const QVariantMap fontSettings = host_.settings().loadWithDefaults();
-    const QString family =
+    const QString family = sanitizedFontFamily(
         fontSettings.value(QStringLiteral("app_font_family"), QStringLiteral("JetBrains Mono"))
-            .toString();
-    const int pointSize = fontSettings.value(QStringLiteral("app_font_size"), 14).toInt();
+            .toString());
+    const int pointSize =
+        std::max(1, fontSettings.value(QStringLiteral("app_font_size"), 14).toInt());
     const bool bold = fontSettings.value(QStringLiteral("app_font_bold"), true).toBool();
-    const QString chromeFontCss =
-        QStringLiteral("\nQMenuBar, QMenu, QToolBar, QToolButton { font-family:'%1'; "
-                       "font-size:%2pt; font-weight:%3; }")
-            .arg(family)
-            .arg(pointSize)
-            .arg(bold ? 700 : 400);
+    const QString fontCss =
+        fontCssRule(fontSettings, QStringLiteral("QMenuBar, QMenu, QToolBar, QToolButton"),
+                    QStringLiteral("app")) +
+        fontCssRule(fontSettings,
+                    QStringLiteral("QTreeWidget#networkTree, QListWidget#memberList, "
+                                   "QLabel#membersHeader, QPushButton#channelModesButton"),
+                    QStringLiteral("list")) +
+        fontCssRule(fontSettings, QStringLiteral("QTextBrowser#chatView, QTextEdit#messageInput"),
+                    QStringLiteral("chat")) +
+        fontCssRule(fontSettings, QStringLiteral("QLabel#nickLabel"), QStringLiteral("nick")) +
+        fontCssRule(fontSettings, QStringLiteral("QStatusBar"), QStringLiteral("status")) +
+        fontCssRule(fontSettings, QStringLiteral("QLabel#topicLabel"), QStringLiteral("topic"));
     // Apply palette + stylesheet app-wide so parentless dialogs are themed too,
     // and the OS palette can't bleed into widgets the QSS doesn't cover.
     if (normalized == systemThemeId()) {
@@ -186,7 +220,7 @@ void AppearanceController::applyTheme(const QString& theme) {
         qApp->setStyleSheet(QString());
     } else {
         qApp->setPalette(paletteForAppearance(normalized));
-        qApp->setStyleSheet(styleSheet + chromeFontCss);
+        qApp->setStyleSheet(styleSheet + fontCss);
     }
     host_.updateTrayIcon();
     if (QWidget* window = host_.dialogParent()) {
