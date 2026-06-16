@@ -1,8 +1,13 @@
 #pragma once
 
+#include "ui/ChatRenderTheme.h"
+#include "ui/ThemeCatalog.h"
+
+#include <QColor>
 #include <QFont>
 #include <QObject>
 #include <QString>
+#include <QStringList>
 #include <QVariantMap>
 
 namespace maxchat::ui {
@@ -41,8 +46,48 @@ class AppearanceController final : public QObject {
     // per area, JetBrains Mono 14 bold as the fallback). Pure.
     [[nodiscard]] ResolvedFonts resolveFonts(const QVariantMap& settings) const;
 
+    // --- Theme selection state (the "what colours" the renderer asks for) -----
+    // Set the current theme ids from a settings map (normalized). Used by
+    // applyCurrentSettings; does NOT apply — the window calls applyTheme after.
+    void loadFromSettings(const QVariantMap& settings);
+
+    void setThemeId(const QString& theme);          // normalizes
+    void setChatThemeId(const QString& chatTheme);  // normalizes
+    void setWallpaperValue(const QString& wallpaper); // normalizes
+    void setChatOpacity(int opacity);               // clamped 20..100
+    void setNickColorMode(const QString& mode);     // off / palette / irc
+    void setEventColor(const QString& color);       // "" = theme/default
+
+    [[nodiscard]] QString themeId() const { return currentTheme_; }
+    [[nodiscard]] QString chatThemeId() const { return currentChatTheme_; }
+    [[nodiscard]] QString wallpaperValue() const { return currentWallpaper_; }
+    [[nodiscard]] int chatOpacity() const { return chatOpacity_; }
+    [[nodiscard]] QString nickColorMode() const { return nickColorMode_; }
+    [[nodiscard]] QString eventColor() const { return eventColor_; }
+    [[nodiscard]] AppThemeDefinition appTheme() const { return appThemeById(currentTheme_); }
+    [[nodiscard]] ChatThemeDefinition chatThemeDef() const {
+        return chatThemeById(currentChatTheme_);
+    }
+
+    // --- Theme-derived render inputs (pure-ish; read the state above) ---------
+    // THE chat background (chat theme bg, "follow" → app theme, fallback). Shared
+    // by the chat renderer + member list + the QSS so they agree.
+    [[nodiscard]] QColor resolvedChatBackground() const;
+    // THE nick-colour palette (chat view + member list both call this). monoOut
+    // receives whether the theme wants monochrome nicks.
+    [[nodiscard]] QStringList effectiveNickPalette(bool* monoOut) const;
+    // The full resolved chat-render colour set for ChatLineFormatOptions.
+    [[nodiscard]] ChatRenderTheme buildChatRenderTheme() const;
+
   private:
     MainWindowHost& host_;
+
+    QString currentTheme_ = QStringLiteral("synthwave");
+    QString currentChatTheme_ = QStringLiteral("follow");
+    QString currentWallpaper_;
+    int chatOpacity_ = 100; // chat bg opacity %, 100 = auto (theme decides)
+    QString nickColorMode_ = QStringLiteral("palette"); // off / palette / irc
+    QString eventColor_;                                // "" = chat theme / default
 };
 
 } // namespace maxchat::ui

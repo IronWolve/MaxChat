@@ -472,8 +472,6 @@ class MainWindow final : public QMainWindow, public MainWindowHost {
     bool m_hideJoinPart = false;
     bool m_showFormatting = true;
     bool m_coloredNicks = true;
-    QString m_nickColorMode = QStringLiteral("palette"); // off / palette / irc
-    int m_chatOpacity = 100; // chat bg opacity %, 100 = auto (theme decides)
     bool m_showMode = true;
     bool m_pmEcho = true;
     bool m_indentWrap = true;
@@ -481,9 +479,6 @@ class MainWindow final : public QMainWindow, public MainWindowHost {
     int m_replayLines = 0;
     int m_nickColumnWidth = 16;
     QString m_timestampFormat = QStringLiteral("%I:%M %p");
-    QString m_currentTheme = QStringLiteral("synthwave");
-    QString m_currentChatTheme = QStringLiteral("follow");
-    QString m_currentWallpaper;
     QVariantMap m_commandAliases;
     maxchat::services::LinkPreviewToggles m_linkPreviewToggles;
     maxchat::services::LinkPreviewRenderOptions m_ogRenderOptions;
@@ -530,7 +525,6 @@ class MainWindow final : public QMainWindow, public MainWindowHost {
     QHash<QString, QShortcut*> m_navShortcuts;
     QHash<QString, QSet<QString>> m_awayNicksByNetwork; // lowercase nicks
     QVariantMap m_nickColorOverrides;                   // lowercase nick -> hex
-    QString m_eventColor;                               // "" = chat theme / default
     bool m_sortByStatus = true;
     bool m_pasteGuard = true;
     int m_pasteLines = 4;
