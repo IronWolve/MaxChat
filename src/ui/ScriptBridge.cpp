@@ -132,7 +132,7 @@ void ScriptBridge::seedAndLoadAll() {
     }
     QDir().mkpath(scriptsDir_);
     seedBundledScripts(scriptsDir_);
-    lua_->loadAll(buildAllScriptPermsMap());
+    lua_->loadAll(buildAllScriptPermsMap(), true);
 }
 
 QStringList ScriptBridge::loadedScripts() const {
@@ -473,7 +473,7 @@ ScriptBridge::buildScriptPermissionsFor(const QString& name) const {
     const QVariantMap perms =
         settings.value(QStringLiteral("scriptPerms")).toMap().value(name).toMap();
     maxchat::scripting::ScriptPermissions out =
-        maxchat::scripting::ScriptPermissions::fromMap(perms, isBundledScript(name));
+        maxchat::scripting::ScriptPermissions::fromMap(perms);
     for (const QVariant& dir : settings.value(QStringLiteral("script_dirs")).toList()) {
         const QString path = dir.toString().trimmed();
         if (!path.isEmpty()) {
@@ -494,15 +494,15 @@ ScriptBridge::buildAllScriptPermsMap() const {
             allowedDirs << path;
         }
     }
-    // Iterate the actual script files (not just saved-perms keys) so a bundled
-    // script with no saved entry still gets its ircSend default at load time.
+    // Iterate the actual script files (not just saved-perms keys) so startup
+    // loading can check every available script's saved load_start flag.
     QHash<QString, maxchat::scripting::ScriptPermissions> result;
     const QFileInfoList files =
         QDir(scriptsDir_).entryInfoList({QStringLiteral("*.lua")}, QDir::Files);
     for (const QFileInfo& fi : files) {
         const QString name = fi.completeBaseName();
         maxchat::scripting::ScriptPermissions p = maxchat::scripting::ScriptPermissions::fromMap(
-            allPerms.value(name).toMap(), isBundledScript(name));
+            allPerms.value(name).toMap());
         p.allowedDirs = allowedDirs;
         result.insert(name, p);
     }

@@ -4,6 +4,8 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QDir>
+#include <QFile>
 #include <QFontComboBox>
 #include <QLineEdit>
 #include <QListWidget>
@@ -11,6 +13,7 @@
 #include <QSpinBox>
 #include <QStackedWidget>
 #include <QTabWidget>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 
 using maxchat::ui::PreferencesDialog;
@@ -44,6 +47,54 @@ class PreferencesDialogTest final : public QObject {
 
         buttons->setCurrentRow(5);
         QCOMPARE(pages->currentIndex(), 5);
+    }
+
+    void scriptPermissionsDefaultOffAndRememberLoadAtStart() {
+        QTemporaryDir temp;
+        QVERIFY(temp.isValid());
+        const QString scriptsDir = QDir(temp.path()).filePath(QStringLiteral("scripts"));
+        QVERIFY(QDir().mkpath(scriptsDir));
+        QFile script(QDir(scriptsDir).filePath(QStringLiteral("demo.lua")));
+        QVERIFY(script.open(QIODevice::WriteOnly | QIODevice::Text));
+        script.write("function on_load(api) end\n");
+        script.close();
+
+        QVariantMap settings = maxchat::core::SettingsStore::defaultSettings();
+        PreferencesDialog dialog(settings, QStringList{}, scriptsDir);
+
+        auto* list = dialog.findChild<QListWidget*>(QStringLiteral("scriptList"));
+        auto* loadStart = dialog.findChild<QCheckBox*>(QStringLiteral("scriptLoadAtStart"));
+        auto* read = dialog.findChild<QCheckBox*>(QStringLiteral("scriptReadFiles"));
+        auto* write = dialog.findChild<QCheckBox*>(QStringLiteral("scriptWriteFiles"));
+        auto* exec = dialog.findChild<QCheckBox*>(QStringLiteral("scriptRunPrograms"));
+        auto* modules = dialog.findChild<QCheckBox*>(QStringLiteral("scriptLoadModules"));
+        auto* network = dialog.findChild<QCheckBox*>(QStringLiteral("scriptNetworkAccess"));
+        auto* irc = dialog.findChild<QCheckBox*>(QStringLiteral("scriptIrcSend"));
+
+        QVERIFY(list != nullptr);
+        QVERIFY(loadStart != nullptr);
+        QVERIFY(read != nullptr);
+        QVERIFY(write != nullptr);
+        QVERIFY(exec != nullptr);
+        QVERIFY(modules != nullptr);
+        QVERIFY(network != nullptr);
+        QVERIFY(irc != nullptr);
+        QCOMPARE(list->count(), 1);
+
+        list->setCurrentRow(0);
+        QVERIFY(!loadStart->isChecked());
+        QVERIFY(!read->isChecked());
+        QVERIFY(!write->isChecked());
+        QVERIFY(!exec->isChecked());
+        QVERIFY(!modules->isChecked());
+        QVERIFY(!network->isChecked());
+        QVERIFY(!irc->isChecked());
+
+        loadStart->setChecked(true);
+        QVariantMap allPerms = dialog.settings().value(QStringLiteral("scriptPerms")).toMap();
+        const QVariantMap demoPerms = allPerms.value(QStringLiteral("demo")).toMap();
+        QCOMPARE(demoPerms.value(QStringLiteral("load_start")).toBool(), true);
+        QCOMPARE(demoPerms.value(QStringLiteral("irc")).toBool(), false);
     }
 
     void writesEditedSettingsAndContentServices() {

@@ -79,6 +79,7 @@ class PreferencesDialog final : public QDialog {
     QListWidget* scriptList_ = nullptr;
     QLabel* permLabel_ = nullptr;
     bool updatingPerms_ = false;
+    QCheckBox* scriptLoadStart_ = nullptr;
     QCheckBox* scriptRead_ = nullptr;
     QCheckBox* scriptWrite_ = nullptr;
     QCheckBox* scriptExec_ = nullptr;

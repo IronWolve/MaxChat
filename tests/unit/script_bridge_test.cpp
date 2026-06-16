@@ -1,7 +1,7 @@
 // Unit tests for ScriptBridge — the script subsystem extracted from MainWindow
 // (decomp phase 1). These exercise the routing/permission logic that used to be
-// untestable while embedded in a 9k-line widget: bundled-vs-user ircSend default
-// resolution, explicit-permission override, and MC-DATA network routing.
+// untestable while embedded in a 9k-line widget: explicit permission handling,
+// startup loading, and MC-DATA network routing.
 
 #include "core/SettingsStore.h"
 #include "irc/IrcConnection.h"
@@ -86,13 +86,19 @@ void markBundled(const QString& scriptsDir, const QString& name) {
     f.write("-- snapshot\n");
 }
 
+void writeScriptFile(const QString& scriptsDir, const QString& name) {
+    QFile f(QDir(scriptsDir).filePath(name + QStringLiteral(".lua")));
+    QVERIFY(f.open(QIODevice::WriteOnly | QIODevice::Text));
+    f.write("function on_load(api) end\n");
+}
+
 } // namespace
 
 class ScriptBridgeTest : public QObject {
     Q_OBJECT
 
   private slots:
-    void bundledScriptDefaultsToIrcSend() {
+    void bundledScriptDefaultsToSandboxed() {
         QTemporaryDir tmp;
         QVERIFY(tmp.isValid());
         SettingsPaths paths;
@@ -109,8 +115,11 @@ class ScriptBridgeTest : public QObject {
         ScriptBridge bridge(host, scriptsDir);
 
         QVERIFY(bridge.isBundledScript(QStringLiteral("bbs")));
-        // Bundled scripts get IRC send by default (no saved perms entry).
-        QVERIFY(bridge.buildScriptPermissionsFor(QStringLiteral("bbs")).ircSend);
+        // Bundled scripts are visible/seeded, but no permission boxes are
+        // implicitly checked anymore.
+        const auto perms = bridge.buildScriptPermissionsFor(QStringLiteral("bbs"));
+        QVERIFY(!perms.ircSend);
+        QVERIFY(!perms.loadAtStart);
     }
 
     void userScriptDefaultsToNoIrcSend() {
@@ -156,6 +165,36 @@ class ScriptBridgeTest : public QObject {
         ScriptBridge bridge(host, scriptsDir);
 
         QVERIFY(bridge.buildScriptPermissionsFor(QStringLiteral("mine")).ircSend);
+    }
+
+    void seedAndLoadAllLoadsOnlyStartupScripts() {
+        QTemporaryDir tmp;
+        QVERIFY(tmp.isValid());
+        SettingsPaths paths;
+        paths.configDir = tmp.path();
+        paths.settingsPath = QDir(tmp.path()).filePath(QStringLiteral("settings.json"));
+        SettingsStore store(paths);
+
+        QVariantMap autoPerms;
+        autoPerms.insert(QStringLiteral("load_start"), true);
+        QVariantMap manualPerms;
+        manualPerms.insert(QStringLiteral("load_start"), false);
+        QVariantMap allPerms;
+        allPerms.insert(QStringLiteral("auto"), autoPerms);
+        allPerms.insert(QStringLiteral("manual"), manualPerms);
+        QVERIFY(store.setValue(QStringLiteral("scriptPerms"), allPerms));
+
+        const QString scriptsDir = QDir(tmp.path()).filePath(QStringLiteral("scripts"));
+        QDir().mkpath(scriptsDir);
+        writeScriptFile(scriptsDir, QStringLiteral("auto"));
+        writeScriptFile(scriptsDir, QStringLiteral("manual"));
+
+        QWidget parent;
+        FakeHost host(store, &parent);
+        ScriptBridge bridge(host, scriptsDir);
+        bridge.seedAndLoadAll();
+
+        QCOMPARE(bridge.loadedScripts(), QStringList{QStringLiteral("auto")});
     }
 
     void mcDataEmptyNetworkRoutesToActive() {
