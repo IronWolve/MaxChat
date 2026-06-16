@@ -44,6 +44,7 @@
 #include "ui/ChatRenderTheme.h"
 #include "ui/MediaController.h"
 #include "ui/IrcRouter.h"
+#include "ui/IrcRoutingHelpers.h"
 #include "ui/ScriptBridge.h"
 #include "ui/ScriptTerminalManager.h"
 #include "ui/SpellTextEdit.h"
@@ -152,73 +153,6 @@ QString comicKey(const QString& network, const QString& target) {
     return network + QChar(0x1f) + target;
 }
 
-QString nickWithoutPrefix(QString nick) {
-    static const QString prefixes = QStringLiteral("~&@%+");
-    while (!nick.isEmpty() && prefixes.contains(nick.front())) {
-        nick.remove(0, 1);
-    }
-    return nick;
-}
-
-bool memberMatchesNick(const QString& memberText, const QString& nick) {
-    return nickWithoutPrefix(memberText).compare(nick, Qt::CaseInsensitive) == 0;
-}
-
-bool removeMember(QListWidget* memberList, const QString& nick) {
-    if (memberList == nullptr || nick.trimmed().isEmpty()) {
-        return false;
-    }
-
-    bool removed = false;
-    for (int row = memberList->count() - 1; row >= 0; --row) {
-        QListWidgetItem* item = memberList->item(row);
-        if (item != nullptr && memberMatchesNick(item->text(), nick)) {
-            delete memberList->takeItem(row);
-            removed = true;
-        }
-    }
-    return removed;
-}
-
-void addMember(QListWidget* memberList, const QString& nick) {
-    const QString trimmed = nick.trimmed();
-    if (memberList == nullptr || trimmed.isEmpty()) {
-        return;
-    }
-
-    for (int row = 0; row < memberList->count(); ++row) {
-        const QListWidgetItem* item = memberList->item(row);
-        if (item != nullptr && memberMatchesNick(item->text(), trimmed)) {
-            return;
-        }
-    }
-
-    memberList->addItem(trimmed);
-    memberList->sortItems(Qt::AscendingOrder);
-}
-
-bool isChannelTarget(const QString& target) {
-    return target.startsWith(QLatin1Char('#')) || target.startsWith(QLatin1Char('&'));
-}
-
-bool isLikelyServerNotice(const QString& sender, const QString& target, const QString& ownNick) {
-    const QString cleanTarget = target.trimmed();
-    if (isChannelTarget(cleanTarget)) {
-        return false;
-    }
-    if (cleanTarget.isEmpty() || cleanTarget == QStringLiteral("*")) {
-        return true;
-    }
-    if (sender.trimmed().isEmpty()) {
-        return true;
-    }
-    if (sender.contains(QLatin1Char('.'))) {
-        return true;
-    }
-    Q_UNUSED(ownNick);
-    return false;
-}
-
 QString cleanedChannelToken(QString token) {
     token = token.trimmed();
     while (!token.isEmpty() && QStringLiteral(":,.;)]}").contains(token.back())) {
@@ -270,16 +204,6 @@ QString replyTextLabel(const QString& line) {
     return match.hasMatch() ? match.captured(1).toLower() : QString();
 }
 
-QString normalizeIgnoreMask(QString mask) {
-    mask = mask.trimmed();
-    if (mask.isEmpty()) {
-        return {};
-    }
-    return mask.contains(QLatin1Char('!')) || mask.contains(QLatin1Char('@'))
-               ? mask
-               : QStringLiteral("%1!*@*").arg(mask);
-}
-
 QStringList variantStringList(const QVariant& value) {
     if (value.metaType().id() == QMetaType::QStringList) {
         return value.toStringList();
@@ -294,12 +218,6 @@ QStringList variantStringList(const QVariant& value) {
         }
     }
     return strings;
-}
-
-bool containsCaseInsensitive(const QStringList& values, const QString& needle) {
-    return std::any_of(values.cbegin(), values.cend(), [&needle](const QString& value) {
-        return value.compare(needle, Qt::CaseInsensitive) == 0;
-    });
 }
 
 QString formatDurationMs(const qint64 milliseconds) {

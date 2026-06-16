@@ -3,109 +3,17 @@
 #include <algorithm>
 
 #include <QApplication>
-#include <QLatin1Char>
-#include <QListWidget>
-#include <QListWidgetItem>
 #include <QStatusBar>
 #include <QString>
-#include <QStringList>
 
 #include "irc/IrcConnection.h"
 #include "ui/BanListDialog.h"
 #include "ui/DccManager.h"
+#include "ui/IrcRoutingHelpers.h"
 #include "ui/MainWindow.h"
 #include "ui/ScriptBridge.h"
 
 namespace maxchat::ui {
-
-namespace {
-
-// Pure helpers the IRC handlers use. Duplicated verbatim from MainWindow.cpp's
-// anonymous namespace (internal linkage, so no ODR/link clash) to keep this a
-// zero-touch relocation of the wiring — `nickWithoutPrefix` in particular has
-// 10+ callers still in MainWindow.cpp. TODO: lift the shared cluster into one
-// `IrcRoutingHelpers.h` and dedupe.
-QString nickWithoutPrefix(QString nick) {
-    static const QString prefixes = QStringLiteral("~&@%+");
-    while (!nick.isEmpty() && prefixes.contains(nick.front())) {
-        nick.remove(0, 1);
-    }
-    return nick;
-}
-
-bool memberMatchesNick(const QString& memberText, const QString& nick) {
-    return nickWithoutPrefix(memberText).compare(nick, Qt::CaseInsensitive) == 0;
-}
-
-bool removeMember(QListWidget* memberList, const QString& nick) {
-    if (memberList == nullptr || nick.trimmed().isEmpty()) {
-        return false;
-    }
-    bool removed = false;
-    for (int row = memberList->count() - 1; row >= 0; --row) {
-        QListWidgetItem* item = memberList->item(row);
-        if (item != nullptr && memberMatchesNick(item->text(), nick)) {
-            delete memberList->takeItem(row);
-            removed = true;
-        }
-    }
-    return removed;
-}
-
-void addMember(QListWidget* memberList, const QString& nick) {
-    const QString trimmed = nick.trimmed();
-    if (memberList == nullptr || trimmed.isEmpty()) {
-        return;
-    }
-    for (int row = 0; row < memberList->count(); ++row) {
-        const QListWidgetItem* item = memberList->item(row);
-        if (item != nullptr && memberMatchesNick(item->text(), trimmed)) {
-            return;
-        }
-    }
-    memberList->addItem(trimmed);
-    memberList->sortItems(Qt::AscendingOrder);
-}
-
-bool isChannelTarget(const QString& target) {
-    return target.startsWith(QLatin1Char('#')) || target.startsWith(QLatin1Char('&'));
-}
-
-bool isLikelyServerNotice(const QString& sender, const QString& target, const QString& ownNick) {
-    const QString cleanTarget = target.trimmed();
-    if (isChannelTarget(cleanTarget)) {
-        return false;
-    }
-    if (cleanTarget.isEmpty() || cleanTarget == QStringLiteral("*")) {
-        return true;
-    }
-    if (sender.trimmed().isEmpty()) {
-        return true;
-    }
-    if (sender.contains(QLatin1Char('.'))) {
-        return true;
-    }
-    Q_UNUSED(ownNick);
-    return false;
-}
-
-QString normalizeIgnoreMask(QString mask) {
-    mask = mask.trimmed();
-    if (mask.isEmpty()) {
-        return {};
-    }
-    return mask.contains(QLatin1Char('!')) || mask.contains(QLatin1Char('@'))
-               ? mask
-               : QStringLiteral("%1!*@*").arg(mask);
-}
-
-bool containsCaseInsensitive(const QStringList& values, const QString& needle) {
-    return std::any_of(values.cbegin(), values.cend(), [&needle](const QString& value) {
-        return value.compare(needle, Qt::CaseInsensitive) == 0;
-    });
-}
-
-} // namespace
 
 void IrcRouter::wire(const QString& network, maxchat::irc::IrcConnection* irc) {
     if (irc == nullptr) {
