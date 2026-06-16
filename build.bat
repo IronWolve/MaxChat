@@ -84,13 +84,16 @@ rem OS speller). Opt out with one or more flags, in any order:
 rem   build.bat noterm           - skip the script terminal / BBS UI (vanilla IRC)
 rem   build.bat noosspell        - skip the native OS speller (Hunspell only)
 rem   build.bat noterm noosspell - leanest build
+rem   build.bat tests            - also run the ctest suite after building
 rem (Lua scripting is a core dependency and always built.)
 set "MAXCHAT_TERMINAL=ON"
 set "MAXCHAT_OS_SPELL=ON"
+set "RUN_TESTS="
 :parse_args
 if "%~1"=="" goto args_done
 if /I "%~1"=="noterm"    set "MAXCHAT_TERMINAL=OFF"
 if /I "%~1"=="noosspell" set "MAXCHAT_OS_SPELL=OFF"
+if /I "%~1"=="tests"     set "RUN_TESTS=1"
 rem Back-compat: "osspell" used to be the opt-in; it is now the default, so
 rem accept it as a harmless no-op rather than erroring on old muscle memory.
 if /I "%~1"=="osspell"   set "MAXCHAT_OS_SPELL=ON"
