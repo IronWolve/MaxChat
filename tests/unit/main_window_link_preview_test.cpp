@@ -32,6 +32,7 @@
 
 // MainWindow grants this test class friendship (see MainWindow.h) so it can
 // reach private members without `#define private public` (an ODR hazard).
+#include "ui/AppearanceController.h"
 #include "ui/MainWindow.h"
 #include "ui/SpellTextEdit.h"
 
@@ -456,7 +457,7 @@ class MainWindowLinkPreviewTest final : public QObject {
         QVERIFY(synthwaveAction->isCheckable());
         QVERIFY(defaultAction->isCheckable());
         QVERIFY(themesOffAction->isCheckable());
-        window.setTheme(QStringLiteral("synthwave"), true);
+        window.m_appearance->setTheme(QStringLiteral("synthwave"), true);
         QVERIFY(synthwaveAction->isChecked());
         // Theming is applied application-wide (qApp) via QPalette + stylesheet.
         QVERIFY(!qApp->styleSheet().isEmpty());
@@ -489,8 +490,8 @@ class MainWindowLinkPreviewTest final : public QObject {
 
         // Reset global app theming + saved state so later tests construct against a
         // clean qApp (each test shares one QApplication and the settings file).
-        window.setTheme(QStringLiteral("system"), true);
-        window.setWallpaper(QString(), true);
+        window.m_appearance->setTheme(QStringLiteral("system"), true);
+        window.m_appearance->setWallpaper(QString(), true);
     }
 
     void draggingChatSeparatorChangesNickColumnWidth() {

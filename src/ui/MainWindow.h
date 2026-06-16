@@ -120,6 +120,11 @@ class MainWindow final : public QMainWindow, public MainWindowHost {
     [[nodiscard]] maxchat::core::SettingsStore& settings() override { return m_settings; }
     [[nodiscard]] QWidget* dialogParent() override { return this; }
     void rebuildTree() override { rebuildNetworkTree(); }
+    // AppearanceController refresh hooks. renderActiveBuffer/recolorMemberList/
+    // updateChatSeparatorGuide/updateTrayIcon are existing private methods that
+    // auto-satisfy the pure virtuals; these two the window doesn't already have:
+    void setMenuBarFont(const QFont& font) override; // QMenuBar incomplete in header
+    void applyAllSettings() override { applyCurrentSettings(); }
 
     bool selfTest() const;
 
@@ -140,13 +145,6 @@ class MainWindow final : public QMainWindow, public MainWindowHost {
     void buildMenus();
     void buildLayout();
     void applyCurrentSettings();
-    void applyTheme(const QString& theme);
-    void setTheme(const QString& theme, bool save);
-    void syncThemeActions(const QString& theme);
-    void setChatTheme(const QString& chatTheme, bool save);
-    void syncChatThemeActions(const QString& chatTheme);
-    void setWallpaper(const QString& wallpaper, bool save);
-    void syncWallpaperActions(const QString& wallpaper);
     void configureSpellcheck(const QVariantMap& settings);
     void resizeMessageInput();
     void setServerListVisible(bool visible, bool save);
@@ -557,9 +555,6 @@ class MainWindow final : public QMainWindow, public MainWindowHost {
     QHash<QString, QPixmap> m_comicPanelCache; // rendered-panel cache, keyed by full visual input
     bool m_dccEnabled = false;
     DccManager* m_dccManager = nullptr;
-    QList<QAction*> m_themeActions;
-    QList<QAction*> m_chatThemeActions;
-    QList<QAction*> m_wallpaperActions;
     QToolBar* m_buttonBar = nullptr;
     QSplitter* m_mainSplitter = nullptr;
     QSplitter* m_chatSplitter = nullptr;

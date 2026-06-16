@@ -5,10 +5,13 @@
 
 #include <QColor>
 #include <QFont>
+#include <QList>
 #include <QObject>
 #include <QString>
 #include <QStringList>
 #include <QVariantMap>
+
+class QAction;
 
 namespace maxchat::ui {
 
@@ -79,8 +82,30 @@ class AppearanceController final : public QObject {
     // The full resolved chat-render colour set for ChatLineFormatOptions.
     [[nodiscard]] ChatRenderTheme buildChatRenderTheme() const;
 
+    // --- Apply (drives qApp + the window shell via host hooks) ---------------
+    // Re-apply the app-wide palette/stylesheet/fonts/tray/window-icon for the
+    // given app theme id (uses the current chat-theme/wallpaper/opacity state).
+    void applyTheme(const QString& theme);
+    // Select + persist (when save) + apply + sync the menu checkmarks.
+    void setTheme(const QString& theme, bool save);
+    void setChatTheme(const QString& chatTheme, bool save);
+    void setWallpaper(const QString& wallpaper, bool save);
+
+    // The window registers its theme/chat-theme/wallpaper menu actions here so
+    // the controller can keep their checkmarks in sync.
+    void registerThemeAction(QAction* action) { themeActions_.append(action); }
+    void registerChatThemeAction(QAction* action) { chatThemeActions_.append(action); }
+    void registerWallpaperAction(QAction* action) { wallpaperActions_.append(action); }
+    void syncThemeActions(const QString& theme);
+    void syncChatThemeActions(const QString& chatTheme);
+    void syncWallpaperActions(const QString& wallpaper);
+
   private:
     MainWindowHost& host_;
+
+    QList<QAction*> themeActions_;
+    QList<QAction*> chatThemeActions_;
+    QList<QAction*> wallpaperActions_;
 
     QString currentTheme_ = QStringLiteral("synthwave");
     QString currentChatTheme_ = QStringLiteral("follow");

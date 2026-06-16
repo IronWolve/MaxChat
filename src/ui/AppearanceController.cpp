@@ -1,10 +1,17 @@
 #include "ui/AppearanceController.h"
 
+#include "core/SettingsStore.h"
 #include "irc/IrcFormat.h"
+#include "ui/AppIcon.h"
 #include "ui/MainWindowHost.h"
 
+#include <QAction>
+#include <QApplication>
 #include <QColor>
 #include <QFontDatabase>
+#include <QSignalBlocker>
+#include <QStyle>
+#include <QWidget>
 
 #include <algorithm>
 
@@ -144,6 +151,144 @@ ChatRenderTheme AppearanceController::buildChatRenderTheme() const {
     const QStringList nickPalette = effectiveNickPalette(&monoNicks);
     return resolveChatRenderTheme(chatThemeById(currentChatTheme_), appThemeById(currentTheme_),
                                   resolvedChatBackground(), nickPalette, monoNicks, eventColor_);
+}
+
+// --- Apply ------------------------------------------------------------------
+
+void AppearanceController::applyTheme(const QString& theme) {
+    const QString normalized = normalizeThemeId(theme);
+    const QString styleSheet =
+        styleSheetForAppearance(normalized, currentChatTheme_, currentWallpaper_, chatOpacity_);
+    // Chrome font lives IN the stylesheet: with an app-wide QSS active,
+    // qApp->setFont/menuBar()->setFont are unreliable — any re-polish (theme,
+    // chat theme, wallpaper switch, even later widget churn) silently reverts
+    // the menu bar / toolbar to the system font. A stylesheet rule cannot be
+    // dropped that way.
+    const QVariantMap fontSettings = host_.settings().loadWithDefaults();
+    const QString family =
+        fontSettings.value(QStringLiteral("app_font_family"), QStringLiteral("JetBrains Mono"))
+            .toString();
+    const int pointSize = fontSettings.value(QStringLiteral("app_font_size"), 14).toInt();
+    const bool bold = fontSettings.value(QStringLiteral("app_font_bold"), true).toBool();
+    const QString chromeFontCss =
+        QStringLiteral("\nQMenuBar, QMenu, QToolBar, QToolButton { font-family:'%1'; "
+                       "font-size:%2pt; font-weight:%3; }")
+            .arg(family)
+            .arg(pointSize)
+            .arg(bold ? 700 : 400);
+    // Apply palette + stylesheet app-wide so parentless dialogs are themed too,
+    // and the OS palette can't bleed into widgets the QSS doesn't cover.
+    if (normalized == systemThemeId()) {
+        if (QStyle* style = QApplication::style()) {
+            qApp->setPalette(style->standardPalette());
+        }
+        // Themes Off has no app QSS → setFont works reliably (no re-polish).
+        qApp->setStyleSheet(QString());
+    } else {
+        qApp->setPalette(paletteForAppearance(normalized));
+        qApp->setStyleSheet(styleSheet + chromeFontCss);
+    }
+    host_.updateTrayIcon();
+    if (QWidget* window = host_.dialogParent()) {
+        window->setWindowIcon(AppIcon::makeIcon(
+            fontSettings.value(QStringLiteral("tray_icon"), QStringLiteral("bubble")).toString(),
+            appThemeById(normalized).accent));
+    }
+    // Keep the app-font assert for everything else (dialogs, labels) — the
+    // stylesheet rule above covers the chrome that re-polish was reverting.
+    QFont appFont(family, pointSize);
+    appFont.setBold(bold);
+    qApp->setFont(appFont);
+    host_.setMenuBarFont(appFont);
+}
+
+void AppearanceController::setTheme(const QString& theme, bool save) {
+    const QString normalized = normalizeThemeId(theme);
+    // Saved/imported themes can bundle font preferences — restore them with the
+    // colours (the Preferences combo does the same via applyFontSelections).
+    const QVariantMap themeFonts = appThemeById(normalized).fonts;
+    if (save) {
+        QVariantMap settings = host_.settings().loadWithDefaults();
+        settings.insert(QStringLiteral("theme"), normalized);
+        for (auto it = themeFonts.constBegin(); it != themeFonts.constEnd(); ++it) {
+            settings.insert(it.key(), it.value());
+        }
+        if (!host_.settings().saveRaw(settings)) {
+            host_.appendActiveSystemLine(tr("! Could not save theme."));
+        }
+        if (!themeFonts.isEmpty()) {
+            host_.applyAllSettings(); // picks up the bundled fonts
+        }
+    }
+    setThemeId(normalized);
+    applyTheme(currentTheme_);
+    syncThemeActions(currentTheme_);
+    host_.renderActiveBuffer();
+    host_.updateChatSeparatorGuide();
+}
+
+void AppearanceController::setChatTheme(const QString& chatTheme, bool save) {
+    const QString normalized = normalizeChatThemeId(chatTheme);
+    if (save) {
+        QVariantMap settings = host_.settings().loadWithDefaults();
+        settings.insert(QStringLiteral("chat_theme"), normalized);
+        if (!host_.settings().saveRaw(settings)) {
+            host_.appendActiveSystemLine(tr("! Could not save chat theme."));
+        }
+    }
+    setChatThemeId(normalized);
+    applyTheme(currentTheme_);
+    syncChatThemeActions(currentChatTheme_);
+    host_.renderActiveBuffer();
+    host_.recolorMemberList();
+    host_.updateChatSeparatorGuide();
+}
+
+void AppearanceController::setWallpaper(const QString& wallpaper, bool save) {
+    const QString normalized = normalizeWallpaperValue(wallpaper);
+    if (save) {
+        QVariantMap settings = host_.settings().loadWithDefaults();
+        settings.insert(QStringLiteral("wallpaper"), normalized);
+        if (!host_.settings().saveRaw(settings)) {
+            host_.appendActiveSystemLine(tr("! Could not save wallpaper."));
+        }
+    }
+    setWallpaperValue(normalized);
+    applyTheme(currentTheme_);
+    syncWallpaperActions(currentWallpaper_);
+}
+
+void AppearanceController::syncThemeActions(const QString& theme) {
+    const QString normalized = normalizeThemeId(theme);
+    for (QAction* action : themeActions_) {
+        if (action == nullptr) {
+            continue;
+        }
+        const QSignalBlocker blocker(action);
+        action->setChecked(action->data().toString() == normalized);
+    }
+}
+
+void AppearanceController::syncChatThemeActions(const QString& chatTheme) {
+    const QString normalized = normalizeChatThemeId(chatTheme);
+    for (QAction* action : chatThemeActions_) {
+        if (action == nullptr) {
+            continue;
+        }
+        const QSignalBlocker blocker(action);
+        action->setChecked(action->data().toString() == normalized);
+    }
+}
+
+void AppearanceController::syncWallpaperActions(const QString& wallpaper) {
+    const QString normalized = normalizeWallpaperValue(wallpaper);
+    for (QAction* action : wallpaperActions_) {
+        if (action == nullptr) {
+            continue;
+        }
+        const QSignalBlocker blocker(action);
+        action->setChecked(action->data().toString() == normalized);
+    }
 }
 
 } // namespace maxchat::ui

@@ -1474,8 +1474,8 @@ void maxchat::ui::MainWindow::buildMenus() {
         action->setCheckable(true);
         action->setData(theme.id);
         themeGroup->addAction(action);
-        m_themeActions.append(action);
-        connect(action, &QAction::triggered, this, [this, id = theme.id]() { setTheme(id, true); });
+        m_appearance->registerThemeAction(action);
+        connect(action, &QAction::triggered, this, [this, id = theme.id]() { m_appearance->setTheme(id, true); });
     }
     QMenu* chatThemeMenu = themesMenu->addMenu(tr("Chat Theme"));
     auto* chatThemeGroup = new QActionGroup(this);
@@ -1485,9 +1485,9 @@ void maxchat::ui::MainWindow::buildMenus() {
         action->setCheckable(true);
         action->setData(theme.id);
         chatThemeGroup->addAction(action);
-        m_chatThemeActions.append(action);
+        m_appearance->registerChatThemeAction(action);
         connect(action, &QAction::triggered, this,
-                [this, id = theme.id]() { setChatTheme(id, true); });
+                [this, id = theme.id]() { m_appearance->setChatTheme(id, true); });
     }
     QMenu* wallpaperMenu = themesMenu->addMenu(tr("Wallpaper"));
     auto* wallpaperGroup = new QActionGroup(this);
@@ -1497,9 +1497,9 @@ void maxchat::ui::MainWindow::buildMenus() {
         action->setCheckable(true);
         action->setData(wallpaper.value);
         wallpaperGroup->addAction(action);
-        m_wallpaperActions.append(action);
+        m_appearance->registerWallpaperAction(action);
         connect(action, &QAction::triggered, this,
-                [this, value = wallpaper.value]() { setWallpaper(value, true); });
+                [this, value = wallpaper.value]() { m_appearance->setWallpaper(value, true); });
     }
     wallpaperMenu->addSeparator();
     wallpaperMenu->addAction(tr("Load Image..."), this, [this]() {
@@ -1507,7 +1507,7 @@ void maxchat::ui::MainWindow::buildMenus() {
             QFileDialog::getOpenFileName(this, QStringLiteral("Choose Wallpaper"), QString(),
                                          QStringLiteral("Images (*.png *.jpg *.jpeg *.webp)"));
         if (!wallPath.isEmpty()) {
-            setWallpaper(wallPath, true);
+            m_appearance->setWallpaper(wallPath, true);
         }
     });
     m_looksMenu = themesMenu->addMenu(tr("Saved Looks"));
@@ -2113,19 +2113,19 @@ void maxchat::ui::MainWindow::openPreferences() {
             [this](const QString& app, const QString& chat, const QString& wallpaper,
                    int chatOpacity) {
                 m_appearance->setChatOpacity(chatOpacity);
-                setTheme(app, false);
-                setChatTheme(chat, false);
-                setWallpaper(wallpaper, false);
+                m_appearance->setTheme(app, false);
+                m_appearance->setChatTheme(chat, false);
+                m_appearance->setWallpaper(wallpaper, false);
             });
     if (dialog.exec() != QDialog::Accepted) {
         const QVariantMap saved = m_settings.loadWithDefaults();
         m_appearance->setChatOpacity(saved.value(QStringLiteral("chat_opacity"), 100).toInt());
-        setTheme(saved.value(QStringLiteral("theme"), QStringLiteral("synthwave")).toString(),
+        m_appearance->setTheme(saved.value(QStringLiteral("theme"), QStringLiteral("synthwave")).toString(),
                  false);
-        setChatTheme(
+        m_appearance->setChatTheme(
             saved.value(QStringLiteral("chat_theme"), QStringLiteral("follow")).toString(),
             false);
-        setWallpaper(saved.value(QStringLiteral("wallpaper")).toString(), false);
+        m_appearance->setWallpaper(saved.value(QStringLiteral("wallpaper")).toString(), false);
         return;
     }
 
@@ -8648,141 +8648,9 @@ void maxchat::ui::MainWindow::resizeMessageInput() {
                                             : Qt::ScrollBarAlwaysOff);
 }
 
-void maxchat::ui::MainWindow::applyTheme(const QString& theme) {
-    const QString normalized = normalizeThemeId(theme);
-    const QString styleSheet =
-        styleSheetForAppearance(normalized, m_appearance->chatThemeId(),
-                                m_appearance->wallpaperValue(), m_appearance->chatOpacity());
-    // Chrome font lives IN the stylesheet: with an app-wide QSS active,
-    // qApp->setFont/menuBar()->setFont are unreliable — any re-polish (theme,
-    // chat theme, wallpaper switch, even later widget churn) silently reverts
-    // the menu bar / toolbar to the system font. A stylesheet rule cannot be
-    // dropped that way.
-    const QVariantMap fontSettings = m_settings.loadWithDefaults();
-    const QString family = fontSettings
-                               .value(QStringLiteral("app_font_family"),
-                                      QStringLiteral("JetBrains Mono"))
-                               .toString();
-    const int pointSize = fontSettings.value(QStringLiteral("app_font_size"), 14).toInt();
-    const bool bold = fontSettings.value(QStringLiteral("app_font_bold"), true).toBool();
-    const QString chromeFontCss =
-        QStringLiteral("\nQMenuBar, QMenu, QToolBar, QToolButton { font-family:'%1'; "
-                       "font-size:%2pt; font-weight:%3; }")
-            .arg(family)
-            .arg(pointSize)
-            .arg(bold ? 700 : 400);
-    // Apply palette + stylesheet app-wide so parentless dialogs are themed too,
-    // and the OS palette can't bleed into widgets the QSS doesn't cover.
-    if (normalized == systemThemeId()) {
-        if (QStyle* style = QApplication::style()) {
-            qApp->setPalette(style->standardPalette());
-        }
-        // Themes Off has no app QSS → setFont works reliably (no re-polish).
-        qApp->setStyleSheet(QString());
-    } else {
-        qApp->setPalette(paletteForAppearance(normalized));
-        qApp->setStyleSheet(styleSheet + chromeFontCss);
-    }
-    updateTrayIcon();
-    setWindowIcon(ui::AppIcon::makeIcon(
-        m_settings.loadWithDefaults().value(QStringLiteral("tray_icon"), QStringLiteral("bubble")).toString(),
-        appThemeById(normalized).accent));
-    // Keep the app-font assert for everything else (dialogs, labels) — the
-    // stylesheet rule above covers the chrome that re-polish was reverting.
-    QFont appFont(family, pointSize);
-    appFont.setBold(bold);
-    qApp->setFont(appFont);
+void maxchat::ui::MainWindow::setMenuBarFont(const QFont& font) {
     if (menuBar() != nullptr) {
-        menuBar()->setFont(appFont);
-    }
-}
-
-void maxchat::ui::MainWindow::setTheme(const QString& theme, const bool save) {
-    const QString normalized = normalizeThemeId(theme);
-    // Saved/imported themes can bundle font preferences — restore them with
-    // the colors (the Preferences combo does the same via applyFontSelections).
-    const QVariantMap themeFonts = appThemeById(normalized).fonts;
-    if (save) {
-        QVariantMap settings = m_settings.loadWithDefaults();
-        settings.insert(QStringLiteral("theme"), normalized);
-        for (auto it = themeFonts.constBegin(); it != themeFonts.constEnd(); ++it) {
-            settings.insert(it.key(), it.value());
-        }
-        if (!m_settings.saveRaw(settings)) {
-            appendSystemLine(tr("! Could not save theme."));
-        }
-        if (!themeFonts.isEmpty()) {
-            applyCurrentSettings(); // picks up the bundled fonts
-        }
-    }
-    m_appearance->setThemeId(normalized);
-    applyTheme(m_appearance->themeId());
-    syncThemeActions(m_appearance->themeId());
-    renderActiveBuffer();
-    updateChatSeparatorGuide();
-}
-
-void maxchat::ui::MainWindow::syncThemeActions(const QString& theme) {
-    const QString normalized = normalizeThemeId(theme);
-    for (QAction* action : m_themeActions) {
-        if (action == nullptr) {
-            continue;
-        }
-        const QSignalBlocker blocker(action);
-        action->setChecked(action->data().toString() == normalized);
-    }
-}
-
-void maxchat::ui::MainWindow::setChatTheme(const QString& chatTheme, const bool save) {
-    const QString normalized = normalizeChatThemeId(chatTheme);
-    if (save) {
-        QVariantMap settings = m_settings.loadWithDefaults();
-        settings.insert(QStringLiteral("chat_theme"), normalized);
-        if (!m_settings.saveRaw(settings)) {
-            appendSystemLine(tr("! Could not save chat theme."));
-        }
-    }
-    m_appearance->setChatThemeId(normalized);
-    applyTheme(m_appearance->themeId());
-    syncChatThemeActions(m_appearance->chatThemeId());
-    renderActiveBuffer();
-    recolorMemberList();
-    updateChatSeparatorGuide();
-}
-
-void maxchat::ui::MainWindow::syncChatThemeActions(const QString& chatTheme) {
-    const QString normalized = normalizeChatThemeId(chatTheme);
-    for (QAction* action : m_chatThemeActions) {
-        if (action == nullptr) {
-            continue;
-        }
-        const QSignalBlocker blocker(action);
-        action->setChecked(action->data().toString() == normalized);
-    }
-}
-
-void maxchat::ui::MainWindow::setWallpaper(const QString& wallpaper, const bool save) {
-    const QString normalized = normalizeWallpaperValue(wallpaper);
-    if (save) {
-        QVariantMap settings = m_settings.loadWithDefaults();
-        settings.insert(QStringLiteral("wallpaper"), normalized);
-        if (!m_settings.saveRaw(settings)) {
-            appendSystemLine(tr("! Could not save wallpaper."));
-        }
-    }
-    m_appearance->setWallpaperValue(normalized);
-    applyTheme(m_appearance->themeId());
-    syncWallpaperActions(m_appearance->wallpaperValue());
-}
-
-void maxchat::ui::MainWindow::syncWallpaperActions(const QString& wallpaper) {
-    const QString normalized = normalizeWallpaperValue(wallpaper);
-    for (QAction* action : m_wallpaperActions) {
-        if (action == nullptr) {
-            continue;
-        }
-        const QSignalBlocker blocker(action);
-        action->setChecked(action->data().toString() == normalized);
+        menuBar()->setFont(font);
     }
 }
 
@@ -8965,7 +8833,7 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
     }
 
     m_appearance->loadFromSettings(settings);
-    applyTheme(m_appearance->themeId());
+    m_appearance->applyTheme(m_appearance->themeId());
     // Re-apply the app font AFTER the theme: setting a global stylesheet re-polishes
     // widgets and drops qApp->setFont for chrome (menu bar, menus, dialogs), so the
     // window/menu font would otherwise ignore the configured app font. Set it on the
@@ -8974,9 +8842,9 @@ void maxchat::ui::MainWindow::applyCurrentSettings() {
     if (menuBar() != nullptr) {
         menuBar()->setFont(appFont);
     }
-    syncThemeActions(m_appearance->themeId());
-    syncChatThemeActions(m_appearance->chatThemeId());
-    syncWallpaperActions(m_appearance->wallpaperValue());
+    m_appearance->syncThemeActions(m_appearance->themeId());
+    m_appearance->syncChatThemeActions(m_appearance->chatThemeId());
+    m_appearance->syncWallpaperActions(m_appearance->wallpaperValue());
 
     // Per-area color overrides ride on widget-level style sheets so they win
     // over the window-level theme QSS; empty = follow the theme.

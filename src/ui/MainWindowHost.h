@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QFont>
 #include <QString>
 #include <QStringList>
 
@@ -76,6 +77,14 @@ class MainWindowHost {
     [[nodiscard]] virtual QWidget* dialogParent() = 0;
     // Rebuild the network/buffer tree (e.g. when the terminal list changes).
     virtual void rebuildTree() = 0;
+
+    // --- Appearance refresh hooks (AppearanceController → window) ------------
+    virtual void renderActiveBuffer() = 0;      // re-render chat after a theme change
+    virtual void recolorMemberList() = 0;       // re-tint the member list
+    virtual void updateChatSeparatorGuide() = 0;
+    virtual void updateTrayIcon() = 0;          // tray icon follows the theme accent
+    virtual void setMenuBarFont(const QFont& font) = 0; // QMainWindow-only, can't reach via QWidget*
+    virtual void applyAllSettings() = 0;        // full re-apply (bundled theme fonts)
 };
 
 } // namespace maxchat::ui
