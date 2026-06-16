@@ -41,6 +41,7 @@ void installTranslators(QApplication& app) {
     static QTranslator appTranslator;
     const QString appDir = QCoreApplication::applicationDirPath();
     const QStringList candidates = {
+        QStringLiteral(":/i18n"), // .qm embedded in the binary by qt_add_translations
         QDir(appDir).filePath(QStringLiteral("translations")),
         QDir(appDir).filePath(QStringLiteral("../translations")),
     };

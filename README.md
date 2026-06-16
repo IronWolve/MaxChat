@@ -45,6 +45,25 @@ cmake -S . -B build-lean -G Ninja -DCMAKE_BUILD_TYPE=Release \
 ./build-release/maxchat-c --selftest
 ```
 
+### Translations
+
+UI strings marked with `tr()` are translatable. Translation sources live in
+`translations/*.ts`; the build compiles them to `.qm` and embeds them in the
+binary (loaded at startup per the `interface_language` setting / system locale).
+
+To add or update a language:
+
+```bash
+# 1. regenerate the .ts files from the current tr() strings
+cmake --build build --target update_translations
+# 2. translate translations/maxchat_<lang>.ts  (Qt Linguist, or edit the XML)
+# 3. add the new .ts to TS_FILES in CMakeLists.txt, then rebuild
+```
+
+A partial German translation (`maxchat_de.ts`, menu bar + tray) ships as the
+reference. Marking the rest of the UI is incremental — wrap more user-facing
+`QStringLiteral("…")` as `tr("…")`, then re-run `update_translations`.
+
 ### Windows
 
 ```cmd
