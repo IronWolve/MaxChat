@@ -414,7 +414,9 @@ endif()
 # binary under :/i18n (the loader in main.cpp reads from there). Regenerate the
 # .ts after adding tr() strings with:  cmake --build build --target update_translations
 qt_add_translations(maxchat-c
-    TS_FILES translations/maxchat_de.ts
+    TS_FILES
+        translations/maxchat_de.ts
+        translations/maxchat_es.ts
     RESOURCE_PREFIX "/i18n"
 )
 
