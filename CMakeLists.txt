@@ -415,6 +415,7 @@ endif()
 # .ts after adding tr() strings with:  cmake --build build --target update_translations
 qt_add_translations(maxchat-c
     TS_FILES
+        translations/maxchat_ar.ts
         translations/maxchat_de.ts
         translations/maxchat_es.ts
         translations/maxchat_fr.ts
