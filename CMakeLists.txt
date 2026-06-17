@@ -418,6 +418,7 @@ qt_add_translations(maxchat-c
         translations/maxchat_de.ts
         translations/maxchat_es.ts
         translations/maxchat_fr.ts
+        translations/maxchat_it.ts
     RESOURCE_PREFIX "/i18n"
 )
 
