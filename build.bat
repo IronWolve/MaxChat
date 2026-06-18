@@ -301,6 +301,13 @@ if exist "%ROOT%\assets\dictionaries" (
     xcopy /E /I /Y "%ROOT%\assets\dictionaries" "%DIST_DIR%\assets\dictionaries" >nul
     if errorlevel 1 exit /b 1
 )
+rem Importable theme-pack gallery + theme-builder.html. Not auto-loaded; users
+rem import the ones they like (Preferences > Themes > Import) and can author new
+rem packs with the builder. Shipped as a sibling folder, not under assets\.
+if exist "%ROOT%\theme-packs" (
+    xcopy /E /I /Y "%ROOT%\theme-packs" "%DIST_DIR%\theme-packs" >nul
+    if errorlevel 1 exit /b 1
+)
 exit /b 0
 
 :copy_notices

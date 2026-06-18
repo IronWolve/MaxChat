@@ -1,11 +1,11 @@
 {
   "kind": "maxchat-theme-pack",
   "version": 1,
-  "name": "mIRC Classic",
+  "name": "Classic IRC Light",
   "app": {
-    "id": "mirc-classic",
-    "label": "mIRC Classic",
-    "name": "mIRC Classic",
+    "id": "classic-irc-light",
+    "label": "Classic IRC Light",
+    "name": "Classic IRC Light",
     "dark": false,
     "bg": [
       212,
@@ -65,8 +65,8 @@
     ]
   },
   "chat": {
-    "id": "mirc-classic",
-    "label": "mIRC Classic",
+    "id": "classic-irc-light",
+    "label": "Classic IRC Light",
     "bg": [
       255,
       255,

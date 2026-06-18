@@ -123,9 +123,30 @@ taskbar flash, notification sounds (.wav), CTCP SOUND receive.
 size-0 guard, comic decoder OOM cap, CR/LF injection strip, CSPRNG tokens,
 CTCP rate-limit, wallpaper path sanitization, topic PlainText.
 
+## Themes
+
+MaxChat ships a small set of built-in app/chat themes, and you can fully
+customise or create your own:
+
+- **Customise live** — Preferences ▸ Themes lets you pick an app theme, a chat
+  theme, fonts, and a wallpaper, and save the result as a new theme.
+- **Theme-pack gallery** — the `theme-packs/` folder bundles 59 ready-made
+  app/chat theme packs (with preview PNGs and wallpapers). Import the ones you
+  like via **Preferences ▸ Themes ▸ Import**. Themes are not auto-loaded, so the
+  picker stays uncluttered — you only add what you want.
+- **Make your own** — open `theme-packs/theme-builder.html` in any browser
+  (no server needed): adjust the app chrome colours, chat colours, fonts, and
+  wallpaper, preview the result, and save a `maxchat-theme-pack` JSON. Drop it in
+  `<config>/maxchat/themes/` or import it. The folder's `README.md` documents the
+  format, and the app writes a copyable `_example.json` template into your theme
+  folder on first run.
+
+Theme packs are plain JSON, so they're easy to share — pass the `.json` (and an
+optional wallpaper) to anyone running MaxChat.
+
 ## Tests
 
-53 CTest targets covering IRC protocol, chat rendering, services, dialogs,
+57 CTest targets covering IRC protocol, chat rendering, services, dialogs,
 comic, DCC, scripting, terminal, themes, and core models.
 
 ```bash
@@ -134,12 +155,9 @@ ctest --test-dir build --output-on-failure
 
 ## Documentation
 
-- `HANDOFF.md` — current development status and ground truth
-- `GUI.MD` — complete GUI reference (windows, dialogs, menus, themes)
-- `INPUT_FOCUS_DESIGN.md` — key redirect and geometry persistence design
 - `SCRIPTING.md` — Lua scripting API and sandbox reference
-- `PORT_PLAN.md` — historic planning document (all milestones complete)
-- `STATUS.md` — development changelog and current state
+- `theme-packs/README.md` — theme-pack format + the gallery list
+- `THIRD_PARTY_NOTICES.md` — bundled third-party components and licenses
 
 ## Dependencies
 

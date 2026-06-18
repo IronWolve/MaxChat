@@ -26,8 +26,8 @@ Useful glyph check line: `┌┬┐ │ ├┼┤ └┴┘ ═ ║ ╔╗ ╚�
 - Amiga Workbench Grey: `amiga-workbench-grey.json`, preview: `amiga-workbench-grey.png`, wallpaper: `amiga-workbench-grey.png`
 - Commodore 64: `commodore-64.json`, preview: `commodore-64.png`
 - DOS VGA Blue: `dos-vga-blue.json`, preview: `dos-vga-blue.png`
-- mIRC Classic: `mirc-classic.json`, preview: `mirc-classic.png`
-- HexChat Classic: `hexchat-classic.json`, preview: `hexchat-classic.png`
+- Classic IRC Light: `classic-irc-light.json`, preview: `classic-irc-light.png`
+- Classic IRC Dark: `classic-irc-dark.json`, preview: `classic-irc-dark.png`
 - Hotdog Stand: `hotdog-stand.json`, preview: `hotdog-stand.png`, wallpaper: `hotdog-stand.png`
 
 ### Modern App Palettes

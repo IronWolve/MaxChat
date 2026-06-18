@@ -1,11 +1,11 @@
 {
   "kind": "maxchat-theme-pack",
   "version": 1,
-  "name": "HexChat Classic",
+  "name": "Classic IRC Dark",
   "app": {
-    "id": "hexchat-classic",
-    "label": "HexChat Classic",
-    "name": "HexChat Classic",
+    "id": "classic-irc-dark",
+    "label": "Classic IRC Dark",
+    "name": "Classic IRC Dark",
     "dark": true,
     "bg": [
       46,
@@ -65,8 +65,8 @@
     ]
   },
   "chat": {
-    "id": "hexchat-classic",
-    "label": "HexChat Classic",
+    "id": "classic-irc-dark",
+    "label": "Classic IRC Dark",
     "bg": [
       29,
       32,
