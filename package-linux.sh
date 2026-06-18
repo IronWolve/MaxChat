@@ -65,12 +65,38 @@ mkdir -p "$OUT"
 # QtCore/QtGui, already exposed via the AppRun's LD_LIBRARY_PATH. Desktop users
 # use the auto-deployed xcb plugin.
 QT_PLUGINS="$("$QMAKE" -query QT_INSTALL_PLUGINS)"
+QT_LIBS="$("$QMAKE" -query QT_INSTALL_LIBS)"
 install -Dm644 "$QT_PLUGINS/platforms/libqoffscreen.so" \
     "$APPDIR/usr/plugins/platforms/libqoffscreen.so"
 
-# Step C: package the AppDir into the AppImage.
+# Step B2: bundle the Wayland platform plugin + shell-integration plugins + the Qt
+# Wayland client lib, so on a Wayland session (incl. WSLg) the app runs natively
+# instead of through XWayland. XWayland's override-redirect popups leave ghost
+# artifacts from menus; native Wayland composites them cleanly. Qt auto-selects
+# wayland when WAYLAND_DISPLAY is set and falls back to the bundled xcb on X11.
+if [ -f "$QT_PLUGINS/platforms/libqwayland.so" ]; then
+    install -Dm644 "$QT_PLUGINS/platforms/libqwayland.so" \
+        "$APPDIR/usr/plugins/platforms/libqwayland.so"
+    for sub in wayland-shell-integration wayland-decoration-client wayland-graphics-integration-client; do
+        if [ -d "$QT_PLUGINS/$sub" ]; then
+            for p in "$QT_PLUGINS/$sub"/*.so; do
+                [ -e "$p" ] && install -Dm644 "$p" "$APPDIR/usr/plugins/$sub/$(basename "$p")"
+            done
+        fi
+    done
+    # Bundle the client-side Qt wayland libs that exist; linuxdeploy resolves
+    # their system deps (libwayland-client/cursor/egl, libxkbcommon).
+    WAYLAND_LIB_ARGS=()
+    for lib in libQt6WaylandClient libQt6WlShellIntegration libQt6WaylandEglClientHwIntegration; do
+        [ -e "$QT_LIBS/$lib.so.6" ] && WAYLAND_LIB_ARGS+=(--library "$QT_LIBS/$lib.so.6")
+    done
+fi
+
+# Step C: package the AppDir into the AppImage (linuxdeploy resolves + bundles the
+# Wayland libs' system dependencies via --library, then patches rpaths).
 ( cd "$OUT" && "$LD" --appdir "$APPDIR" \
     --desktop-file "$ROOT/packaging/maxchat.desktop" \
+    "${WAYLAND_LIB_ARGS[@]}" \
     --output appimage )
 
 echo "==> Done: $(ls -1 "$OUT"/MaxChat-*-x86_64.AppImage 2>/dev/null | tail -1)"
