@@ -71,6 +71,12 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/app/Version.h.in
 
 # Lua interpreter (C). Always built — scripting is a core dependency.
 enable_language(C)
+
+# Windows .exe resource (icon + version metadata) is compiled by windres/rc, which
+# needs the RC language enabled. Windows-only; never reached on other platforms.
+if(WIN32)
+    enable_language(RC)
+endif()
 file(GLOB MAXCHAT_LUA_SOURCES CONFIGURE_DEPENDS
      "${CMAKE_CURRENT_SOURCE_DIR}/third_party/lua/*.c")
 add_library(maxchat_lua STATIC ${MAXCHAT_LUA_SOURCES})
