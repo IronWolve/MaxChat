@@ -50,7 +50,7 @@ class SettingsStoreTest final : public QObject {
         QCOMPARE(settings.value(QStringLiteral("theme")).toString(), QStringLiteral("synthwave"));
         QCOMPARE(settings.value(QStringLiteral("chat_theme")).toString(), QStringLiteral("follow"));
         QCOMPARE(settings.value(QStringLiteral("interface_language")).toString(),
-                 QStringLiteral("system"));
+                 QStringLiteral("en"));
         QCOMPARE(settings.value(QStringLiteral("spellcheck_enabled")).toBool(), true);
         QCOMPARE(settings.value(QStringLiteral("spell_language")).toString(), QStringLiteral("en"));
         QCOMPARE(settings.value(QStringLiteral("app_font_family")).toString(),

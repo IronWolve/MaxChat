@@ -297,8 +297,11 @@ QVariantMap SettingsStore::defaultSettings() {
   QVariantMap settings;
   settings.insert(QStringLiteral("theme"), QStringLiteral("synthwave"));
   settings.insert(QStringLiteral("chat_theme"), QStringLiteral("follow"));
+  // Default to English explicitly (not "system") so the shipped builds are
+  // English out of the box regardless of OS locale; users can switch to their
+  // language — or "System default" — in Preferences ▸ Localization.
   settings.insert(QStringLiteral("interface_language"),
-                  QStringLiteral("system"));
+                  QStringLiteral("en"));
   settings.insert(QStringLiteral("spellcheck_enabled"), true);
   settings.insert(QStringLiteral("spellcheck_backend"), QStringLiteral("internal"));
   settings.insert(QStringLiteral("spell_language"), QStringLiteral("en"));
