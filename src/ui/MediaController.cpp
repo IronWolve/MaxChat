@@ -21,6 +21,8 @@ MediaController::~MediaController() = default;
 
 void MediaController::configure(const QVariantMap& settings) {
     uploader_ = maxchat::upload::makeImageUploader(settings, &host_.previewNetworkManager(), this);
+    openLinks_ = settings.value(QStringLiteral("open_links_in_browser"), true).toBool();
+    linkToggles_ = maxchat::services::linkPreviewTogglesFromSettings(settings);
 }
 
 bool MediaController::isConfigured() const {
@@ -60,18 +62,28 @@ void MediaController::handleAnchorClicked(const QUrl& url) {
     if (!url.isValid()) {
         return;
     }
+    // Master switch: when off, a clicked link does nothing at all.
+    if (!openLinks_) {
+        return;
+    }
 
     using maxchat::services::LinkPreviewKind;
     const auto candidate = maxchat::services::classifyLinkPreview(url);
     switch (candidate.kind) {
     case LinkPreviewKind::DirectImage: {
-        auto* viewer = new ImageViewerDialog(
-            candidate.fetchUrl.isValid() ? candidate.fetchUrl : url, host_.dialogParent());
-        viewer->show();
-        return;
+        // Only open the in-app viewer when image handling is enabled; otherwise
+        // fall through and let the OS browser open the link.
+        if (linkToggles_.images) {
+            auto* viewer = new ImageViewerDialog(
+                candidate.fetchUrl.isValid() ? candidate.fetchUrl : url, host_.dialogParent());
+            viewer->show();
+            return;
+        }
+        break;
     }
     case LinkPreviewKind::DirectAudio: {
-        if (audioBar_ == nullptr) {
+        // Off → open externally; null bar → open externally (unchanged).
+        if (!linkToggles_.media || audioBar_ == nullptr) {
             break;
         }
         // Same SSRF gate as previews: the static check can't catch a public
@@ -90,6 +102,9 @@ void MediaController::handleAnchorClicked(const QUrl& url) {
         return;
     }
     case LinkPreviewKind::DirectVideo: {
+        if (!linkToggles_.media) {
+            break; // open externally
+        }
         const QUrl mediaUrl = candidate.fetchUrl.isValid() ? candidate.fetchUrl : url;
         maxchat::services::resolvePreviewUrlPublicAsync(
             mediaUrl, /*allowPrivateNetwork=*/false, this, [this, mediaUrl](bool allowed) {

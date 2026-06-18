@@ -87,6 +87,36 @@ class MediaControllerTest : public QObject {
         QVERIFY(host.activeLines.first().contains(QStringLiteral("Refused")));
     }
 
+    void masterOffSwallowsClick() {
+        QWidget parent;
+        FakeHost host(&parent);
+        MediaController media(host);
+        QVariantMap s;
+        s.insert(QStringLiteral("open_links_in_browser"), false);
+        media.configure(s);
+        // With the master off, even a normally-refused scheme produces no output:
+        // the click is dropped before the scheme allow-list runs.
+        media.handleAnchorClicked(QUrl(QStringLiteral("file:///etc/passwd")));
+        QCOMPARE(host.activeLines.size(), 0);
+    }
+
+    void imageToggleOffRoutesExternally() {
+        QWidget parent;
+        FakeHost host(&parent);
+        MediaController media(host);
+        // Master on, image handling off → an image link is no longer opened in the
+        // in-app viewer; it falls through to the OS path, where the scheme guard
+        // still refuses a file: URL (proving it took the external branch).
+        QVariantMap services;
+        services.insert(QStringLiteral("images"), false);
+        QVariantMap s;
+        s.insert(QStringLiteral("content_services"), services);
+        media.configure(s);
+        media.handleAnchorClicked(QUrl(QStringLiteral("file:///home/me/pic.png")));
+        QCOMPARE(host.activeLines.size(), 1);
+        QVERIFY(host.activeLines.first().contains(QStringLiteral("Refused")));
+    }
+
     void uploadWithoutServiceWarns() {
         QWidget parent;
         FakeHost host(&parent);

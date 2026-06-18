@@ -171,6 +171,7 @@ class PreferencesDialog final : public QDialog {
     QSpinBox* dccPortFirst_ = nullptr;
     QSpinBox* dccPortLast_ = nullptr;
     QLineEdit* dccDir_ = nullptr;
+    QCheckBox* openLinksBrowser_ = nullptr;
     QCheckBox* linkImages_ = nullptr;
     QCheckBox* linkMedia_ = nullptr;
     QCheckBox* linkXCards_ = nullptr;

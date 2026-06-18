@@ -5,6 +5,8 @@
 #include <QString>
 #include <QVariantMap>
 
+#include "services/LinkPreviewPolicy.h"
+
 #include <memory>
 
 class QImage;
@@ -53,6 +55,11 @@ class MediaController final : public QObject {
     std::unique_ptr<maxchat::upload::ImageUploader> uploader_;
     QPointer<MediaPlayerDialog> mediaPlayer_; // one at a time
     QPointer<AudioPlayerBar> audioBar_;       // owned by the window
+    // Click-handling policy, refreshed in configure(). openLinks_ off → clicked
+    // links do nothing; the per-type toggles route image/audio/video links to the
+    // in-app viewers vs. the OS browser (same flags the preview fetcher uses).
+    bool openLinks_ = true;
+    maxchat::services::LinkPreviewToggles linkToggles_;
 };
 
 } // namespace maxchat::ui
