@@ -384,6 +384,15 @@ set_target_properties(maxchat-c
         WIN32_EXECUTABLE $<PLATFORM_ID:Windows>
 )
 
+# Embed the application icon into the Windows .exe (Explorer / taskbar / Alt-Tab).
+# Compiled by windres (MinGW) or rc (MSVC); the absolute path is baked in so it
+# resolves no matter the build dir. No effect on non-Windows builds.
+if(WIN32)
+    set(MAXCHAT_ICON_PATH "${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/maxchat.ico")
+    configure_file(resources/maxchat.rc.in "${CMAKE_CURRENT_BINARY_DIR}/maxchat.rc" @ONLY)
+    target_sources(maxchat-c PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/maxchat.rc")
+endif()
+
 target_link_libraries(maxchat-c
     PRIVATE
         maxchat_core
