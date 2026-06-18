@@ -436,6 +436,10 @@ QVariantMap SettingsStore::defaultSettings() {
   contentServices.insert(QStringLiteral("xcards"), true);
   contentServices.insert(QStringLiteral("webcards"), true);
   settings.insert(QStringLiteral("content_services"), contentServices);
+  // Master switch for clicked links: ON = a clicked URL opens (in the browser by
+  // default; the content_services toggles above route image/audio/video links to
+  // the in-app viewers instead). OFF = clicking a link does nothing.
+  settings.insert(QStringLiteral("open_links_in_browser"), true);
   settings.insert(QStringLiteral("server_list_visible"), true);
   settings.insert(QStringLiteral("member_list_visible"), true);
   settings.insert(QStringLiteral("show_button_bar"), false);

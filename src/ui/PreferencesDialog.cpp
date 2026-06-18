@@ -391,6 +391,9 @@ QVariantMap PreferencesDialog::settings() const {
     if (ctcpSound_) out.insert(QStringLiteral("ctcp_sound"), ctcpSound_->isChecked());
     if (minimizeToTray_) out.insert(QStringLiteral("minimize_to_tray"), minimizeToTray_->isChecked());
 
+    if (openLinksBrowser_)
+        out.insert(QStringLiteral("open_links_in_browser"), openLinksBrowser_->isChecked());
+
     QVariantMap services = contentServicesFromSettings(out);
     services.insert(QStringLiteral("images"), linkImages_->isChecked());
     services.insert(QStringLiteral("media"), linkMedia_->isChecked());
@@ -1991,13 +1994,33 @@ void PreferencesDialog::buildServicesTab(QWidget* tab) {
 
     const QVariantMap services = contentServicesFromSettings(settings_);
 
+    // ── Links ─────────────────────────────────────────────────────────
+    // Master switch: when off, clicking a link does nothing. When on, a clicked
+    // link opens in the system browser unless its type is enabled below (then it
+    // opens in-app). The type rows also gate the inline preview/thumbnail.
+    openLinksBrowser_ = new QCheckBox(tr("Open links in browser"), tab);
+    openLinksBrowser_->setObjectName(QStringLiteral("openLinksBrowser"));
+    openLinksBrowser_->setChecked(
+        settings_.value(QStringLiteral("open_links_in_browser"), true).toBool());
+    openLinksBrowser_->setToolTip(
+        tr("Master switch: clicking a URL opens it in your browser. Turn off to "
+           "make clicked links do nothing. The types below open in-app instead."));
+    root->addWidget(openLinksBrowser_);
+    root->addSpacing(4);
+
     // ── Link preview types ────────────────────────────────────────────
     linkImages_ = new QCheckBox(tr("Image previews"), tab);
     linkImages_->setObjectName(QStringLiteral("linkImages"));
     linkImages_->setChecked(services.value(QStringLiteral("images")).toBool());
+    linkImages_->setToolTip(
+        tr("Show inline thumbnails and open clicked image links in the in-app "
+           "viewer. Off → image links open in your browser."));
     linkMedia_ = new QCheckBox(tr("Audio/video previews"), tab);
     linkMedia_->setObjectName(QStringLiteral("linkMedia"));
     linkMedia_->setChecked(services.value(QStringLiteral("media")).toBool());
+    linkMedia_->setToolTip(
+        tr("Show inline media previews and play clicked audio/video links in-app. "
+           "Off → audio/video links open in your browser."));
     linkXCards_ = new QCheckBox(tr("X / Twitter cards"), tab);
     linkXCards_->setObjectName(QStringLiteral("linkXCards"));
     linkXCards_->setChecked(services.value(QStringLiteral("xcards")).toBool());
@@ -2008,6 +2031,17 @@ void PreferencesDialog::buildServicesTab(QWidget* tab) {
     root->addWidget(linkMedia_);
     root->addWidget(linkXCards_);
     root->addWidget(linkWebCards_);
+
+    // The type rows only matter when links open at all; grey them out otherwise.
+    const auto syncLinkTypesEnabled = [this]() {
+        const bool on = openLinksBrowser_->isChecked();
+        linkImages_->setEnabled(on);
+        linkMedia_->setEnabled(on);
+        linkXCards_->setEnabled(on);
+        linkWebCards_->setEnabled(on);
+    };
+    QObject::connect(openLinksBrowser_, &QCheckBox::toggled, tab, syncLinkTypesEnabled);
+    syncLinkTypesEnabled();
 
     // ── Separator ─────────────────────────────────────────────────────
     auto* sep = new QFrame(tab);
