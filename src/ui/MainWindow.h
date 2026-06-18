@@ -219,6 +219,7 @@ class MainWindow final : public QMainWindow,
     void openRawLog();
     void openUrlList();
     void openCommandHelp();
+    void openThemeBuilder();
     void openAbout();
     // Quiet GitHub Releases check (manual=true also reports "you're up to date").
     void checkForUpdates(bool manual);
