@@ -81,9 +81,16 @@ modern IRC client.
 
 ### Download (recommended)
 
-Grab the latest **Windows** or **Linux** build from the
-[Releases](https://github.com/IronWolve/MaxChat/releases) page, unzip it, and run `maxchat`
-(`maxchat.exe` on Windows). Everything it needs (themes, wallpapers, dictionaries, fonts) is in the zip.
+Grab the latest build from the [Releases](https://github.com/IronWolve/MaxChat/releases) page:
+
+- **Windows** — download `MaxChat-<version>-windows-x64.zip`, unzip it, and run `maxchat.exe`.
+  Everything it needs (Qt, themes, wallpapers, dictionaries, fonts) is in the zip.
+- **Linux** — download `MaxChat-<version>-x86_64.AppImage`, then:
+  ```bash
+  chmod +x MaxChat-*-x86_64.AppImage
+  ./MaxChat-*-x86_64.AppImage
+  ```
+  It's a single self-contained file with Qt bundled — no system Qt required.
 
 Then **Server ▸ Server List…** to choose a saved network, or **Server ▸ Quick Connect…** for a
 one-off connection. Comic mode is optional — see [Comic art](#comic-art-optional) to switch it on.
@@ -184,11 +191,19 @@ sources live in `translations/*.ts` and compile to `.qm` embedded in the binary.
 **Windows:**
 
 ```cmd
-build.bat            ::  MinGW default → dist-win\
+build.bat            ::  MinGW default → dist-win\ + MaxChat-<ver>-windows-x64.zip
 build.bat msvc       ::  MSVC
 build.bat noterm     ::  without the terminal / BBS UI
 build.bat tests      ::  build, then run the test suite
 ```
+
+### Release packaging
+
+- **Windows:** `build.bat` assembles `dist-win\` (exe + Qt via `windeployqt` + assets +
+  licenses) and zips it to `MaxChat-<version>-windows-x64.zip`.
+- **Linux:** `./package-linux.sh` builds Release and produces a self-contained
+  `dist-linux/MaxChat-<version>-x86_64.AppImage` with Qt bundled (fetches the
+  `linuxdeploy` tooling automatically). Upload either artifact straight to a GitHub Release.
 
 ## License
 
