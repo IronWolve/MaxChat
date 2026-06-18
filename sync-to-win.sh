@@ -42,11 +42,8 @@ for file in \
   CMakeLists.txt \
   LICENSE \
   README.md \
+  SCRIPTING.md \
   THIRD_PARTY_NOTICES.md \
-  PORT_PLAN.md \
-  STATUS.md \
-  HANDOFF.md \
-  WINDOWS_SETUP.md \
   build.bat \
   sync-to-win.sh; do
   copy_file "$file"
