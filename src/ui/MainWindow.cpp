@@ -1189,7 +1189,7 @@ void maxchat::ui::MainWindow::buildMenus() {
     QAction* channelListAction = serverMenu->addAction(tr("Channels..."), this,
                                                        [this]() { openChannelList(false); });
     serverMenu->addSeparator();
-    serverMenu->addAction(tr("Quit"), qApp, &QApplication::quit);
+    serverMenu->addAction(tr("Quit"), this, &MainWindow::quitApplication);
 
     auto* viewMenu = menuBar()->addMenu(tr("&View"));
     m_buttonBarAction = viewMenu->addAction(tr("Button Bar"));
@@ -2227,6 +2227,7 @@ void maxchat::ui::MainWindow::checkForUpdates(bool manual) {
         QStringLiteral("https://api.github.com/repos/IronWolve/MaxChat/releases/latest")));
     req.setRawHeader("User-Agent", "MaxChat-update-check");
     req.setRawHeader("Accept", "application/vnd.github+json");
+    req.setTransferTimeout(15000); // don't hang on a stalled connection
     QNetworkReply* reply = m_updateNetworkManager.get(req);
     connect(reply, &QNetworkReply::finished, this, [this, reply, manual]() {
         reply->deleteLater();
@@ -2235,16 +2236,23 @@ void maxchat::ui::MainWindow::checkForUpdates(bool manual) {
         QString url = QStringLiteral("https://github.com/IronWolve/MaxChat/releases");
         bool parsed = ok;
         if (ok) {
-            const QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
+            // Cap the read — a release body can be arbitrarily large, and we only
+            // need tag_name/html_url out of the top of it.
+            const QByteArray body = reply->read(256 * 1024);
+            const QJsonDocument doc = QJsonDocument::fromJson(body);
             if (doc.isObject()) {
                 const QJsonObject obj = doc.object();
                 latest = obj.value(QStringLiteral("tag_name")).toString();
                 while (latest.startsWith(QLatin1Char('v')) || latest.startsWith(QLatin1Char('V'))) {
                     latest.remove(0, 1);
                 }
-                const QString html = obj.value(QStringLiteral("html_url")).toString();
-                if (!html.isEmpty()) {
-                    url = html;
+                // Only follow html_url if it is an https URL — never hand an
+                // unexpected scheme to QDesktopServices (matches the allow-list
+                // every other openUrl path uses). Otherwise keep the safe default.
+                const QUrl html(obj.value(QStringLiteral("html_url")).toString());
+                if (html.isValid() && html.scheme().compare(QLatin1String("https"),
+                                                            Qt::CaseInsensitive) == 0) {
+                    url = html.toString();
                 }
             } else {
                 parsed = false;
@@ -4905,20 +4913,41 @@ void maxchat::ui::MainWindow::removeMutedChannel(const QString& channel) {
                          .arg(channel.trimmed(), activeNetworkName()));
 }
 
-void MainWindow::closeEvent(QCloseEvent* event) {
+bool MainWindow::confirmQuitIfConnected() {
     if (m_confirmQuit && anyNetworkConnectionIsConnected()) {
         const auto answer = QMessageBox::question(
             this, QStringLiteral("Quit MaxChat"),
             QStringLiteral("You are still connected. Quit anyway?"));
         if (answer != QMessageBox::Yes) {
-            event->ignore();
-            return;
+            return false;
         }
     }
+    return true;
+}
+
+void MainWindow::saveWindowGeometry() {
     QVariantMap s = m_settings.loadRaw();
     s.insert(QStringLiteral("window_geometry"), QString::fromLatin1(saveGeometry().toBase64()));
     (void)m_settings.saveRaw(s);
+}
+
+void MainWindow::closeEvent(QCloseEvent* event) {
+    if (!confirmQuitIfConnected()) {
+        event->ignore();
+        return;
+    }
+    saveWindowGeometry();
     QMainWindow::closeEvent(event);
+}
+
+void MainWindow::quitApplication() {
+    // The tray "Quit" runs while the window is hidden in the tray; close() on a
+    // hidden window does not trigger quitOnLastWindowClosed, so quit explicitly.
+    if (!confirmQuitIfConnected()) {
+        return;
+    }
+    saveWindowGeometry();
+    qApp->quit();
 }
 
 void MainWindow::noteUserActivity() {

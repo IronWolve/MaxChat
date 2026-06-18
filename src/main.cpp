@@ -28,6 +28,9 @@ void installTranslators(QApplication& app) {
     const QLocale locale = configured.isEmpty() || configured == QStringLiteral("system")
                                ? QLocale::system()
                                : QLocale(configured);
+    // Mirror the whole UI for RTL locales (Arabic, Hebrew, …). Qt does not flip
+    // layout direction automatically just because an RTL translation loaded.
+    app.setLayoutDirection(locale.textDirection());
     if (locale.language() == QLocale::C || locale.language() == QLocale::English) {
         return;
     }
