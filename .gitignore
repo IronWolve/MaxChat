@@ -14,6 +14,7 @@ Testing/
 *.app/
 compile_commands.json
 dist-win/
+dist-linux/
 build-output.log
 *.mcb
 
@@ -22,3 +23,4 @@ build-output.log
 # README.md, SCRIPTING.md, and THIRD_PARTY_NOTICES.md are user-facing and tracked.
 /DEVDOCS/
 /OLD/
+/MaxChat-*-windows-x64.zip

@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=MaxChat
+GenericName=IRC Client
+Comment=A comic-strip-style graphical IRC client
+Exec=maxchat
+Icon=maxchat
+Terminal=false
+Categories=Network;IRCClient;
+Keywords=IRC;chat;comic;
+StartupNotify=true
+StartupWMClass=maxchat

@@ -193,10 +193,26 @@ if errorlevel 1 (
     exit /b 1
 )
 
+call :make_zip
+
 echo.
 echo Windows build complete:
 echo   %DIST_DIR%\maxchat.exe
+if exist "%ZIP_PATH%" echo   %ZIP_PATH%
 popd >nul
+exit /b 0
+
+:make_zip
+rem Zip the assembled dist-win\ into a ready-to-upload release archive. Version
+rem comes from CMakeLists project(VERSION). PowerShell's Compress-Archive ships
+rem with Windows 10/11. Non-fatal: a zip failure must not fail the build.
+set "APP_VERSION="
+for /f "tokens=2" %%v in ('findstr /r /c:"^    VERSION [0-9]" "%ROOT%\CMakeLists.txt"') do set "APP_VERSION=%%v"
+if "%APP_VERSION%"=="" set "APP_VERSION=dev"
+set "ZIP_PATH=%ROOT%\MaxChat-%APP_VERSION%-windows-x64.zip"
+if exist "%ZIP_PATH%" del /q "%ZIP_PATH%"
+powershell -NoProfile -Command "Compress-Archive -Path '%DIST_DIR%\*' -DestinationPath '%ZIP_PATH%' -Force" 2>nul
+if exist "%ZIP_PATH%" (echo Packaged: %ZIP_PATH%) else (echo WARN: could not create release zip ^(PowerShell Compress-Archive unavailable?^))
 exit /b 0
 
 :find_qt
