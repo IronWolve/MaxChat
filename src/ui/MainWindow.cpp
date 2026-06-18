@@ -72,6 +72,7 @@
 #include <QDateTime>
 #include <QCoreApplication>
 #include <QDir>
+#include <QFileInfo>
 #include <QEventLoop>
 #include <QElapsedTimer>
 #include <QEvent>
@@ -1361,6 +1362,7 @@ void maxchat::ui::MainWindow::buildMenus() {
                                               &MainWindow::openCommandHelp);
     helpMenu->addAction(tr("Comic Chat Guide..."), m_comicController,
                         &ComicController::openComicHelp);
+    helpMenu->addAction(tr("Theme Builder..."), this, &MainWindow::openThemeBuilder);
     helpAction->setShortcut(QKeySequence(Qt::Key_F1));
     helpMenu->addSeparator();
     helpMenu->addAction(tr("Check for Updates..."), this,
@@ -2181,6 +2183,28 @@ void maxchat::ui::MainWindow::openCommandHelp() {
             .join(QStringLiteral("\n\n")));
 }
 
+void maxchat::ui::MainWindow::openThemeBuilder() {
+    // The builder is a standalone HTML page shipped in the themes/ gallery folder
+    // (sibling of the binary in a release; repo root in the dev tree). Open it in
+    // the user's browser — it's our own bundled asset, not a chat-supplied URL.
+    const QString appDir = QCoreApplication::applicationDirPath();
+    const QStringList candidates = {
+        QDir(appDir).filePath(QStringLiteral("themes/theme-builder.html")),
+        QDir(appDir).filePath(QStringLiteral("../themes/theme-builder.html")),
+        QDir::current().filePath(QStringLiteral("themes/theme-builder.html")),
+    };
+    for (const QString& path : candidates) {
+        if (QFileInfo::exists(path)) {
+            QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(path).absoluteFilePath()));
+            return;
+        }
+    }
+    QMessageBox::information(
+        this, tr("Theme Builder"),
+        tr("The theme builder (themes/theme-builder.html) wasn't found next to the "
+           "application. You can still create and customise themes in "
+           "Preferences ▸ Themes."));
+}
 
 void maxchat::ui::MainWindow::openAbout() {
     QMessageBox::about(
