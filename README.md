@@ -130,11 +130,11 @@ customise or create your own:
 
 - **Customise live** — Preferences ▸ Themes lets you pick an app theme, a chat
   theme, fonts, and a wallpaper, and save the result as a new theme.
-- **Theme-pack gallery** — the `theme-packs/` folder bundles 59 ready-made
-  app/chat theme packs (with preview PNGs and wallpapers). Import the ones you
-  like via **Preferences ▸ Themes ▸ Import**. Themes are not auto-loaded, so the
-  picker stays uncluttered — you only add what you want.
-- **Make your own** — open `theme-packs/theme-builder.html` in any browser
+- **Theme gallery** — the `themes/` folder bundles 59 ready-made app/chat theme
+  packs (with preview PNGs and wallpapers). Import the ones you like via
+  **Preferences ▸ Themes ▸ Import**. They are not auto-loaded, so the picker
+  stays uncluttered — you only add what you want.
+- **Make your own** — open `themes/theme-builder.html` in any browser
   (no server needed): adjust the app chrome colours, chat colours, fonts, and
   wallpaper, preview the result, and save a `maxchat-theme-pack` JSON. Drop it in
   `<config>/maxchat/themes/` or import it. The folder's `README.md` documents the
@@ -156,7 +156,7 @@ ctest --test-dir build --output-on-failure
 ## Documentation
 
 - `SCRIPTING.md` — Lua scripting API and sandbox reference
-- `theme-packs/README.md` — theme-pack format + the gallery list
+- `themes/README.md` — theme-pack format + the gallery list
 - `THIRD_PARTY_NOTICES.md` — bundled third-party components and licenses
 
 ## Dependencies
