@@ -17,7 +17,7 @@ QString version() {
 }
 
 QString displayName() {
-    return QStringLiteral("MaxChat C++");
+    return QStringLiteral("MaxChat");
 }
 
 } // namespace maxchat::app

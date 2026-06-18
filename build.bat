@@ -106,7 +106,7 @@ set "CONFIG_ARGS=%CONFIG_ARGS% -DMAXCHAT_OS_SPELL=%MAXCHAT_OS_SPELL%"
 echo OS spell engine: %MAXCHAT_OS_SPELL%
 set "BUILD_ARGS="
 set "CTEST_ARGS="
-set "EXE_PATH=%BUILD_DIR%\maxchat-c.exe"
+set "EXE_PATH=%BUILD_DIR%\maxchat.exe"
 
 where ninja >nul 2>nul
 if errorlevel 1 (
@@ -123,7 +123,7 @@ if errorlevel 1 (
     set "CONFIG_ARGS=-A x64"
     set "BUILD_ARGS=--config Release"
     set "CTEST_ARGS=-C Release"
-    set "EXE_PATH=%BUILD_DIR%\Release\maxchat-c.exe"
+    set "EXE_PATH=%BUILD_DIR%\Release\maxchat.exe"
 )
 
 echo Using Qt: %QT_DIR%
@@ -165,14 +165,14 @@ if not exist "%EXE_PATH%" (
 )
 
 if not exist "%DIST_DIR%" mkdir "%DIST_DIR%"
-copy /Y "%EXE_PATH%" "%DIST_DIR%\maxchat-c.exe" >nul
+copy /Y "%EXE_PATH%" "%DIST_DIR%\maxchat.exe" >nul
 if errorlevel 1 (
     echo ERROR: Could not copy executable to dist-win.
     popd >nul
     exit /b 1
 )
 
-"%QT_DIR%\bin\windeployqt.exe" --release --compiler-runtime "%DIST_DIR%\maxchat-c.exe"
+"%QT_DIR%\bin\windeployqt.exe" --release --compiler-runtime "%DIST_DIR%\maxchat.exe"
 if errorlevel 1 (
     echo ERROR: windeployqt failed.
     popd >nul
@@ -195,7 +195,7 @@ if errorlevel 1 (
 
 echo.
 echo Windows build complete:
-echo   %DIST_DIR%\maxchat-c.exe
+echo   %DIST_DIR%\maxchat.exe
 popd >nul
 exit /b 0
 

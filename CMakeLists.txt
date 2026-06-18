@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.24)
 
 project(MaxChatCpp
-    VERSION 0.9.1
-    DESCRIPTION "Native C++/Qt port experiment for MaxChat"
+    VERSION 1.0.1
+    DESCRIPTION "MaxChat — a graphical IRC client"
     LANGUAGES CXX
 )
 
@@ -381,6 +381,7 @@ qt_add_executable(maxchat-c
 
 set_target_properties(maxchat-c
     PROPERTIES
+        OUTPUT_NAME maxchat                          # ship as maxchat / maxchat.exe
         WIN32_EXECUTABLE $<PLATFORM_ID:Windows>
 )
 

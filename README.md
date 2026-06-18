@@ -82,8 +82,8 @@ modern IRC client.
 ### Download (recommended)
 
 Grab the latest **Windows** or **Linux** build from the
-[Releases](https://github.com/IronWolve/MaxChat/releases) page, unzip it, and run `maxchat-c`
-(`maxchat-c.exe` on Windows). Everything it needs (themes, wallpapers, dictionaries, fonts) is in the zip.
+[Releases](https://github.com/IronWolve/MaxChat/releases) page, unzip it, and run `maxchat`
+(`maxchat.exe` on Windows). Everything it needs (themes, wallpapers, dictionaries, fonts) is in the zip.
 
 Then **Server ▸ Server List…** to choose a saved network, or **Server ▸ Quick Connect…** for a
 one-off connection. Comic mode is optional — see [Comic art](#comic-art-optional) to switch it on.
@@ -95,7 +95,7 @@ Requires **Qt 6** (Widgets, Network, Multimedia, LinguistTools) and **CMake** + 
 ```bash
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build
-./build/maxchat-c
+./build/maxchat
 ```
 
 On **Windows** (MinGW or MSVC), `build.bat` configures, builds, runs `windeployqt`, and assembles a
