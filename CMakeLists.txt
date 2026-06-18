@@ -34,7 +34,9 @@ if(CCACHE_PROGRAM)
     set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
 endif()
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Test Multimedia
+# Qt6::Test is found only when BUILD_TESTING is on (see the test block below) so
+# the app builds on a Qt install without the Test module.
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Multimedia
                                      MultimediaWidgets LinguistTools)
 # Spellcheck uses a VENDORED Hunspell (third_party/hunspell) so the internal
 # engine works on every platform (incl. Windows/MinGW) without a system package.
@@ -434,7 +436,13 @@ qt_add_translations(maxchat-c
     RESOURCE_PREFIX "/i18n"
 )
 
+# BUILD_TESTING is CMake's standard switch (default ON). -DBUILD_TESTING=OFF
+# builds just the app and needs no Qt Test module. Everything below to EOF is
+# the test tree.
+option(BUILD_TESTING "Build the unit tests" ON)
+if(BUILD_TESTING)
 enable_testing()
+find_package(Qt6 REQUIRED COMPONENTS Test)
 
 qt_add_executable(app_info_test
     tests/unit/app_info_test.cpp
@@ -1471,3 +1479,5 @@ target_link_libraries(lua_engine_test
 target_compile_definitions(lua_engine_test PRIVATE
     MAXCHAT_EXAMPLE_SCRIPTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/scripts")
 add_test(NAME lua_engine COMMAND lua_engine_test)
+
+endif() # BUILD_TESTING
