@@ -32,7 +32,7 @@ copy_file() {
   fi
 }
 
-for dir in src tests assets resources licenses third_party; do
+for dir in src tests assets resources licenses third_party themes; do
   sync_dir "$dir"
 done
 
@@ -69,6 +69,11 @@ if [[ -d "$TARGET_DIR/dist-win" ]]; then
       rsync -a --delete "$SOURCE_DIR/assets/$dir/" "$TARGET_DIR/dist-win/assets/$dir/"
     fi
   done
+  # The importable theme-pack gallery ships as a top-level themes/ folder next to
+  # the exe (not under assets/); refresh it too.
+  if [[ -d "$SOURCE_DIR/themes" ]]; then
+    rsync -a --delete "$SOURCE_DIR/themes/" "$TARGET_DIR/dist-win/themes/"
+  fi
   echo "Refreshed runtime assets in $TARGET_DIR/dist-win/assets"
 fi
 
