@@ -167,7 +167,9 @@ if not exist "%EXE_PATH%" (
 if not exist "%DIST_DIR%" mkdir "%DIST_DIR%"
 copy /Y "%EXE_PATH%" "%DIST_DIR%\maxchat.exe" >nul
 if errorlevel 1 (
-    echo ERROR: Could not copy executable to dist-win.
+    echo ERROR: Could not copy maxchat.exe to dist-win - it is probably running.
+    echo        Close MaxChat ^(dist-win\maxchat.exe^), then run build.bat again.
+    echo        The compiled exe is ready at: %EXE_PATH%
     popd >nul
     exit /b 1
 )
