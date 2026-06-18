@@ -232,7 +232,7 @@ void ChatPane::setComicWidget(QWidget* comic) {
         return;
     }
     comic->setVisible(false);
-    // Comic above chat (MS Comic Chat style); chat stays visible beneath.
+    // Comic above chat (classic comic-strip style); chat stays visible beneath.
     splitter_->insertWidget(0, comic);
     splitter_->setCollapsible(0, false);
     splitter_->setCollapsible(1, false);

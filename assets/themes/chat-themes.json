@@ -52,8 +52,8 @@
    "fixed": true
   },
   {
-   "id": "irssi",
-   "label": "irssi - clean (mono nicks)",
+   "id": "terminal-mono",
+   "label": "Terminal - clean (mono nicks)",
    "bg": [
     0,
     0,
@@ -83,8 +83,8 @@
    "nicks": "mono"
   },
   {
-   "id": "bitchx",
-   "label": "BitchX - bright & loud",
+   "id": "terminal-loud",
+   "label": "Terminal - bright & loud",
    "bg": [
     0,
     0,

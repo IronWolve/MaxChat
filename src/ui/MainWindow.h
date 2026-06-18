@@ -168,7 +168,7 @@ class MainWindow final : public QMainWindow,
     void showEvent(QShowEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
 
-    // HexChat-style key redirect: typing anywhere in the main window jumps to
+    // Type-to-input key redirect: typing anywhere in the main window jumps to
     // the message box. Returns true if the key was consumed (caller should too).
     // Never fires when a menu, popup, or modal dialog is active.
     bool redirectKeyToInput(QKeyEvent* e);

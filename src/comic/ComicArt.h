@@ -7,7 +7,7 @@
 
 namespace maxchat::comic {
 
-// Decoded cells of a Microsoft Comic Chat .avb character bundle.
+// Decoded cells of a classic .avb comic character bundle.
 struct CharacterCells {
     QString name;
     QList<QImage> bodies;          // tall pose cells
@@ -20,7 +20,7 @@ struct CharacterCells {
 // Decode a .avb character bundle into body + face cells.
 [[nodiscard]] CharacterCells loadCharacterCells(const QString& path);
 
-// Scan a Comic Chat art folder: returns (.bgb files, .avb files), sorted.
+// Scan a comic art folder: returns (.bgb files, .avb files), sorted.
 void scanArtDir(const QString& folder, QStringList& backgrounds, QStringList& characters);
 // Dev-only bundled art dir (assets/cc-art) if present, else empty.
 [[nodiscard]] QString bundledArtDir();

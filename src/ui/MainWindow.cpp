@@ -834,7 +834,7 @@ static bool isTextEntry(QWidget* w) {
     return false;
 }
 
-// HexChat-style key redirect.
+// Type-to-input key redirect.
 //
 // Invariants that must hold forever:
 //  1. If a QMenu, combo popup, or modal dialog is active → do nothing.
@@ -1635,7 +1635,7 @@ void maxchat::ui::MainWindow::buildLayout() {
     connect(m_input, &SpellTextEdit::imageReceived, this,
             [this](const QImage& image) { m_media->uploadImage(image); });
 
-    // mIRC formatting: Ctrl+B/I/U insert the control codes, Ctrl+K opens the
+    // IRC formatting: Ctrl+B/I/U insert the control codes, Ctrl+K opens the
     // colour picker. Widget-scoped so they only fire while typing.
     const auto addFormattingShortcut = [this](const QString& key, const ushort code) {
         auto* shortcut = new QShortcut(QKeySequence(key), m_input);
@@ -1674,7 +1674,7 @@ void maxchat::ui::MainWindow::buildLayout() {
     });
 
     // Comic panels sit ABOVE the chat in a vertical splitter so the chat stays
-    // visible beneath them when Comic Mode is on (MS Comic Chat style). ChatPane
+    // visible beneath them when Comic Mode is on (classic comic-strip style). ChatPane
     // owns the splitter now (render-pipeline R4); MainWindow still owns the
     // ComicView + its art pipeline (refreshComic/saveComic) and injects it.
     m_comicView = new ComicView(chatColumn);
@@ -5018,7 +5018,7 @@ void MainWindow::applyCtcpVersion(const QVariantMap& settings) {
 }
 
 bool MainWindow::textHighlightsMe(const QString& text, const QString& nick) const {
-    // Match against the plain text (Python strips mIRC codes first) so a colour
+    // Match against the plain text (strip IRC color codes first) so a colour
     // or bold code adjacent to / inside your nick can't hide a highlight.
     const QString plain = maxchat::irc::stripFormatting(text);
     // Whole-word match: bare contains() made nick "art" highlight on "start"

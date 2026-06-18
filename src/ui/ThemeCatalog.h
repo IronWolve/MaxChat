@@ -38,7 +38,7 @@ struct ChatThemeDefinition {
   QColor bg;
   QColor fg;
   bool fixedFont = true;
-  // Optional terminal-look extras (irssi/BitchX): invalid color = follow the
+  // Optional terminal-look extras (classic clients): invalid color = follow the
   // formatter's defaults.
   QColor timestamp;
   QColor bracket;

@@ -9,13 +9,13 @@ namespace maxchat::ui {
 
 namespace {
 
-struct MircColor {
+struct IrcColor {
     int code;
     const char* name;
     const char* hex;
 };
 
-constexpr MircColor MircColors[] = {
+constexpr IrcColor IrcColors[] = {
     {0, "White", "#FFFFFF"},      {1, "Black", "#000000"},
     {2, "Navy", "#00007F"},       {3, "Green", "#009300"},
     {4, "Red", "#FF0000"},        {5, "Maroon", "#7F0000"},
@@ -38,7 +38,7 @@ ColorPickerDialog::ColorPickerDialog(QWidget* parent) : QDialog(parent) {
     auto* grid = new QGridLayout();
     grid->setSpacing(4);
     for (int index = 0; index < 16; ++index) {
-        const MircColor& color = MircColors[index];
+        const IrcColor& color = IrcColors[index];
         auto* swatch = new QPushButton(QString::number(color.code), this);
         swatch->setToolTip(QString::fromLatin1(color.name));
         swatch->setFixedSize(44, 30);

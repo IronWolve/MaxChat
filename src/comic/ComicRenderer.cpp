@@ -468,7 +468,7 @@ void drawBalloons(QPainter& p, const QVector<Row>& rows, const QFont& font, int 
     }
     for (const Row& r : rows) {
         if (r.action) {
-            // /me actions are narration captions (MS Comic Chat style): a
+            // /me actions are narration captions (classic comic-strip style): a
             // tailless cream box, italic text — deliberately NOT a speech or
             // thought balloon.
             QFont ital(font);
