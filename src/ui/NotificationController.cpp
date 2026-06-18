@@ -108,7 +108,7 @@ void NotificationController::setupTrayIcon() {
         return;
     }
 
-    m_window.m_tray = new ::QSystemTrayIcon(this);
+    m_window.m_tray = new ::QSystemTrayIcon(&m_window);
     m_window.m_trayMenu = new QMenu(&m_window);
 
     m_window.m_trayMenu->addAction(tr("Show / Hide"), &m_window, &MainWindow::toggleWindowVisibility);
@@ -119,7 +119,7 @@ void NotificationController::setupTrayIcon() {
         m_window.m_trayMenu->addAction(m_window.m_doNotDisturbAction);
     }
     m_window.m_trayMenu->addSeparator();
-    m_window.m_trayMenu->addAction(tr("Quit"), &m_window, &QWidget::close);
+    m_window.m_trayMenu->addAction(tr("Quit"), &m_window, &MainWindow::quitApplication);
 
     m_window.m_tray->setContextMenu(m_window.m_trayMenu);
     connect(m_window.m_tray, &::QSystemTrayIcon::activated, this, [this](::QSystemTrayIcon::ActivationReason r) {

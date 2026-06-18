@@ -201,6 +201,10 @@ class MainWindow final : public QMainWindow,
     [[nodiscard]] maxchat::irc::IrcConnection* connectionForNetwork(const QString& network) const;
     [[nodiscard]] maxchat::irc::IrcConnection* ensureConnectionForNetwork(const QString& network);
     [[nodiscard]] bool anyNetworkConnectionIsConnected() const;
+    // Shared by closeEvent + quitApplication. confirmQuitIfConnected() returns
+    // false if the user cancels the "still connected" prompt.
+    [[nodiscard]] bool confirmQuitIfConnected();
+    void saveWindowGeometry();
     void openServerList();
     void openQuickConnect();
     void openJoinDialog();
@@ -400,6 +404,11 @@ class MainWindow final : public QMainWindow,
     void renameMemberInChannelBuffers(const QString& oldNick, const QString& newNick);
     void updateTrayIcon(); // forwarder → NotificationController (host hook)
     void toggleWindowVisibility();
+    // Single reliable quit path for the menu-bar + tray "Quit" actions. Unlike
+    // close(), this also quits when the window is hidden in the tray (close() on
+    // a hidden window never trips quitOnLastWindowClosed), and it honours the
+    // confirm-quit prompt + geometry save that the window-close path runs.
+    void quitApplication();
     void notify(const QString& title, const QString& text,
                 const QString& network = {}, const QString& target = {});
     [[nodiscard]] QStringList channelTargetsContainingMember(const QString& network,
