@@ -1360,7 +1360,7 @@ void maxchat::ui::MainWindow::buildMenus() {
     auto* helpMenu = menuBar()->addMenu(tr("&Help"));
     QAction* helpAction = helpMenu->addAction(tr("Commands && Shortcuts..."), this,
                                               &MainWindow::openCommandHelp);
-    helpMenu->addAction(tr("Comic Chat Guide..."), m_comicController,
+    helpMenu->addAction(tr("Comic Mode Guide..."), m_comicController,
                         &ComicController::openComicHelp);
     helpMenu->addAction(tr("Theme Builder..."), this, &MainWindow::openThemeBuilder);
     helpAction->setShortcut(QKeySequence(Qt::Key_F1));
@@ -2212,7 +2212,7 @@ void maxchat::ui::MainWindow::openAbout() {
         tr("<b>%1 %2</b><br><br>"
                        "Native C++/Qt port of MaxChat.<br><br>"
                        "A full IRC client: multi-network, server list, link previews, "
-                       "inline media, spellcheck, logging, DCC, scripting, and Comic Chat "
+                       "inline media, spellcheck, logging, DCC, scripting, and comic "
                        "mode with themeable balloons.")
             .arg(app::displayName().toHtmlEscaped(), app::version().toHtmlEscaped()));
 }

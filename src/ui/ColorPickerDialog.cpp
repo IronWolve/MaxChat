@@ -32,7 +32,7 @@ ColorPickerDialog::ColorPickerDialog(QWidget* parent) : QDialog(parent) {
     setWindowTitle(tr("Insert Color"));
 
     auto* root = new QVBoxLayout(this);
-    auto* hint = new QLabel(tr("Pick a text color (mIRC code)."), this);
+    auto* hint = new QLabel(tr("Pick a text color (IRC color code)."), this);
     root->addWidget(hint);
 
     auto* grid = new QGridLayout();

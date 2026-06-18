@@ -31,7 +31,7 @@ QString comicKey(const QString& network, const QString& target) {
 
 void ComicController::openComicHelp() {
     QMessageBox::information(
-        &m_window, tr("Comic Chat Guide"),
+        &m_window, tr("Comic Mode Guide"),
         QStringList{
             tr("Comic Mode turns the channel into a comic strip. Turn it on per "
                            "channel from the Comic menu (Ctrl+M), and set your art folder in "
@@ -145,7 +145,7 @@ void ComicController::setComicMode(bool enabled) {
         refreshComic();
         if (!backendWasOn && m_window.m_comicCharacterPaths.isEmpty()) {
             m_window.appendSystemLine(tr(
-                "! Comic Mode: no art loaded. Set your Comic Chat art folder in "
+                "! Comic Mode: no art loaded. Set your comic art folder in "
                 "Comic > Comic Settings (the folder with the .avb/.bgb files)."));
         }
     }
