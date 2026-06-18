@@ -6,7 +6,7 @@
 namespace maxchat::irc {
 namespace {
 
-const QHash<int, QString>& mircColors() {
+const QHash<int, QString>& ircColors() {
     static const QHash<int, QString> colors = {
         {0, QStringLiteral("FFFFFF")},  {1, QStringLiteral("000000")},
         {2, QStringLiteral("00007F")},  {3, QStringLiteral("009300")},
@@ -63,7 +63,7 @@ const QHash<int, QString>& mircColors() {
 }
 
 QString colorForNumber(int number) {
-    const QString value = mircColors().value(number);
+    const QString value = ircColors().value(number);
     return value.isEmpty() ? QString() : QStringLiteral("#") + value;
 }
 

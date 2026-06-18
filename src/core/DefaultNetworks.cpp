@@ -1555,7 +1555,7 @@ maxchat::irc::ServerEndpoint parseServerSpec(const QString& spec, int defaultPor
         const int parsedPort = portText.toInt(&ok);
         if (ok) {
             // Only adjust once the port actually parses, so "host:garbage" can't
-            // silently downgrade TLS or drop the default port. The mIRC "+port"
+            // silently downgrade TLS or drop the default port. The classic "+port"
             // convention marks TLS; a bare numeric port means plaintext.
             port = parsedPort;
             tls = explicitTls;

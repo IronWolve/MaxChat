@@ -9,7 +9,7 @@
 
 namespace maxchat::comic {
 
-// The 9 Comic Chat emotions: neutral centre + 8 ring emotions.
+// The 9 comic emotions: neutral centre + 8 ring emotions.
 [[nodiscard]] const QStringList& emotions();
 
 // A loaded comic character: body poses + emotion faces, composing a head onto a

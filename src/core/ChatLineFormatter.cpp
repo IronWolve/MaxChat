@@ -154,7 +154,7 @@ QString colorSpan(const QString& color, const QString& html) {
 }
 
 QString labelHtml(const ParsedLine& parsed, const ChatLineFormatOptions& options) {
-    // Strip mIRC formatting from the label: raw codes would render as literal
+    // Strip IRC formatting from the label: raw codes would render as literal
     // digits ("<04nick>") and, worse, make the colour hash differ from the
     // member list's (which hashes the clean nick).
     const QString cleanLabel = maxchat::irc::stripFormatting(parsed.label);
@@ -177,7 +177,7 @@ QString labelHtml(const ParsedLine& parsed, const ChatLineFormatOptions& options
         return nickColor.isEmpty() ? escapedLabel : colorSpan(nickColor, escapedLabel);
     }
 
-    // Tint the <> / - - / * marks around the nick separately (BitchX-style).
+    // Tint the <> / - - / * marks around the nick separately (classic-client style).
     const qsizetype nickStart = cleanLabel.indexOf(nick);
     if (nickStart < 0) {
         return nickColor.isEmpty() ? escapedLabel : colorSpan(nickColor, escapedLabel);

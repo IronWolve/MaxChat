@@ -46,7 +46,7 @@ struct Dib {
     bool ok = false;
 };
 
-// Hostile-file guards: real Comic Chat art is tiny (315x315 backgrounds, cells
+// Hostile-file guards: real comic art is tiny (315x315 backgrounds, cells
 // well under 512px), so these caps never reject legitimate art but stop a
 // crafted .avb/.bgb from forcing a giant allocation.
 constexpr qint64 MaxDibDim = 4096;                        // bounds stride + QImage size

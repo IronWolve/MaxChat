@@ -695,7 +695,7 @@ QString styleSheetForAppearance(const QString& theme, const QString& chatTheme,
     const int opacity = std::clamp(chatOpacityPercent, 20, 100);
     if (opacity < 100) {
         // User-chosen translucency wins for every chat theme — this is what
-        // lets the wallpaper show through irssi/terminal-style themes.
+        // lets the wallpaper show through terminal-style themes.
         chatBg = cssRgba(chatBgColor, opacity / 100.0);
     } else {
         chatBg = hasWallpaper && chat.id == QStringLiteral("follow")

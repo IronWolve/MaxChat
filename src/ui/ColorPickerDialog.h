@@ -5,7 +5,7 @@
 
 namespace maxchat::ui {
 
-// mIRC colour picker (Ctrl+K): the classic 16 colours as swatches. Returns
+// IRC colour picker (Ctrl+K): the classic 16 colours as swatches. Returns
 // the two-digit colour code to insert after \x03 ("" if cancelled).
 class ColorPickerDialog final : public QDialog {
     Q_OBJECT

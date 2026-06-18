@@ -62,25 +62,25 @@ class ThemeCatalogTest final : public QObject {
                  QString());
     }
 
-    void irssiChatThemeCarriesTerminalExtras() {
-        const auto irssi = maxchat::ui::chatThemeById(QStringLiteral("irssi"));
-        QCOMPARE(irssi.id, QStringLiteral("irssi"));
-        QCOMPARE(irssi.timestamp, QColor(95, 95, 110));
-        QCOMPARE(irssi.bracket, QColor(120, 120, 120));
-        QCOMPARE(irssi.system, QColor(108, 132, 168));
-        QVERIFY(irssi.monoNicks);
-        QVERIFY(irssi.nickPalette.isEmpty());
+    void monoTerminalChatThemeCarriesTerminalExtras() {
+        const auto mono = maxchat::ui::chatThemeById(QStringLiteral("terminal-mono"));
+        QCOMPARE(mono.id, QStringLiteral("terminal-mono"));
+        QCOMPARE(mono.timestamp, QColor(95, 95, 110));
+        QCOMPARE(mono.bracket, QColor(120, 120, 120));
+        QCOMPARE(mono.system, QColor(108, 132, 168));
+        QVERIFY(mono.monoNicks);
+        QVERIFY(mono.nickPalette.isEmpty());
     }
 
-    void bitchxChatThemeCarriesNickPalette() {
-        const auto bitchx = maxchat::ui::chatThemeById(QStringLiteral("bitchx"));
-        QCOMPARE(bitchx.id, QStringLiteral("bitchx"));
-        QCOMPARE(bitchx.timestamp, QColor(0, 200, 200));
-        QCOMPARE(bitchx.bracket, QColor(0, 205, 0));
-        QCOMPARE(bitchx.system, QColor(0, 200, 200));
-        QVERIFY(!bitchx.monoNicks);
-        QCOMPARE(bitchx.nickPalette.size(), 10);
-        QCOMPARE(bitchx.nickPalette.first(), QColor(0, 255, 255));
+    void loudTerminalChatThemeCarriesNickPalette() {
+        const auto loud = maxchat::ui::chatThemeById(QStringLiteral("terminal-loud"));
+        QCOMPARE(loud.id, QStringLiteral("terminal-loud"));
+        QCOMPARE(loud.timestamp, QColor(0, 200, 200));
+        QCOMPARE(loud.bracket, QColor(0, 205, 0));
+        QCOMPARE(loud.system, QColor(0, 200, 200));
+        QVERIFY(!loud.monoNicks);
+        QCOMPARE(loud.nickPalette.size(), 10);
+        QCOMPARE(loud.nickPalette.first(), QColor(0, 255, 255));
     }
 
     void plainChatThemesHaveNoExtras() {

@@ -4,7 +4,7 @@
 
 namespace maxchat::ui {
 
-// A one-line mIRC-style system summary:
+// A one-line IRC-style system summary:
 //   OS: … | Uptime: … | CPU: … | RAM: … (Used: … / NN%) | GPU: … | Res: WxH | Net: …
 // Fields that can't be read on the current platform are omitted. Platform code
 // is isolated in SystemInfo.cpp.

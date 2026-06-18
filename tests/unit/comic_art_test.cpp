@@ -73,7 +73,7 @@ private slots:
   }
 
   void garbageInputReturnsEmpty() {
-    const QByteArray junk("this is not comic chat art, just some text bytes");
+    const QByteArray junk("this is not comic art, just some text bytes");
     QTemporaryFile bg(QDir::tempPath() + QStringLiteral("/cc_XXXXXX.bgb"));
     QVERIFY(loadBackground(write(bg, junk)).isNull());
     QTemporaryFile av(QDir::tempPath() + QStringLiteral("/cc_XXXXXX.avb"));
