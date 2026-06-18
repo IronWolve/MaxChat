@@ -1,0 +1,5 @@
+// Windows resource: embeds the application icon into maxchat-c.exe so Explorer,
+// the taskbar, and Alt-Tab show the MaxChat icon. The lowest-ID icon resource
+// becomes the executable's icon. Generated from maxchat.rc.in by CMake (@ONLY)
+// so the .ico path resolves regardless of the build directory or toolchain.
+1 ICON "@MAXCHAT_ICON_PATH@"
