@@ -17,16 +17,8 @@ dist-win/
 build-output.log
 *.mcb
 
-# Internal dev docs — local-only, not shipped in the public release. Kept on
-# disk for session continuity; only README.md, SCRIPTING.md, and
-# THIRD_PARTY_NOTICES.md are user-facing and stay tracked.
-/AUDIT-PLAN.MD
-/AUDIT-OLD/
-/DEV_NOTES.md
-/HANDOFF.md
-/STATUS.md
-/PORT_PLAN.md
-/GUI.MD
-/UI_SURFACES.md
-/MAINWINDOW.MD
-/*_DESIGN.md
+# Internal dev docs (DEVDOCS/) + historical plan/audits (OLD/) — local-only, not
+# shipped in the public release. Kept on disk for session continuity. Only
+# README.md, SCRIPTING.md, and THIRD_PARTY_NOTICES.md are user-facing and tracked.
+/DEVDOCS/
+/OLD/
