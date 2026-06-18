@@ -727,7 +727,7 @@ void PreferencesDialog::buildNotificationsTab(QWidget* tab) {
     ctcpSound_ = new QCheckBox(tab);
     ctcpSound_->setChecked(settings_.value(QStringLiteral("ctcp_sound"), false).toBool());
     ctcpSound_->setToolTip(tr(
-        "Play .wav sounds others send via CTCP SOUND (mIRC/Comic Chat). Drop your own "
+        "Play .wav sounds others send via CTCP SOUND. Drop your own "
         ".wav files in the 'sounds' folder under your config directory; a sound only "
         "plays if you have that file."));
 
