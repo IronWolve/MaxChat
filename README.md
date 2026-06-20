@@ -2,8 +2,9 @@
 
 > A comic-strip-style graphical IRC client.
 
-MaxChat is a real desktop **IRC client** with an optional **comic mode**: flip it on and the
-conversation is drawn as a comic strip — each message becomes a panel with an expressive character,
+MaxChat is the native C++/Qt rewrite of the original Python/Qt MaxChat prototype: a real
+desktop **IRC client** with an optional **comic mode**. Flip comic mode on and the conversation
+is drawn as a comic strip — each message becomes a panel with an expressive character,
 a chosen emotion, a speech (or thought) balloon, and a scene backdrop. Flip it off and it's a clean,
 modern IRC client.
 
@@ -97,7 +98,7 @@ one-off connection. Comic mode is optional — see [Comic art](#comic-art-option
 
 ### Build from source
 
-Requires **Qt 6** (Widgets, Network, Multimedia, LinguistTools) and **CMake** + a C++17 compiler.
+Requires **Qt 6** (Widgets, Network, Multimedia, LinguistTools) and **CMake** + a C++20 compiler.
 
 ```bash
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -180,7 +181,7 @@ Build options:
 | Option | Default | Effect |
 | --- | --- | --- |
 | `MAXCHAT_TERMINAL` | ON | Script terminal / BBS UI. OFF → a lean "vanilla IRC client". |
-| `MAXCHAT_OS_SPELL` | OFF | (Windows) native speller backend instead of the bundled engine. |
+| `MAXCHAT_OS_SPELL` | OFF via direct CMake; ON by default in `build.bat` | (Windows) native speller backend in addition to the bundled engine. |
 | `BUILD_TESTING` | ON | Build the unit tests. OFF → app only, no Qt Test module required. |
 
 Lua scripting is a core dependency and is always built. UI strings marked with `tr()` are translatable;
