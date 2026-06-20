@@ -23,4 +23,5 @@ build-output.log
 # README.md, SCRIPTING.md, and THIRD_PARTY_NOTICES.md are user-facing and tracked.
 /DEVDOCS/
 /OLD/
+/ponytail-*.md
 /MaxChat-*-windows-x64.zip
