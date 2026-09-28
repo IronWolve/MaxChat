@@ -4,6 +4,8 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonDocument>
+#include <QJsonArray>
+#include <QJsonObject>
 #include <QJsonObject>
 #include <QHash>
 #include <QTemporaryDir>
@@ -77,6 +79,19 @@ class SettingsStoreTest final : public QObject {
     }
 
   private slots:
+    void oversizedExistingSettingsAreNotOverwritten() {
+        QTemporaryDir dir;
+        SettingsPaths paths;
+        paths.configDir = dir.path(); paths.cacheDir = dir.path();
+        paths.settingsPath = dir.filePath(QStringLiteral("settings.json"));
+        QFile file(paths.settingsPath); QVERIFY(file.open(QIODevice::WriteOnly));
+        QVERIFY(file.resize(8 * 1024 * 1024 + 1)); file.close();
+        SettingsStore store(paths);
+        QVERIFY(store.loadRaw().isEmpty());
+        QVERIFY(!store.saveRaw({{QStringLiteral("nick"), QStringLiteral("unchanged")}}));
+        QCOMPARE(QFileInfo(paths.settingsPath).size(), qint64(8 * 1024 * 1024 + 1));
+    }
+
     void credentialsRoundTripWithoutAppearingInSettingsJson() {
         QTemporaryDir dir;
         auto vault = std::make_shared<FakeSecretStore>();
@@ -262,6 +277,79 @@ class SettingsStoreTest final : public QObject {
         const QVariantMap rejected = store.prepareImportedSettings(imported);
         QVERIFY(rejected.value(QStringLiteral("networks")).toList().first().toMap()
                     .value(QStringLiteral("password")).toString().isEmpty());
+    }
+
+    void importingWeakerAuthPolicyDoesNotReuseCredentials() {
+        QTemporaryDir dir;
+        auto vault = std::make_shared<FakeSecretStore>();
+        const SettingsStore store = makeStore(dir, vault);
+        const QVariantMap network{{QStringLiteral("name"), QStringLiteral("Private example")},
+            {QStringLiteral("host"), QStringLiteral("irc.example")},
+            {QStringLiteral("password"), QStringLiteral("local-test-secret")}};
+        QVERIFY(store.saveRaw({{QStringLiteral("networks"), QVariantList{network}}}));
+        for (const auto& key : {QStringLiteral("accept_invalid_cert"), QStringLiteral("allow_insecure_auth")}) {
+            QVariantMap imported = SettingsStore::withoutSecrets(store.loadRaw());
+            QVariantMap changed = imported.value(QStringLiteral("networks")).toList().first().toMap();
+            changed.insert(key, true);
+            imported.insert(QStringLiteral("networks"), QVariantList{changed});
+            const auto result = store.prepareImportedSettings(imported);
+            QVERIFY(result.value(QStringLiteral("networks")).toList().first().toMap()
+                        .value(QStringLiteral("password")).toString().isEmpty());
+        }
+    }
+
+    void importedSettingsCannotGrantScriptExecutionOrAutoconnect() {
+        QTemporaryDir dir;
+        const SettingsStore store = makeStore(dir);
+        QVariantMap grants{{QStringLiteral("exec"), true}, {QStringLiteral("load_start"), true}};
+        QVariantMap imported{{QStringLiteral("scriptPerms"), QVariantMap{{QStringLiteral("run"), grants}}},
+            {QStringLiteral("script_dirs"), QVariantList{QStringLiteral("unreviewed")}},
+            {QStringLiteral("connect_on_start"), true}};
+        const auto result = store.prepareImportedSettings(imported);
+        QVERIFY(result.value(QStringLiteral("scriptPerms")).toMap().isEmpty());
+        QVERIFY(result.value(QStringLiteral("script_dirs")).toList().isEmpty());
+        QVERIFY(!result.value(QStringLiteral("connect_on_start")).toBool());
+    }
+
+    void storedCredentialsAreBoundToTheirNetworkIdentity() {
+        QTemporaryDir dir;
+        auto vault = std::make_shared<FakeSecretStore>();
+        const SettingsStore store = makeStore(dir, vault);
+        QVariantMap network{{QStringLiteral("name"), QStringLiteral("Private example")},
+            {QStringLiteral("host"), QStringLiteral("original.example")},
+            {QStringLiteral("password"), QStringLiteral("bound-test-secret")}};
+        QVERIFY(store.saveRaw({{QStringLiteral("networks"), QVariantList{network}}}));
+        QFile file(store.paths().settingsPath); QVERIFY(file.open(QIODevice::ReadOnly));
+        auto document = QJsonDocument::fromJson(file.readAll()).object(); file.close();
+        auto row = document.value(QStringLiteral("networks")).toArray().first().toObject();
+        row.insert(QStringLiteral("host"), QStringLiteral("redirected.example"));
+        document.insert(QStringLiteral("networks"), QJsonArray{row});
+        QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        const QByteArray changed = QJsonDocument(document).toJson();
+        file.write(changed); file.close();
+        const SettingsStore reopened(store.paths(), vault);
+        const auto loaded = reopened.loadRaw();
+        QVERIFY(loaded.value(QStringLiteral("networks")).toList().first().toMap()
+                    .value(QStringLiteral("password")).toString().isEmpty());
+        QVERIFY(!reopened.saveRaw(loaded));
+        QCOMPARE(vault->values.size(), 1);
+        QVERIFY(file.open(QIODevice::ReadOnly)); QCOMPARE(file.readAll(), changed);
+    }
+
+    void editingConnectionThroughStoreRebindsCredentials() {
+        QTemporaryDir dir;
+        auto vault = std::make_shared<FakeSecretStore>();
+        const SettingsStore store = makeStore(dir, vault);
+        QVariantMap network{{QStringLiteral("name"), QStringLiteral("Private example")},
+            {QStringLiteral("host"), QStringLiteral("original.example")},
+            {QStringLiteral("password"), QStringLiteral("bound-test-secret")}};
+        QVERIFY(store.saveRaw({{QStringLiteral("networks"), QVariantList{network}}}));
+        network.insert(QStringLiteral("host"), QStringLiteral("edited.example"));
+        QVERIFY(store.saveRaw({{QStringLiteral("networks"), QVariantList{network}}}));
+        const SettingsStore reopened(store.paths(), vault);
+        QCOMPARE(reopened.loadRaw().value(QStringLiteral("networks")).toList().first().toMap()
+                    .value(QStringLiteral("password")).toString(), QStringLiteral("bound-test-secret"));
+        QCOMPARE(vault->values.size(), 1);
     }
 
     void defaultSettingsContainLaunchCriticalDefaults() {

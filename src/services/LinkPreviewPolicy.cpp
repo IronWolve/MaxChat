@@ -12,10 +12,10 @@ bool boolValue(const QVariantMap &map, const QString &key, bool fallback) {
 
 LinkPreviewToggles linkPreviewTogglesFromServices(const QVariantMap &services) {
   LinkPreviewToggles toggles;
-  toggles.images = boolValue(services, QStringLiteral("images"), true);
-  toggles.media = boolValue(services, QStringLiteral("media"), true);
-  toggles.xCards = boolValue(services, QStringLiteral("xcards"), true);
-  toggles.webCards = boolValue(services, QStringLiteral("webcards"), true);
+  toggles.images = boolValue(services, QStringLiteral("images"), false);
+  toggles.media = boolValue(services, QStringLiteral("media"), false);
+  toggles.xCards = boolValue(services, QStringLiteral("xcards"), false);
+  toggles.webCards = boolValue(services, QStringLiteral("webcards"), false);
   return toggles;
 }
 

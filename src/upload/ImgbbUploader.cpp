@@ -42,6 +42,7 @@ void ImgbbUploader::upload(const QImage &image) {
     url.setQuery(query);
 
     QNetworkRequest request(url);
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::SameOriginRedirectPolicy);
     auto *reply = manager_->post(request, multipart);
     multipart->setParent(reply);
 

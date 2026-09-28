@@ -120,10 +120,11 @@ class DccManager final : public QObject {
 
     DccTransfer* findById(int id);
     Runtime& rt(int id) { return runtimes_[id]; }
+    void pruneFinishedHistory();
     void emitChanged() { emit transfersChanged(); }
     [[nodiscard]] quint16 openListenPort(QTcpServer* server);
     [[nodiscard]] QString advertisedIp() const;
-    [[nodiscard]] QString destPath(const QString& name, qint64 size) const;
+    [[nodiscard]] QString destPath(const QString& name, qint64 size, const QString& peer) const;
 
     void beginSend(int id, QTcpSocket* socket);
     void beginReceive(int id, QTcpSocket* socket);

@@ -4,7 +4,7 @@
 
 namespace maxchat::irc {
 
-QString redactLine(const QString& line) {
+static QString redactCommand(const QString& line) {
     const QString upper = line.toUpper();
     if (upper.startsWith(QStringLiteral("PASS "))) {
         return QStringLiteral("PASS ****");
@@ -33,7 +33,7 @@ QString redactLine(const QString& line) {
         QStringLiteral("IDENTIFY|REGISTER|GHOST|RECOVER|RELEASE|SIDENTIFY|LOGIN");
     // PRIVMSG/NOTICE NickServ :IDENTIFY <pw>
     static const QRegularExpression servicesPassword(
-        QStringLiteral(R"(^((?:PRIVMSG|NOTICE) \S+ :(?:%1)\s+))").arg(verbs),
+        QStringLiteral(R"(^((?:PRIVMSG|NOTICE)\s+\S+\s+:(?:%1)\s+))").arg(verbs),
         QRegularExpression::CaseInsensitiveOption);
     const QRegularExpressionMatch match = servicesPassword.match(line);
     if (match.hasMatch()) {
@@ -49,6 +49,14 @@ QString redactLine(const QString& line) {
     }
 
     return line;
+}
+
+QString redactLine(const QString& line) {
+    static const QRegularExpression envelope(
+        QStringLiteral(R"(^(\s*(?:@\S+\s+)?(?::\S+\s+)?)(.*)$)"));
+    const auto match = envelope.match(line);
+    if (!match.hasMatch()) return line;
+    return match.captured(1) + redactCommand(match.captured(2));
 }
 
 } // namespace maxchat::irc

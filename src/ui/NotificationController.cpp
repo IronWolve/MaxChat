@@ -1,3 +1,4 @@
+#include "app/BundledPaths.h"
 #include "ui/NotificationController.h"
 
 #include <QApplication>
@@ -32,7 +33,7 @@ void NotificationController::notify(const QString& title, const QString& text,
     if (m_window.m_notifySound) {
         const QString soundsDir =
             QDir(m_window.m_settings.paths().configDir).filePath(QStringLiteral("sounds"));
-        const QString bundled = QDir(QCoreApplication::applicationDirPath())
+        const QString bundled = QDir(maxchat::app::bundledDataDirectory())
                                     .filePath(QStringLiteral("assets/sounds"));
         const QString selectedSound = m_window.m_settings.loadWithDefaults().value(QStringLiteral("notify_sound_file"), QStringLiteral("notify.wav")).toString();
         if (!m_window.m_soundPlayer.play(notifySoundPath(soundsDir, bundled, selectedSound))) {

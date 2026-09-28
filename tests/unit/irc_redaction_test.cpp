@@ -41,6 +41,13 @@ class IrcRedactionTest final : public QObject {
                  QStringLiteral("CS REGISTER ****"));
     }
 
+    void taggedAndPrefixedCredentialsAreMasked() {
+        QCOMPARE(redactLine(QStringLiteral("@label=test PASS sensitive")),
+                 QStringLiteral("@label=test PASS ****"));
+        QCOMPARE(redactLine(QStringLiteral(":me!user@host PRIVMSG  NickServ  :IDENTIFY sensitive")),
+                 QStringLiteral(":me!user@host PRIVMSG  NickServ  :IDENTIFY ****"));
+    }
+
     void normalTrafficUntouched() {
         QCOMPARE(redactLine(QStringLiteral("PRIVMSG #chan :hello there")),
                  QStringLiteral("PRIVMSG #chan :hello there"));

@@ -1,29 +1,33 @@
 #!/usr/bin/env bash
 # Build a self-contained Linux AppImage for MaxChat: a single executable file
-# with Qt bundled, so it runs on any recent x86-64 Linux without installing Qt.
-# Output: dist-linux/MaxChat-<version>-x86_64.AppImage
+# with Qt bundled. Supported system-library versions depend on the build host;
+# inspect and record the resulting GLIBC/GLIBCXX requirements for each release.
+# Output: ../run/packages/MaxChat-<version>-x86_64.AppImage
 #
 # Requires: a working Qt6 build toolchain (cmake, ninja, g++, qt6-base-dev,
-# qt6-multimedia-dev, qt6-tools-dev) + curl. The linuxdeploy tools are fetched
-# automatically and cached under build-appimage/tools/.
+# qt6-multimedia-dev, qt6-tools-dev) + curl, Python 3.11+ and dpkg metadata. The linuxdeploy tools are fetched
+# automatically and cached under ../.cache/appimage-tools/.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$ROOT"
+source "$ROOT/tools/project-env.sh"
+project_environment
+project_lock
+cd "$PROJECT_DIR"
 
-VERSION="$(grep -oP 'VERSION \K[0-9]+\.[0-9]+\.[0-9]+' CMakeLists.txt | head -1)"
+VERSION="$(grep -oP 'VERSION \K[0-9]+\.[0-9]+\.[0-9]+' repo/CMakeLists.txt | head -1)"
 echo "==> Packaging MaxChat ${VERSION} (Linux AppImage)"
 
-BUILD_DIR="$ROOT/build-release"
-WORK="$ROOT/build-appimage"
+BUILD_DIR="run/build-release"
+WORK="run/appimage"
 APPDIR="$WORK/AppDir"
-TOOLS="$WORK/tools"
-OUT="$ROOT/dist-linux"
+TOOLS=".cache/appimage-tools"
+OUT="run/packages"
 
 # 1. Release build.
 echo "==> Building Release"
-cmake -S "$ROOT" -B "$BUILD_DIR" -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF >/dev/null
-cmake --build "$BUILD_DIR" -j"$(nproc)"
+project_configure "$BUILD_DIR" -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF >/dev/null
+cmake --build "$BUILD_DIR" --parallel "${MAXCHAT_BUILD_JOBS:-2}"
 [ -x "$BUILD_DIR/maxchat" ] || { echo "ERROR: $BUILD_DIR/maxchat not built"; exit 1; }
 
 # 2. Stage AppDir. MaxChat loads themes/wallpapers/dictionaries from disk next to
@@ -33,8 +37,9 @@ echo "==> Staging AppDir"
 rm -rf "$APPDIR"
 install -Dm755 "$BUILD_DIR/maxchat" "$APPDIR/usr/bin/maxchat"
 install -Dm755 "$BUILD_DIR/maxchat-secrets" "$APPDIR/usr/bin/maxchat-secrets"
-cmake -DSOURCE_ROOT="$ROOT" -DDESTINATION_ROOT="$APPDIR/usr/bin" \
-      -P "$ROOT/packaging/stage-assets.cmake"
+install -Dm755 "$BUILD_DIR/maxchat-script-worker" "$APPDIR/usr/bin/maxchat-script-worker"
+cmake -DSOURCE_ROOT=repo -DDESTINATION_ROOT="$APPDIR/usr/bin" \
+      -P "repo/packaging/stage-assets.cmake"
 
 # 3. Fetch linuxdeploy + the Qt plugin (cached).
 echo "==> Fetching linuxdeploy tools"
@@ -66,21 +71,34 @@ fetch "https://api.github.com/repos/linuxdeploy/linuxdeploy/releases/assets/5389
 fetch "https://api.github.com/repos/linuxdeploy/linuxdeploy-plugin-qt/releases/assets/525032210" \
       "$TOOLS/linuxdeploy-plugin-qt-x86_64.AppImage" \
       "cfc1055b2b9dbc08412b579f20990b7b41a17b61beaa5847dc9477c96c9e9617"
+# appimagetool otherwise fetches a mutable runtime during packaging. Pin the
+# loader as well as the build tools; its source/notices accompany the release.
+fetch "https://api.github.com/repos/AppImage/type2-runtime/releases/assets/596078161" \
+      "$TOOLS/runtime-x86_64" \
+      "156f4bdbde9c52d01814600013e0a273f0118dc2de98975f3c8c63427ec79074"
+export LDAI_RUNTIME_FILE="$PROJECT_DIR/$TOOLS/runtime-x86_64"
 
 # 4. Build the AppImage. EXTRACT_AND_RUN lets the tool AppImages run without FUSE
 #    (e.g. inside WSL/containers). The Qt plugin finds Qt via QMAKE.
 echo "==> Running linuxdeploy (bundling Qt)"
 export APPIMAGE_EXTRACT_AND_RUN=1
-export QMAKE="$(command -v qmake6 || command -v qmake)"
+QT_SDK="${MAXCHAT_QT_ROOT:-.cache/qt-sdk/linux}"
+if [[ "$QT_SDK" != /* ]]; then QT_SDK="$PROJECT_DIR/$QT_SDK"; fi
+if [[ -x "$QT_SDK/bin/qmake" ]]; then
+    export QMAKE="$QT_SDK/bin/qmake"
+    export LD_LIBRARY_PATH="$QT_SDK/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+else
+    export QMAKE="$(command -v qmake6 || command -v qmake)"
+fi
 export VERSION
-export PATH="$TOOLS:$PATH"   # so --plugin qt finds linuxdeploy-plugin-qt
+export PATH="$PROJECT_DIR/$TOOLS:$PATH"   # so --plugin qt finds linuxdeploy-plugin-qt
 mkdir -p "$OUT"
 
 # Step A: deploy Qt + dependent libs into the AppDir (no AppImage yet).
 "$LD" --appdir "$APPDIR" \
     --executable "$APPDIR/usr/bin/maxchat" \
-    --desktop-file "$ROOT/packaging/maxchat.desktop" \
-    --icon-file "$ROOT/assets/icons/maxchat.png" \
+    --desktop-file "repo/packaging/maxchat.desktop" \
+    --icon-file "repo/assets/icons/maxchat.png" \
     --plugin qt
 
 # Step B: also bundle the offscreen platform plugin so `--selftest` (which forces
@@ -97,6 +115,7 @@ install -Dm644 "$QT_PLUGINS/platforms/libqoffscreen.so" \
 # instead of through XWayland. XWayland's override-redirect popups leave ghost
 # artifacts from menus; native Wayland composites them cleanly. Qt auto-selects
 # wayland when WAYLAND_DISPLAY is set and falls back to the bundled xcb on X11.
+WAYLAND_LIB_ARGS=()
 if [ -f "$QT_PLUGINS/platforms/libqwayland.so" ]; then
     install -Dm644 "$QT_PLUGINS/platforms/libqwayland.so" \
         "$APPDIR/usr/plugins/platforms/libqwayland.so"
@@ -115,11 +134,13 @@ if [ -f "$QT_PLUGINS/platforms/libqwayland.so" ]; then
     done
 fi
 
-# Step C: package the AppDir into the AppImage (linuxdeploy resolves + bundles the
-# Wayland libs' system dependencies via --library, then patches rpaths).
-( cd "$OUT" && "$LD" --appdir "$APPDIR" \
-    --desktop-file "$ROOT/packaging/maxchat.desktop" \
-    "${WAYLAND_LIB_ARGS[@]}" \
+# Complete dependency deployment before collecting notices for the actual files.
+"$LD" --appdir "$APPDIR" "${WAYLAND_LIB_ARGS[@]}"
+python3 repo/packaging/linux-runtime-notices.py "$APPDIR"
+
+# Package the assembled runtime and its dependency notices.
+( cd "$OUT" && "$PROJECT_DIR/$LD" --appdir "$PROJECT_DIR/$APPDIR" \
+    --desktop-file "$PROJECT_DIR/repo/packaging/maxchat.desktop" \
     --output appimage )
 
 echo "==> Done: $(ls -1 "$OUT"/MaxChat-*-x86_64.AppImage 2>/dev/null | tail -1)"

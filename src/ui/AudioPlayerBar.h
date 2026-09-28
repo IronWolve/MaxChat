@@ -19,7 +19,7 @@ class AudioPlayerBar final : public QWidget {
   public:
     explicit AudioPlayerBar(QWidget* parent = nullptr);
 
-    void playUrl(const QUrl& url);
+    void playUrl(const QUrl& url, const QString& displayName = {});
     void stopAndHide();
 
   private:

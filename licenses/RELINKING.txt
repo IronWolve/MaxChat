@@ -1,0 +1,58 @@
+Library source, replacement and rebuilding
+=========================================
+
+MaxChat remains under its existing Apache-2.0 license. Bundled libraries and
+assets retain their own licenses; see THIRD_PARTY_NOTICES.md and this directory.
+Nothing in MaxChat's distribution terms prohibits modifying these libraries or
+reverse engineering the combined work to debug such modifications.
+
+Each release must distribute the matching MaxChat source archive, source-file
+manifest and third-party source companion beside the binary downloads, under
+equivalent access conditions and at no additional charge. SOURCES.json identifies
+archive names, upstream versions and SHA-256 values. The companion includes exact
+Qt module sources, FFmpeg, ICU, dictionary source distributions/generators and
+Linux distribution source packages with their build recipes. MaxChat source
+includes its CMake/build/packaging scripts and the used Hunspell, Lua and zlib
+source. Keep these companions available with any redistribution of the binaries.
+
+Qt 6.11.2 uses shared libraries under the LGPL-3.0 option. FFmpeg 7.1.5 uses shared
+libraries under LGPL-2.1-or-later, with GPL components disabled. Source archives
+and the recorded build configuration permit rebuilding compatible replacements.
+Hunspell 1.7.4 is statically linked under its MPL-1.1 option (including the MySpell
+BSD notices); its covered source remains available in the MaxChat source archive.
+The Qt Windows entry-point helper uses its BSD-3-Clause option. Lua and zlib are
+permissively licensed; Lua is linked only into maxchat-script-worker.
+
+Work on a copy and preserve your profile separately. Replace all affected
+libraries/plugins with ABI-compatible builds of the same architecture. Rebuild
+the complete application when changing an ABI. No vendor authorization key is
+needed to run a modified MaxChat build.
+
+Linux:
+  An AppImage can be extracted using its --appimage-extract option. In the
+  extracted directory, replace the appropriate libraries in usr/lib and plugins
+  in usr/plugins (or the location named by usr/bin/qt.conf). Run ./AppRun from
+  that directory; repacking is optional. The native deployment similarly keeps
+  its libraries and plugins alongside the executable. The source package's
+  build.sh/package-linux.sh and CMake files describe the build and staging.
+
+Windows:
+  Unpack the ZIP and replace compatible Qt/FFmpeg DLLs and their plugin folders
+  beside maxchat.exe. Keep maxchat-script-worker.exe and maxchat-secrets.exe
+  beside it. Use repo/build.bat with an explicitly selected SDK/toolchain to
+  rebuild. No signature enforcement or developer checkout is required at runtime.
+
+macOS:
+  Copy MaxChat.app to a writable location. Replace the corresponding frameworks
+  in Contents/Frameworks and plugins in Contents/PlugIns, preserving relative
+  install names. The app is ad-hoc signed, so changes require signing nested
+  Mach-O binaries/frameworks before the outer app. The supplied
+  repo/packaging/sign-macos-bundle.py performs that operation with the selected
+  architecture, using the public ad-hoc identity '-'. Then verify with
+  codesign --verify --deep --strict MaxChat.app. Apple system frameworks are
+  operating-system dependencies and are not redistributed in the app. Normal
+  macOS launch approval still applies; no secret signing credential is needed.
+
+Dictionary data is loaded as separate, replaceable aff/dic text files. Preserve
+its respective license/source obligations when modifying or redistributing it.
+Font licenses and trademarks remain separate; OFL fonts may not be sold alone.

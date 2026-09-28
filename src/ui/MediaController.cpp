@@ -1,6 +1,8 @@
 #include "ui/MediaController.h"
+#include "core/SettingsStore.h"
 
 #include "services/LinkPreviewClassifier.h"
+#include "services/PublicHttpFetch.h"
 #include "ui/AudioPlayerBar.h"
 #include "ui/ImageViewerDialog.h"
 #include "ui/MainWindowHost.h"
@@ -11,6 +13,10 @@
 #include <QDesktopServices>
 #include <QImage>
 #include <QUrl>
+#include <QDir>
+#include <QStandardPaths>
+#include <QTemporaryFile>
+#include <QTimer>
 
 namespace maxchat::ui {
 
@@ -23,6 +29,11 @@ void MediaController::configure(const QVariantMap& settings) {
     uploader_ = maxchat::upload::makeImageUploader(settings, &host_.previewNetworkManager(), this);
     openLinks_ = settings.value(QStringLiteral("open_links_in_browser"), true).toBool();
     linkToggles_ = maxchat::services::linkPreviewTogglesFromSettings(settings);
+    if (!openLinks_ || !linkToggles_.media) {
+        ++mediaRequest_;
+        if (pendingMedia_) { delete pendingMedia_; host_.clearStatus(); }
+        pendingMedia_ = nullptr;
+    }
 }
 
 bool MediaController::isConfigured() const {
@@ -86,42 +97,14 @@ void MediaController::handleAnchorClicked(const QUrl& url) {
         if (!linkToggles_.media || audioBar_ == nullptr) {
             break;
         }
-        // Same SSRF gate as previews: the static check can't catch a public
-        // hostname that resolves to a LAN/metadata address, and the media
-        // backend follows redirects we can't intercept.
-        const QUrl mediaUrl = candidate.fetchUrl.isValid() ? candidate.fetchUrl : url;
-        maxchat::services::resolvePreviewUrlPublicAsync(
-            mediaUrl, /*allowPrivateNetwork=*/false, this, [this, mediaUrl](bool allowed) {
-                if (allowed && audioBar_ != nullptr) {
-                    audioBar_->playUrl(mediaUrl);
-                } else if (!allowed) {
-                    host_.appendActiveSystemLine(
-                        QStringLiteral("! Blocked audio URL (private address)."));
-                }
-            });
+        fetchMedia(candidate.fetchUrl.isValid() ? candidate.fetchUrl : url, false);
         return;
     }
     case LinkPreviewKind::DirectVideo: {
         if (!linkToggles_.media) {
             break; // open externally
         }
-        const QUrl mediaUrl = candidate.fetchUrl.isValid() ? candidate.fetchUrl : url;
-        maxchat::services::resolvePreviewUrlPublicAsync(
-            mediaUrl, /*allowPrivateNetwork=*/false, this, [this, mediaUrl](bool allowed) {
-                if (!allowed) {
-                    host_.appendActiveSystemLine(
-                        QStringLiteral("! Blocked video URL (private address)."));
-                    return;
-                }
-                // One player at a time: clicking links repeatedly used to
-                // stack dialogs all playing audio simultaneously.
-                if (mediaPlayer_ != nullptr) {
-                    mediaPlayer_->close();
-                }
-                auto* player = new MediaPlayerDialog(mediaUrl, host_.dialogParent());
-                mediaPlayer_ = player;
-                player->show();
-            });
+        fetchMedia(candidate.fetchUrl.isValid() ? candidate.fetchUrl : url, true);
         return;
     }
     default:
@@ -138,6 +121,59 @@ void MediaController::handleAnchorClicked(const QUrl& url) {
         return;
     }
     QDesktopServices::openUrl(url);
+}
+
+void MediaController::fetchMedia(const QUrl& url, bool video) {
+    const quint64 request = ++mediaRequest_;
+    if (pendingMedia_) delete pendingMedia_;
+    host_.showStatus(QStringLiteral("Downloading media…"));
+    maxchat::services::PublicHttpOptions options;
+    options.maxBytes = 25 * 1024 * 1024;
+    options.timeoutMs = 30000;
+    options.accept = "audio/*,video/*,application/octet-stream;q=0.5";
+    pendingMedia_ = maxchat::services::fetchPublicHttp(&host_.previewNetworkManager(), url, options, this,
+        [this, request, url, video](maxchat::services::PublicHttpResult result) {
+            if (request != mediaRequest_ || !openLinks_ || !linkToggles_.media) return;
+            pendingMedia_ = nullptr;
+            host_.clearStatus();
+            if (!result.error.isEmpty()) {
+                host_.appendActiveSystemLine(QStringLiteral("! Media download failed: %1. Inline files are limited to 25 MiB.").arg(result.error));
+                return;
+            }
+            // Reject playlist/script responses. Playback receives only a local
+            // media file; the multimedia backend never owns a remote URL.
+            const QByteArray& bytes = result.body;
+            const bool knownContainer = bytes.startsWith("ID3") || bytes.startsWith("OggS") ||
+                bytes.startsWith("fLaC") || bytes.startsWith(QByteArray::fromHex("1a45dfa3")) ||
+                (bytes.size() >= 12 && bytes.startsWith("RIFF") && bytes.mid(8, 4) == "WAVE") ||
+                (bytes.size() >= 12 && bytes.mid(4, 4) == "ftyp") ||
+                (bytes.size() >= 2 && uchar(bytes[0]) == 0xff && (uchar(bytes[1]) & 0xe0) == 0xe0);
+            if (!knownContainer) {
+                host_.appendActiveSystemLine(QStringLiteral("! Unsupported media response.")); return;
+            }
+            const QString cache = QDir(maxchat::core::standardSettingsPaths().cacheDir)
+                                      .filePath(QStringLiteral("media"));
+            if (!QDir().mkpath(cache)) { host_.appendActiveSystemLine(QStringLiteral("! Could not prepare the media cache.")); return; }
+            auto* file = new QTemporaryFile(QDir(cache).filePath(QStringLiteral("clip-XXXXXX.media")), this);
+            if (!file->open() || file->write(bytes) != bytes.size() || !file->flush()) {
+                delete file; host_.appendActiveSystemLine(QStringLiteral("! Could not save the media preview.")); return;
+            }
+            const QUrl local = QUrl::fromLocalFile(file->fileName());
+            file->close();
+            if (video) {
+                if (mediaPlayer_) mediaPlayer_->close();
+                auto* player = new MediaPlayerDialog(local, host_.dialogParent());
+                player->setWindowTitle(url.fileName());
+                file->setParent(player);
+                mediaPlayer_ = player;
+                player->show();
+            } else if (audioBar_) {
+                audioBar_->stopAndHide();
+                if (audioFile_) audioFile_->deleteLater();
+                audioFile_ = file;
+                audioBar_->playUrl(local, url.fileName());
+            } else { delete file; }
+        });
 }
 
 } // namespace maxchat::ui

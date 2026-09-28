@@ -1,23 +1,33 @@
 @echo off
-setlocal EnableExtensions EnableDelayedExpansion
+setlocal EnableExtensions DisableDelayedExpansion
 
-set "ROOT=%~dp0"
-if "%ROOT:~-1%"=="\" set "ROOT=%ROOT:~0,-1%"
-pushd "%ROOT%" >nul || exit /b 1
+rem Discover this project from the script, then keep project paths relative.
+for %%P in ("%~dp0..") do set "PROJECT_DIR=%%~fP"
+pushd "%PROJECT_DIR%" >nul || exit /b 1
+set "ROOT=repo"
+if not exist "logs" mkdir "logs"
+if not exist "tmp" mkdir "tmp"
+if not exist "run\packages" mkdir "run\packages"
+rem OS/tool environment variables need absolute paths, derived at runtime only.
+set "TEMP=%CD%\tmp"
+set "TMP=%CD%\tmp"
+set "CCACHE_DIR=%CD%\.cache\ccache"
 
-if not defined QT_ROOT set "QT_ROOT=%~dp0.cache\qt"
-
-if exist "%ProgramFiles%\CMake\bin\cmake.exe" set "PATH=%ProgramFiles%\CMake\bin;%PATH%"
+rem Explicit relative tool settings are relative to this project, never the caller.
+if not defined QT_DIR if exist ".cache\qt-sdk\windows\lib\cmake\Qt6\Qt6Config.cmake" set "QT_DIR=.cache\qt-sdk\windows"
+if not defined QT_ROOT set "QT_ROOT=.cache\qt"
+for %%Q in ("%QT_ROOT%") do set "QT_ROOT=%%~fQ"
+if defined QT_DIR for %%Q in ("%QT_DIR%") do set "QT_DIR=%%~fQ"
+if defined MINGW_DIR for %%Q in ("%MINGW_DIR%") do set "MINGW_DIR=%%~fQ"
 if exist "%QT_ROOT%\Tools\CMake_64\bin\cmake.exe" set "PATH=%QT_ROOT%\Tools\CMake_64\bin;%PATH%"
 if exist "%QT_ROOT%\Tools\Ninja\ninja.exe" set "PATH=%QT_ROOT%\Tools\Ninja;%PATH%"
-if exist "%ROOT%\.cache\tools\ninja.exe" set "PATH=%ROOT%\.cache\tools;%PATH%"
 
 if "%QT_DIR%"=="" call :find_qt
 if "%QT_DIR%"=="" (
     echo ERROR: QT_DIR is not set and no Qt kit was found.
     echo Expected installed kit examples:
-    echo   %QT_ROOT%\6.11.1\mingw_64
-    echo   %QT_ROOT%\6.10.2\msvc2022_64
+    echo   %QT_ROOT%\6.11.2\mingw_64
+    echo   .cache\qt\6.11.2\msvc2022_64
     echo.
     echo If Qt is installed somewhere else, run:
     echo   set QT_DIR=.cache\qt\installed-kit
@@ -63,6 +73,10 @@ if defined USING_MINGW (
 ) else (
     if not defined VSCMD_ARG_TGT_ARCH call :setup_msvc
 )
+if errorlevel 1 (
+    popd >nul
+    exit /b 1
+)
 
 where cmake >nul 2>nul
 if errorlevel 1 (
@@ -72,11 +86,11 @@ if errorlevel 1 (
 )
 
 if defined USING_MINGW (
-    set "BUILD_DIR=%ROOT%\build-win-mingw"
+    set "BUILD_DIR=run\build-win-mingw"
 ) else (
-    set "BUILD_DIR=%ROOT%\build-win-msvc"
+    set "BUILD_DIR=run\build-win-msvc"
 )
-set "DIST_DIR=%ROOT%\dist-win"
+set "DIST_DIR=run\windows"
 set "GENERATOR=Ninja"
 set "CONFIG_ARGS=-DCMAKE_BUILD_TYPE=Release"
 rem A bare "build.bat" builds EVERY optional feature (Lua scripting + the native
@@ -114,13 +128,11 @@ if errorlevel 1 (
         echo ERROR: Ninja was not found, and the MinGW Qt kit needs Ninja here.
         echo Expected:
         echo   %QT_ROOT%\Tools\Ninja\ninja.exe
-        echo or:
-        echo   %ROOT%\.cache\tools\ninja.exe
         popd >nul
         exit /b 1
     )
     set "GENERATOR=Visual Studio 17 2022"
-    set "CONFIG_ARGS=-A x64"
+    set "CONFIG_ARGS=%CONFIG_ARGS% -A x64"
     set "BUILD_ARGS=--config Release"
     set "CTEST_ARGS=-C Release"
     set "EXE_PATH=%BUILD_DIR%\Release\maxchat.exe"
@@ -130,7 +142,19 @@ echo Using Qt: %QT_DIR%
 if defined USING_MINGW echo Using MinGW: %MINGW_DIR%
 echo Using generator: %GENERATOR%
 
-cmake -S "%ROOT%" -B "%BUILD_DIR%" -G "%GENERATOR%" %CONFIG_ARGS% -DCMAKE_PREFIX_PATH="%QT_DIR%" -DCMAKE_INSTALL_PREFIX="%DIST_DIR%" %COMPILER_ARGS%
+rem CMake owns an absolute-path cache. Refresh it after moving this project.
+set "FRESH_ARG="
+set "EXPECTED_SOURCE=%PROJECT_DIR:\=/%/repo"
+set "EXPECTED_BUILD=%PROJECT_DIR:\=/%/%BUILD_DIR:\=/%"
+if exist "%BUILD_DIR%\CMakeCache.txt" (
+    for /f "tokens=1,* delims==" %%A in ('findstr /B /C:"CMAKE_HOME_DIRECTORY:INTERNAL=" /C:"CMAKE_CACHEFILE_DIR:INTERNAL=" "%BUILD_DIR%\CMakeCache.txt"') do (
+        if "%%A"=="CMAKE_HOME_DIRECTORY:INTERNAL" if /I not "%%B"=="%EXPECTED_SOURCE%" set "FRESH_ARG=--fresh"
+        if "%%A"=="CMAKE_CACHEFILE_DIR:INTERNAL" if /I not "%%B"=="%EXPECTED_BUILD%" set "FRESH_ARG=--fresh"
+    )
+)
+if exist "%BUILD_DIR%\CMakeCache.txt" if not exist "%BUILD_DIR%\build.ninja" if "%GENERATOR%"=="Ninja" set "FRESH_ARG=--fresh"
+if defined FRESH_ARG echo Refreshing the local CMake cache.
+cmake %FRESH_ARG% -S "%ROOT%" -B "%BUILD_DIR%" -G "%GENERATOR%" %CONFIG_ARGS% -DCMAKE_PREFIX_PATH="%QT_DIR%" %COMPILER_ARGS%
 if errorlevel 1 (
     echo ERROR: CMake configure failed.
     popd >nul
@@ -139,11 +163,11 @@ if errorlevel 1 (
 
 rem Capture build output to a log (no native tee on cmd) so failures are
 rem inspectable after the fact; print it, preserving the real exit code.
-cmake --build "%BUILD_DIR%" %BUILD_ARGS% > "%BUILD_DIR%\build-output.log" 2>&1
+cmake --build "%BUILD_DIR%" %BUILD_ARGS% > "logs\build-windows.log" 2>&1
 set "BUILD_RC=%errorlevel%"
-type "%BUILD_DIR%\build-output.log"
+type "logs\build-windows.log"
 if not "%BUILD_RC%"=="0" (
-    echo ERROR: Build failed. Full log: %BUILD_DIR%\build-output.log
+    echo ERROR: Build failed. Full log: logs\build-windows.log
     popd >nul
     exit /b 1
 )
@@ -175,8 +199,8 @@ if exist "%DIST_DIR%" (
 if not exist "%DIST_DIR%" mkdir "%DIST_DIR%"
 copy /Y "%EXE_PATH%" "%DIST_DIR%\maxchat.exe" >nul
 if errorlevel 1 (
-    echo ERROR: Could not copy maxchat.exe to dist-win - it is probably running.
-    echo        Close MaxChat ^(dist-win\maxchat.exe^), then run build.bat again.
+    echo ERROR: Could not copy maxchat.exe to run\windows - it is probably running.
+    echo        Close MaxChat ^(run\windows\maxchat.exe^), then run build.bat again.
     echo        The compiled exe is ready at: %EXE_PATH%
     popd >nul
     exit /b 1
@@ -195,16 +219,32 @@ if errorlevel 1 (
     exit /b 1
 )
 
-"%QT_DIR%\bin\windeployqt.exe" --release --compiler-runtime "%DIST_DIR%\maxchat.exe"
+for %%E in ("%EXE_PATH%") do set "SCRIPT_WORKER=%%~dpEmaxchat-script-worker.exe"
+if not exist "%SCRIPT_WORKER%" (
+    echo ERROR: Script worker was not built.
+    popd >nul
+    exit /b 1
+)
+copy /Y "%SCRIPT_WORKER%" "%DIST_DIR%\maxchat-script-worker.exe" >nul
+if errorlevel 1 (
+    popd >nul
+    exit /b 1
+)
+
+"%QT_DIR%\bin\windeployqt.exe" --release --compiler-runtime --no-opengl-sw "%DIST_DIR%\maxchat.exe"
 if errorlevel 1 (
     echo ERROR: windeployqt failed.
     popd >nul
     exit /b 1
 )
 
-call :copy_notices
+if not exist "%QT_DIR%\plugins\platforms\qoffscreen.dll" (
+    echo ERROR: Qt offscreen plugin is required for packaged selftests.
+    popd >nul
+    exit /b 1
+)
+copy /Y "%QT_DIR%\plugins\platforms\qoffscreen.dll" "%DIST_DIR%\platforms\qoffscreen.dll" >nul
 if errorlevel 1 (
-    echo ERROR: Could not copy license notices.
     popd >nul
     exit /b 1
 )
@@ -218,12 +258,17 @@ if errorlevel 1 (
 
 xcopy /E /I /Y "%DIST_DIR%" "%LIVE_DIST_DIR%" >nul
 if errorlevel 1 (
-    echo ERROR: Could not update dist-win; close MaxChat before rebuilding.
+    echo ERROR: Could not update run\windows; close MaxChat before rebuilding.
     echo        The clean package stage was preserved.
     popd >nul
     exit /b 1
 )
 call :make_zip
+if errorlevel 1 (
+    echo ERROR: Could not create the release ZIP.
+    popd >nul
+    exit /b 1
+)
 set "DIST_DIR=%LIVE_DIST_DIR%"
 
 echo.
@@ -234,35 +279,32 @@ popd >nul
 exit /b 0
 
 :make_zip
-rem Zip the assembled dist-win\ into a ready-to-upload release archive. Version
-rem comes from CMakeLists project(VERSION). PowerShell's Compress-Archive ships
-rem with Windows 10/11. Non-fatal: a zip failure must not fail the build.
+rem Zip the assembled run\windows\ into a ready-to-upload release archive. Version
+rem comes from CMakeLists project(VERSION). The PowerShell/.NET packager ships
+rem with Windows 10/11. A packaging failure must fail the release build.
 set "APP_VERSION="
 for /f "tokens=2" %%v in ('findstr /r /c:"^    VERSION [0-9]" "%ROOT%\CMakeLists.txt"') do set "APP_VERSION=%%v"
 if "%APP_VERSION%"=="" set "APP_VERSION=dev"
-set "ZIP_PATH=%ROOT%\MaxChat-%APP_VERSION%-windows-x64.zip"
+set "ZIP_PATH=run\packages\MaxChat-%APP_VERSION%-windows-x64.zip"
 if exist "%ZIP_PATH%" del /q "%ZIP_PATH%"
-powershell -NoProfile -Command "Compress-Archive -Path '%DIST_DIR%\*' -DestinationPath '%ZIP_PATH%' -Force" 2>nul
-if exist "%ZIP_PATH%" (echo Packaged: %ZIP_PATH%) else (echo WARN: could not create release zip ^(PowerShell Compress-Archive unavailable?^))
+powershell -NoProfile -ExecutionPolicy Bypass -File "%ROOT%\packaging\package-windows.ps1" -Stage "%DIST_DIR%" -Destination "%ZIP_PATH%"
+if errorlevel 1 exit /b 1
+if not exist "%ZIP_PATH%" exit /b 1
+echo Packaged: %ZIP_PATH%
 exit /b 0
 
 :find_qt
+for %%T in (qmake6.exe qmake.exe) do (
+    for /f "delims=" %%Q in ('%%T -query QT_INSTALL_PREFIX 2^>nul') do (
+        if exist "%%Q\bin\windeployqt.exe" if exist "%%Q\lib\cmake\Qt6\Qt6Config.cmake" (
+            set "QT_DIR=%%Q"
+            exit /b 0
+        )
+    )
+)
 for %%Q in (
-    "%QT_ROOT%\6.11.1\mingw_64"
-    "%QT_ROOT%\6.11.0\mingw_64"
-    "%QT_ROOT%\6.10.2\mingw_64"
-    "%QT_ROOT%\6.10.1\mingw_64"
-    "%QT_ROOT%\6.9.3\mingw_64"
-    "%QT_ROOT%\6.8.3\mingw_64"
-    "%QT_ROOT%\6.11.1\msvc2022_64"
-    "%QT_ROOT%\6.10.2\msvc2022_64"
-    "%QT_ROOT%\6.10.1\msvc2022_64"
-    "%QT_ROOT%\6.9.3\msvc2022_64"
-    "%QT_ROOT%\6.8.3\msvc2022_64"
-    "%QT_ROOT%\6.10.2\msvc2022_64"
-    "%QT_ROOT%\6.10.1\msvc2022_64"
-    "%QT_ROOT%\6.9.3\msvc2022_64"
-    "%QT_ROOT%\6.8.3\msvc2022_64"
+    "%QT_ROOT%\6.11.2\mingw_64"
+    "%QT_ROOT%\6.11.2\msvc2022_64"
 ) do (
     if exist "%%~Q\bin\windeployqt.exe" if exist "%%~Q\lib\cmake\Qt6\Qt6Config.cmake" (
         set "QT_DIR=%%~Q"
@@ -273,22 +315,20 @@ exit /b 0
 
 :setup_mingw
 if "%MINGW_DIR%"=="" if exist "%QT_ROOT%\Tools\mingw1310_64\bin\g++.exe" set "MINGW_DIR=%QT_ROOT%\Tools\mingw1310_64"
-if "%MINGW_DIR%"=="" if exist "%QT_ROOT%\Tools\mingw1310_64\bin\g++.exe" set "MINGW_DIR=%QT_ROOT%\Tools\mingw1310_64"
 if "%MINGW_DIR%"=="" (
     echo ERROR: MinGW compiler was not found.
     echo Expected:
     echo   %QT_ROOT%\Tools\mingw1310_64\bin\g++.exe
-    popd >nul
     exit /b 1
 )
 if not exist "%MINGW_DIR%\bin\g++.exe" (
     echo ERROR: g++.exe was not found under:
     echo   %MINGW_DIR%\bin
-    popd >nul
     exit /b 1
 )
 set "PATH=%QT_DIR%\bin;%MINGW_DIR%\bin;%PATH%"
-set "COMPILER_ARGS=-DCMAKE_C_COMPILER=%MINGW_DIR%\bin\gcc.exe -DCMAKE_CXX_COMPILER=%MINGW_DIR%\bin\g++.exe"
+rem Keep compiler lookup flags in CMake data, avoiding nested cmd.exe quoting.
+set COMPILER_ARGS=-DCMAKE_TOOLCHAIN_FILE="%PROJECT_DIR%\repo\packaging\windows-toolchain.cmake"
 exit /b 0
 
 :setup_msvc
@@ -299,7 +339,6 @@ set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
 if not exist "%VSWHERE%" (
     echo ERROR: MSVC compiler was not found and vswhere.exe is missing.
     echo Install Visual Studio 2022 Build Tools with Desktop development with C++.
-    popd >nul
     exit /b 1
 )
 
@@ -311,14 +350,12 @@ for /f "usebackq delims=" %%I in (`"%VSWHERE%" -latest -products * -requires Mic
 if "%VSINSTALL%"=="" (
     echo ERROR: Visual Studio C++ tools were not found.
     echo Install the Desktop development with C++ workload.
-    popd >nul
     exit /b 1
 )
 
 if not exist "%VSINSTALL%\VC\Auxiliary\Build\vcvars64.bat" (
     echo ERROR: vcvars64.bat was not found under:
     echo   %VSINSTALL%
-    popd >nul
     exit /b 1
 )
 
@@ -329,20 +366,3 @@ exit /b 0
 rem Copy only reviewed runtime assets, including the bundled script examples.
 cmake -DSOURCE_ROOT="%ROOT%" -DDESTINATION_ROOT="%DIST_DIR%" -P "%ROOT%\packaging\stage-assets.cmake"
 exit /b %ERRORLEVEL%
-
-:copy_notices
-if exist "%ROOT%\LICENSE" copy /Y "%ROOT%\LICENSE" "%DIST_DIR%\LICENSE" >nul
-if exist "%ROOT%\THIRD_PARTY_NOTICES.md" copy /Y "%ROOT%\THIRD_PARTY_NOTICES.md" "%DIST_DIR%\THIRD_PARTY_NOTICES.md" >nul
-
-if not exist "%DIST_DIR%\licenses" mkdir "%DIST_DIR%\licenses"
-if exist "%ROOT%\licenses\fonts" xcopy /E /I /Y "%ROOT%\licenses\fonts" "%DIST_DIR%\licenses\fonts" >nul
-if exist "%QT_ROOT%\Licenses" xcopy /E /I /Y "%QT_ROOT%\Licenses" "%DIST_DIR%\licenses\qt" >nul
-
-if defined USING_MINGW (
-    if not exist "%DIST_DIR%\licenses\mingw" mkdir "%DIST_DIR%\licenses\mingw"
-    if exist "%MINGW_DIR%\licenses\gcc" xcopy /E /I /Y "%MINGW_DIR%\licenses\gcc" "%DIST_DIR%\licenses\mingw\gcc" >nul
-    if exist "%MINGW_DIR%\licenses\mingw-w64" xcopy /E /I /Y "%MINGW_DIR%\licenses\mingw-w64" "%DIST_DIR%\licenses\mingw\mingw-w64" >nul
-    if exist "%MINGW_DIR%\licenses\winpthreads" xcopy /E /I /Y "%MINGW_DIR%\licenses\winpthreads" "%DIST_DIR%\licenses\mingw\winpthreads" >nul
-)
-
-exit /b 0

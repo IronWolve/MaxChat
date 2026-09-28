@@ -7,10 +7,10 @@
 namespace maxchat::services {
 
 struct LinkPreviewToggles {
-  bool images = true;
-  bool media = true;
-  bool xCards = true;
-  bool webCards = true;
+  bool images = false;
+  bool media = false;
+  bool xCards = false;
+  bool webCards = false;
 };
 
 [[nodiscard]] LinkPreviewToggles

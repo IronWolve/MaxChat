@@ -1,10 +1,17 @@
 #include "scripting/LuaEngine.h"
+#include "scripting/ScriptProtocol.h"
 #include "scripting/ScriptHost.h"
 #include "scripting/ScriptPermissions.h"
 #include "ui/TerminalFrame.h"
 
 #include <QDir>
 #include <QHash>
+#include <QElapsedTimer>
+#include <QEventLoop>
+#include <QTimer>
+#include <QCoreApplication>
+#include <QScopeGuard>
+#include <functional>
 #include <QSize>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -18,6 +25,9 @@ namespace {
 class FakeHost final : public ScriptHost {
   public:
     QStringList echoes;
+    QStringList echoNetworks;
+    std::function<QString()> httpReply;
+    std::function<void()> afterEcho;
     QStringList says;     // "target|text"
     QStringList inserts;
     QStringList notifies; // "title|text"
@@ -26,7 +36,7 @@ class FakeHost final : public ScriptHost {
     QStringList terminals;
     QHash<QString, QSize> terminalSizes;
 
-    void scriptEcho(const QString&, const QString& text) override { echoes.append(text); }
+    void scriptEcho(const QString& network, const QString& text) override { echoNetworks.append(network); echoes.append(text); const auto callback = afterEcho; if (callback) callback(); }
     void scriptSay(const QString&, const QString& target, const QString& text) override {
         says.append(target + QStringLiteral("|") + text);
     }
@@ -100,7 +110,7 @@ class FakeHost final : public ScriptHost {
     QStringList scriptNicks(const QString&, const QString&) override {
         return {QStringLiteral("alice"), QStringLiteral("bob")};
     }
-    QString scriptHttpGet(const QString&) override { return QStringLiteral("BODY"); }
+    QString scriptHttpGet(const QString&) override { return httpReply ? httpReply() : QStringLiteral("BODY"); }
 };
 
 // Permissions granting IRC send (say/send_raw/mc_send/mc_reply).
@@ -127,7 +137,360 @@ class LuaEngineTest final : public QObject {
     Q_OBJECT
 
   private slots:
+    void supervisorRejectsHostilePeerMessages_data() {
+        QTest::addColumn<QString>("mode"); QTest::addColumn<bool>("accepted");
+        QTest::newRow("forbidden-irc") << QStringLiteral("forbidden-irc") << false;
+        QTest::newRow("bad-type") << QStringLiteral("bad-type") << false;
+        QTest::newRow("oversized-frame") << QStringLiteral("oversized-frame") << false;
+        QTest::newRow("native-hang") << QStringLiteral("native-hang") << false;
+        QTest::newRow("script-identity") << QStringLiteral("identity") << true;
+        QTest::newRow("stdout-not-protocol") << QStringLiteral("stdout-forgery") << true;
+        QTest::newRow("wrong-process") << QStringLiteral("wrong-peer") << true;
+    }
+    void supervisorRejectsHostilePeerMessages() {
+        QFETCH(QString, mode); QFETCH(bool, accepted);
+        const auto previous=qgetenv("MAXCHAT_TEST_WORKER_MODE");
+        const auto restore=qScopeGuard([previous]{ if(previous.isNull()) qunsetenv("MAXCHAT_TEST_WORKER_MODE"); else qputenv("MAXCHAT_TEST_WORKER_MODE",previous); });
+        qputenv("MAXCHAT_TEST_WORKER_MODE",mode.toUtf8());
+        QTemporaryDir directory; FakeHost host;
+        QString helper=QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("maxchat-worker-fixture"));
+#ifdef Q_OS_WIN
+        helper+=QStringLiteral(".exe");
+#endif
+        LuaEngine engine(&host,directory.path(),directory.path(),nullptr,helper);
+        const auto source=writeScript(QDir(directory.path()),QStringLiteral("owner.lua"),QStringLiteral("-- fixture"));
+        QElapsedTimer elapsed;elapsed.start();
+        QCOMPARE(engine.load(source),accepted);
+        QVERIFY(elapsed.elapsed()<5000);
+        QVERIFY(host.raws.isEmpty());
+        if (mode==QLatin1String("identity")) {
+            QCOMPARE(host.terminals,QStringList{QStringLiteral("open|owner|panel|fixture|free|80x25")});
+        } else if (mode==QLatin1String("stdout-forgery")) {
+            QCOMPARE(host.echoes,QStringList{QStringLiteral("private channel")});
+        } else if (mode==QLatin1String("wrong-peer")) {
+            QCOMPARE(host.echoes,QStringList{QStringLiteral("foreign peer rejected")});
+        }
+    }
+
+    void hostileScriptsAreContained_data() {
+        QTest::addColumn<QString>("source");
+        QTest::newRow("infinite-loop") << QStringLiteral("while true do end");
+        QTest::newRow("caught-errors") << QStringLiteral("while true do pcall(function() error('caught') end) end");
+        QTest::newRow("allocation") << QStringLiteral("local x = string.rep('x', 40 * 1024 * 1024)");
+        QTest::newRow("caught-allocation") << QStringLiteral("while true do pcall(string.rep, 'x', 40 * 1024 * 1024) end");
+        QTest::newRow("native-pattern-loop") << QStringLiteral("string.match(string.rep('a',30000), 'a*a*a*a*a*a*a*a*b')");
+        QTest::newRow("stdout-flood") << QStringLiteral("while true do print(string.rep('x',65536)) end");
+        QTest::newRow("ipc-flood") << QStringLiteral("function on_load(api) while true do api.echo(string.rep('x',100000)) end end");
+        QTest::newRow("oversized-ipc") << QStringLiteral("function on_load(api) api.echo(string.rep('x',3*1024*1024)) end");
+    }
+    void hostileScriptsAreContained() {
+        QFETCH(QString, source);
+        QTemporaryDir directory; FakeHost host;
+        LuaEngine engine(&host,directory.path(),directory.path());
+        const QString good = writeScript(QDir(directory.path()),QStringLiteral("good.lua"),
+            QStringLiteral("function on_ping(api) api.echo('healthy'); return true end"));
+        QVERIFY(engine.load(good));
+        int heartbeats = 0; QTimer timer; timer.setInterval(10);
+        connect(&timer,&QTimer::timeout,this,[&] { ++heartbeats; }); timer.start();
+        QElapsedTimer elapsed; elapsed.start();
+        const QString bad = writeScript(QDir(directory.path()),QStringLiteral("bad.lua"),source);
+        engine.load(bad);
+        QTRY_VERIFY_WITH_TIMEOUT(!engine.loaded().contains(QStringLiteral("bad")),5000);
+        QVERIFY2(elapsed.elapsed()<5000,"Runaway worker blocked its caller");
+        QVERIFY(elapsed.elapsed()<50 || heartbeats>0);
+        QVERIFY(engine.dispatch(QStringLiteral("on_ping"),QStringLiteral("net")));
+        QVERIFY(host.echoes.contains(QStringLiteral("healthy")));
+        QCOMPARE(engine.loaded(),QStringList{QStringLiteral("good")});
+    }
+    void runawayTimerIsContained() {
+        QTemporaryDir directory; FakeHost host;
+        LuaEngine engine(&host,directory.path(),directory.path());
+        const auto file=writeScript(QDir(directory.path()),QStringLiteral("timer-loop.lua"),
+            QStringLiteral("function on_load(api) api.timer(50,function() while true do end end) end"));
+        QVERIFY(engine.load(file));
+        QTRY_VERIFY_WITH_TIMEOUT(engine.loaded().isEmpty(),5000);
+        QVERIFY(!host.echoes.isEmpty());
+    }
+    void unloadDuringCallbackCancelsOnlyThatWorker() {
+        QTemporaryDir directory; FakeHost host;
+        LuaEngine engine(&host,directory.path(),directory.path());
+        const auto file=writeScript(QDir(directory.path()),QStringLiteral("cancel.lua"),
+            QStringLiteral("function on_load(api) api.echo('cancel me') end"));
+        host.afterEcho=[&] { host.afterEcho={}; engine.unload(QStringLiteral("cancel")); };
+        QVERIFY(!engine.load(file));
+        QVERIFY(engine.loaded().isEmpty());
+    }
+    void missingWorkerFailsClosed() {
+        QTemporaryDir directory; FakeHost host;
+        LuaEngine engine(&host,directory.path(),directory.path(),nullptr,directory.filePath(QStringLiteral("missing-worker")));
+        const auto file=writeScript(QDir(directory.path()),QStringLiteral("probe.lua"),QStringLiteral("function on_load(api) api.echo('unsafe') end"));
+        QVERIFY(!engine.load(file)); QVERIFY(engine.loaded().isEmpty());
+        QVERIFY(!host.echoes.contains(QStringLiteral("unsafe")));
+        QVERIFY(host.echoes.join(QLatin1Char(' ')).contains(QStringLiteral("worker is missing")));
+    }
+    void cancelledTimerMayReportAnErrorWithoutDanglingState() {
+        QTemporaryDir directory; FakeHost host;
+        LuaEngine engine(&host,directory.path(),directory.path());
+        const auto file=writeScript(QDir(directory.path()),QStringLiteral("cancel-timer.lua"),
+            QStringLiteral("function on_load(api) local id; id=api.timer(50,function() api.cancel_timer(id); error('expected') end) end"));
+        QVERIFY(engine.load(file));
+        QTRY_VERIFY(host.echoes.join(QLatin1Char(' ')).contains(QStringLiteral("expected")));
+        QCOMPARE(engine.loaded(),QStringList{QStringLiteral("cancel-timer")});
+    }
+
+    void destructionDuringHostCallbackIsSafe() {
+        QTemporaryDir directory; FakeHost host;
+        auto* engine=new LuaEngine(&host,directory.path(),directory.path());
+        const auto file=writeScript(QDir(directory.path()),QStringLiteral("destroy.lua"),
+            QStringLiteral("function on_load(api) api.echo('destroy') end"));
+        host.afterEcho=[&] { host.afterEcho={}; delete engine; engine=nullptr; };
+        QVERIFY(!engine->load(file)); QVERIFY(engine==nullptr);
+    }
+    void queuedEventsRetainNetworkScopeDuringHostWait() {
+        QTemporaryDir directory; FakeHost host;
+        LuaEngine engine(&host,directory.path(),directory.path()); engine.setCurrentNetwork(QStringLiteral("initial"));
+        const auto file=writeScript(QDir(directory.path()),QStringLiteral("queued.lua"),
+            QStringLiteral("function on_load(api) api.http_get('fixture'); api.echo('loaded') end\n"
+                           "function on_message(api,text) api.echo(text) end"));
+        host.httpReply=[&] {
+            QEventLoop loop;
+            QTimer::singleShot(0,&loop,[&]{engine.dispatch(QStringLiteral("on_message"),QStringLiteral("other"),{QStringLiteral("queued")});});
+            QTimer::singleShot(50,&loop,&QEventLoop::quit); loop.exec(); return QStringLiteral("reply");
+        };
+        auto permissions=ircPerms(); permissions.network=true;
+        QVERIFY(engine.load(file,permissions));
+        QTRY_VERIFY(host.echoes.contains(QStringLiteral("queued")));
+        QCOMPARE(host.echoes,(QStringList{QStringLiteral("loaded"),QStringLiteral("queued")}));
+        QCOMPARE(host.echoNetworks,(QStringList{QStringLiteral("initial"),QStringLiteral("other")}));
+    }
+    void shortTimerCpuFloodHasAggregateLimit() {
+        QTemporaryDir directory; FakeHost host;
+        LuaEngine engine(&host,directory.path(),directory.path());
+        const auto file=writeScript(QDir(directory.path()),QStringLiteral("timer-flood.lua"),
+            QStringLiteral("function on_load(api) api.timer(50,function() local start=os.clock(); while os.clock()-start<0.12 do end end) end"));
+        QVERIFY(engine.load(file));
+        QTRY_VERIFY_WITH_TIMEOUT(engine.loaded().isEmpty(),6000);
+    }
+    void unloadFinalizersAreBounded() {
+        QTemporaryDir directory; FakeHost host;
+        LuaEngine engine(&host,directory.path(),directory.path());
+        const auto file=writeScript(QDir(directory.path()),QStringLiteral("finalizer.lua"),
+            QStringLiteral("held=setmetatable({}, {__gc=function() while true do end end})"));
+        QVERIFY(engine.load(file)); QElapsedTimer elapsed;elapsed.start();
+        QVERIFY(engine.unload(QStringLiteral("finalizer")));
+        QVERIFY(elapsed.elapsed()<4000); QVERIFY(engine.loaded().isEmpty());
+    }
+    void unloadKeepsApprovedFileAccessUntilStateCloses() {
+        QTemporaryDir directory; FakeHost host;
+        LuaEngine engine(&host,directory.path(),directory.path());
+        const auto file=writeScript(QDir(directory.path()),QStringLiteral("flush.lua"),
+            QStringLiteral("function on_unload(api) local f=assert(io.open(api.data_dir()..'/final.txt','w')); f:write('done'); f:close() end"));
+        auto permissions=ircPerms();permissions.writeFiles=true;
+        QVERIFY(engine.load(file,permissions)); QVERIFY(engine.unload(QStringLiteral("flush")));
+        QFile saved(directory.filePath(QStringLiteral("flush/final.txt"))); QVERIFY(saved.open(QIODevice::ReadOnly)); QCOMPARE(saved.readAll(),QByteArray("done"));
+    }
+    void loadedScriptCountIsBounded() {
+        QTemporaryDir directory; FakeHost host;
+        LuaEngine engine(&host,directory.path(),directory.path());
+        for (int i=0;i<17;++i) {
+            const auto path=writeScript(QDir(directory.path()),QStringLiteral("script%1.lua").arg(i),QStringLiteral("-- bounded fixture"));
+            QCOMPARE(engine.load(path),i<16);
+        }
+        QCOMPARE(engine.loaded().size(),16);
+    }
+
+    void builtInDataWritesAreBoundedAndPreserveExistingFiles() {
+        QTemporaryDir directory; FakeHost host;
+        const QString data=directory.filePath(QStringLiteral("quota")); QVERIFY(QDir().mkpath(data));
+        QFile content(QDir(data).filePath(QStringLiteral("full.txt")));
+        QVERIFY(content.open(QIODevice::WriteOnly)); QVERIFY(content.resize(8*1024*1024)); content.close();
+        QFile preferences(QDir(data).filePath(QStringLiteral("prefs.json")));
+        QVERIFY(preferences.open(QIODevice::WriteOnly)); QVERIFY(preferences.resize(1024*1024+1)); preferences.close();
+        const auto source=writeScript(QDir(directory.path()),QStringLiteral("quota.lua"),
+            QStringLiteral("function on_load(api) assert(not pcall(api.append_file,'full.txt','x')); assert(not pcall(api.set,'key','value')); api.echo('bounded') end"));
+        LuaEngine engine(&host,directory.path(),directory.path()); QVERIFY(engine.load(source));
+        QCOMPARE(host.echoes,QStringList{QStringLiteral("bounded")});
+        QCOMPARE(QFileInfo(content).size(),qint64(8*1024*1024));
+        QCOMPARE(QFileInfo(preferences).size(),qint64(1024*1024+1));
+    }
+
+    void dataScopeNamesArePortableAndCannotNormalizeToParentOrDevice() {
+        using maxchat::scripting::protocol::validScriptName;
+        for (const QString& name : {QStringLiteral(".. "),QStringLiteral(".."),QStringLiteral("."),
+             QStringLiteral("name."),QStringLiteral("con"),QStringLiteral("NUL.txt"),QStringLiteral("COM1"),
+             QStringLiteral("LPT\u00b2"),QStringLiteral("CONOUT$"),QStringLiteral("../other")}) QVERIFY(!validScriptName(name));
+        QVERIFY(validScriptName(QStringLiteral("memo"))); QVERIFY(validScriptName(QStringLiteral("\u00e9cho script")));
+    }
+
+    void approvedIoUsesTheSameUnicodePathAsThePermissionCheck() {
+        QTemporaryDir directory; FakeHost host;
+        const auto file=writeScript(QDir(directory.path()),QStringLiteral("\u00e9cho.lua"),
+            QStringLiteral("function on_load(api) local path=api.data_dir()..'/\u6f22.txt'; local f=assert(io.open(path,'w')); f:write('unicode'); f:close(); local r=assert(io.open(path,'r')); api.echo(r:read('a')); r:close() end"));
+        LuaEngine engine(&host,directory.path(),directory.path()); auto permissions=ircPerms();
+        permissions.readFiles=true;permissions.writeFiles=true;
+        QVERIFY(engine.load(file,permissions)); QCOMPARE(host.echoes,QStringList{QStringLiteral("unicode")});
+        QFile saved(directory.filePath(QStringLiteral("\u00e9cho/\u6f22.txt"))); QVERIFY(saved.open(QIODevice::ReadOnly)); QCOMPARE(saved.readAll(),QByteArray("unicode"));
+    }
+
     void available() { QVERIFY(LuaEngine::available()); }
+
+    void scriptBasenameCannotEscapeItsDataDirectory() {
+        QTemporaryDir scripts, data;
+        const QString path = writeScript(QDir(scripts.path()), QStringLiteral("...lua"),
+            QStringLiteral("function on_load(api) api.append_file('escaped.txt', 'bad') end"));
+        QCOMPARE(QFileInfo(path).completeBaseName(), QStringLiteral(".."));
+        FakeHost host;
+        LuaEngine engine(&host, scripts.path(), data.path());
+        QVERIFY(!engine.load(path));
+        QVERIFY(engine.loaded().isEmpty());
+        QVERIFY(!QFile::exists(QDir(data.path()).filePath(QStringLiteral("../escaped.txt"))));
+    }
+
+    void unicodeEntryPathPreservesBomAndShebang() {
+        QTemporaryDir root;
+        const QString scripts = root.filePath(QStringLiteral("scripts with spaces \u03a9\u6f22"));
+        QVERIFY(QDir().mkpath(scripts));
+        const QString path = writeScript(QDir(scripts), QStringLiteral("\u00e9cho.lua"),
+            QString(QChar(0xfeff)) + QStringLiteral("#!/usr/bin/env lua\nfunction on_load(api) api.echo('unicode loaded') end"));
+        FakeHost host;
+        LuaEngine engine(&host, scripts, root.filePath(QStringLiteral("data")));
+        QVERIFY(engine.load(path));
+        QCOMPARE(host.echoes, QStringList{QStringLiteral("unicode loaded")});
+    }
+
+    void rejectsBinaryEntryScriptsBeforeDecoding() {
+        QTemporaryDir dir;
+        const QString path = QDir(dir.path()).filePath(QStringLiteral("binary.lua"));
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write(QByteArray::fromHex("1b4c7561"));
+        file.close();
+        FakeHost host;
+        LuaEngine engine(&host, dir.path(), dir.path());
+        QVERIFY(!engine.load(path));
+        QVERIFY(host.echoes.join(QLatin1Char('\n')).contains(QStringLiteral("mode is 't'")));
+    }
+
+    void requireRejectsBinaryModules() {
+        QTemporaryDir dir;
+        const QString module = QDir(dir.path()).filePath(QStringLiteral("bytecode.lua"));
+        QFile file(module);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write(QByteArray::fromHex("1b4c7561"));
+        file.close();
+        const QString path = writeScript(QDir(dir.path()), QStringLiteral("loader.lua"),
+            QStringLiteral("package.path = [[%1/?.lua]]\n"
+                           "function on_load(api)\n"
+                           " local ok, err = pcall(require, 'bytecode')\n"
+                           " api.echo(tostring(ok)); api.echo(tostring(err))\nend\n").arg(dir.path()));
+        maxchat::scripting::ScriptPermissions perms;
+        perms.loadModules = true;
+        FakeHost host;
+        LuaEngine engine(&host, dir.path(), dir.path());
+        QVERIFY(engine.load(path, perms));
+        QCOMPARE(host.echoes.value(0), QStringLiteral("false"));
+        QVERIFY(host.echoes.value(1).contains(QStringLiteral("mode is 't'")));
+    }
+
+    void dataApiRejectsSymlinkEscapes() {
+#ifdef Q_OS_WIN
+        QSKIP("QFile::link creates Windows shortcuts, not POSIX symlinks");
+#endif
+        QTemporaryDir dir;
+        const QString outside = QDir(dir.path()).filePath(QStringLiteral("outside.txt"));
+        QFile file(outside);
+        QVERIFY(file.open(QIODevice::WriteOnly)); file.write("unchanged"); file.close();
+        const QString data = QDir(dir.path()).filePath(QStringLiteral("data"));
+        QVERIFY(QDir().mkpath(data + QStringLiteral("/escape")));
+        QVERIFY(QFile::link(outside, data + QStringLiteral("/escape/link.txt")));
+        const QString path = writeScript(QDir(dir.path()), QStringLiteral("escape.lua"),
+            QStringLiteral("function on_load(api)\n"
+                           " api.echo(tostring(api.read_file('link.txt') == nil))\n"
+                           " api.echo(tostring(pcall(api.append_file, 'link.txt', 'bad')))\nend\n"));
+        FakeHost host;
+        LuaEngine engine(&host, dir.path(), data);
+        QVERIFY(engine.load(path));
+        QCOMPARE(host.echoes, (QStringList{QStringLiteral("true"), QStringLiteral("false")}));
+        QVERIFY(file.open(QIODevice::ReadOnly)); QCOMPARE(file.readAll(), QByteArray("unchanged"));
+    }
+
+    void writePermissionDoesNotGrantReadWriteModes() {
+        QTemporaryDir dir;
+        const QString path = writeScript(QDir(dir.path()), QStringLiteral("writer.lua"),
+            QStringLiteral("function on_load(api)\n"
+                           " local f = io.open([[%1/readwrite.txt]], 'w+')\n"
+                           " api.echo(tostring(f == nil))\nend\n").arg(dir.path()));
+        maxchat::scripting::ScriptPermissions perms;
+        perms.writeFiles = true; perms.allowedDirs = {dir.path()};
+        FakeHost host;
+        LuaEngine engine(&host, dir.path(), dir.path());
+        QVERIFY(engine.load(path, perms));
+        QCOMPARE(host.echoes, QStringList{QStringLiteral("true")});
+        QVERIFY(!QFile::exists(QDir(dir.path()).filePath(QStringLiteral("readwrite.txt"))));
+    }
+
+    void allowedDirectoryRejectsSymlinkEscapes() {
+#ifdef Q_OS_WIN
+        QSKIP("POSIX symlink regression");
+#endif
+        QTemporaryDir dir;
+        const QString allowed = QDir(dir.path()).filePath(QStringLiteral("allowed"));
+        const QString outside = QDir(dir.path()).filePath(QStringLiteral("outside"));
+        QVERIFY(QDir().mkpath(allowed)); QVERIFY(QDir().mkpath(outside));
+        QVERIFY(QFile::link(outside, allowed + QStringLiteral("/link")));
+        const QString path = writeScript(QDir(dir.path()), QStringLiteral("guard.lua"),
+            QStringLiteral("function on_load(api)\n"
+                           " local f = io.open([[%1/link/escape.txt]], 'w')\n"
+                           " api.echo(tostring(f == nil))\nend\n").arg(allowed));
+        maxchat::scripting::ScriptPermissions perms;
+        perms.writeFiles = true; perms.allowedDirs = {allowed};
+        FakeHost host;
+        LuaEngine engine(&host, dir.path(), dir.path());
+        QVERIFY(engine.load(path, perms));
+        QCOMPARE(host.echoes, QStringList{QStringLiteral("true")});
+        QVERIFY(!QFile::exists(outside + QStringLiteral("/escape.txt")));
+    }
+
+
+    void moduleLoadingCannotReadOutsideApprovedDirectories() {
+        QTemporaryDir scripts, outside;
+        const QString secret = writeScript(QDir(outside.path()), QStringLiteral("private.lua"),
+                                           QStringLiteral("return 'private-fixture'"));
+        const QString script = writeScript(QDir(scripts.path()), QStringLiteral("loader.lua"),
+            QStringLiteral("function on_load(api)\n"
+                           " local f = loadfile([[%1]])\n"
+                           " api.echo(tostring(f == nil))\nend\n").arg(secret));
+        FakeHost host;
+        LuaEngine engine(&host, scripts.path(), scripts.path());
+        maxchat::scripting::ScriptPermissions permissions; permissions.loadModules = true;
+        QVERIFY(engine.load(script, permissions));
+        QCOMPARE(host.echoes, QStringList{QStringLiteral("true")});
+    }
+
+    void textLoadersPreserveTheirDefaultEnvironment() {
+        QTemporaryDir scripts;
+        writeScript(QDir(scripts.path()), QStringLiteral("module.lua"), QStringLiteral("return math.floor(3.7)"));
+        const QString script = writeScript(QDir(scripts.path()), QStringLiteral("loader.lua"),
+            QStringLiteral("function on_load(api)\n"
+                           " api.echo(tostring(assert(load('return math.floor(4.7)'))()))\n"
+                           " api.echo(tostring(assert(loadfile('module.lua'))()))\nend\n"));
+        FakeHost host;
+        LuaEngine engine(&host, scripts.path(), scripts.path());
+        maxchat::scripting::ScriptPermissions permissions; permissions.loadModules = true;
+        QVERIFY(engine.load(script, permissions));
+        QCOMPARE(host.echoes, (QStringList{QStringLiteral("4"), QStringLiteral("3")}));
+    }
+
+    void filePermissionDoesNotExposeProcessStdio() {
+        QTemporaryDir scripts;
+        const QString script = writeScript(QDir(scripts.path()), QStringLiteral("stdio.lua"),
+            QStringLiteral("function on_load(api) api.echo(tostring(io.stdin == nil and io.read == nil and io.stdout == nil)) end"));
+        FakeHost host;
+        LuaEngine engine(&host, scripts.path(), scripts.path());
+        maxchat::scripting::ScriptPermissions permissions; permissions.writeFiles = true;
+        QVERIFY(engine.load(script, permissions));
+        QCOMPARE(host.echoes, QStringList{QStringLiteral("true")});
+    }
 
     void onLoadCallsEcho() {
         QTemporaryDir dir;
@@ -832,6 +1195,46 @@ class LuaEngineTest final : public QObject {
         LuaEngine engine2(&host2, dir.path(), dir.path());
         QVERIFY(engine2.load(script, perms));
         QCOMPARE(host2.echoes, QStringList{QStringLiteral("BODY")});
+    }
+
+    void bridgeErrorsReleaseCppResources() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        // A regular file prevents creation of the per-script data directory.
+        QFile blocker(QDir(dir.path()).filePath(QStringLiteral("errors")));
+        QVERIFY(blocker.open(QIODevice::WriteOnly));
+        blocker.close();
+        const QString path = writeScript(QDir(dir.path()), QStringLiteral("errors.lua"),
+            QStringLiteral(R"lua(
+function on_load(api)
+  local calls = {
+    function() api.say('target', {}) end,
+    function() api.notify('title', {}) end,
+    function() api.mc_send('target', 'service', {}) end,
+    function() api.terminal_open('id', 'title', 'free', {}) end,
+    function() api.terminal_write('id', {}) end,
+    function() api.terminal_profile('id', 'free', {}) end,
+    function() api.append_file('file.txt', {}) end,
+    function() api.append_file('file.txt', 'content') end,
+    function() api.append_file('..', 'content') end,
+    function() api.set('key', {}) end,
+    function() api.set('key', 'value') end,
+    function() io.open(api.data_dir(), 'r?') end,
+  }
+  for i = 1, 20 do
+    for index, call in ipairs(calls) do assert(not pcall(call), tostring(index)) end
+  end
+  api.echo('errors caught')
+end
+)lua"));
+        FakeHost host;
+        LuaEngine engine(&host, dir.path(), dir.path());
+        auto perms = ircPerms();
+        perms.readFiles = true;
+        QVERIFY(engine.load(path, perms));
+        QCOMPARE(host.echoes, QStringList{QStringLiteral("errors caught")});
+        QVERIFY(host.says.isEmpty());
+        QVERIFY(host.notifies.isEmpty());
     }
 
     void scriptErrorDoesNotCrash() {

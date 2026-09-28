@@ -7,7 +7,7 @@
 namespace maxchat::scripting {
 
 // What a loaded script is allowed to reach beyond the safe core. All default to
-// off — scripts start fully sandboxed and the user opts in per capability in
+// off; each script has a resource-limited process and the user opts in per capability in
 // Preferences > Scripts. `allowedDirs` are absolute paths that file reads/writes
 // are confined to (the script's own data dir is always allowed via api.*).
 struct ScriptPermissions {

@@ -1,137 +1,50 @@
 #include "services/ImageFetcher.h"
-
-#include "services/LinkPreviewClassifier.h"
-
+#include "services/PublicHttpFetch.h"
+#include <QBuffer>
+#include <QImageReader>
 #include <QNetworkAccessManager>
-#include <QNetworkReply>
-#include <QNetworkRequest>
-#include <QPointer>
-#include <QScopeGuard>
-#include <QTimer>
-
 namespace maxchat::services {
-namespace {
-
-qsizetype normalizedMaxBytes(qsizetype value) {
-  return value > 0 ? value : 5 * 1024 * 1024;
-}
-
-int normalizedTimeoutMs(int value) { return value > 0 ? value : 12000; }
-
-QNetworkRequest buildRequest(const QUrl &url) {
-  QNetworkRequest request(url);
-  request.setHeader(QNetworkRequest::UserAgentHeader,
-                    QStringLiteral("MaxChat/0.1 link-preview"));
-  request.setRawHeader("Accept", "image/*;q=0.9,*/*;q=0.1");
-  request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
-                       QNetworkRequest::NoLessSafeRedirectPolicy);
-  request.setMaximumRedirectsAllowed(5);
-  return request;
-}
-
-} // namespace
-
-ImageFetcher::ImageFetcher(QNetworkAccessManager *manager, QObject *parent)
+ImageFetcher::ImageFetcher(QNetworkAccessManager* manager, QObject* parent)
     : QObject(parent), manager_(manager) {}
-
-void ImageFetcher::fetch(const QUrl &url, ImageFetchOptions options) {
-  if (manager_ == nullptr) {
-    emit imageFetchFailed(url, QStringLiteral("network manager missing"));
-    return;
-  }
-  // SSRF gate runs its DNS off the GUI thread; the GET only fires once it passes.
-  resolvePreviewUrlPublicAsync(
-      url, options.allowPrivateNetwork, this, [this, url, options](bool allowed) {
-        if (!allowed) {
-          emit imageFetchFailed(url, QStringLiteral("blocked image URL"));
-          return;
+void ImageFetcher::fetch(const QUrl& url, ImageFetchOptions options) {
+    PublicHttpOptions request;
+    request.maxBytes = options.maxBytes > 0 ? options.maxBytes : 5 * 1024 * 1024;
+    request.timeoutMs = options.timeoutMs > 0 ? options.timeoutMs : 12000;
+    request.allowPrivateNetwork = options.allowPrivateNetwork;
+    request.accept = "image/*;q=0.9,*/*;q=0.1";
+    fetchPublicHttp(manager_, url, request, this, [this, url, options](PublicHttpResult result) {
+        if (!result.error.isEmpty()) {
+            emit imageFetchFailed(url, result.error == QLatin1String("blocked preview URL")
+                ? QStringLiteral("blocked image URL") : result.error);
+            return;
         }
-        issueRequest(url, options);
-      });
+        const QByteArray type = result.contentType.toLower();
+        if (!type.isEmpty() && !type.startsWith("image/")) {
+            emit imageFetchFailed(url, QStringLiteral("response was not an image")); return;
+        }
+        QBuffer buffer(&result.body);
+        buffer.open(QIODevice::ReadOnly);
+        QImageReader reader(&buffer);
+        const QByteArray format = reader.format().toLower();
+        if (format != "png" && format != "jpeg" && format != "jpg" && format != "gif" &&
+            format != "webp" && format != "bmp") {
+            emit imageFetchFailed(url, QStringLiteral("unsupported preview image format")); return;
+        }
+        const QSize size = reader.size();
+        constexpr qint64 MaxPixels = 16 * 1024 * 1024;
+        if (!size.isValid() || qint64(size.width()) * size.height() > MaxPixels) {
+            emit imageFetchFailed(url, QStringLiteral("image dimensions exceed decode limit")); return;
+        }
+        const QSize maximum(qBound(1, options.maxWidth, 8192), qBound(1, options.maxHeight, 8192));
+        if (size.width() > maximum.width() || size.height() > maximum.height())
+            reader.setScaledSize(size.scaled(maximum, Qt::KeepAspectRatio));
+        QImage image = reader.read();
+        if (image.isNull()) {
+            emit imageFetchFailed(url, QStringLiteral("could not decode image")); return;
+        }
+        if (image.width() > maximum.width() || image.height() > maximum.height())
+            image = image.scaled(maximum, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        emit imageFetched(url, image);
+    });
 }
-
-void ImageFetcher::issueRequest(const QUrl &url, ImageFetchOptions options) {
-  options.maxBytes = normalizedMaxBytes(options.maxBytes);
-  options.timeoutMs = normalizedTimeoutMs(options.timeoutMs);
-  QNetworkReply *reply = manager_->get(buildRequest(url));
-
-  const QPointer<QNetworkReply> guardedReply(reply);
-  QTimer::singleShot(options.timeoutMs, reply, [guardedReply]() {
-    if (guardedReply != nullptr && !guardedReply->isFinished()) {
-      guardedReply->setProperty("maxchat_timeout", true);
-      guardedReply->abort();
-    }
-  });
-
-  // Abort as soon as the body exceeds the cap — reading only at finished()
-  // would let QNAM buffer an arbitrarily large response in RAM first.
-  const qsizetype maxBytes = options.maxBytes;
-  connect(reply, &QNetworkReply::downloadProgress, this,
-          [guardedReply, maxBytes](qint64 received, qint64 /*total*/) {
-            if (received > maxBytes && guardedReply != nullptr &&
-                !guardedReply->isFinished()) {
-              guardedReply->setProperty("maxchat_too_big", true);
-              guardedReply->abort();
-            }
-          });
-
-  // Re-run the SSRF guard on every redirect — a public host can 30x to a
-  // private address, which NoLessSafeRedirectPolicy alone does not block.
-  const bool allowPrivate = options.allowPrivateNetwork;
-  connect(reply, &QNetworkReply::redirected, this,
-          [this, guardedReply, allowPrivate](const QUrl &target) {
-            // Literal private IPs reject synchronously inside the gate (abort
-            // immediately); only public-domain hops do an off-thread resolve.
-            resolvePreviewUrlPublicAsync(
-                target, allowPrivate, this, [guardedReply](bool allowed) {
-                  if (!allowed && guardedReply != nullptr) {
-                    guardedReply->setProperty("maxchat_blocked_redirect", true);
-                    guardedReply->abort();
-                  }
-                });
-          });
-
-  connect(reply, &QNetworkReply::finished, this, [this, reply, url, options]() {
-    const auto cleanup = qScopeGuard([reply]() { reply->deleteLater(); });
-
-    if (reply->error() != QNetworkReply::NoError) {
-      QString reason = reply->errorString();
-      if (reply->property("maxchat_blocked_redirect").toBool()) {
-        reason = QStringLiteral("blocked redirect to a private address");
-      } else if (reply->property("maxchat_timeout").toBool()) {
-        reason = QStringLiteral("image fetch timed out");
-      } else if (reply->property("maxchat_too_big").toBool()) {
-        reason = QStringLiteral("image exceeded size cap");
-      }
-      emit imageFetchFailed(url, reason);
-      return;
-    }
-
-    const QString contentType =
-        reply->header(QNetworkRequest::ContentTypeHeader).toString().toLower();
-    if (!contentType.isEmpty() &&
-        !contentType.startsWith(QStringLiteral("image/"))) {
-      emit imageFetchFailed(url, QStringLiteral("response was not an image"));
-      return;
-    }
-
-    const QByteArray payload = reply->read(options.maxBytes + 1);
-    if (static_cast<qsizetype>(payload.size()) > options.maxBytes) {
-      emit imageFetchFailed(url, QStringLiteral("image exceeded size cap"));
-      return;
-    }
-
-    QImage image;
-    if (!image.loadFromData(payload) || image.isNull()) {
-      emit imageFetchFailed(url, QStringLiteral("could not decode image"));
-      return;
-    }
-    if (image.width() > options.maxWidth || image.height() > options.maxHeight) {
-      image = image.scaled(options.maxWidth, options.maxHeight,
-                           Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    }
-    emit imageFetched(url, image);
-  });
 }
-
-} // namespace maxchat::services

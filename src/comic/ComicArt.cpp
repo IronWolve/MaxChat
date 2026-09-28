@@ -1,3 +1,4 @@
+#include "app/BundledPaths.h"
 #include "comic/ComicArt.h"
 
 #include <QCoreApplication>
@@ -7,23 +8,23 @@
 #include <QtEndian>
 
 #include <array>
+#include <zlib.h>
 
 // Port of the Python comic/assets.py decoder. .avb/.bgb wrap zlib-deflated
-// Windows DIBs in a TLV chunk stream. We inflate with qUncompress by prefixing
-// the big-endian original length (qUncompress's expected-size header) onto the
-// raw zlib stream the file already carries.
+// Windows DIBs in a TLV chunk stream. Inflate into a fixed-size buffer so
+// a forged declared length cannot become an unbounded allocation hint.
 
 namespace maxchat::comic {
 
 namespace {
 
 quint16 u16(const QByteArray& d, int o) {
-    return o + 2 <= d.size() ? qFromLittleEndian<quint16>(
+    return o >= 0 && qint64(o) + 2 <= d.size() ? qFromLittleEndian<quint16>(
                                    reinterpret_cast<const uchar*>(d.constData() + o))
                              : 0;
 }
 quint32 u32(const QByteArray& d, int o) {
-    return o + 4 <= d.size() ? qFromLittleEndian<quint32>(
+    return o >= 0 && qint64(o) + 4 <= d.size() ? qFromLittleEndian<quint32>(
                                    reinterpret_cast<const uchar*>(d.constData() + o))
                              : 0;
 }
@@ -50,7 +51,10 @@ struct Dib {
 // well under 512px), so these caps never reject legitimate art but stop a
 // crafted .avb/.bgb from forcing a giant allocation.
 constexpr qint64 MaxDibDim = 4096;                        // bounds stride + QImage size
-constexpr quint32 MaxInflateBytes = 32u * 1024 * 1024;   // bounds qUncompress output alloc
+constexpr quint32 MaxInflateBytes = 32u * 1024 * 1024;
+constexpr qint64 MaxArtFileBytes = 32 * 1024 * 1024;
+constexpr int MaxArtCells = 128;
+constexpr qint64 MaxCharacterPixels = 16 * 1024 * 1024;
 
 // Inflate the zlib DIB whose BITMAPINFOHEADER is at offset j.
 Dib inflateDib(const QByteArray& data, int j) {
@@ -79,17 +83,15 @@ Dib inflateDib(const QByteArray& data, int j) {
     if (cmprLen64 == 0 || static_cast<qint64>(j) + 48 + cmprLen64 > dataLen) {
         return out;
     }
-    // qUncompress allocates the prefixed length up front, so an attacker-set
-    // origLen (~4GB) would OOM us. Reject anything beyond a sane ceiling.
-    if (origLen == 0 || origLen > MaxInflateBytes) {
-        return out;
-    }
-    QByteArray packed;
-    packed.resize(4);
-    qToBigEndian<quint32>(origLen, reinterpret_cast<uchar*>(packed.data()));
-    packed.append(data.constData() + j + 48, cmprLen64);
-    out.pixels = qUncompress(packed);
-    out.ok = !out.pixels.isEmpty();
+    if (origLen == 0 || origLen > MaxInflateBytes) return out;
+    out.pixels.resize(static_cast<qsizetype>(origLen));
+    uLongf written = origLen;
+    uLong consumed = cmprLen;
+    const int result = uncompress2(reinterpret_cast<Bytef*>(out.pixels.data()), &written,
+                                  reinterpret_cast<const Bytef*>(data.constData() + j + 48),
+                                  &consumed);
+    out.ok = result == Z_OK && written == origLen && consumed == cmprLen;
+    if (!out.ok) out.pixels.clear();
     return out;
 }
 
@@ -205,6 +207,7 @@ QList<int> zlibDibOffsets(const QByteArray& data) {
         if (z < 0) {
             break;
         }
+        if (out.size() >= MaxArtCells) return {};
         out.append(z - 48);
         i = z + 1;
     }
@@ -287,7 +290,9 @@ QImage loadBackground(const QString& path) {
     if (!file.open(QIODevice::ReadOnly)) {
         return {};
     }
-    const QByteArray data = file.readAll();
+    if (file.size() > MaxArtFileBytes) return {};
+    const QByteArray data = file.read(MaxArtFileBytes + 1);
+    if (data.size() > MaxArtFileBytes) return {};
     const int j = data.indexOf(QByteArray("\x28\x00\x00\x00", 4));
     return j >= 0 ? palettedImage(data, j) : QImage();
 }
@@ -299,7 +304,22 @@ CharacterCells loadCharacterCells(const QString& path) {
     if (!file.open(QIODevice::ReadOnly)) {
         return cells;
     }
-    const QByteArray data = file.readAll();
+    if (file.size() > MaxArtFileBytes) return {};
+    const QByteArray data = file.read(MaxArtFileBytes + 1);
+    if (data.size() > MaxArtFileBytes) return {};
+
+    qint64 decodedPixels = 0;
+    int decodedCells = 0;
+    const auto boundedCell = [&](int offset) -> QImage {
+        if (++decodedCells > MaxArtCells || offset < 0 || qint64(offset) + 48 > data.size()) return {};
+        const qint64 width = qint32(u32(data, offset + 4));
+        const qint64 height = qAbs(qint64(qint32(u32(data, offset + 8))));
+        if (width <= 0 || height <= 0 || width > MaxDibDim || height > MaxDibDim ||
+            width * height > MaxCharacterPixels - decodedPixels) return {};
+        const QImage image = tryCell(data, offset);
+        if (!image.isNull()) decodedPixels += qint64(image.width()) * image.height();
+        return image;
+    };
 
     // Chunk-table parse (magic 0x8181).
     if (data.size() > 6 && static_cast<uchar>(data[0]) == 0x81 &&
@@ -340,8 +360,9 @@ CharacterCells loadCharacterCells(const QString& path) {
                     if (rec + 14 > data.size()) {
                         break;
                     }
-                    const int off =
-                        headerOffsetAfterPalette(data, static_cast<int>(u32(data, rec) + bias));
+                    const quint64 rawOffset = quint64(u32(data, rec)) + bias;
+                    if (rawOffset >= quint64(data.size())) continue;
+                    const int off = headerOffsetAfterPalette(data, static_cast<int>(rawOffset));
                     const int eid = i16(data, rec + 12);
                     if (off < 0 || off + 40 > data.size() ||
                         static_cast<uchar>(data[off]) != 0x28) {
@@ -352,7 +373,8 @@ CharacterCells loadCharacterCells(const QString& path) {
                     if (w <= 0 || h == 0) {
                         continue;
                     }
-                    if (std::abs(h) > w * 1.4) {
+                    if (bodyOffsets.size() + faceOffsets.size() >= MaxArtCells) return {};
+                    if (qAbs(qint64(h)) > w * 1.4) {
                         bodyOffsets.append(off);
                     } else if (!faceOffsets.contains(eid)) {
                         faceOffsets.insert(eid, off);
@@ -365,13 +387,13 @@ CharacterCells loadCharacterCells(const QString& path) {
         }
         if (parseOk && (!bodyOffsets.isEmpty() || !faceOffsets.isEmpty())) {
             for (const int off : bodyOffsets) {
-                const QImage img = tryCell(data, off);
+                const QImage img = boundedCell(off);
                 if (!img.isNull()) {
                     cells.bodies.append(img);
                 }
             }
             for (auto it = faceOffsets.constBegin(); it != faceOffsets.constEnd(); ++it) {
-                const QImage img = tryCell(data, it.value());
+                const QImage img = boundedCell(it.value());
                 if (!img.isNull()) {
                     cells.faces.insert(it.key(), img);
                 }
@@ -397,14 +419,14 @@ CharacterCells loadCharacterCells(const QString& path) {
         const int w = static_cast<qint32>(u32(data, j + 4));
         const int h = static_cast<qint32>(u32(data, j + 8));
         const int bc = u16(data, j + 14);
-        if (sz != 40 || bc != 2 || w < 40 || std::abs(h) < 40) {
+        if (sz != 40 || bc != 2 || w < 40 || qAbs(qint64(h)) < 40) {
             continue;
         }
-        const QImage img = tryCell(data, j);
+        const QImage img = boundedCell(j);
         if (img.isNull()) {
             continue;
         }
-        if (std::abs(h) > w * 1.4) {
+        if (qAbs(qint64(h)) > w * 1.4) {
             cells.bodies.append(img);
         } else {
             faceList.append(img);
@@ -440,10 +462,8 @@ void scanArtDir(const QString& folder, QStringList& backgrounds, QStringList& ch
 }
 
 QString bundledArtDir() {
-    const QString appDir = QCoreApplication::applicationDirPath();
-    const QStringList candidates = {QDir(appDir).filePath(QStringLiteral("assets/cc-art")),
-                                    QDir(appDir).filePath(QStringLiteral("../assets/cc-art")),
-                                    QDir::current().filePath(QStringLiteral("assets/cc-art"))};
+    const QString appDir = maxchat::app::bundledDataDirectory();
+    const QStringList candidates = {QDir(appDir).filePath(QStringLiteral("assets/cc-art"))};
     for (const QString& dir : candidates) {
         if (QDir(dir).exists()) {
             return QDir(dir).absolutePath();

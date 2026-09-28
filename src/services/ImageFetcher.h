@@ -19,8 +19,8 @@ struct ImageFetchOptions {
 };
 
 // Downloads an image for an inline chat preview. Reuses the shared SSRF gate
-// (canFetchPreviewUrl) — http(s) only, no credentials, public-only DNS, and the
-// guard is re-run on every redirect hop. Decodes + scales down before emitting.
+// with destination pinning, no ambient credentials, bounded response sizes,
+// and validation on every redirect. Decodes + scales down before emitting.
 class ImageFetcher final : public QObject {
   Q_OBJECT
 public:
@@ -33,7 +33,6 @@ signals:
   void imageFetchFailed(const QUrl &url, const QString &reason);
 
 private:
-  void issueRequest(const QUrl &url, ImageFetchOptions options); // after the SSRF gate passes
 
   QNetworkAccessManager *manager_ = nullptr;
 };

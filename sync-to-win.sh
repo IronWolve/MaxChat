@@ -1,82 +1,22 @@
 #!/usr/bin/env bash
+# Sync only approved files into an explicitly selected Windows project/repo/.
 set -euo pipefail
-
-SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TARGET_DIR="${1:?Pass the destination project directory}"
-
-if [[ ! -d "$SOURCE_DIR/src" || ! -f "$SOURCE_DIR/CMakeLists.txt" ]]; then
-  echo "ERROR: run this from the MaxChat C++ source tree." >&2
-  exit 1
+SOURCE_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd -- "$SOURCE_DIR/.." && pwd)"
+if [[ $# != 1 || ${1:-} == --help || ${1:-} == -h ]]; then
+    printf 'Usage: sync-to-win.sh <destination-project>\nRelative destinations are resolved from this project root.\nCopies approved source into <destination-project>/repo; build repo/build.bat on Windows.\n'
+    [[ ${1:-} == --help || ${1:-} == -h ]] && exit 0
+    exit 1
 fi
-
-if ! command -v rsync >/dev/null 2>&1; then
-  echo "ERROR: rsync is required for a clean sync." >&2
-  echo "Install it in WSL with: sudo apt install rsync" >&2
-  exit 1
-fi
-
-mkdir -p "$TARGET_DIR"
-
-sync_dir() {
-  local name="$1"
-  if [[ -d "$SOURCE_DIR/$name" ]]; then
-    mkdir -p "$TARGET_DIR/$name"
-    rsync -a --delete "$SOURCE_DIR/$name/" "$TARGET_DIR/$name/"
-  fi
-}
-
-copy_file() {
-  local name="$1"
-  if [[ -f "$SOURCE_DIR/$name" ]]; then
-    mkdir -p "$(dirname "$TARGET_DIR/$name")"
-    cp -p "$SOURCE_DIR/$name" "$TARGET_DIR/$name"
-  fi
-}
-
-for dir in src tests assets resources licenses third_party themes; do
-  sync_dir "$dir"
-done
-
-for file in \
-  .clang-format \
-  .gitignore \
-  CMakeLists.txt \
-  LICENSE \
-  README.md \
-  SCRIPTING.md \
-  THIRD_PARTY_NOTICES.md \
-  build.bat \
-  tools/secret_store_helper.cpp \
-  packaging/runtime-assets.txt \
-  packaging/stage-assets.cmake \
-  sync-to-win.sh; do
-  copy_file "$file"
-done
-
-# build.bat must have CRLF endings on Windows: cmd.exe seeks labels by byte
-# offset, and LF-only files make later `call :label`s (e.g. copy_assets) fail.
-# Force it on the synced copy regardless of the repo file's endings.
-if [[ -f "$TARGET_DIR/build.bat" ]]; then
-  sed -i 's/\r\?$/\r/' "$TARGET_DIR/build.bat"
-fi
-
-# The packaged app reads themes/ and wallpapers/ from disk next to the exe
-# (fonts/sounds/icons are embedded). Refresh an existing dist-win so new or
-# edited assets show up without rerunning build.bat.
-if [[ -d "$TARGET_DIR/dist-win" ]]; then
-  mkdir -p "$TARGET_DIR/dist-win/assets"
-  for dir in themes wallpapers dictionaries scripts; do
-    if [[ -d "$SOURCE_DIR/assets/$dir" ]]; then
-      rsync -a --delete "$SOURCE_DIR/assets/$dir/" "$TARGET_DIR/dist-win/assets/$dir/"
-    fi
-  done
-  # The importable theme-pack gallery ships as a top-level themes/ folder next to
-  # the exe (not under assets/); refresh it too.
-  if [[ -d "$SOURCE_DIR/themes" ]]; then
-    rsync -a --delete "$SOURCE_DIR/themes/" "$TARGET_DIR/dist-win/themes/"
-  fi
-  echo "Refreshed runtime assets in $TARGET_DIR/dist-win/assets"
-fi
-
-echo "Synced MaxChat C++ source to $TARGET_DIR"
-echo "Windows build command: build.bat in the selected project"
+command -v rsync >/dev/null || { printf 'ERROR: rsync is required.\n' >&2; exit 1; }
+case "$1" in
+    /*) destination="$1" ;;
+    *) destination="$PROJECT_DIR/$1" ;;
+esac
+TARGET_DIR="$(realpath -m -- "$destination/repo")"
+case "$TARGET_DIR" in
+    "$SOURCE_DIR"|"$SOURCE_DIR"/*) printf 'ERROR: target must be outside the source checkout.\n' >&2; exit 1 ;;
+esac
+mkdir -p -- "$TARGET_DIR"
+rsync -a --files-from="$SOURCE_DIR/packaging/source-files.txt" -- "$SOURCE_DIR/" "$TARGET_DIR/"
+printf 'Synced approved source to the selected project: %s/repo\nBuild on Windows using repo\\build.bat. Existing runtime and configuration were preserved.\n' "$1"

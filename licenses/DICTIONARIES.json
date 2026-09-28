@@ -1,0 +1,311 @@
+{
+  "repository": "https://github.com/wooorm/dictionaries",
+  "commit": "8cfea406b505e4d7df52d5a19bce525df98c54ab",
+  "note": "Package versions identify the pinned collection packages, not necessarily the original dictionary release. Editable aff/dic files are shipped in assets/dictionaries; original source distributions and generators are included in the corresponding-source companion. Upstream normalization uses script/crawl.sh (UTF-8 conversion and whitespace normalization).",
+  "dictionaries": [
+    {
+      "locale": "en_US",
+      "package_version": "4.0.0",
+      "upstream_options": "(MIT AND BSD)",
+      "distribution_option": "SCOWL composite MIT and BSD-style grants",
+      "files": [
+        {
+          "file": "assets/dictionaries/en_US.aff",
+          "sha256": "e746c882dd6f303c2c46e7452804b9201115a6942cfeb15f18f8edf774d2e24e",
+          "upstream_path": "dictionaries/en/index.aff"
+        },
+        {
+          "file": "assets/dictionaries/en_US.dic",
+          "sha256": "f0b1a234bd178bdd01875b2a392a9647f888b8fe879f79c52aae62c2759b3647",
+          "upstream_path": "dictionaries/en/index.dic"
+        }
+      ],
+      "changes": "en_US.aff retains the marked 2024-01-29 apostrophe-handling change; other differences are whitespace."
+    },
+    {
+      "locale": "en_GB",
+      "package_version": "3.0.0",
+      "upstream_options": "(MIT AND BSD)",
+      "distribution_option": "SCOWL composite MIT and BSD-style grants",
+      "files": [
+        {
+          "file": "assets/dictionaries/en_GB.aff",
+          "sha256": "8ae1f19d4840d957728ad90555d5a8dff6cc5c046279c95ff0c00fc0a0136c7b",
+          "upstream_path": "dictionaries/en-GB/index.aff"
+        },
+        {
+          "file": "assets/dictionaries/en_GB.dic",
+          "sha256": "869fe17ba4ee4b5401c60a666ee2d6a3dcc237f460b7294435df1cc6a799aa57",
+          "upstream_path": "dictionaries/en-GB/index.dic"
+        }
+      ],
+      "changes": "No MaxChat changes to the pinned aff/dic data."
+    },
+    {
+      "locale": "nl_NL",
+      "package_version": "2.0.0",
+      "upstream_options": "(BSD-3-Clause OR CC-BY-3.0)",
+      "distribution_option": "BSD-3-Clause",
+      "files": [
+        {
+          "file": "assets/dictionaries/nl_NL.aff",
+          "sha256": "b430d9cf5f4170d9e5072397927e1402b34aa877d1f4c8fbc00dab6370d87312",
+          "upstream_path": "dictionaries/nl/index.aff"
+        },
+        {
+          "file": "assets/dictionaries/nl_NL.dic",
+          "sha256": "be192fdc36efd39dde0fb9a5a113143e0a906782e81ed68a74a710edced378d0",
+          "upstream_path": "dictionaries/nl/index.dic"
+        }
+      ],
+      "changes": "No MaxChat changes to the pinned aff/dic data."
+    },
+    {
+      "locale": "ru_RU",
+      "package_version": "3.0.0",
+      "upstream_options": "BSD-3-Clause",
+      "distribution_option": "BSD-style grant with modified-version marking",
+      "files": [
+        {
+          "file": "assets/dictionaries/ru_RU.aff",
+          "sha256": "38ce7d4af78e211e9bafe4bf7e3d6a2c420591136cb738ec6648f8fdf6524cd7",
+          "upstream_path": "dictionaries/ru/index.aff"
+        },
+        {
+          "file": "assets/dictionaries/ru_RU.dic",
+          "sha256": "f6047416a0204adbecf3a451b874ec8a97ee37e2cbc714466ef04d8dbcc0d6fc",
+          "upstream_path": "dictionaries/ru/index.dic"
+        }
+      ],
+      "changes": "No MaxChat changes to the pinned aff/dic data."
+    },
+    {
+      "locale": "uk_UA",
+      "package_version": "4.0.0",
+      "upstream_options": "GPL-3.0",
+      "distribution_option": "GPL-3.0",
+      "files": [
+        {
+          "file": "assets/dictionaries/uk_UA.aff",
+          "sha256": "4243327a3aa19c6db5a4fb2e0c4e3eba6ad26e7ccb8a3f4e634c28d9a2d18956",
+          "upstream_path": "dictionaries/uk/index.aff"
+        },
+        {
+          "file": "assets/dictionaries/uk_UA.dic",
+          "sha256": "48cbe32567a2c3c98f83d437bcd84ad3c11310e9df4d6c15d888b1e67654be31",
+          "upstream_path": "dictionaries/uk/index.dic"
+        }
+      ],
+      "changes": "No MaxChat changes to the pinned aff/dic data."
+    },
+    {
+      "locale": "tr_TR",
+      "package_version": "2.0.0",
+      "upstream_options": "MIT",
+      "distribution_option": "MIT",
+      "files": [
+        {
+          "file": "assets/dictionaries/tr_TR.aff",
+          "sha256": "6a390c79b054ad427cf9a6bf6de43463953cc1918e7f727e9dd4ebd4f9702f42",
+          "upstream_path": "dictionaries/tr/index.aff"
+        },
+        {
+          "file": "assets/dictionaries/tr_TR.dic",
+          "sha256": "dc1d8f7724f4aefd117274678de431e4ea1765f2e02e6983b6ca48cbf5a7fc7c",
+          "upstream_path": "dictionaries/tr/index.dic"
+        }
+      ],
+      "changes": "No MaxChat changes to the pinned aff/dic data."
+    },
+    {
+      "locale": "es_ES",
+      "package_version": "4.0.0",
+      "upstream_options": "(GPL-3.0 OR LGPL-3.0 OR MPL-1.1)",
+      "distribution_option": "MPL-1.1",
+      "files": [
+        {
+          "file": "assets/dictionaries/es_ES.aff",
+          "sha256": "892039d59db11d747061b81c3a92a52d48ba0e055b5835af1943cbd3c2fba85b",
+          "upstream_path": "dictionaries/es/index.aff"
+        },
+        {
+          "file": "assets/dictionaries/es_ES.dic",
+          "sha256": "907f786a8ceb3456722b20ad91dd4dbe99c5c16e45015ea63155e36f26b06d2c",
+          "upstream_path": "dictionaries/es/index.dic"
+        }
+      ],
+      "changes": "No MaxChat changes to the pinned aff/dic data."
+    },
+    {
+      "locale": "fr_FR",
+      "package_version": "3.0.0",
+      "upstream_options": "MPL-2.0",
+      "distribution_option": "MPL-2.0",
+      "files": [
+        {
+          "file": "assets/dictionaries/fr_FR.aff",
+          "sha256": "05a735d34c912e4e381ff08ee7c747923ccf5cf9dca81d8467982fa1ca51c2b7",
+          "upstream_path": "dictionaries/fr/index.aff"
+        },
+        {
+          "file": "assets/dictionaries/fr_FR.dic",
+          "sha256": "984e933237bc1224a48f42828233be9b03228260ef67aa8e2bdddcd03a26230d",
+          "upstream_path": "dictionaries/fr/index.dic"
+        }
+      ],
+      "changes": "No MaxChat changes to the pinned aff/dic data."
+    },
+    {
+      "locale": "de_DE",
+      "package_version": "3.0.0",
+      "upstream_options": "(GPL-2.0 OR GPL-3.0)",
+      "distribution_option": "GPL-3.0",
+      "files": [
+        {
+          "file": "assets/dictionaries/de_DE.aff",
+          "sha256": "57fdd1b16aac2131003c91e0cf2a488becb970382a402a9ce089307301cb3ef0",
+          "upstream_path": "dictionaries/de/index.aff"
+        },
+        {
+          "file": "assets/dictionaries/de_DE.dic",
+          "sha256": "b5c781a0cf6f285fb6b9b8ab02fbea104b987104a1efdda8a835837e89e3ec77",
+          "upstream_path": "dictionaries/de/index.dic"
+        }
+      ],
+      "changes": "No MaxChat changes to the pinned aff/dic data."
+    },
+    {
+      "locale": "it_IT",
+      "package_version": "2.0.0",
+      "upstream_options": "GPL-3.0",
+      "distribution_option": "GPL-3.0",
+      "files": [
+        {
+          "file": "assets/dictionaries/it_IT.aff",
+          "sha256": "5770cd3e16d494c045b4a9a4a9fcd7962577e642d0384a7129c020a12cdd2c79",
+          "upstream_path": "dictionaries/it/index.aff"
+        },
+        {
+          "file": "assets/dictionaries/it_IT.dic",
+          "sha256": "b1348fbdb6f441ea9dd7e33b2cfcb96ead39ccd5e48bf894972774cd5aa86abb",
+          "upstream_path": "dictionaries/it/index.dic"
+        }
+      ],
+      "changes": "No MaxChat changes to the pinned aff/dic data."
+    },
+    {
+      "locale": "pl_PL",
+      "package_version": "2.0.0",
+      "upstream_options": "(GPL-3.0 OR LGPL-3.0 OR MPL-2.0)",
+      "distribution_option": "MPL-2.0",
+      "files": [
+        {
+          "file": "assets/dictionaries/pl_PL.aff",
+          "sha256": "de7b54a8fa37562d58b481cf3d87a63e3dcc2d74021f6403eb0e4f5df9ecc225",
+          "upstream_path": "dictionaries/pl/index.aff"
+        },
+        {
+          "file": "assets/dictionaries/pl_PL.dic",
+          "sha256": "74b6155391025419967c26913541b55b36d58e80b1028037d4a0b8ddcb18d0b7",
+          "upstream_path": "dictionaries/pl/index.dic"
+        }
+      ],
+      "changes": "No MaxChat changes to the pinned aff/dic data."
+    },
+    {
+      "locale": "pt_BR",
+      "package_version": "4.0.0",
+      "upstream_options": "(LGPL-3.0 OR MPL-2.0)",
+      "distribution_option": "MPL-2.0",
+      "files": [
+        {
+          "file": "assets/dictionaries/pt_BR.aff",
+          "sha256": "a9f3621b94eb4d6838474bf9982027758e77dcb248815f49409b1a4a477dbd27",
+          "upstream_path": "dictionaries/pt/index.aff"
+        },
+        {
+          "file": "assets/dictionaries/pt_BR.dic",
+          "sha256": "32e2edd83541d58613bcc83ef731a79aadf85ed57e977a16c6b5f711a7a36cee",
+          "upstream_path": "dictionaries/pt/index.dic"
+        }
+      ],
+      "changes": "No MaxChat changes to the pinned aff/dic data."
+    },
+    {
+      "locale": "pt_PT",
+      "package_version": "2.0.0",
+      "upstream_options": "(GPL-2.0 OR LGPL-2.1 OR MPL-1.1)",
+      "distribution_option": "MPL-1.1",
+      "files": [
+        {
+          "file": "assets/dictionaries/pt_PT.aff",
+          "sha256": "975a209fcc892cb382fa5f34a28c391a39668661ce373ae071287809c5fcae24",
+          "upstream_path": "dictionaries/pt-PT/index.aff"
+        },
+        {
+          "file": "assets/dictionaries/pt_PT.dic",
+          "sha256": "fcac21564163586df74ba88cde362bb75560548b35bcaa780558c8f97f43de04",
+          "upstream_path": "dictionaries/pt-PT/index.dic"
+        }
+      ],
+      "changes": "No MaxChat changes to the pinned aff/dic data."
+    },
+    {
+      "locale": "sv_SE",
+      "package_version": "4.0.0",
+      "upstream_options": "LGPL-3.0",
+      "distribution_option": "LGPL-3.0",
+      "files": [
+        {
+          "file": "assets/dictionaries/sv_SE.aff",
+          "sha256": "ff8ddb979daa9f128e7489ece5edd666ada7af787933221543b7cecb2b3ed478",
+          "upstream_path": "dictionaries/sv/index.aff"
+        },
+        {
+          "file": "assets/dictionaries/sv_SE.dic",
+          "sha256": "540ff8d0d9b05aae66dd919625d3a0bd25026d1e157027e6602e5dd11a07b645",
+          "upstream_path": "dictionaries/sv/index.dic"
+        }
+      ],
+      "changes": "No MaxChat changes to the pinned aff/dic data."
+    },
+    {
+      "locale": "nb_NO",
+      "package_version": "3.0.0",
+      "upstream_options": "GPL-2.0",
+      "distribution_option": "GPL-2.0",
+      "files": [
+        {
+          "file": "assets/dictionaries/nb_NO.aff",
+          "sha256": "515a1e5f32ffa555d253c827830420dc5bb1d9a59ea9f720729acb0874c6a8c3",
+          "upstream_path": "dictionaries/nb/index.aff"
+        },
+        {
+          "file": "assets/dictionaries/nb_NO.dic",
+          "sha256": "e97fdf7f441b3c46e1d0761a8ad25fa1883d0977d70ea8cb04751cb1c47fa10e",
+          "upstream_path": "dictionaries/nb/index.dic"
+        }
+      ],
+      "changes": "No MaxChat changes to the pinned aff/dic data."
+    },
+    {
+      "locale": "da_DK",
+      "package_version": "6.0.0",
+      "upstream_options": "(GPL-2.0 OR LGPL-2.1 OR MPL-1.1)",
+      "distribution_option": "MPL-1.1",
+      "files": [
+        {
+          "file": "assets/dictionaries/da_DK.aff",
+          "sha256": "cb5ef704de0ab8575c883c97981d5d242260c7ebe47b28c15c205443aca15976",
+          "upstream_path": "dictionaries/da/index.aff"
+        },
+        {
+          "file": "assets/dictionaries/da_DK.dic",
+          "sha256": "9a12345e1881c96f18cc460dbd062e47509571d5f2a2a9bf041da169856dc19e",
+          "upstream_path": "dictionaries/da/index.dic"
+        }
+      ],
+      "changes": "No MaxChat changes to the pinned aff/dic data."
+    }
+  ]
+}

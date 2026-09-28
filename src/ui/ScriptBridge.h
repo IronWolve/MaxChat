@@ -93,6 +93,7 @@ class ScriptBridge final : public QObject, public maxchat::scripting::ScriptHost
     QStringList scriptChannels(const QString& network) override;
     QStringList scriptNicks(const QString& network, const QString& target) override;
     QString scriptHttpGet(const QString& url) override;
+    QString scriptHttpGet(const QString& url, const std::function<bool()>& cancelled) override;
 
   private:
     [[nodiscard]] QHash<QString, maxchat::scripting::ScriptPermissions> buildAllScriptPermsMap()

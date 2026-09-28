@@ -207,7 +207,7 @@ class PreferencesDialogTest final : public QObject {
         const QVariantMap services = values.value(QStringLiteral("content_services")).toMap();
         QCOMPARE(services.value(QStringLiteral("images")).toBool(), false);
         QCOMPARE(services.value(QStringLiteral("media")).toBool(), false);
-        QCOMPARE(services.value(QStringLiteral("xcards")).toBool(), true);
+        QCOMPARE(services.value(QStringLiteral("xcards")).toBool(), false);
         QCOMPARE(services.value(QStringLiteral("webcards")).toBool(), false);
     }
 

@@ -11,6 +11,11 @@ class LinkPreviewClassifierTest final : public QObject {
   Q_OBJECT
 
 private slots:
+  void rejectsAlternativeLoopbackLiterals() {
+    for (const auto &host : {"127.1", "127.0.1", "0x7f000001", "0177.0.0.1", "2130706433"})
+      QVERIFY2(!isAllowedPreviewFetchUrl(QUrl(QStringLiteral("http://") + QLatin1String(host))), host);
+  }
+
   void classifiesDirectRasterImages() {
     const auto candidate = classifyLinkPreview(
         QStringLiteral("https://cdn.example.com/a/photo.JPG?size=large"));

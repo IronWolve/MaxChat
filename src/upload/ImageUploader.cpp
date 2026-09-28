@@ -21,12 +21,22 @@ QByteArray ImageUploader::encodePng(const QImage &image) {
 void ImageUploader::handleJsonReply(QNetworkReply *reply,
                                     const std::function<void(const QJsonObject &)> &onJson) {
     armUploadTimeout(reply);
+    connect(reply, &QIODevice::readyRead, reply, [reply]() {
+        if (reply->bytesAvailable() > kMaxResponseBytes && !reply->isFinished()) {
+            reply->setProperty("maxchat_oversize", true);
+            reply->abort();
+        }
+    });
     connect(reply, &QNetworkReply::finished, this, [this, reply, onJson]() {
         reply->deleteLater();
+        if (reply->property("maxchat_oversize").toBool() || reply->bytesAvailable() > kMaxResponseBytes) {
+            emit uploadFailed(QStringLiteral("Upload response exceeded size limit"));
+            return;
+        }
         if (reply->error() != QNetworkReply::NoError) {
             emit uploadFailed(reply->property("maxchat_timeout").toBool()
                                   ? QStringLiteral("Upload timed out")
-                                  : reply->errorString());
+                                  : QStringLiteral("Upload request failed"));
             return;
         }
         onJson(QJsonDocument::fromJson(readCappedBody(reply)).object());
@@ -37,7 +47,7 @@ void ImageUploader::finishWithHttpsUrl(const QString &url) {
     if (!isHttpsUrl(url)) {
         emit uploadFailed(QStringLiteral("Upload response had no valid https URL"));
     } else {
-        emit uploaded(url);
+        emit uploaded(QUrl(url, QUrl::StrictMode).toString(QUrl::FullyEncoded));
     }
 }
 

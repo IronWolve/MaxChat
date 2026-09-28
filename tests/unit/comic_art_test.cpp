@@ -3,6 +3,7 @@
 #include <QDir>
 #include <QTemporaryFile>
 #include <QtTest/QtTest>
+#include <limits>
 
 using maxchat::comic::loadBackground;
 using maxchat::comic::loadCharacterCells;
@@ -56,6 +57,55 @@ class ComicArtTest final : public QObject {
   Q_OBJECT
 
 private slots:
+  void forgedSmallInflateLengthIsRejected() {
+    const QByteArray compressed = qCompress(QByteArray(1024 * 1024, 'x'), 9).mid(4);
+    QByteArray data = dibHeader(64, 64, 2, 4, compressed.size());
+    data += compressed;
+    QTemporaryFile file(QDir::tempPath() + QStringLiteral("/cc_XXXXXX.avb"));
+    QVERIFY(!loadCharacterCells(write(file, data)).ok());
+  }
+
+  void oversizedArtFileIsRejectedBeforeReading() {
+    QTemporaryFile file(QDir::tempPath() + QStringLiteral("/cc_XXXXXX.bgb"));
+    QVERIFY(file.open());
+    QVERIFY(file.resize(32 * 1024 * 1024 + 1));
+    QVERIFY(loadBackground(file.fileName()).isNull());
+    QVERIFY(!loadCharacterCells(file.fileName()).ok());
+  }
+
+  void validCellStillDecodes() {
+    const QByteArray pixels(1024, char(0x55));
+    const QByteArray compressed = qCompress(pixels, 9).mid(4);
+    const QByteArray data = dibHeader(64, 64, 2, pixels.size(), compressed.size()) + compressed;
+    QTemporaryFile file(QDir::tempPath() + QStringLiteral("/cc_XXXXXX.avb"));
+    const auto cells = loadCharacterCells(write(file, data));
+    QVERIFY(cells.ok());
+    QCOMPARE(cells.faces.size(), 1);
+  }
+
+  void aggregateDecodedCellsStayWithinBudget() {
+    const QByteArray pixels(1024 * 1024, char(0x55));
+    const QByteArray compressed = qCompress(pixels, 9).mid(4);
+    const QByteArray cell = dibHeader(2048, 2048, 2, pixels.size(), compressed.size()) + compressed;
+    QByteArray data;
+    for (int i = 0; i < 5; ++i) data += cell;
+    QTemporaryFile file(QDir::tempPath() + QStringLiteral("/cc_XXXXXX.avb"));
+    const auto cells = loadCharacterCells(write(file, data));
+    qint64 count = 0;
+    for (const auto& image : cells.faces) count += qint64(image.width()) * image.height();
+    for (const auto& image : cells.bodies) count += qint64(image.width()) * image.height();
+    QVERIFY(cells.ok());
+    QVERIFY(count <= 16 * 1024 * 1024);
+    QCOMPARE(cells.faces.size(), 4);
+  }
+
+  void minimumSignedHeightDoesNotOverflow() {
+    const QByteArray compressed = qCompress(QByteArray(16, char(0x55)), 9).mid(4);
+    const QByteArray data = dibHeader(64, std::numeric_limits<qint32>::min(), 2, 16, compressed.size()) + compressed;
+    QTemporaryFile file(QDir::tempPath() + QStringLiteral("/cc_XXXXXX.avb"));
+    QVERIFY(!loadCharacterCells(write(file, data)).ok());
+  }
+
   void hugeOrigLenDoesNotAllocate() {
     // A crafted header claiming ~4GB inflated size must be rejected, not fed to
     // qUncompress (which would try to allocate it → OOM).

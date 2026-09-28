@@ -1,3 +1,4 @@
+#include "app/BundledPaths.h"
 #include "ui/MainWindow.h"
 
 #include "app/AppInfo.h"
@@ -756,11 +757,11 @@ MainWindow::MainWindow(QWidget* parent)
         resize(1100, 720);
     }
     applyCurrentSettings();
-    if (startupSettings.value(QStringLiteral("connect_on_start"), false).toBool()) {
+    if (!qApp->property("maxchat.selftest").toBool() && startupSettings.value(QStringLiteral("connect_on_start"), false).toBool()) {
         QTimer::singleShot(0, this, [this]() { startConfiguredStartupConnection(); });
     }
 
-    if (startupSettings.value(QStringLiteral("update_check"), false).toBool()) {
+    if (!qApp->property("maxchat.selftest").toBool() && startupSettings.value(QStringLiteral("update_check"), false).toBool()) {
         QTimer::singleShot(3500, this, [this]() { checkForUpdates(/*manual=*/false); });
     }
 
@@ -1877,7 +1878,7 @@ void maxchat::ui::MainWindow::openPreferences() {
         if (sound) {
             const QString soundsDir =
                 QDir(m_settings.paths().configDir).filePath(QStringLiteral("sounds"));
-            const QString bundled = QDir(QCoreApplication::applicationDirPath())
+            const QString bundled = QDir(maxchat::app::bundledDataDirectory())
                                         .filePath(QStringLiteral("assets/sounds"));
             const QString selectedSound = testSettings.value(QStringLiteral("notify_sound_file"), QStringLiteral("notify.wav")).toString();
             if (!m_soundPlayer.play(notifySoundPath(soundsDir, bundled, selectedSound))) {
@@ -2205,11 +2206,10 @@ void maxchat::ui::MainWindow::openThemeBuilder() {
     // The builder is a standalone HTML page shipped in the themes/ gallery folder
     // (sibling of the binary in a release; repo root in the dev tree). Open it in
     // the user's browser — it's our own bundled asset, not a chat-supplied URL.
-    const QString appDir = QCoreApplication::applicationDirPath();
+    const QString appDir = maxchat::app::bundledDataDirectory();
     const QStringList candidates = {
         QDir(appDir).filePath(QStringLiteral("themes/theme-builder.html")),
         QDir(appDir).filePath(QStringLiteral("../themes/theme-builder.html")),
-        QDir::current().filePath(QStringLiteral("themes/theme-builder.html")),
     };
     for (const QString& path : candidates) {
         if (QFileInfo::exists(path)) {
@@ -2270,7 +2270,11 @@ void maxchat::ui::MainWindow::checkForUpdates(bool manual) {
     req.setRawHeader("User-Agent", "MaxChat-update-check");
     req.setRawHeader("Accept", "application/vnd.github+json");
     req.setTransferTimeout(15000); // don't hang on a stalled connection
+    req.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::SameOriginRedirectPolicy);
     QNetworkReply* reply = m_updateNetworkManager.get(req);
+    connect(reply, &QIODevice::readyRead, reply, [reply]() {
+        if (reply->bytesAvailable() > 256 * 1024 && !reply->isFinished()) reply->abort();
+    });
     connect(reply, &QNetworkReply::finished, this, [this, reply, manual]() {
         reply->deleteLater();
         const bool ok = reply->error() == QNetworkReply::NoError;
@@ -2293,7 +2297,9 @@ void maxchat::ui::MainWindow::checkForUpdates(bool manual) {
                 // every other openUrl path uses). Otherwise keep the safe default.
                 const QUrl html(obj.value(QStringLiteral("html_url")).toString());
                 if (html.isValid() && html.scheme().compare(QLatin1String("https"),
-                                                            Qt::CaseInsensitive) == 0) {
+                                                            Qt::CaseInsensitive) == 0 && html.userInfo().isEmpty() &&
+                    html.host().compare(QLatin1String("github.com"), Qt::CaseInsensitive) == 0 &&
+                    html.path().startsWith(QLatin1String("/IronWolve/MaxChat/releases"))) {
                     url = html.toString();
                 }
             } else {
@@ -3241,7 +3247,11 @@ void maxchat::ui::MainWindow::importSettings() {
     }
 
     QJsonParseError error;
-    const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &error);
+    constexpr qint64 maxImport = 8 * 1024 * 1024;
+    if (file.size() > maxImport) { appendSystemLine(tr("! Settings import exceeds the 8 MiB limit.")); return; }
+    const QByteArray bytes = file.read(maxImport + 1);
+    if (bytes.size() > maxImport) { appendSystemLine(tr("! Settings import exceeds the 8 MiB limit.")); return; }
+    const QJsonDocument document = QJsonDocument::fromJson(bytes, &error);
     if (error.error != QJsonParseError::NoError || !document.isObject()) {
         appendSystemLine(tr("! Settings import file is not valid JSON."));
         return;

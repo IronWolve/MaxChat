@@ -23,13 +23,13 @@ class LinkPreviewPolicyTest final : public QObject {
   Q_OBJECT
 
 private slots:
-  void defaultsMissingServiceKeysToEnabled() {
+  void defaultsMissingServiceKeysToDisabled() {
     const auto toggles = linkPreviewTogglesFromServices({});
 
-    QVERIFY(toggles.images);
-    QVERIFY(toggles.media);
-    QVERIFY(toggles.xCards);
-    QVERIFY(toggles.webCards);
+    QVERIFY(!toggles.images);
+    QVERIFY(!toggles.media);
+    QVERIFY(!toggles.xCards);
+    QVERIFY(!toggles.webCards);
   }
 
   void readsNestedContentServicesMap() {

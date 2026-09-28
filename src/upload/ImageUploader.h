@@ -64,7 +64,11 @@ class ImageUploader : public QObject {
     }
     // A returned image URL must be https before we hand it back to the user.
     static bool isHttpsUrl(const QString &url) {
-        return QUrl(url).scheme().compare(QStringLiteral("https"), Qt::CaseInsensitive) == 0;
+        for (const QChar character : url)
+            if (character.unicode() < 32 || character.unicode() == 127) return false;
+        const QUrl parsed(url, QUrl::StrictMode);
+        return parsed.isValid() && !parsed.host().isEmpty() && parsed.userInfo().isEmpty() &&
+               parsed.scheme().compare(QStringLiteral("https"), Qt::CaseInsensitive) == 0;
     }
 
     // --- Shared upload flow (every backend repeats this skeleton) ----------

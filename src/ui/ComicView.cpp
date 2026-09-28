@@ -84,10 +84,11 @@ class PanelZoomDialog final : public QDialog {
 // Choose rows/cols that maximise the square panel edge within (w,h).
 void gridFor(int count, int w, int h, int gap, int& rows, int& cols, int& edge) {
     rows = 1;
-    cols = count;
+    cols = std::max(1, count);
     edge = 0;
+    if (count <= 0) return;
     for (int r = 1; r <= count; ++r) {
-        const int c = (count + r - 1) / r;
+        const int c = 1 + (count - 1) / r;
         const int cellW = (w - gap * (c + 1)) / c;
         const int cellH = (h - gap * (r + 1)) / r;
         const int e = std::min(cellW, cellH);

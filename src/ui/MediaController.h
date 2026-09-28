@@ -11,6 +11,7 @@
 
 class QImage;
 class QUrl;
+class QTemporaryFile;
 
 namespace maxchat::upload {
 class ImageUploader;
@@ -51,6 +52,7 @@ class MediaController final : public QObject {
     void handleAnchorClicked(const QUrl& url);
 
   private:
+    void fetchMedia(const QUrl& url, bool video);
     MainWindowHost& host_;
     std::unique_ptr<maxchat::upload::ImageUploader> uploader_;
     QPointer<MediaPlayerDialog> mediaPlayer_; // one at a time
@@ -58,6 +60,9 @@ class MediaController final : public QObject {
     // Click-handling policy, refreshed in configure(). openLinks_ off → clicked
     // links do nothing; the per-type toggles route image/audio/video links to the
     // in-app viewers vs. the OS browser (same flags the preview fetcher uses).
+    QPointer<QObject> pendingMedia_;
+    QPointer<QTemporaryFile> audioFile_;
+    quint64 mediaRequest_ = 0;
     bool openLinks_ = true;
     maxchat::services::LinkPreviewToggles linkToggles_;
 };

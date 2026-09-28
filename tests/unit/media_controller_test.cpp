@@ -7,7 +7,11 @@
 #include "ui/MediaController.h"
 
 #include <QImage>
+#include <QDialog>
 #include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QTimer>
+#include <cstring>
 #include <QString>
 #include <QStringList>
 #include <QUrl>
@@ -18,6 +22,41 @@ using maxchat::ui::MainWindowHost;
 using maxchat::ui::MediaController;
 
 namespace {
+
+// Intercept requests before the network: no DNS or external service is used.
+class MediaReply final : public QNetworkReply {
+  public:
+    QByteArray body;
+    int* aborted;
+    MediaReply(const QNetworkRequest& request, QByteArray bytes, bool stalled,
+               int* abortCount, QObject* parent)
+        : QNetworkReply(parent), body(std::move(bytes)), aborted(abortCount) {
+        setRequest(request); setUrl(request.url()); open(QIODevice::ReadOnly);
+        setAttribute(QNetworkRequest::HttpStatusCodeAttribute, 200);
+        if (!stalled) QTimer::singleShot(0, this, [this] {
+            emit readyRead(); setFinished(true); emit finished();
+        });
+    }
+    void abort() override { ++*aborted; setFinished(true); }
+    qint64 bytesAvailable() const override { return body.size() + QNetworkReply::bytesAvailable(); }
+    qint64 readData(char* out, qint64 limit) override {
+        const qint64 count = qMin(limit, qint64(body.size()));
+        if (!count) return -1;
+        std::memcpy(out, body.constData(), size_t(count)); body.remove(0, count);
+        return count;
+    }
+};
+class MediaManager final : public QNetworkAccessManager {
+  public:
+    QByteArray body;
+    bool stalled = false;
+    int requests = 0;
+    int aborted = 0;
+    QNetworkReply* createRequest(Operation, const QNetworkRequest& request, QIODevice*) override {
+        ++requests;
+        return new MediaReply(request, body, stalled, &aborted, this);
+    }
+};
 
 class FakeHost final : public MainWindowHost {
   public:
@@ -35,8 +74,8 @@ class FakeHost final : public MainWindowHost {
     void insertInput(const QString&) override {}
     void notifyUser(const QString&, const QString&) override {}
     void appendInputUrl(const QString& url) override { insertedUrls << url; }
-    void showStatus(const QString&, int) override {}
-    void clearStatus() override {}
+    void showStatus(const QString& value, int) override { status = value; }
+    void clearStatus() override { status.clear(); }
 
     maxchat::irc::IrcConnection* connectionFor(const QString&) override { return nullptr; }
     QNetworkAccessManager& scriptNetworkManager() override { return nam_; }
@@ -56,10 +95,12 @@ class FakeHost final : public MainWindowHost {
 
     QStringList activeLines;
     QStringList insertedUrls;
+    QString status;
+    MediaManager nam_;
 
   private:
     QWidget* parent_;
-    QNetworkAccessManager nam_;
+
 };
 
 } // namespace
@@ -115,6 +156,37 @@ class MediaControllerTest : public QObject {
         media.handleAnchorClicked(QUrl(QStringLiteral("file:blocked-test.png")));
         QCOMPARE(host.activeLines.size(), 1);
         QVERIFY(host.activeLines.first().contains(QStringLiteral("Refused")));
+    }
+
+    void playlistResponseNeverReachesPlayer() {
+        QWidget parent;
+        FakeHost host(&parent);
+        host.nam_.body = "#EXTM3U\nhttp://127.0.0.1/private\n";
+        MediaController media(host);
+        media.configure({{QStringLiteral("content_services"),
+            QVariantMap{{QStringLiteral("media"), true}}}});
+        media.handleAnchorClicked(QUrl(QStringLiteral("https://8.8.8.8/clip.mp4")));
+        QTRY_COMPARE(host.activeLines.size(), 1);
+        QCOMPARE(host.nam_.requests, 1);
+        QVERIFY(host.activeLines.first().contains(QStringLiteral("Unsupported media")));
+        QVERIFY(host.status.isEmpty());
+        QVERIFY(parent.findChildren<QDialog*>().isEmpty());
+    }
+
+    void disablingMediaCancelsPendingDownload() {
+        QWidget parent;
+        FakeHost host(&parent);
+        host.nam_.stalled = true;
+        MediaController media(host);
+        media.configure({{QStringLiteral("content_services"),
+            QVariantMap{{QStringLiteral("media"), true}}}});
+        media.handleAnchorClicked(QUrl(QStringLiteral("https://8.8.8.8/clip.mp4")));
+        QTRY_COMPARE(host.nam_.requests, 1);
+        media.configure({}); // default-off policy
+        QTRY_COMPARE(host.nam_.aborted, 1);
+        QVERIFY(host.activeLines.isEmpty());
+        QVERIFY(host.status.isEmpty());
+        QVERIFY(parent.findChildren<QDialog*>().isEmpty());
     }
 
     void uploadWithoutServiceWarns() {

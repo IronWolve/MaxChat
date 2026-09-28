@@ -15,6 +15,15 @@ class ThemeCatalogTest final : public QObject {
     Q_OBJECT
 
   private slots:
+    void oversizedThemeImportIsRejected() {
+        QTemporaryDir dir;
+        const QString path = dir.filePath(QStringLiteral("oversized.json"));
+        QFile file(path); QVERIFY(file.open(QIODevice::WriteOnly));
+        QVERIFY(file.resize(16 * 1024 * 1024 + 1)); file.close();
+        const auto theme = maxchat::ui::importThemePack(path);
+        QVERIFY(!theme.error.isEmpty());
+    }
+
     void bundledCatalogLoadsSynthwave() {
         const auto definition = appThemeById(QStringLiteral("synthwave"));
         QCOMPARE(definition.id, QStringLiteral("synthwave"));

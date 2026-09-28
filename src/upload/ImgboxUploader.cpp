@@ -38,6 +38,7 @@ void ImgboxUploader::upload(const QImage &image) {
     credentials.insert(QStringLiteral("comments_enabled"), 0);
 
     QNetworkRequest tokenRequest(QUrl(QStringLiteral("https://imgbox.com/api/v1/token/create")));
+    tokenRequest.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::SameOriginRedirectPolicy);
     tokenRequest.setHeader(QNetworkRequest::ContentTypeHeader,
                            QStringLiteral("application/json"));
     auto *tokenReply = manager_->post(tokenRequest,
@@ -88,6 +89,7 @@ void ImgboxUploader::doUpload(const QByteArray &pngData,
     multipart->append(filePart);
 
     QNetworkRequest request(QUrl(QStringLiteral("https://imgbox.com/api/v1/images/upload")));
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::SameOriginRedirectPolicy);
     auto *reply = manager_->post(request, multipart);
     multipart->setParent(reply);
 

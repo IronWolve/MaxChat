@@ -1,7 +1,6 @@
 #include "services/LinkPreviewClassifier.h"
 
 #include <QHostAddress>
-#include <QHostInfo>
 #include <QRegularExpression>
 #include <QStringList>
 
@@ -239,100 +238,19 @@ bool isAllowedPreviewFetchUrl(const QUrl &url) {
   }
 
   Ipv4Octets octets = {0, 0, 0, 0};
+  const QHostAddress address(host);
+  if (!address.isNull()) {
+    if (address.protocol() != QAbstractSocket::IPv4Protocol) return false;
+    const quint32 value = address.toIPv4Address();
+    octets = {int(value >> 24), int((value >> 16) & 255),
+              int((value >> 8) & 255), int(value & 255)};
+    return isPublicIpv4Literal(octets);
+  }
   if (parseIpv4Literal(host, octets)) {
     return isPublicIpv4Literal(octets);
   }
 
   return host.contains(QLatin1Char('.'));
-}
-
-namespace {
-
-// Reject if ANY resolved address is private/loopback/etc. (a public-looking
-// domain can have a DNS A record pointing at 127.0.0.1 / 169.254.169.254 / 10.x
-// …). Shared by the sync and async resolvers so the rule can't drift.
-bool addressesAllPublic(const QList<QHostAddress> &addresses,
-                        const QString &scheme) {
-  if (addresses.isEmpty()) {
-    return false;
-  }
-  for (const QHostAddress &address : addresses) {
-    QUrl probe;
-    probe.setScheme(scheme);
-    probe.setHost(address.toString());
-    if (!isAllowedPreviewFetchUrl(probe)) {
-      return false;
-    }
-  }
-  return true;
-}
-
-// Synchronous resolve (kept for canFetchPreviewUrl; matches Python's getaddrinfo
-// check). Prefer resolvePreviewUrlPublicAsync to avoid blocking the GUI thread.
-bool resolvesToPublicOnly(const QUrl &url) {
-  const QString host = url.host();
-  if (host.isEmpty()) {
-    return false;
-  }
-  if (!QHostAddress(host).isNull()) {
-    return true; // an IP literal was already vetted by isAllowedPreviewFetchUrl
-  }
-  const QHostInfo info = QHostInfo::fromName(host);
-  if (info.error() != QHostInfo::NoError) {
-    return false; // can't resolve → don't fetch
-  }
-  return addressesAllPublic(info.addresses(), url.scheme());
-}
-
-} // namespace
-
-bool canFetchPreviewUrl(const QUrl &url, bool allowPrivateNetwork) {
-  const QString scheme = url.scheme().toLower();
-  const bool httpNoCreds =
-      url.isValid() &&
-      (scheme == QStringLiteral("http") || scheme == QStringLiteral("https")) &&
-      !url.host().isEmpty() && url.userInfo().isEmpty();
-  if (!httpNoCreds) {
-    return false;
-  }
-  if (allowPrivateNetwork) {
-    return true;
-  }
-  return isAllowedPreviewFetchUrl(url) && resolvesToPublicOnly(url);
-}
-
-void resolvePreviewUrlPublicAsync(const QUrl &url, bool allowPrivateNetwork,
-                                  const QObject *context,
-                                  std::function<void(bool)> callback) {
-  const QString scheme = url.scheme().toLower();
-  const bool httpNoCreds =
-      url.isValid() &&
-      (scheme == QStringLiteral("http") || scheme == QStringLiteral("https")) &&
-      !url.host().isEmpty() && url.userInfo().isEmpty();
-  if (!httpNoCreds) {
-    callback(false);
-    return;
-  }
-  if (allowPrivateNetwork) {
-    callback(true);
-    return;
-  }
-  if (!isAllowedPreviewFetchUrl(url)) {
-    callback(false);
-    return;
-  }
-  const QString host = url.host();
-  if (!QHostAddress(host).isNull()) {
-    callback(true); // IP literal already vetted — no DNS needed
-    return;
-  }
-  // Resolve off the GUI thread; the functor runs back on `context`'s thread.
-  const QString urlScheme = url.scheme();
-  QHostInfo::lookupHost(host, context, [urlScheme, callback = std::move(callback)](
-                                           const QHostInfo &info) {
-    callback(info.error() == QHostInfo::NoError &&
-             addressesAllPublic(info.addresses(), urlScheme));
-  });
 }
 
 bool isDirectRasterImageUrl(const QUrl &url) {

@@ -32,7 +32,7 @@
 #include <QVariant>
 #include <QWidget>
 
-#include "services/LinkPreviewClassifier.h" // maxchat::services::canFetchPreviewUrl
+#include "services/LinkPreviewClassifier.h" // URL classification; actual requests are pinned by PublicHttpFetch
 
 namespace maxchat::ui {
 
@@ -199,6 +199,7 @@ ChatPane::ChatPane(QWidget* parent) : QWidget(parent) {
     // Anchor clicks route through the delegate (→ MediaController) so image/
     // audio/video links open the inline viewers instead of an external browser.
     view->setOpenExternalLinks(false);
+    view->document()->setMaximumBlockCount(5000);
     view->setOpenLinks(false);
     view->setSeparatorMovedHandler([this](const int nickWidth) {
         if (delegate_ != nullptr) {
@@ -411,7 +412,7 @@ void ChatPane::requestPreviewImages(const QString& html) {
             continue;
         }
         const QUrl url(src);
-        if (!maxchat::services::canFetchPreviewUrl(url)) {
+        if (!maxchat::services::isAllowedPreviewFetchUrl(url) || previewImagePending_.size() >= 16) {
             continue;
         }
         previewImagePending_.insert(src);
@@ -427,9 +428,13 @@ void ChatPane::onPreviewImageReady(const QUrl& url, const QImage& scaledImage) {
     if (scaledImage.isNull()) {
         return;
     }
-    if (previewImageCache_.size() > 64) {
+    if (previewImageCache_.size() >= 64) {
         // Decoded images are big; cheap full flush beats LRU bookkeeping.
         // Evicted images simply re-fetch if their line scrolls back into view.
+        if (view_) {
+            for (auto it = previewImageCache_.cbegin(); it != previewImageCache_.cend(); ++it)
+                view_->document()->addResource(QTextDocument::ImageResource, QUrl(it.key()), QVariant());
+        }
         previewImageCache_.clear();
     }
     previewImageCache_.insert(key, scaledImage);

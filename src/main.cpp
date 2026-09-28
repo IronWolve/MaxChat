@@ -1,3 +1,4 @@
+#include "app/BundledPaths.h"
 #include "app/AppInfo.h"
 #include "core/SettingsStore.h"
 #include "ui/MainWindow.h"
@@ -42,7 +43,7 @@ void installTranslators(QApplication& app) {
     }
 
     static QTranslator appTranslator;
-    const QString appDir = QCoreApplication::applicationDirPath();
+    const QString appDir = maxchat::app::bundledDataDirectory();
     const QStringList candidates = {
         QStringLiteral(":/i18n"), // .qm embedded in the binary by qt_add_translations
         QDir(appDir).filePath(QStringLiteral("translations")),
@@ -61,7 +62,8 @@ void installTranslators(QApplication& app) {
 int main(int argc, char* argv[]) {
     const bool selfTestRequested = [&argc, &argv]() {
         for (int i = 1; i < argc; ++i) {
-            if (QString::fromLocal8Bit(argv[i]) == QStringLiteral("--selftest")) {
+            if (QString::fromLocal8Bit(argv[i]) == QStringLiteral("--selftest") ||
+                QString::fromLocal8Bit(argv[i]).startsWith(QStringLiteral("--selftest-screenshot"))) {
                 return true;
             }
         }
@@ -72,6 +74,10 @@ int main(int argc, char* argv[]) {
         qputenv("QT_QPA_PLATFORM", "offscreen");
     }
 
+    // Remote media is downloaded through the guarded transport first. Forbid
+    // nested network protocols in the decoder even for a disguised playlist.
+    qputenv("QT_MEDIA_BACKEND", "ffmpeg");
+    qputenv("QT_FFMPEG_PROTOCOL_WHITELIST", "file");
     QApplication app(argc, argv);
     QApplication::setApplicationName(maxchat::app::applicationName());
     QApplication::setApplicationDisplayName(maxchat::app::displayName());
@@ -79,24 +85,43 @@ int main(int argc, char* argv[]) {
     QApplication::setOrganizationName(maxchat::app::organizationName());
 
     QCommandLineParser parser;
-    parser.setApplicationDescription(QStringLiteral("Native C++/Qt port experiment for MaxChat"));
+    parser.setApplicationDescription(QStringLiteral("MaxChat graphical IRC client"));
     parser.addHelpOption();
     parser.addVersionOption();
     QCommandLineOption selfTestOption(QStringLiteral("selftest"),
                                       QStringLiteral("Run startup self-test and exit."));
     parser.addOption(selfTestOption);
+    QCommandLineOption profileOption(QStringLiteral("profile"),
+        QStringLiteral("Use an isolated profile (relative paths are beside the application)."), QStringLiteral("directory"));
+    QCommandLineOption screenshotOption(QStringLiteral("selftest-screenshot"),
+        QStringLiteral("Save a startup self-test screenshot and exit."), QStringLiteral("file"));
+    parser.addOption(profileOption);
+    parser.addOption(screenshotOption);
     parser.process(app);
+    if (parser.isSet(profileOption)) {
+        if (parser.value(profileOption).trimmed().isEmpty()) { QTextStream(stderr) << "Profile directory must not be empty\n"; return 1; }
+        qputenv("MAXCHAT_PROFILE_DIR", parser.value(profileOption).toUtf8());
+    }
+    app.setProperty("maxchat.selftest", parser.isSet(selfTestOption) || parser.isSet(screenshotOption));
 
     installTranslators(app);
 
     maxchat::ui::MainWindow window;
 
-    if (parser.isSet(selfTestOption)) {
+    if (parser.isSet(selfTestOption) || parser.isSet(screenshotOption)) {
         QTextStream out(stdout);
         if (!window.selfTest()) {
             QTextStream err(stderr);
             err << "MaxChat C++ selftest FAILED\n";
             return 1;
+        }
+        if (parser.isSet(screenshotOption)) {
+            window.show();
+            QApplication::processEvents();
+            if (!window.grab().save(parser.value(screenshotOption))) {
+                QTextStream(stderr) << "Could not save self-test screenshot\n";
+                return 1;
+            }
         }
         out << maxchat::app::displayName() << " " << maxchat::app::version() << " selftest OK\n";
         return 0;

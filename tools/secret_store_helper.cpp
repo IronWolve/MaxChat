@@ -8,6 +8,9 @@
 #include <QLibrary>
 #include <QUuid>
 #include <cstdio>
+#ifdef Q_OS_MACOS
+#include "core/MacKeychain.h"
+#endif
 
 #ifdef Q_OS_WIN
 #ifndef NOMINMAX
@@ -93,6 +96,10 @@ bool nativeRequest(const QString& operation, const QString& id, QByteArray& valu
         if (value.size() > MaximumValueBytes) return false;
     }
     return true;
+}
+#elif defined(Q_OS_MACOS)
+bool nativeRequest(const QString& operation, const QString& id, QByteArray& value) {
+    return maxchat::core::macKeychainRequest(operation, id, value);
 }
 #elif defined(Q_OS_LINUX)
 // libsecret's public C ABI uses opaque objects here. Resolve the installed

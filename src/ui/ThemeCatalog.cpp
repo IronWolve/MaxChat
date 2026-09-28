@@ -1,4 +1,6 @@
+#include "app/BundledPaths.h"
 #include "ui/ThemeCatalog.h"
+#include "core/SettingsStore.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -17,6 +19,13 @@
 namespace maxchat::ui {
 
 namespace {
+QByteArray boundedThemeJson(QFile& file) {
+    constexpr qint64 limit = 16 * 1024 * 1024;
+    if (file.size() > limit) return {};
+    const QByteArray data = file.read(limit + 1);
+    return data.size() <= limit ? data : QByteArray();
+}
+
 
 QColor rgb(const int r, const int g, const int b) {
     return QColor(r, g, b);
@@ -75,11 +84,9 @@ QString displayNameFromFileName(const QString& fileName) {
 }
 
 QString assetDirectory(const QString& name) {
-    const QString appDir = QCoreApplication::applicationDirPath();
+    const QString appDir = maxchat::app::bundledDataDirectory();
     const QStringList candidates = {
         QDir(appDir).filePath(QStringLiteral("assets/%1").arg(name)),
-        QDir(appDir).filePath(QStringLiteral("../assets/%1").arg(name)),
-        QDir::current().filePath(QStringLiteral("assets/%1").arg(name)),
     };
     for (const QString& candidate : candidates) {
         if (QDir(candidate).exists()) {
@@ -94,12 +101,7 @@ QString themeDirectory() {
 }
 
 QString userConfigDirectory() {
-    const QString root =
-        QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
-    if (root.isEmpty()) {
-        return {};
-    }
-    return QDir(root).filePath(QStringLiteral("maxchat"));
+    return maxchat::core::standardSettingsPaths().configDir;
 }
 
 QString userThemeDirectory() {
@@ -154,7 +156,7 @@ QList<QJsonObject> userThemeObjects() {
         if (!file.open(QIODevice::ReadOnly)) {
             continue;
         }
-        const QJsonDocument document = QJsonDocument::fromJson(file.readAll());
+        const QJsonDocument document = QJsonDocument::fromJson(boundedThemeJson(file));
         if (!document.isObject()) {
             continue;
         }
@@ -185,7 +187,7 @@ QList<QJsonObject> userChatThemeObjects() {
     if (!file.open(QIODevice::ReadOnly)) {
         return objects;
     }
-    const QJsonDocument document = QJsonDocument::fromJson(file.readAll());
+    const QJsonDocument document = QJsonDocument::fromJson(boundedThemeJson(file));
     if (!document.isObject()) {
         return objects;
     }
@@ -321,7 +323,7 @@ QList<QJsonObject> jsonThemeObjects(const QString& kind) {
         if (!file.open(QIODevice::ReadOnly)) {
             continue;
         }
-        const QJsonDocument document = QJsonDocument::fromJson(file.readAll());
+        const QJsonDocument document = QJsonDocument::fromJson(boundedThemeJson(file));
         if (!document.isObject()) {
             continue;
         }
@@ -1045,7 +1047,7 @@ bool deleteUserChatTheme(const QString& id) {
         if (!file.open(QIODevice::ReadOnly)) {
             return false;
         }
-        const QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+        const QJsonDocument doc = QJsonDocument::fromJson(boundedThemeJson(file));
         if (!doc.isObject()) {
             return false;
         }
@@ -1102,7 +1104,7 @@ ThemePack importThemePack(const QString& path) {
         result.error = QStringLiteral("could not open the file");
         return result;
     }
-    const QJsonDocument document = QJsonDocument::fromJson(file.readAll());
+    const QJsonDocument document = QJsonDocument::fromJson(boundedThemeJson(file));
     if (!document.isObject()) {
         result.error = QStringLiteral("not a theme JSON file");
         return result;
@@ -1190,7 +1192,7 @@ QString saveUserChatTheme(const QString& name, const ChatThemeDefinition& theme)
     QJsonObject root;
     QFile readFile(path);
     if (readFile.open(QIODevice::ReadOnly)) {
-        const QJsonDocument doc = QJsonDocument::fromJson(readFile.readAll());
+        const QJsonDocument doc = QJsonDocument::fromJson(boundedThemeJson(readFile));
         if (doc.isObject()) {
             root = doc.object();
         }

@@ -97,8 +97,9 @@ AudioPlayerBar::AudioPlayerBar(QWidget* parent) : QWidget(parent) {
     hide();
 }
 
-void AudioPlayerBar::playUrl(const QUrl& url) {
-    nameLabel_->setText(url.fileName().isEmpty() ? url.toDisplayString() : url.fileName());
+void AudioPlayerBar::playUrl(const QUrl& url, const QString& displayName) {
+    if (!url.isLocalFile()) return;
+    nameLabel_->setText(displayName.isEmpty() ? url.fileName() : displayName);
     player_->setSource(url);
     {
         const QSignalBlocker blocker(playPause_);

@@ -1,3 +1,4 @@
+#include "app/BundledPaths.h"
 #include "core/SettingsStore.h"
 
 #include "core/CommandAlias.h"
@@ -5,6 +6,7 @@
 #include "core/SettingsSecrets.h"
 
 #include <QDir>
+#include <QCoreApplication>
 #include <QFile>
 #include <QFileInfo>
 #include <QHash>
@@ -20,6 +22,13 @@
 namespace maxchat::core {
 
 namespace {
+constexpr qint64 MaxSettingsBytes = 8 * 1024 * 1024;
+QByteArray boundedSettings(QFile& file) {
+  if (file.size() > MaxSettingsBytes) return {};
+  const QByteArray data = file.read(MaxSettingsBytes + 1);
+  return data.size() <= MaxSettingsBytes ? data : QByteArray();
+}
+
 
 QString fallbackHomeConfigDir() {
   return QDir::home().filePath(QStringLiteral(".config/maxchat"));
@@ -53,6 +62,20 @@ QVariantMap networkConfigFromDefaults(const NetworkDefaults &network) {
 } // namespace
 
 SettingsPaths standardSettingsPaths() {
+  const auto explicitPath = [](const QString& value) {
+    return QDir::isAbsolutePath(value) ? QDir::cleanPath(value)
+        : QDir(maxchat::app::portableDataBaseDirectory()).absoluteFilePath(value);
+  };
+  const QString profile = qEnvironmentVariable("MAXCHAT_PROFILE_DIR");
+  if (!profile.isEmpty()) {
+    SettingsPaths paths;
+    paths.configDir = explicitPath(profile);
+    const QString cache = qEnvironmentVariable("MAXCHAT_CACHE_DIR");
+    paths.cacheDir = cache.isEmpty() ? QDir(paths.configDir).filePath(QStringLiteral(".cache"))
+                                   : explicitPath(cache);
+    paths.settingsPath = QDir(paths.configDir).filePath(QStringLiteral("settings.json"));
+    return paths;
+  }
   const QString configRoot =
       QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
   const QString cacheRoot =
@@ -143,6 +166,7 @@ QVariantMap SettingsStore::loadRaw() const {
     cacheValid_ = false;
     credentialId_.clear();
     storedSecrets_.clear();
+  storedBindings_.clear();
     credentialsUnavailable_ = info.exists();
     legacyCredentials_ = false;
     if (credentialsUnavailable_)
@@ -152,7 +176,7 @@ QVariantMap SettingsStore::loadRaw() const {
 
   QJsonParseError error;
   const QJsonDocument document =
-      QJsonDocument::fromJson(file.readAll(), &error);
+      QJsonDocument::fromJson(boundedSettings(file), &error);
   if (error.error != QJsonParseError::NoError || !document.isObject()) {
     cacheValid_ = false;
     credentialsUnavailable_ = true;
@@ -164,6 +188,7 @@ QVariantMap SettingsStore::loadRaw() const {
   credentialId_ = reference.toString();
   credentialsUnavailable_ = false;
   storedSecrets_.clear();
+  storedBindings_.clear();
   const QVariantMap legacySecrets = splitSettingsSecrets(cachedRaw_).secrets;
   legacyCredentials_ = !legacySecrets.isEmpty();
   if (reference.isValid()) {
@@ -174,11 +199,10 @@ QVariantMap SettingsStore::loadRaw() const {
     if (!validId || !secrets_ || !secrets_->read(credentialId_, bytes, error)) {
       credentialsUnavailable_ = true;
     } else {
-      const QJsonDocument values = QJsonDocument::fromJson(bytes);
-      if (!values.isObject()) {
+      if (!decodeCredentialEnvelope(cachedRaw_, bytes, storedSecrets_)) {
         credentialsUnavailable_ = true;
       } else {
-        storedSecrets_ = values.object().toVariantMap();
+        storedBindings_ = credentialBindings(cachedRaw_, storedSecrets_);
         cachedRaw_ = restoreSettingsSecrets(cachedRaw_, storedSecrets_);
         // A manually added legacy password takes precedence over the old vault
         // value and is migrated on the next successful secure write.
@@ -186,7 +210,7 @@ QVariantMap SettingsStore::loadRaw() const {
       }
     }
     if (credentialsUnavailable_) {
-      reportError(QStringLiteral("Saved credentials could not be read. Unlock the OS keychain and restart MaxChat before saving settings; existing credentials will be preserved."));
+      reportError(QStringLiteral("Saved credentials could not be read or do not match these connection settings. Unlock the keychain or restore matching settings. Older unbound records require password re-entry through Forget passwords; existing credentials are preserved."));
     }
   }
   cachedMtime_ = info.lastModified();
@@ -209,7 +233,7 @@ QVariantMap SettingsStore::loadPublicWithDefaults() const {
   QVariantMap settings = defaultSettings();
   QFile file(paths_.settingsPath);
   if (file.open(QIODevice::ReadOnly)) {
-    const QVariantMap saved = withoutSecrets(QJsonDocument::fromJson(file.readAll()).object().toVariantMap());
+    const QVariantMap saved = withoutSecrets(QJsonDocument::fromJson(boundedSettings(file)).object().toVariantMap());
     for (auto it = saved.cbegin(); it != saved.cend(); ++it) settings.insert(it.key(), it.value());
   }
   return withoutSecrets(settings);
@@ -247,16 +271,17 @@ bool SettingsStore::saveRaw(const QVariantMap &settings, const bool preserveGeom
   }
 
   SettingsSecrets protectedSettings = splitSettingsSecrets(merged);
+  const QVariantMap nextBindings = credentialBindings(protectedSettings.settings, protectedSettings.secrets);
   const QString previousId = credentialId_;
   QString nextId;
   bool newCredential = false;
   if (!protectedSettings.secrets.isEmpty()) {
-    if (!previousId.isEmpty() && protectedSettings.secrets == storedSecrets_) {
+    if (!previousId.isEmpty() && protectedSettings.secrets == storedSecrets_ && nextBindings == storedBindings_) {
       nextId = previousId;
     } else {
       nextId = QUuid::createUuid().toString(QUuid::WithoutBraces);
       QString error;
-      const QByteArray values = QJsonDocument::fromVariant(protectedSettings.secrets).toJson(QJsonDocument::Compact);
+      const QByteArray values = encodeCredentialEnvelope(protectedSettings.settings, protectedSettings.secrets);
       if (!secrets_ || !secrets_->write(nextId, values, error)) {
         reportError(error.isEmpty() ? QStringLiteral("OS credential storage is unavailable. Existing settings were not changed; passwords will not be saved as plaintext.") : error);
         return false;
@@ -278,7 +303,8 @@ bool SettingsStore::saveRaw(const QVariantMap &settings, const bool preserveGeom
     return rollback();
   }
 
-  const QByteArray bytes = QJsonDocument::fromVariant(protectedSettings.settings).toJson(QJsonDocument::Indented);
+  const QByteArray bytes = QJsonDocument::fromVariant(protectedSettings.settings).toJson(QJsonDocument::Compact);
+  if (bytes.size() > MaxSettingsBytes) { file.cancelWriting(); return rollback(); }
   if (!file.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner) ||
       file.write(bytes) != bytes.size() || !file.commit()) {
     file.cancelWriting();
@@ -289,6 +315,7 @@ bool SettingsStore::saveRaw(const QVariantMap &settings, const bool preserveGeom
   if (!previousId.isEmpty() && previousId != nextId) (void)secrets_->remove(previousId);
   credentialId_ = nextId;
   storedSecrets_ = protectedSettings.secrets;
+  storedBindings_ = nextBindings;
   legacyCredentials_ = false;
   cachedRaw_ = merged;
   cachedRaw_.remove(QLatin1String(CredentialReferenceKey));
@@ -312,7 +339,7 @@ bool SettingsStore::forgetCredentials() const {
     reportError(QStringLiteral("Could not read settings; saved credentials were not changed."));
     return false;
   }
-  const QJsonDocument original = QJsonDocument::fromJson(input.readAll());
+  const QJsonDocument original = QJsonDocument::fromJson(boundedSettings(input));
   input.close();
   if (!original.isObject()) {
     reportError(QStringLiteral("Settings are not valid JSON; saved credentials were not changed."));
@@ -320,7 +347,7 @@ bool SettingsStore::forgetCredentials() const {
   }
   const QVariantMap settings = original.object().toVariantMap();
   const QString oldId = settings.value(QLatin1String(CredentialReferenceKey)).toString();
-  const QByteArray bytes = QJsonDocument::fromVariant(withoutSecrets(settings)).toJson(QJsonDocument::Indented);
+  const QByteArray bytes = QJsonDocument::fromVariant(withoutSecrets(settings)).toJson(QJsonDocument::Compact);
   QSaveFile output(paths_.settingsPath);
   if (!output.open(QIODevice::WriteOnly | QIODevice::Truncate) ||
       !output.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner) ||
@@ -336,6 +363,7 @@ bool SettingsStore::forgetCredentials() const {
   cacheValid_ = false;
   cachedRaw_.clear();
   storedSecrets_.clear();
+  storedBindings_.clear();
   credentialId_.clear();
   credentialsUnavailable_ = false;
   legacyCredentials_ = false;
@@ -383,6 +411,13 @@ SettingsStore::prepareImportedSettings(const QVariantMap &imported) const {
             };
             if (encode(network) != encode(local)) sameEndpoint = false;
           }
+          for (const char* key : {"accept_invalid_cert", "allow_insecure_auth"}) {
+            if (network.value(QLatin1String(key)).toBool() != local.value(QLatin1String(key)).toBool())
+              sameEndpoint = false;
+          }
+          if (network.value(QStringLiteral("account")).toString().trimmed().isEmpty() &&
+              network.value(QStringLiteral("nick")) != local.value(QStringLiteral("nick")))
+            sameEndpoint = false;
           if (sameEndpoint) network = preserveLocalSecrets(network, local);
           break;
         }
@@ -398,6 +433,11 @@ SettingsStore::prepareImportedSettings(const QVariantMap &imported) const {
   if (prepared.value(QStringLiteral("imgbox_username")) != current.value(QStringLiteral("imgbox_username")))
     top.remove(QStringLiteral("imgbox_password"));
   prepared = preserveLocalSecrets(prepared, top);
+  // Importing layout/network data must not approve executable capabilities or
+  // new automatic connections. Those decisions belong to this local profile.
+  prepared.insert(QStringLiteral("scriptPerms"), current.value(QStringLiteral("scriptPerms"), QVariantMap()));
+  prepared.insert(QStringLiteral("script_dirs"), current.value(QStringLiteral("script_dirs"), QVariantList()));
+  prepared.insert(QStringLiteral("connect_on_start"), current.value(QStringLiteral("connect_on_start"), false));
   return prepared;
 }
 
@@ -615,10 +655,10 @@ QVariantMap SettingsStore::defaultSettings() {
   settings.insert(QStringLiteral("nick_width_autoset"), false);
   settings.insert(QStringLiteral("word_wrap"), true);
   QVariantMap contentServices;
-  contentServices.insert(QStringLiteral("images"), true);
-  contentServices.insert(QStringLiteral("media"), true);
-  contentServices.insert(QStringLiteral("xcards"), true);
-  contentServices.insert(QStringLiteral("webcards"), true);
+  contentServices.insert(QStringLiteral("images"), false);
+  contentServices.insert(QStringLiteral("media"), false);
+  contentServices.insert(QStringLiteral("xcards"), false);
+  contentServices.insert(QStringLiteral("webcards"), false);
   settings.insert(QStringLiteral("content_services"), contentServices);
   // Master switch for clicked links: ON = a clicked URL opens (in the browser by
   // default; the content_services toggles above route image/audio/video links to
@@ -633,10 +673,8 @@ QVariantMap SettingsStore::defaultSettings() {
   // the central defaults so they round-trip on export (Python parity).
   settings.insert(QStringLiteral("shortcuts"), QVariantMap());
   settings.insert(QStringLiteral("looks"), QVariantMap());
-  // Quietly check GitHub Releases for a newer build shortly after launch.
-  // TODO(release): flip this default to true when going live (it's off for now
-  // so pre-release builds don't poll GitHub). The Notifications pref + Help >
-  // Check for Updates already work; only the auto-on-startup default is gated.
+  // New profiles do not make background requests to third parties. Saved
+  // choices and the explicit Help > Check for Updates action remain available.
   settings.insert(QStringLiteral("update_check"), false);
   // Lua script capabilities, keyed by script name — empty means every script
   // starts fully sandboxed (absent name → all-false perms). The live code key

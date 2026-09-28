@@ -1,0 +1,13 @@
+# Preserve the cmd.exe script bytes and validate CRLF correctly.
+build.bat -text whitespace=cr-at-eol
+
+# Retain verified upstream bytes, including harmless upstream trailing spaces.
+third_party/hunspell/replist.hxx whitespace=-blank-at-eol
+
+# Preserve verbatim runtime notices, including upstream CRLF and blank lines.
+licenses/mingw/** -text whitespace=cr-at-eol,-blank-at-eol,-blank-at-eof,-space-before-tab
+licenses/qt/** -text whitespace=-blank-at-eol,-blank-at-eof
+
+# Preserve original font/dictionary notices, including upstream whitespace.
+licenses/fonts/* -text whitespace=-blank-at-eol,-blank-at-eof
+licenses/dictionaries/* -text whitespace=-blank-at-eol,-blank-at-eof

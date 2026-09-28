@@ -11,6 +11,8 @@
 #include <QDir>
 #include <QFile>
 #include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QTimer>
 #include <QString>
 #include <QStringList>
 #include <QTemporaryDir>
@@ -54,7 +56,7 @@ class FakeHost final : public MainWindowHost {
         return nullptr; // "not connected" — exercises the failure/route path
     }
 
-    QNetworkAccessManager& scriptNetworkManager() override { return nam_; }
+    QNetworkAccessManager& scriptNetworkManager() override { return networkOverride ? *networkOverride : nam_; }
     QNetworkAccessManager& previewNetworkManager() override { return nam_; }
     SettingsStore& settings() override { return store_; }
     QWidget* dialogParent() override { return parent_; }
@@ -66,6 +68,7 @@ class FakeHost final : public MainWindowHost {
     void setMenuBarFont(const QFont&) override {}
     void applyAllSettings() override {}
 
+    QNetworkAccessManager* networkOverride = nullptr;
     QStringList activeLines;
     QList<QPair<QString, QString>> systemLines;
     QStringList connectionRequests;
@@ -75,6 +78,24 @@ class FakeHost final : public MainWindowHost {
     SettingsStore& store_;
     QWidget* parent_;
     QNetworkAccessManager nam_;
+};
+
+class StalledReply final : public QNetworkReply {
+public:
+    bool* aborted;
+    StalledReply(const QNetworkRequest& request, bool* flag, QObject* parent) : QNetworkReply(parent), aborted(flag) {
+        setRequest(request); setUrl(request.url()); open(QIODevice::ReadOnly);
+        setAttribute(QNetworkRequest::HttpStatusCodeAttribute,200);
+    }
+    void abort() override { *aborted=true; setFinished(true); }
+    qint64 readData(char*,qint64) override { return -1; }
+};
+class StalledManager final : public QNetworkAccessManager {
+public:
+    bool aborted=false; int requests=0;
+    QNetworkReply* createRequest(Operation,const QNetworkRequest& request,QIODevice*) override {
+        ++requests; return new StalledReply(request,&aborted,this);
+    }
 };
 
 // Drop a .bundled/<name>.lua snapshot so isBundledScript(name) returns true.
@@ -98,6 +119,35 @@ class ScriptBridgeTest : public QObject {
     Q_OBJECT
 
   private slots:
+    void stoppedWorkerCancelsItsInFlightHttpRequest() {
+        QTemporaryDir directory; SettingsPaths paths;
+        paths.configDir=directory.path(); paths.cacheDir=directory.path();
+        paths.settingsPath=directory.filePath(QStringLiteral("settings.json"));
+        SettingsStore store(paths); QWidget parent; FakeHost host(store,&parent);
+        StalledManager network; host.networkOverride=&network;
+        ScriptBridge bridge(host,directory.path()); bool cancelled=false;
+        QTimer::singleShot(10,&bridge,[&]{cancelled=true;});
+        QElapsedTimer elapsed; elapsed.start();
+        QCOMPARE(bridge.scriptHttpGet(QStringLiteral("https://8.8.8.8/fixture"),[&]{return cancelled;}),QString());
+        QVERIFY(elapsed.elapsed()<1000); QCOMPARE(network.requests,1); QVERIFY(network.aborted);
+    }
+
+    void privateHttpUrlReturnsWithoutEnteringNestedEventLoop() {
+        QTemporaryDir tmp;
+        SettingsPaths paths;
+        paths.configDir = tmp.path();
+        paths.cacheDir = tmp.path();
+        paths.settingsPath = QDir(tmp.path()).filePath(QStringLiteral("settings.json"));
+        SettingsStore store(paths);
+        QWidget parent;
+        FakeHost host(store, &parent);
+        ScriptBridge bridge(host, tmp.path());
+        QElapsedTimer timer;
+        timer.start();
+        QCOMPARE(bridge.scriptHttpGet(QStringLiteral("http://127.0.0.1/private")), QString());
+        QVERIFY(timer.elapsed() < 1000);
+    }
+
     void bundledScriptDefaultsToSandboxed() {
         QTemporaryDir tmp;
         QVERIFY(tmp.isValid());

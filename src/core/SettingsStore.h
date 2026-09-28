@@ -55,6 +55,7 @@ class SettingsStore final {
     mutable QString error_;
     mutable QString credentialId_;
     mutable QVariantMap storedSecrets_;
+    mutable QVariantMap storedBindings_;
     mutable bool credentialsUnavailable_ = false;
     mutable bool legacyCredentials_ = false;
     // mtime+size cache for loadRaw: startup alone used to parse settings.json

@@ -81,8 +81,10 @@ MediaPlayerDialog::MediaPlayerDialog(const QUrl& mediaUrl, QWidget* parent) : QD
     connect(closeShortcut, &QShortcut::activated, this, &QDialog::close);
 
     resize(720, 460);
-    player_->setSource(mediaUrl);
-    player_->play();
+    if (mediaUrl.isLocalFile()) {
+        player_->setSource(mediaUrl);
+        player_->play();
+    }
 }
 
 } // namespace maxchat::ui

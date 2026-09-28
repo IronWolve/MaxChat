@@ -45,6 +45,7 @@ void PostimagesUploader::upload(const QImage &image) {
     multipart->append(tokenPart);
 
     QNetworkRequest request(QUrl(QStringLiteral("https://postimages.org/json/rr")));
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::SameOriginRedirectPolicy);
     auto *reply = manager_->post(request, multipart);
     multipart->setParent(reply);
 

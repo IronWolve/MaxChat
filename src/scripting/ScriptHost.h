@@ -3,6 +3,7 @@
 #include <QString>
 #include <QStringList>
 #include <QSize>
+#include <functional>
 
 namespace maxchat::scripting {
 
@@ -15,6 +16,7 @@ namespace maxchat::scripting {
 class ScriptHost {
   public:
     virtual ~ScriptHost() = default;
+    virtual bool scriptLaunch(const QString&) { return false; }
 
     virtual void scriptEcho(const QString& network, const QString& text) = 0;
     virtual void scriptSay(const QString& network, const QString& target,
@@ -56,6 +58,9 @@ class ScriptHost {
     // Synchronous HTTP GET for api.http_get (only reached when the network
     // permission is granted). Returns the body, or an empty string on failure.
     [[nodiscard]] virtual QString scriptHttpGet(const QString& url) = 0;
+    [[nodiscard]] virtual QString scriptHttpGet(const QString& url, const std::function<bool()>& cancelled) {
+        return cancelled && cancelled() ? QString() : scriptHttpGet(url);
+    }
 };
 
 } // namespace maxchat::scripting

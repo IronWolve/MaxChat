@@ -1,8 +1,14 @@
 #include "ui/DccManager.h"
+#include "core/SettingsStore.h"
 
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QCryptographicHash>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QSaveFile>
+#include <QStandardPaths>
 #include <QHostAddress>
 #include <QRandomGenerator>
 #include <QTcpServer>
@@ -21,6 +27,40 @@ constexpr qint64 ChatLineCap = 8192;
 constexpr qint64 ChatBufferCap = 65536;
 // Anti-flood: cap how many unaccepted incoming offers can pile up at once.
 constexpr int MaxPendingOffers = 32;
+
+QString partialRecord(const QString& path) {
+    const QString root = QDir(maxchat::core::standardSettingsPaths().cacheDir)
+                             .filePath(QStringLiteral("dcc-resume"));
+    const QByteArray digest = QCryptographicHash::hash(QFileInfo(path).absoluteFilePath().toUtf8(),
+                                                       QCryptographicHash::Sha256).toHex();
+    return QDir(root).filePath(QString::fromLatin1(digest) + QStringLiteral(".json"));
+}
+bool ownedPartial(const QString& path, qint64 size, const QString& peer) {
+    const QFileInfo part(path + QStringLiteral(".part"));
+    if (!part.isFile() || part.isSymbolicLink() || part.size() <= 0 || part.size() >= size) return false;
+    const QString recordPath = partialRecord(path);
+    if (QFileInfo(recordPath).isSymbolicLink()) return false;
+    QFile record(recordPath);
+    if (!record.open(QIODevice::ReadOnly) || record.size() > 1024) return false;
+    const QJsonObject metadata = QJsonDocument::fromJson(record.read(1025)).object();
+    return metadata.value(QStringLiteral("format")).toString() == QLatin1String("maxchat-dcc-partial-v1") &&
+           metadata.value(QStringLiteral("peer")).toString() == peer.toLower() &&
+           metadata.value(QStringLiteral("size")).toString() == QString::number(size) &&
+           metadata.value(QStringLiteral("name")).toString() == QFileInfo(path).fileName();
+}
+bool recordPartial(const QString& path, qint64 size, const QString& peer) {
+    const QString recordPath = partialRecord(path);
+    if (!QDir().mkpath(QFileInfo(recordPath).absolutePath()) || QFileInfo(recordPath).isSymbolicLink()) return false;
+    QSaveFile record(recordPath);
+    if (!record.open(QIODevice::WriteOnly) ||
+        !record.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner)) return false;
+    const QByteArray data = QJsonDocument(QJsonObject{
+        {QStringLiteral("format"), QStringLiteral("maxchat-dcc-partial-v1")},
+        {QStringLiteral("peer"), peer.toLower()}, {QStringLiteral("size"), QString::number(size)},
+        {QStringLiteral("name"), QFileInfo(path).fileName()}}).toJson(QJsonDocument::Compact);
+    return record.write(data) == data.size() && record.commit();
+}
+bool pathTaken(const QString& path) { const QFileInfo info(path); return info.exists() || info.isSymbolicLink(); }
 
 QString quoteName(const QString& name) {
     return QStringLiteral("\"%1\"").arg(QString(name).remove(QLatin1Char('"')));
@@ -228,7 +268,18 @@ quint16 DccManager::openListenPort(QTcpServer* server) {
     return server->listen(QHostAddress::Any, 0) ? server->serverPort() : 0;
 }
 
-QString DccManager::destPath(const QString& name, qint64 size) const {
+void DccManager::pruneFinishedHistory() {
+    while (transfers_.size() >= 512) {
+        const auto completed = std::find_if(transfers_.begin(), transfers_.end(), [](const DccTransfer& transfer) {
+            return transfer.state == DccTransfer::State::Done || transfer.state == DccTransfer::State::Failed ||
+                   transfer.state == DccTransfer::State::Cancelled;
+        });
+        if (completed == transfers_.end()) break;
+        transfers_.erase(completed);
+    }
+}
+
+QString DccManager::destPath(const QString& name, qint64 size, const QString& peer) const {
     const QString dir = downloadDir_.isEmpty() ? QDir::homePath() : downloadDir_;
     QDir().mkpath(dir);
     const QString base = sanitizeFileName(name);
@@ -255,11 +306,11 @@ QString DccManager::destPath(const QString& name, qint64 size) const {
     // is a resume candidate" appended a stranger's bytes to unrelated files
     // the user already had.
     const QFileInfo part(candidate + QStringLiteral(".part"));
-    if (part.exists() && part.size() > 0 && size > 0 && part.size() < size &&
+    if (ownedPartial(candidate, size, peer) &&
         !reservedByTransfer(candidate)) {
         return candidate;
     }
-    if (!QFileInfo::exists(candidate) && !part.exists() && !reservedByTransfer(candidate)) {
+    if (!pathTaken(candidate) && !pathTaken(part.filePath()) && !reservedByTransfer(candidate)) {
         return candidate;
     }
     const QFileInfo info(candidate);
@@ -269,13 +320,13 @@ QString DccManager::destPath(const QString& name, qint64 size) const {
     for (int i = 1; i < 10000; ++i) {
         const QString tryPath =
             QDir(dir).filePath(QStringLiteral("%1.%2%3").arg(stem).arg(i).arg(suffix));
-        if (!QFileInfo::exists(tryPath) &&
-            !QFileInfo::exists(tryPath + QStringLiteral(".part")) &&
+        if (!pathTaken(tryPath) &&
+            !pathTaken(tryPath + QStringLiteral(".part")) &&
             !reservedByTransfer(tryPath)) {
             return tryPath;
         }
     }
-    return candidate;
+    return {};
 }
 
 // ---- outgoing SEND -------------------------------------------------------
@@ -299,7 +350,8 @@ void DccManager::offerSend(const QString& peer, const QString& filePath) {
     if (passive_) {
         const QString token = newToken();
         transfer.state = DccTransfer::State::Offered;
-        transfers_.append(transfer);
+        pruneFinishedHistory();
+    transfers_.append(transfer);
         awaitingTokens_.insert(token, transfer.id);
         emitChanged();
         emit ctcpToSend(peer, QStringLiteral("SEND %1 %2 0 %3 %4")
@@ -320,6 +372,7 @@ void DccManager::offerSend(const QString& peer, const QString& filePath) {
     }
     transfer.port = port;
     transfer.state = DccTransfer::State::Offered;
+    pruneFinishedHistory();
     transfers_.append(transfer);
     const int id = transfer.id;
     runtimes_[id].server = server;
@@ -352,6 +405,7 @@ void DccManager::offerSend(const QString& peer, const QString& filePath) {
 }
 
 void DccManager::beginSend(int id, QTcpSocket* socket) {
+    socket->setReadBufferSize(64 * 1024);
     DccTransfer* t = findById(id);
     if (t == nullptr) {
         socket->abort();
@@ -506,7 +560,8 @@ void DccManager::inSend(const QString& sender, const QStringList& toks) {
         if (t.direction == DccTransfer::Direction::Receive &&
             (t.state == DccTransfer::State::Pending ||
              t.state == DccTransfer::State::Offered ||
-             t.state == DccTransfer::State::Resuming)) {
+             t.state == DccTransfer::State::Resuming ||
+             t.state == DccTransfer::State::Connecting || t.state == DccTransfer::State::Active)) {
             ++pendingOffers;
         }
     }
@@ -525,8 +580,10 @@ void DccManager::inSend(const QString& sender, const QStringList& toks) {
     transfer.host = host;
     transfer.port = port;
     transfer.size = size;
-    transfer.localPath = destPath(name, size);
+    transfer.localPath = destPath(name, size, sender);
+    if (transfer.localPath.isEmpty()) { emit status(QStringLiteral("DCC: no free destination filename.")); return; }
     transfer.offeredAtMs = clock_.elapsed();
+    pruneFinishedHistory();
     transfers_.append(transfer);
     // Remember the token for a passive offer (port 0) so accept() can reply.
     if (!token.isEmpty()) {
@@ -556,7 +613,7 @@ void DccManager::acceptTransfer(int id) {
 
     // Resume only our own partial download (<final>.part).
     const QFileInfo info(t->localPath + QStringLiteral(".part"));
-    if (info.exists() && info.size() > 0 && t->size > 0 && info.size() < t->size) {
+    if (ownedPartial(t->localPath, t->size, t->peer)) {
         rt(id).startOffset = info.size();
         t->transferred = info.size();
         t->state = DccTransfer::State::Resuming;
@@ -569,6 +626,8 @@ void DccManager::acceptTransfer(int id) {
                                      .arg(info.size()));
         return; // wait for ACCEPT
     }
+
+    if (pathTaken(info.filePath())) { finishTransfer(id, false); return; }
 
     if (t->port != 0) {
         // Active offer: connect to the sender.
@@ -641,12 +700,17 @@ void DccManager::beginReceive(int id, QTcpSocket* socket) {
     // can then never target an unrelated pre-existing file.
     r.file = new QFile(t->localPath + QStringLiteral(".part"), socket);
     const bool resume = r.startOffset > 0;
-    if (!r.file->open(resume ? (QIODevice::ReadWrite) : QIODevice::WriteOnly)) {
+    socket->setReadBufferSize(64 * 1024);
+    if ((resume && (!ownedPartial(t->localPath, t->size, t->peer) || r.file->size() != r.startOffset)) ||
+        QFileInfo(r.file->fileName()).isSymbolicLink() ||
+        !r.file->open(resume ? (QIODevice::ReadWrite | QIODevice::ExistingOnly)
+                            : (QIODevice::WriteOnly | QIODevice::NewOnly))) {
         finishTransfer(id, false);
         return;
     }
+    if (!resume && !recordPartial(t->localPath, t->size, t->peer)) { finishTransfer(id, false); return; }
     if (resume) {
-        r.file->seek(r.startOffset);
+        if (!r.file->seek(r.startOffset)) { finishTransfer(id, false); return; }
         t->transferred = r.startOffset;
     }
     t->state = DccTransfer::State::Active;
@@ -792,13 +856,16 @@ void DccManager::finishTransfer(int id, bool ok) {
     if (r.file != nullptr) {
         r.file->close();
     }
+    const QString resumeRecord = partialRecord(t->localPath);
     if (ok && t->direction == DccTransfer::Direction::Receive) {
         // Promote the .part to its final name (path was reserved at offer time).
         const QString partPath = t->localPath + QStringLiteral(".part");
         if (QFile::exists(partPath) && !QFile::rename(partPath, t->localPath)) {
             emit status(QStringLiteral("DCC: saved as %1 (could not rename)").arg(partPath));
+            t->localPath = partPath;
         }
     }
+    if (ok && t->direction == DccTransfer::Direction::Receive) QFile::remove(resumeRecord);
     if (r.socket != nullptr) {
         r.socket->disconnectFromHost();
         r.socket->deleteLater(); // also frees r.file (parented to the socket)

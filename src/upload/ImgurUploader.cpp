@@ -38,6 +38,7 @@ void ImgurUploader::upload(const QImage &image) {
     multipart->append(imagePart);
 
     QNetworkRequest request(QUrl(QStringLiteral("https://api.imgur.com/3/image")));
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::SameOriginRedirectPolicy);
     request.setRawHeader("Authorization",
                          QStringLiteral("Client-ID %1").arg(safeId).toUtf8());
     auto *reply = manager_->post(request, multipart);

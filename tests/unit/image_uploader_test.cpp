@@ -8,6 +8,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QNetworkAccessManager>
+#include <QNetworkRequest>
 #include <QSignalSpy>
 #include <QTcpServer>
 #include <QTcpSocket>
@@ -79,10 +80,93 @@ static QImage make1x1() {
     return img;
 }
 
+class AuditUploadReply final : public QNetworkReply {
+public:
+    explicit AuditUploadReply(const QNetworkRequest &request, QObject *parent) : QNetworkReply(parent) {
+        setRequest(request); setUrl(request.url()); open(QIODevice::ReadOnly);
+    }
+    QByteArray body;
+    bool aborted = false;
+    void abort() override {
+        aborted = true;
+        setError(QNetworkReply::OperationCanceledError, QStringLiteral("cancelled"));
+        setFinished(true); emit finished();
+    }
+    qint64 bytesAvailable() const override { return body.size() + QIODevice::bytesAvailable(); }
+    qint64 readData(char *data, qint64 maximum) override {
+        const qint64 count = qMin(maximum, qint64(body.size()));
+        if (count == 0) return -1;
+        memcpy(data, body.constData(), size_t(count)); body.remove(0, count); return count;
+    }
+    void receive(const QByteArray &data) { body = data; emit readyRead(); }
+    void failWithPrivateUrl() {
+        setError(QNetworkReply::ProtocolFailure, QStringLiteral("https://example.invalid/?key=private-marker"));
+        setFinished(true); emit finished();
+    }
+};
+
+class AuditUploadManager final : public QNetworkAccessManager {
+public:
+    AuditUploadReply *reply = nullptr;
+    QNetworkReply *createRequest(Operation, const QNetworkRequest &request, QIODevice *) override {
+        reply = new AuditUploadReply(request, this); return reply;
+    }
+};
+
+class UrlValidationUploader final : public ImageUploader {
+public:
+    UrlValidationUploader() : ImageUploader(nullptr) {}
+    void upload(const QImage&) override {}
+    QString serviceName() const override { return QStringLiteral("fixture"); }
+    using ImageUploader::finishWithHttpsUrl;
+};
 class ImageUploaderTest final : public QObject {
     Q_OBJECT
 
   private slots:
+    void returnedUrlCannotInjectInputLinesOrCredentials() {
+        UrlValidationUploader uploader;
+        QSignalSpy accepted(&uploader, &ImageUploader::uploaded);
+        QSignalSpy rejected(&uploader, &ImageUploader::uploadFailed);
+        uploader.finishWithHttpsUrl(QStringLiteral("https://example.test/image.png\n/join #injected"));
+        uploader.finishWithHttpsUrl(QStringLiteral("https://user:password@example.test/image.png"));
+        uploader.finishWithHttpsUrl(QStringLiteral("https:"));
+        QCOMPARE(accepted.count(), 0);
+        QCOMPARE(rejected.count(), 3);
+        uploader.finishWithHttpsUrl(QStringLiteral("https://example.test/image.png?q=ok"));
+        QCOMPARE(accepted.count(), 1);
+    }
+
+    void uploadRequestCannotRedirectCredentialsAcrossOrigins() {
+        AuditUploadManager manager;
+        ImgbbUploader uploader(QStringLiteral("fake-test-key"), &manager);
+        uploader.upload(make1x1());
+        QVERIFY(manager.reply);
+        QCOMPARE(manager.reply->request().attribute(QNetworkRequest::RedirectPolicyAttribute).toInt(),
+                 int(QNetworkRequest::SameOriginRedirectPolicy));
+    }
+
+    void oversizedReplyAbortsWhileStreaming() {
+        AuditUploadManager manager;
+        ImgbbUploader uploader(QStringLiteral("fake-test-key"), &manager);
+        QSignalSpy failed(&uploader, &ImageUploader::uploadFailed);
+        uploader.upload(make1x1());
+        manager.reply->receive(QByteArray(1024 * 1024 + 1, 'x'));
+        QVERIFY(manager.reply->aborted);
+        QCOMPARE(failed.count(), 1);
+        QVERIFY(failed.at(0).at(0).toString().contains(QStringLiteral("size limit")));
+    }
+
+    void transportErrorsDoNotExposeCredentialUrls() {
+        AuditUploadManager manager;
+        ImgbbUploader uploader(QStringLiteral("fake-test-key"), &manager);
+        QSignalSpy failed(&uploader, &ImageUploader::uploadFailed);
+        uploader.upload(make1x1());
+        manager.reply->failWithPrivateUrl();
+        QCOMPARE(failed.count(), 1);
+        QVERIFY(!failed.at(0).at(0).toString().contains(QStringLiteral("private-marker")));
+    }
+
     void factoryReturnsNullWhenDisabled() {
         QVariantMap settings;
         settings.insert(QStringLiteral("image_upload_service"), QString());

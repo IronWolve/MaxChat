@@ -1,7 +1,14 @@
 cmake_minimum_required(VERSION 3.24)
 
+# Keep generated files outside the source checkout.
+cmake_path(IS_PREFIX CMAKE_CURRENT_SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}"
+           NORMALIZE MAXCHAT_BUILD_INSIDE_SOURCE)
+if(MAXCHAT_BUILD_INSIDE_SOURCE)
+    message(FATAL_ERROR "Build outside the source checkout; use the project build.sh launcher.")
+endif()
+
 project(MaxChatCpp
-    VERSION 1.0.1
+    VERSION 1.0.2
     DESCRIPTION "MaxChat — a graphical IRC client"
     LANGUAGES CXX
 )
@@ -9,6 +16,15 @@ project(MaxChatCpp
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Apply to every C/C++ target, including vendors, but never to Windows RC.
+# Do not ship development paths through __FILE__ or compiler debug metadata.
+add_compile_options(
+    "$<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:-ffile-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}=.>"
+    "$<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:-ffile-prefix-map=${CMAKE_CURRENT_BINARY_DIR}=.>"
+    "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-ffile-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}=.>"
+    "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-ffile-prefix-map=${CMAKE_CURRENT_BINARY_DIR}=.>"
+)
 
 # Lua scripting (vendors Lua 5.4 under third_party/lua) is a CORE dependency —
 # always built. (There used to be a MAXCHAT_LUA=OFF lean build; dropped, since we
@@ -36,7 +52,7 @@ endif()
 
 # Qt6::Test is found only when BUILD_TESTING is on (see the test block below) so
 # the app builds on a Qt install without the Test module.
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Multimedia
+find_package(Qt6 6.11.2 REQUIRED COMPONENTS Core Gui Widgets Network Multimedia
                                      MultimediaWidgets LinguistTools)
 # Spellcheck uses a VENDORED Hunspell (third_party/hunspell) so the internal
 # engine works on every platform (incl. Windows/MinGW) without a system package.
@@ -48,6 +64,7 @@ add_library(maxchat_hunspell STATIC
     third_party/hunspell/filemgr.cxx
     third_party/hunspell/hashmgr.cxx
     third_party/hunspell/hunspell.cxx
+    third_party/hunspell/hunspelltrace.cxx
     third_party/hunspell/hunzip.cxx
     third_party/hunspell/phonet.cxx
     third_party/hunspell/replist.cxx
@@ -62,6 +79,8 @@ set(HUNSPELL_LIBRARY_DIRS "")
 set(HUNSPELL_CFLAGS_OTHER "")
 set(HUNSPELL_LIBRARIES maxchat_hunspell)
 
+set(CMAKE_INSTALL_BINDIR ".")
+set(CMAKE_INSTALL_LIBDIR "lib")
 qt_standard_project_setup()
 
 # Single source of truth for the app version: project(VERSION ...) above flows
@@ -72,13 +91,59 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/app/Version.h.in
 # Lua interpreter (C). Always built — scripting is a core dependency.
 enable_language(C)
 
+# Reviewed inflate-only source gives imported art a hard output bound.
+add_library(maxchat_inflate STATIC
+    third_party/zlib/adler32.c
+    third_party/zlib/crc32.c
+    third_party/zlib/inflate.c
+    third_party/zlib/inffast.c
+    third_party/zlib/inftrees.c
+    third_party/zlib/uncompr.c
+    third_party/zlib/zutil.c
+)
+target_include_directories(maxchat_inflate PUBLIC third_party/zlib)
+target_compile_definitions(maxchat_inflate PUBLIC Z_PREFIX)
+set_target_properties(maxchat_inflate PROPERTIES C_STANDARD 99 C_VISIBILITY_PRESET hidden)
+
 # Windows .exe resource (icon + version metadata) is compiled by windres/rc, which
 # needs the RC language enabled. Windows-only; never reached on other platforms.
 if(WIN32)
     enable_language(RC)
 endif()
-file(GLOB MAXCHAT_LUA_SOURCES CONFIGURE_DEPENDS
-     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/lua/*.c")
+set(MAXCHAT_LUA_SOURCES
+    third_party/lua/lapi.c
+    third_party/lua/lauxlib.c
+    third_party/lua/lbaselib.c
+    third_party/lua/lcode.c
+    third_party/lua/lcorolib.c
+    third_party/lua/lctype.c
+    third_party/lua/ldblib.c
+    third_party/lua/ldebug.c
+    third_party/lua/ldo.c
+    third_party/lua/ldump.c
+    third_party/lua/lfunc.c
+    third_party/lua/lgc.c
+    third_party/lua/linit.c
+    third_party/lua/liolib.c
+    third_party/lua/llex.c
+    third_party/lua/lmathlib.c
+    third_party/lua/lmem.c
+    third_party/lua/loadlib.c
+    third_party/lua/lobject.c
+    third_party/lua/lopcodes.c
+    third_party/lua/loslib.c
+    third_party/lua/lparser.c
+    third_party/lua/lstate.c
+    third_party/lua/lstring.c
+    third_party/lua/lstrlib.c
+    third_party/lua/ltable.c
+    third_party/lua/ltablib.c
+    third_party/lua/ltm.c
+    third_party/lua/lundump.c
+    third_party/lua/lutf8lib.c
+    third_party/lua/lvm.c
+    third_party/lua/lzio.c
+)
 add_library(maxchat_lua STATIC ${MAXCHAT_LUA_SOURCES})
 target_include_directories(maxchat_lua PUBLIC
      "${CMAKE_CURRENT_SOURCE_DIR}/third_party/lua")
@@ -96,11 +161,27 @@ target_include_directories(maxchat_scripting PUBLIC
      "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_link_libraries(maxchat_scripting PUBLIC Qt6::Core)
 # maxchat_core for stripFormatting; maxchat_lua for the interpreter.
-target_link_libraries(maxchat_scripting PRIVATE maxchat_core maxchat_lua)
+target_link_libraries(maxchat_scripting PRIVATE maxchat_core)
+add_library(maxchat_script_protocol STATIC src/scripting/ScriptProtocol.cpp src/scripting/ScriptProtocol.h)
+target_include_directories(maxchat_script_protocol PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
+target_link_libraries(maxchat_script_protocol PUBLIC Qt6::Core Qt6::Network)
+target_link_libraries(maxchat_scripting PUBLIC maxchat_script_protocol)
+add_library(maxchat_lua_runtime STATIC src/scripting/LuaRuntime.cpp src/scripting/LuaRuntime.h)
+target_include_directories(maxchat_lua_runtime PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
+target_link_libraries(maxchat_lua_runtime PUBLIC Qt6::Core PRIVATE maxchat_lua maxchat_core)
+qt_add_executable(maxchat-script-worker tools/script_worker.cpp)
+set_target_properties(maxchat-script-worker PROPERTIES MACOSX_BUNDLE FALSE WIN32_EXECUTABLE FALSE)
+target_link_libraries(maxchat-script-worker PRIVATE maxchat_lua_runtime maxchat_script_protocol)
+add_dependencies(maxchat_scripting maxchat-script-worker)
+if(WIN32)
+    target_link_libraries(maxchat_script_protocol PRIVATE psapi)
+    target_link_libraries(maxchat_scripting PRIVATE shell32)
+endif()
 
 add_library(maxchat_core STATIC
     src/app/AppInfo.cpp
     src/app/AppInfo.h
+    src/app/BundledPaths.h
     src/core/ChatBufferStore.cpp
     src/core/ChatBufferStore.h
     src/core/ChatLineFormatter.cpp
@@ -155,6 +236,13 @@ target_link_libraries(maxchat_core
 
 qt_add_executable(maxchat-secrets tools/secret_store_helper.cpp)
 target_link_libraries(maxchat-secrets PRIVATE Qt6::Core)
+set_target_properties(maxchat-secrets PROPERTIES MACOSX_BUNDLE FALSE)
+if(APPLE)
+    add_library(maxchat_keychain STATIC src/core/MacKeychain.cpp src/core/MacKeychain.h)
+    target_include_directories(maxchat_keychain PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
+    target_link_libraries(maxchat_keychain PUBLIC Qt6::Core "-framework Security" "-framework CoreFoundation")
+    target_link_libraries(maxchat-secrets PRIVATE maxchat_keychain)
+endif()
 if(WIN32)
     target_link_libraries(maxchat-secrets PRIVATE advapi32)
 endif()
@@ -190,6 +278,8 @@ target_link_libraries(maxchat_upload PUBLIC Qt6::Core Qt6::Gui Qt6::Network)
 set_target_properties(maxchat_upload PROPERTIES AUTOMOC ON)
 
 add_library(maxchat_services STATIC
+    src/services/PublicHttpFetch.cpp
+    src/services/PublicHttpFetch.h
     src/services/ImageFetcher.cpp
     src/services/ImageFetcher.h
     src/services/LinkPreviewClassifier.cpp
@@ -232,9 +322,6 @@ target_link_libraries(maxchat_spell
     PUBLIC
         Qt6::Core
 )
-
-target_compile_definitions(maxchat_spell PRIVATE
-    MAXCHAT_BUNDLED_DICTIONARY_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/dictionaries")
 
 # Native OS speller (opt-in; Windows ISpellChecker). OFF by default so the
 # normal build is never affected by the platform COM code. Only meaningful on
@@ -297,6 +384,9 @@ if(MAXCHAT_TERMINAL)
     target_include_directories(maxchat_terminal PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
     target_link_libraries(maxchat_terminal PUBLIC Qt6::Widgets Qt6::Gui)
 endif()
+
+# Explicit resource generation avoids unsupported AUTORCC locks on WSL shares.
+qt_add_resources(MAXCHAT_EMBEDDED_RESOURCES resources/maxchat.qrc)
 
 qt_add_executable(maxchat-c
     src/main.cpp
@@ -392,7 +482,7 @@ qt_add_executable(maxchat-c
     src/ui/SoundPlayer.h
     src/ui/SystemInfo.cpp
     src/ui/SystemInfo.h
-    resources/maxchat.qrc
+    ${MAXCHAT_EMBEDDED_RESOURCES}
 )
 
 set_target_properties(maxchat-c
@@ -400,7 +490,23 @@ set_target_properties(maxchat-c
         OUTPUT_NAME maxchat                          # ship as maxchat / maxchat.exe
         WIN32_EXECUTABLE $<PLATFORM_ID:Windows>
 )
-add_dependencies(maxchat-c maxchat-secrets)
+add_dependencies(maxchat-c maxchat-secrets maxchat-script-worker)
+if(APPLE)
+    set_target_properties(maxchat-c PROPERTIES
+        OUTPUT_NAME MaxChat
+        MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_BUNDLE_NAME MaxChat
+        MACOSX_BUNDLE_GUI_IDENTIFIER org.maxchat.MaxChat
+        MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
+        MACOSX_BUNDLE_ICON_FILE MaxChat.icns
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/packaging/Info.plist.in"
+    )
+    add_custom_command(TARGET maxchat-c POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:maxchat-script-worker>" "$<TARGET_FILE_DIR:maxchat-c>/maxchat-script-worker"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:maxchat-secrets>" "$<TARGET_FILE_DIR:maxchat-c>/maxchat-secrets"
+        VERBATIM)
+endif()
 
 # Embed the application icon into the Windows .exe (Explorer / taskbar / Alt-Tab).
 # Compiled by windres (MinGW) or rc (MSVC); the absolute path is baked in so it
@@ -1291,7 +1397,7 @@ qt_add_executable(main_window_link_preview_test
     src/ui/SoundPlayer.h
     src/ui/SystemInfo.cpp
     src/ui/SystemInfo.h
-    resources/maxchat.qrc
+    ${MAXCHAT_EMBEDDED_RESOURCES}
 )
 
 target_link_libraries(main_window_link_preview_test
@@ -1492,6 +1598,10 @@ target_link_libraries(lua_smoke_test
 )
 add_test(NAME lua_smoke COMMAND lua_smoke_test)
 
+qt_add_executable(maxchat-worker-fixture tests/unit/script_worker_fixture.cpp)
+set_target_properties(maxchat-worker-fixture PROPERTIES MACOSX_BUNDLE FALSE WIN32_EXECUTABLE FALSE)
+target_link_libraries(maxchat-worker-fixture PRIVATE maxchat_script_protocol)
+
 qt_add_executable(lua_engine_test
     tests/unit/lua_engine_test.cpp
     src/ui/TerminalFrame.cpp
@@ -1505,6 +1615,102 @@ target_link_libraries(lua_engine_test
 )
 target_compile_definitions(lua_engine_test PRIVATE
     MAXCHAT_EXAMPLE_SCRIPTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/scripts")
+add_dependencies(lua_engine_test maxchat-worker-fixture)
 add_test(NAME lua_engine COMMAND lua_engine_test)
 
+qt_add_executable(public_http_fetch_test tests/unit/public_http_fetch_test.cpp)
+target_link_libraries(public_http_fetch_test PRIVATE maxchat_services Qt6::Test)
+add_test(NAME public_http_fetch COMMAND public_http_fetch_test)
+
+if(APPLE)
+    qt_add_executable(mac_keychain_test tests/unit/mac_keychain_test.cpp)
+    target_link_libraries(mac_keychain_test PRIVATE maxchat_keychain Qt6::Test)
+    add_test(NAME mac_keychain COMMAND mac_keychain_test)
+    get_property(maxchat_mac_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+    foreach(maxchat_target IN LISTS maxchat_mac_targets)
+        if(maxchat_target MATCHES "_test$")
+            set_target_properties(${maxchat_target} PROPERTIES MACOSX_BUNDLE FALSE)
+        endif()
+    endforeach()
+endif()
 endif() # BUILD_TESTING
+
+# Every app/test target that compiles the art decoder uses the same bounded codec.
+get_property(maxchat_build_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+foreach(maxchat_target IN LISTS maxchat_build_targets)
+    get_target_property(maxchat_target_sources ${maxchat_target} SOURCES)
+    if("src/comic/ComicArt.cpp" IN_LIST maxchat_target_sources)
+        target_link_libraries(${maxchat_target} PRIVATE maxchat_inflate)
+    endif()
+endforeach()
+
+option(MAXCHAT_STAGE_RUNTIME_ASSETS "Stage the reviewed full-app runtime asset manifest" ON)
+# Focused scripting/security tests can exclude unrelated distribution assets.
+# Test and build executables use the same explicit, deployed asset layout.
+set(maxchat_asset_root "$<TARGET_FILE_DIR:maxchat-c>")
+if(APPLE)
+    set(maxchat_asset_root "$<TARGET_BUNDLE_DIR:maxchat-c>/Contents/Resources")
+    if(BUILD_TESTING AND MAXCHAT_STAGE_RUNTIME_ASSETS)
+        add_custom_target(maxchat_test_assets ALL
+            COMMAND ${CMAKE_COMMAND} "-DSOURCE_ROOT=${CMAKE_CURRENT_SOURCE_DIR}"
+                "-DDESTINATION_ROOT=${CMAKE_CURRENT_BINARY_DIR}"
+                -P "${CMAKE_CURRENT_SOURCE_DIR}/packaging/stage-assets.cmake" VERBATIM)
+    endif()
+endif()
+if(MAXCHAT_STAGE_RUNTIME_ASSETS)
+add_custom_target(maxchat_runtime_assets ALL
+    COMMAND ${CMAKE_COMMAND}
+        "-DSOURCE_ROOT=${CMAKE_CURRENT_SOURCE_DIR}"
+        "-DDESTINATION_ROOT=${maxchat_asset_root}"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/packaging/stage-assets.cmake"
+    VERBATIM
+)
+else()
+    add_custom_target(maxchat_runtime_assets)
+endif()
+add_dependencies(maxchat-c maxchat_runtime_assets)
+if(BUILD_TESTING)
+    get_property(maxchat_test_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+    foreach(maxchat_target IN LISTS maxchat_test_targets)
+        if(maxchat_target MATCHES "_test$")
+            add_dependencies(${maxchat_target} maxchat_runtime_assets)
+            if(APPLE AND MAXCHAT_STAGE_RUNTIME_ASSETS)
+                add_dependencies(${maxchat_target} maxchat_test_assets)
+            endif()
+        endif()
+    endforeach()
+endif()
+
+# Native Linux deployment carries Qt beside the executable and uses relative
+# runtime lookup. Generated CMake/SDK paths stay in the private build tree.
+if(UNIX AND NOT APPLE)
+    set(QT_DEPLOY_BIN_DIR ".")
+    set(QT_DEPLOY_LIB_DIR "lib")
+    set(QT_DEPLOY_PLUGINS_DIR "plugins")
+    set_target_properties(maxchat-c maxchat-secrets maxchat-script-worker PROPERTIES INSTALL_RPATH "$ORIGIN/lib")
+    install(TARGETS maxchat-c maxchat-secrets maxchat-script-worker RUNTIME DESTINATION "." COMPONENT Runtime)
+    qt_generate_deploy_script(TARGET maxchat-c OUTPUT_SCRIPT maxchat_deploy_script CONTENT [[
+        set(QT_DEPLOY_BIN_DIR ".")
+        set(QT_DEPLOY_LIB_DIR "lib")
+        set(QT_DEPLOY_PLUGINS_DIR "plugins")
+        qt_deploy_runtime_dependencies(
+            EXECUTABLE "$<TARGET_FILE:maxchat-c>"
+            GENERATE_QT_CONF
+            INCLUDE_PLUGINS qoffscreen qwayland
+            INCLUDE_PLUGIN_TYPES wayland-shell-integration wayland-graphics-integration-client
+                wayland-decoration-client xcbglintegrations
+        )
+    ]])
+    install(SCRIPT ${maxchat_deploy_script} COMPONENT Runtime)
+endif()
+
+# UI filesystem helpers share the same explicitly selected profile on all OSes.
+get_property(maxchat_profile_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+foreach(maxchat_target IN LISTS maxchat_profile_targets)
+    get_target_property(maxchat_target_sources ${maxchat_target} SOURCES)
+    if("src/ui/ThemeCatalog.cpp" IN_LIST maxchat_target_sources OR
+       "src/ui/DccManager.cpp" IN_LIST maxchat_target_sources OR
+       "src/ui/MediaController.cpp" IN_LIST maxchat_target_sources)
+        target_link_libraries(${maxchat_target} PRIVATE maxchat_core)
+    endif()
+endforeach()

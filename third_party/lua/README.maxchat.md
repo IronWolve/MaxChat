@@ -1,10 +1,9 @@
-# Vendored Lua 5.4.7
+# Vendored Lua 5.4.9
 
-Unmodified Lua interpreter source, used by MaxChat's scripting engine when built
-with `-DMAXCHAT_LUA=ON`.
+Unmodified Lua interpreter source, used by MaxChat's scripting engine as a core build dependency.
 
-- Upstream: https://www.lua.org/ftp/lua-5.4.7.tar.gz
-- sha256: `9fbf5e28ef86c69858f6d3d34eccc32e911c1a28b4120ff3e84aaa70cfbf1e30`
+- Upstream: https://www.lua.org/ftp/lua-5.4.9.tar.gz
+- sha256: `2335b6c582a52654f94612bf10d2f4672805d05329aa6568b1d8cd9e5c6fb8e6`
 - License: MIT (see `../../THIRD_PARTY_NOTICES.md`)
 
 Only `src/*.c` and `src/*.h` are vendored. The standalone `lua.c` (interpreter

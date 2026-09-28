@@ -58,7 +58,7 @@ void PreviewFetcher::queueFromLine(const QString& line) {
         case maxchat::services::LinkPreviewKind::XPost:
         case maxchat::services::LinkPreviewKind::MastodonPost: {
             const QString key = previewKey(candidate.fetchUrl);
-            if (pending_.contains(key)) {
+            if (pending_.contains(key) || pending_.size() >= 16) {
                 break;
             }
             maxchat::services::LinkPreviewCandidate tagged = candidate;

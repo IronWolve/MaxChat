@@ -1,3 +1,5 @@
+#include "app/BundledPaths.h"
+#include "services/PublicHttpFetch.h"
 #include "ui/ScriptBridge.h"
 
 #include "core/SettingsStore.h"
@@ -132,7 +134,8 @@ void ScriptBridge::seedAndLoadAll() {
     }
     QDir().mkpath(scriptsDir_);
     seedBundledScripts(scriptsDir_);
-    lua_->loadAll(buildAllScriptPermsMap(), true);
+    if (!QCoreApplication::instance()->property("maxchat.selftest").toBool())
+        lua_->loadAll(buildAllScriptPermsMap(), true);
 }
 
 QStringList ScriptBridge::loadedScripts() const {
@@ -387,70 +390,35 @@ QStringList ScriptBridge::scriptNicks(const QString& network, const QString& tar
 }
 
 QString ScriptBridge::scriptHttpGet(const QString& url) {
+    return scriptHttpGet(url, {});
+}
+QString ScriptBridge::scriptHttpGet(const QString& url, const std::function<bool()>& cancelled) {
+    if (cancelled && cancelled()) return {};
     const QUrl parsed(url);
     if (!parsed.isValid() || (parsed.scheme() != QLatin1String("http") &&
                               parsed.scheme() != QLatin1String("https"))) {
         return {};
     }
 
-    // SSRF gate (same one the link-preview fetcher uses): a script must not be
-    // able to reach loopback/link-local/private hosts — that's localhost
-    // services and cloud metadata endpoints. Checked up front and on every
-    // redirect hop below.
-    bool allowed = false;
-    {
-        QEventLoop gateLoop;
-        maxchat::services::resolvePreviewUrlPublicAsync(
-            parsed, /*allowPrivateNetwork=*/false, this, [&](bool ok) {
-                allowed = ok;
-                gateLoop.quit();
-            });
-        gateLoop.exec();
-    }
-    if (!allowed) {
-        return {};
-    }
-
-    QNetworkAccessManager& manager = host_.scriptNetworkManager();
-    QNetworkRequest request(parsed);
-    request.setRawHeader("User-Agent", "MaxChat-script");
-    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
-                         QNetworkRequest::NoLessSafeRedirectPolicy);
-    QNetworkReply* reply = manager.get(request);
-
-    constexpr qint64 kMaxBodyBytes = 2 * 1024 * 1024; // scripts get text, not blobs
-    connect(reply, &QNetworkReply::redirected, this, [reply](const QUrl& target) {
-        maxchat::services::resolvePreviewUrlPublicAsync(
-            target, /*allowPrivateNetwork=*/false, reply, [reply](bool ok) {
-                if (!ok) {
-                    reply->abort();
-                }
-            });
-    });
-    connect(reply, &QNetworkReply::downloadProgress, this,
-            [reply](qint64 received, qint64 /*total*/) {
-                if (received > kMaxBodyBytes) {
-                    reply->abort(); // unbounded body = memory DoS
-                }
-            });
-
-    // Block (with a timeout) until the request finishes — scripts opt into this
-    // by enabling the network permission, and accept the synchronous wait.
     QEventLoop loop;
-    QTimer timeout;
-    timeout.setSingleShot(true);
-    connect(&timeout, &QTimer::timeout, &loop, &QEventLoop::quit);
-    connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
-    timeout.start(10000);
-    loop.exec();
-
-    QString body;
-    if (reply->isFinished() && reply->error() == QNetworkReply::NoError) {
-        body = QString::fromUtf8(reply->read(kMaxBodyBytes));
-    } else if (!reply->isFinished()) {
-        reply->abort();
+    QTimer cancellation;
+    cancellation.setInterval(20);
+    if (cancelled) {
+        connect(&cancellation,&QTimer::timeout,&loop,[&] { if (cancelled()) loop.quit(); });
+        cancellation.start();
     }
-    reply->deleteLater();
+    bool completed = false;
+    QString body;
+    maxchat::services::PublicHttpOptions options;
+    options.maxBytes = 2 * 1024 * 1024;
+    options.timeoutMs = 10000;
+    maxchat::services::fetchPublicHttp(&host_.scriptNetworkManager(), parsed, options, &loop,
+        [&](maxchat::services::PublicHttpResult result) {
+            completed = true;
+            if (result.error.isEmpty()) body = QString::fromUtf8(result.body);
+            loop.quit();
+        });
+    if (!completed) loop.exec(QEventLoop::AllEvents);
     return body;
 }
 
@@ -510,10 +478,8 @@ ScriptBridge::buildAllScriptPermsMap() const {
 }
 
 void ScriptBridge::seedBundledScripts(const QString& destDir) {
-    const QString appDir = QCoreApplication::applicationDirPath();
-    const QStringList candidates = {QDir(appDir).filePath(QStringLiteral("assets/scripts")),
-                                    QDir(appDir).filePath(QStringLiteral("../assets/scripts")),
-                                    QDir::current().filePath(QStringLiteral("assets/scripts"))};
+    const QString appDir = maxchat::app::bundledDataDirectory();
+    const QStringList candidates = {QDir(appDir).filePath(QStringLiteral("assets/scripts"))};
     QString src;
     for (const QString& candidate : candidates) {
         if (QDir(candidate).exists()) {
