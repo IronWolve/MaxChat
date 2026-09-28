@@ -4,6 +4,7 @@
 .gitignore
 CMakeLists.txt
 LICENSE
+README.md
 THIRD_PARTY_NOTICES.md
 assets/dictionaries/LICENSE_da_DK.txt
 assets/dictionaries/LICENSE_de_DE.txt

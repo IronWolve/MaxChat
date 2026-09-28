@@ -36,7 +36,7 @@ PRIVATE_PATHS = (
     'user.vcxproj.user', 'app.suo', '.DS_Store', 'Thumbs.db',
     'notes/private.md', 'docs/audit.md', 'DEVDOCS/HANDOFF.md',
     'backups/source.cpp', 'backup.cpp.bak', 'source.cpp~', '.source.cpp.swp',
-    'core', 'core.123', 'maxchat.pid', 'maxchat.sock', 'README.md', 'RELEASE-1.0.1.md',
+    'core', 'core.123', 'maxchat.pid', 'maxchat.sock', 'readme.md', 'RELEASE-1.0.1.md',
 )
 
 
@@ -85,6 +85,23 @@ class PublicationPolicyTest(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text('unapproved\n')
         self.assertEqual(self.run_git('ls-files', '--others', '--exclude-standard').stdout, b'')
+
+    def test_public_readme_requires_explicit_approval_and_content_checks(self):
+        name = 'README.md'
+        path = self.root / name
+        path.write_text('Public project overview\n')
+        self.run_git('check-ignore', '--no-index', name)
+        self.run_git('add', '-f', name)
+        self.assertTrue(any(name + ': outside' in e for e in guard.audit(self.root, staged=True)))
+        self.approved.append(name)
+        self.write_policy()
+        self.run_git('add', '.gitignore', guard.MANIFEST, name)
+        self.assertEqual(guard.audit(self.root), [])
+        self.assertEqual(guard.audit(self.root, staged=True), [])
+        path.write_text('ghp_' + 'A' * 40 + '\n')
+        self.run_git('add', name)
+        self.assertTrue(any(name + ': possible GitHub token' in e
+                            for e in guard.audit(self.root, staged=True)))
 
     def test_force_added_private_file_is_rejected(self):
         (self.root / '.env').write_text('fixture=yes\n')

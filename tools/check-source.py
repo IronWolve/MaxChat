@@ -55,6 +55,9 @@ PRIVATE_SUFFIXES = {
     '.appimage', '.msi', '.msix', '.dmg', '.deb', '.rpm', '.bundle',
 }
 ROOT_DOCUMENTS = ('readme.md', 'scripting.md', 'release-*.md')
+# The user explicitly approved a public project README. It still needs an exact
+# manifest entry and passes the same content checks as every other source file.
+PUBLIC_ROOT_DOCUMENTS = {'README.md'}
 
 
 def case_pattern(value):
@@ -76,6 +79,7 @@ def ignore_rules(approved):
     rules += ['**/*' + case_pattern(suffix) for suffix in sorted(PRIVATE_SUFFIXES)]
     rules += ['/' + case_pattern(pattern) for pattern in ROOT_DOCUMENTS]
     rules += ['/core']  # Never ignore src/core/ as a core-dump filename.
+    rules += ['!/' + name for name in sorted(PUBLIC_ROOT_DOCUMENTS.intersection(approved))]
     return rules
 
 
@@ -92,6 +96,8 @@ def git(root, *args):
 
 
 def private_path(name):
+    if name in PUBLIC_ROOT_DOCUMENTS:
+        return False
     path = PurePosixPath(name)
     parts = tuple(part.lower() for part in path.parts)
     base = path.name.lower()
