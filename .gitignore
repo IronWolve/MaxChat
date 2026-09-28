@@ -16,6 +16,7 @@
 !/assets/dictionaries/
 !/assets/fonts/
 !/assets/icons/
+!/assets/screenshots/
 !/assets/scripts/
 !/assets/sounds/
 !/assets/themes/
@@ -106,6 +107,8 @@
 !/assets/fonts/SymbolsNerdFontMono-Regular.ttf
 !/assets/icons/maxchat.ico
 !/assets/icons/maxchat.png
+!/assets/screenshots/maxchat-no-theme.jpg
+!/assets/screenshots/maxchat-theme.jpg
 !/assets/scripts/_hello.lua
 !/assets/scripts/bbs.lua
 !/assets/scripts/dice.lua
