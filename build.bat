@@ -164,12 +164,33 @@ if not exist "%EXE_PATH%" (
     exit /b 1
 )
 
+set "LIVE_DIST_DIR=%DIST_DIR%"
+set "DIST_DIR=%BUILD_DIR%\package-stage"
+if exist "%DIST_DIR%" rmdir /S /Q "%DIST_DIR%"
+if exist "%DIST_DIR%" (
+    echo ERROR: Could not clear the build packaging stage.
+    popd >nul
+    exit /b 1
+)
 if not exist "%DIST_DIR%" mkdir "%DIST_DIR%"
 copy /Y "%EXE_PATH%" "%DIST_DIR%\maxchat.exe" >nul
 if errorlevel 1 (
     echo ERROR: Could not copy maxchat.exe to dist-win - it is probably running.
     echo        Close MaxChat ^(dist-win\maxchat.exe^), then run build.bat again.
     echo        The compiled exe is ready at: %EXE_PATH%
+    popd >nul
+    exit /b 1
+)
+
+for %%E in ("%EXE_PATH%") do set "SECRET_HELPER=%%~dpEmaxchat-secrets.exe"
+if not exist "%SECRET_HELPER%" (
+    echo ERROR: Credential-storage helper was not built.
+    popd >nul
+    exit /b 1
+)
+copy /Y "%SECRET_HELPER%" "%DIST_DIR%\maxchat-secrets.exe" >nul
+if errorlevel 1 (
+    echo ERROR: Could not copy credential-storage helper.
     popd >nul
     exit /b 1
 )
@@ -195,7 +216,15 @@ if errorlevel 1 (
     exit /b 1
 )
 
+xcopy /E /I /Y "%DIST_DIR%" "%LIVE_DIST_DIR%" >nul
+if errorlevel 1 (
+    echo ERROR: Could not update dist-win; close MaxChat before rebuilding.
+    echo        The clean package stage was preserved.
+    popd >nul
+    exit /b 1
+)
 call :make_zip
+set "DIST_DIR=%LIVE_DIST_DIR%"
 
 echo.
 echo Windows build complete:
@@ -297,36 +326,9 @@ call "%VSINSTALL%\VC\Auxiliary\Build\vcvars64.bat"
 exit /b 0
 
 :copy_assets
-rem Themes and wallpapers are read from disk at runtime (fonts/sounds/icons are
-rem embedded via maxchat.qrc) - without assets\ next to the exe the app falls
-rem back to the built-in Dark theme only.
-if not exist "%ROOT%\assets\themes" (
-    echo ERROR: assets\themes is missing from the source tree.
-    exit /b 1
-)
-if not exist "%ROOT%\assets\wallpapers" (
-    echo ERROR: assets\wallpapers is missing from the source tree.
-    exit /b 1
-)
-if not exist "%DIST_DIR%\assets" mkdir "%DIST_DIR%\assets"
-xcopy /E /I /Y "%ROOT%\assets\themes" "%DIST_DIR%\assets\themes" >nul
-if errorlevel 1 exit /b 1
-xcopy /E /I /Y "%ROOT%\assets\wallpapers" "%DIST_DIR%\assets\wallpapers" >nul
-if errorlevel 1 exit /b 1
-rem Spellcheck dictionaries (.aff/.dic) load from disk at runtime; ship the
-rem bundled en_US so the internal engine works out of the box.
-if exist "%ROOT%\assets\dictionaries" (
-    xcopy /E /I /Y "%ROOT%\assets\dictionaries" "%DIST_DIR%\assets\dictionaries" >nul
-    if errorlevel 1 exit /b 1
-)
-rem Importable theme-pack gallery + theme-builder.html. Not auto-loaded; users
-rem import the ones they like (Preferences > Themes > Import) and can author new
-rem packs with the builder. Shipped as a sibling folder, not under assets\.
-if exist "%ROOT%\themes" (
-    xcopy /E /I /Y "%ROOT%\themes" "%DIST_DIR%\themes" >nul
-    if errorlevel 1 exit /b 1
-)
-exit /b 0
+rem Copy only reviewed runtime assets, including the bundled script examples.
+cmake -DSOURCE_ROOT="%ROOT%" -DDESTINATION_ROOT="%DIST_DIR%" -P "%ROOT%\packaging\stage-assets.cmake"
+exit /b %ERRORLEVEL%
 
 :copy_notices
 if exist "%ROOT%\LICENSE" copy /Y "%ROOT%\LICENSE" "%DIST_DIR%\LICENSE" >nul

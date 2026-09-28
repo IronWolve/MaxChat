@@ -20,7 +20,7 @@ namespace {
 // Translators must outlive the app, hence static.
 void installTranslators(QApplication& app) {
     const QVariantMap settings =
-        maxchat::core::SettingsStore(maxchat::core::standardSettingsPaths()).loadWithDefaults();
+        maxchat::core::SettingsStore(maxchat::core::standardSettingsPaths()).loadPublicWithDefaults();
     const QString configured =
         settings.value(QStringLiteral("interface_language"), QStringLiteral("system"))
             .toString()

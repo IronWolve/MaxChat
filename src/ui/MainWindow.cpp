@@ -742,6 +742,13 @@ MainWindow::MainWindow(QWidget* parent)
     //    restoreGeometry resizes it.
     setWindowTitle(QStringLiteral("%1 %2").arg(app::displayName(), app::version()));
     setWindowIcon(QIcon(QStringLiteral(":/icons/maxchat.ico")));
+    m_settings.setErrorHandler([this](const QString& message) {
+        QTimer::singleShot(0, this, [this, message]() {
+            appendSystemLine(tr("! %1").arg(message));
+            statusBar()->showMessage(message, 15000);
+        });
+    });
+    (void)m_settings.migrateCredentials();
     const QVariantMap startupSettings = m_settings.loadWithDefaults();
     const QString savedGeom =
         startupSettings.value(QStringLiteral("window_geometry")).toString();
@@ -1800,6 +1807,17 @@ void maxchat::ui::MainWindow::openPreferences() {
     connect(&dialog, &PreferencesDialog::importSettingsRequested, this, [this, &dialog]() {
         dialog.reject();
         importSettings();
+    });
+    connect(&dialog, &PreferencesDialog::forgetCredentialsRequested, this, [this, &dialog]() {
+        if (QMessageBox::question(&dialog, tr("Forget saved passwords"),
+                tr("Remove saved passwords and upload keys from this profile? You will need to enter them again. Connections and other preferences will be kept."),
+                QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes) return;
+        // Close the old preferences snapshot before clearing its credentials.
+        dialog.reject();
+        if (m_settings.forgetCredentials()) {
+            applyCurrentSettings();
+            appendSystemLine(tr("! Saved passwords and upload keys were removed from this profile."));
+        }
     });
     connect(&dialog, &PreferencesDialog::resetServerListRequested, this, [this, &dialog]() {
         dialog.reject();
@@ -3161,7 +3179,16 @@ void maxchat::ui::MainWindow::exportSettings() {
         return;
     }
 
-    QVariantMap settings = m_settings.loadWithDefaults();
+    const QFileInfo destination(path);
+    const QFileInfo activeSettings(m_settings.paths().settingsPath);
+    if (destination.absoluteFilePath() == activeSettings.absoluteFilePath() ||
+        (!destination.canonicalFilePath().isEmpty() &&
+         destination.canonicalFilePath() == activeSettings.canonicalFilePath())) {
+        appendSystemLine(tr("! Choose a different export file; an export must not replace your active settings."));
+        return;
+    }
+
+    QVariantMap settings = m_settings.loadPublicWithDefaults();
     settings.insert(
         QStringLiteral("networks"),
         maxchat::core::networkConfigListToVariantList(maxchat::core::networkConfigListFromVariant(
@@ -3196,7 +3223,7 @@ void maxchat::ui::MainWindow::exportSettings() {
         appendSystemLine(tr("! Could not write settings export file."));
         return;
     }
-    appendSystemLine(tr("! Settings exported to %1.").arg(path));
+    appendSystemLine(tr("! Settings exported to %1. Passwords and access keys were excluded.").arg(path));
 }
 
 void maxchat::ui::MainWindow::importSettings() {

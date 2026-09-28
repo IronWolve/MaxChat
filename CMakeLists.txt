@@ -119,6 +119,10 @@ add_library(maxchat_core STATIC
     src/core/NetworkImport.h
     src/core/SettingsStore.cpp
     src/core/SettingsStore.h
+    src/core/SettingsSecrets.cpp
+    src/core/SettingsSecrets.h
+    src/core/SecretStore.cpp
+    src/core/SecretStore.h
     src/core/UrlDetector.cpp
     src/core/UrlDetector.h
     src/irc/CommandParser.cpp
@@ -148,6 +152,12 @@ target_link_libraries(maxchat_core
     PUBLIC
         Qt6::Core
 )
+
+qt_add_executable(maxchat-secrets tools/secret_store_helper.cpp)
+target_link_libraries(maxchat-secrets PRIVATE Qt6::Core)
+if(WIN32)
+    target_link_libraries(maxchat-secrets PRIVATE advapi32)
+endif()
 
 add_library(maxchat_network STATIC
     src/irc/IrcConnection.cpp
@@ -390,6 +400,7 @@ set_target_properties(maxchat-c
         OUTPUT_NAME maxchat                          # ship as maxchat / maxchat.exe
         WIN32_EXECUTABLE $<PLATFORM_ID:Windows>
 )
+add_dependencies(maxchat-c maxchat-secrets)
 
 # Embed the application icon into the Windows .exe (Explorer / taskbar / Alt-Tab).
 # Compiled by windres (MinGW) or rc (MSVC); the absolute path is baked in so it

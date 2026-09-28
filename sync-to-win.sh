@@ -28,6 +28,7 @@ sync_dir() {
 copy_file() {
   local name="$1"
   if [[ -f "$SOURCE_DIR/$name" ]]; then
+    mkdir -p "$(dirname "$TARGET_DIR/$name")"
     cp -p "$SOURCE_DIR/$name" "$TARGET_DIR/$name"
   fi
 }
@@ -45,6 +46,9 @@ for file in \
   SCRIPTING.md \
   THIRD_PARTY_NOTICES.md \
   build.bat \
+  tools/secret_store_helper.cpp \
+  packaging/runtime-assets.txt \
+  packaging/stage-assets.cmake \
   sync-to-win.sh; do
   copy_file "$file"
 done

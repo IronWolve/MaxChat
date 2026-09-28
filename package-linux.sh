@@ -32,17 +32,40 @@ cmake --build "$BUILD_DIR" -j"$(nproc)"
 echo "==> Staging AppDir"
 rm -rf "$APPDIR"
 install -Dm755 "$BUILD_DIR/maxchat" "$APPDIR/usr/bin/maxchat"
-cp -r "$ROOT/assets" "$APPDIR/usr/bin/assets"
-cp -r "$ROOT/themes" "$APPDIR/usr/bin/themes"
+install -Dm755 "$BUILD_DIR/maxchat-secrets" "$APPDIR/usr/bin/maxchat-secrets"
+cmake -DSOURCE_ROOT="$ROOT" -DDESTINATION_ROOT="$APPDIR/usr/bin" \
+      -P "$ROOT/packaging/stage-assets.cmake"
 
 # 3. Fetch linuxdeploy + the Qt plugin (cached).
 echo "==> Fetching linuxdeploy tools"
 mkdir -p "$TOOLS"
-fetch() { [ -f "$2" ] || curl -fL --retry 3 -o "$2" "$1"; chmod +x "$2"; }
+fetch() {
+    local url="$1" output="$2" digest="$3"
+    if [ -f "$output" ]; then
+        printf '%s  %s\n' "$digest" "$output" | sha256sum --check --status - || {
+            echo "ERROR: cached packaging tool does not match the reviewed digest: $(basename "$output")" >&2
+            echo "Remove that cached tool to fetch the pinned release asset." >&2
+            return 1
+        }
+    else
+        curl -fL --retry 3 -H 'Accept: application/octet-stream' -o "$output.part" "$url"
+        if ! printf '%s  %s\n' "$digest" "$output.part" | sha256sum --check --status -; then
+            rm -f -- "$output.part"
+            echo "ERROR: downloaded packaging tool failed digest verification." >&2
+            return 1
+        fi
+        mv -- "$output.part" "$output"
+    fi
+    chmod +x "$output"
+}
 LD="$TOOLS/linuxdeploy-x86_64.AppImage"
-fetch "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage" "$LD"
-fetch "https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage" \
-      "$TOOLS/linuxdeploy-plugin-qt-x86_64.AppImage"
+# Immutable asset IDs plus publisher-reported SHA-256 digests. Review both when
+# upgrading; never execute an unverified mutable continuous-release download.
+fetch "https://api.github.com/repos/linuxdeploy/linuxdeploy/releases/assets/538917371" "$LD" \
+      "36a2d7e274d12e1050d0e9ecfe11d339ed54720b2bec464c286d53f8b07f5c62"
+fetch "https://api.github.com/repos/linuxdeploy/linuxdeploy-plugin-qt/releases/assets/525032210" \
+      "$TOOLS/linuxdeploy-plugin-qt-x86_64.AppImage" \
+      "cfc1055b2b9dbc08412b579f20990b7b41a17b61beaa5847dc9477c96c9e9617"
 
 # 4. Build the AppImage. EXTRACT_AND_RUN lets the tool AppImages run without FUSE
 #    (e.g. inside WSL/containers). The Qt plugin finds Qt via QMAKE.

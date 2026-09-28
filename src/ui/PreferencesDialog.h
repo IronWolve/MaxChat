@@ -39,6 +39,7 @@ class PreferencesDialog final : public QDialog {
     void themePreviewRequested(const QString& appTheme, const QString& chatTheme,
                                const QString& wallpaper, int chatOpacity);
     void importSettingsRequested();
+    void forgetCredentialsRequested();
     void resetServerListRequested();
     void resetAllSettingsRequested();
     void testNotificationRequested();

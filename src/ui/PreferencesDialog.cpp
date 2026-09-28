@@ -2458,10 +2458,13 @@ void PreferencesDialog::buildDataTab(QWidget* tab) {
     resetServers->setObjectName(QStringLiteral("resetServerList"));
     auto* resetAll = new QPushButton(tr("Reset to Defaults..."), tab);
     resetAll->setObjectName(QStringLiteral("resetAllSettings"));
+    auto* forgetCredentials = new QPushButton(tr("Forget passwords..."), tab);
+    forgetCredentials->setObjectName(QStringLiteral("forgetCredentials"));
     configRow->addWidget(exportSettings);
     configRow->addWidget(importSettings);
     configRow->addWidget(resetServers);
     configRow->addWidget(resetAll);
+    configRow->addWidget(forgetCredentials);
     configRow->addStretch(1);
     root->addWidget(configBox);
     root->addStretch(1);
@@ -2474,6 +2477,8 @@ void PreferencesDialog::buildDataTab(QWidget* tab) {
             &PreferencesDialog::resetServerListRequested);
     connect(resetAll, &QPushButton::clicked, this,
             &PreferencesDialog::resetAllSettingsRequested);
+    connect(forgetCredentials, &QPushButton::clicked, this,
+            &PreferencesDialog::forgetCredentialsRequested);
 }
 
 } // namespace maxchat::ui

@@ -4,6 +4,8 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonDocument>
+#include <QJsonObject>
+#include <QHash>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -15,16 +17,47 @@ using maxchat::core::NetworksMergeVersion;
 using maxchat::core::SettingsPaths;
 using maxchat::core::SettingsStore;
 
+class FakeSecretStore final : public maxchat::core::SecretStore {
+public:
+    QHash<QString, QByteArray> values;
+    bool failRead = false;
+    bool failWrite = false;
+    int reads = 0;
+    int writes = 0;
+    std::function<void()> afterWrite;
+    bool read(const QString& id, QByteArray& value, QString& error) override {
+        ++reads;
+        if (failRead || !values.contains(id)) { error = QStringLiteral("Keychain unavailable"); return false; }
+        value = values.value(id);
+        return true;
+    }
+    bool write(const QString& id, const QByteArray& value, QString& error) override {
+        ++writes;
+        if (failWrite) { error = QStringLiteral("Keychain unavailable"); return false; }
+        values.insert(id, value);
+        if (afterWrite) afterWrite();
+        return true;
+    }
+    bool remove(const QString& id) override { values.remove(id); return true; }
+};
+
 class SettingsStoreTest final : public QObject {
     Q_OBJECT
 
   private:
-    static SettingsStore makeStore(QTemporaryDir& dir) {
+    static SettingsStore makeStore(QTemporaryDir& dir,
+                                   std::shared_ptr<FakeSecretStore> secrets = std::make_shared<FakeSecretStore>()) {
         SettingsPaths paths;
         paths.configDir = QDir(dir.path()).filePath(QStringLiteral("config/maxchat"));
         paths.cacheDir = QDir(dir.path()).filePath(QStringLiteral("cache/maxchat"));
         paths.settingsPath = QDir(paths.configDir).filePath(QStringLiteral("settings.json"));
-        return SettingsStore(paths);
+        return SettingsStore(paths, std::move(secrets));
+    }
+
+    static QByteArray diskContents(const SettingsStore& store) {
+        QFile file(store.paths().settingsPath);
+        if (!file.open(QIODevice::ReadOnly)) return {};
+        return file.readAll();
     }
 
     static void writeText(const QString& path, const QByteArray& data) {
@@ -44,6 +77,193 @@ class SettingsStoreTest final : public QObject {
     }
 
   private slots:
+    void credentialsRoundTripWithoutAppearingInSettingsJson() {
+        QTemporaryDir dir;
+        auto vault = std::make_shared<FakeSecretStore>();
+        const SettingsStore store = makeStore(dir, vault);
+        const QVariantMap settings{
+            {QStringLiteral("theme"), QStringLiteral("system")},
+            {QStringLiteral("imgbb_api_key"), QStringLiteral("test-only-image-key")},
+            {QStringLiteral("postimages_token"), QStringLiteral("test-only-upload-token")},
+            {QStringLiteral("imgbox_password"), QStringLiteral("test-only-image-password")},
+            {QStringLiteral("networks"), QVariantList{QVariantMap{
+                {QStringLiteral("name"), QStringLiteral("Example")},
+                {QStringLiteral("host"), QStringLiteral("irc.example")},
+                {QStringLiteral("password"), QStringLiteral("test-only-sasl-password")},
+                {QStringLiteral("server_pass"), QStringLiteral("test-only-server-password")},
+                {QStringLiteral("proxy_password"), QStringLiteral("test-only-proxy-password")}}}}};
+        QVERIFY(store.saveRaw(settings));
+        QVERIFY(!diskContents(store).contains("test-only-"));
+        QVERIFY(diskContents(store).contains("_maxchat_credentials"));
+        QCOMPARE(vault->values.size(), 1);
+        const SettingsStore reopened(store.paths(), vault);
+        QCOMPARE(reopened.loadRaw(), settings);
+        const int writes = vault->writes;
+        QVariantMap edited = reopened.loadRaw();
+        edited.insert(QStringLiteral("theme"), QStringLiteral("other"));
+        QVERIFY(reopened.saveRaw(edited));
+        QCOMPARE(vault->writes, writes); // Ordinary preference saves reuse the vault entry.
+    }
+
+    void failedKeychainWritePreservesLastCommittedSettingsAndSecrets() {
+        QTemporaryDir dir;
+        auto vault = std::make_shared<FakeSecretStore>();
+        const SettingsStore store = makeStore(dir, vault);
+        QVariantMap settings{{QStringLiteral("password"), QStringLiteral("first-test-secret")}};
+        QVERIFY(store.saveRaw(settings));
+        const QByteArray before = diskContents(store);
+        const auto values = vault->values;
+        vault->failWrite = true;
+        settings.insert(QStringLiteral("password"), QStringLiteral("second-test-secret"));
+        QVERIFY(!store.saveRaw(settings));
+        QCOMPARE(diskContents(store), before);
+        QCOMPARE(vault->values, values);
+        QVERIFY(!store.errorString().isEmpty());
+    }
+
+    void numericAndStructuredSecretValuesCannotLeakThroughExports() {
+        QTemporaryDir dir;
+        auto vault = std::make_shared<FakeSecretStore>();
+        const SettingsStore store = makeStore(dir, vault);
+        const QVariantMap settings{
+            {QStringLiteral("token_id"), 12345678},
+            {QStringLiteral("password"), QVariantMap{{QStringLiteral("value"), QStringLiteral("structured-test-secret")}}},
+            {QStringLiteral("sasl"), true}};
+        QVERIFY(store.saveRaw(settings));
+        QVERIFY(!diskContents(store).contains("12345678"));
+        QVERIFY(!diskContents(store).contains("structured-test-secret"));
+        QVERIFY(store.loadPublicWithDefaults().value(QStringLiteral("sasl")).toBool());
+        const SettingsStore reopened(store.paths(), vault);
+        QCOMPARE(reopened.loadRaw(), settings);
+    }
+
+    void explicitLegacyEditTakesPrecedenceDuringMigration() {
+        QTemporaryDir dir;
+        auto vault = std::make_shared<FakeSecretStore>();
+        const SettingsStore store = makeStore(dir, vault);
+        QVERIFY(store.saveRaw({{QStringLiteral("password"), QStringLiteral("old-test-secret")}}));
+        auto disk = QJsonDocument::fromJson(diskContents(store)).object();
+        disk.insert(QStringLiteral("password"), QStringLiteral("new-test-secret"));
+        writeText(store.paths().settingsPath, QJsonDocument(disk).toJson());
+        const SettingsStore reopened(store.paths(), vault);
+        QVERIFY(reopened.migrateCredentials());
+        QCOMPARE(reopened.loadRaw().value(QStringLiteral("password")).toString(), QStringLiteral("new-test-secret"));
+        QVERIFY(!diskContents(reopened).contains("new-test-secret"));
+        QCOMPARE(vault->values.size(), 1);
+    }
+
+    void lockedKeychainCannotEraseStoredPasswords() {
+        QTemporaryDir dir;
+        auto vault = std::make_shared<FakeSecretStore>();
+        const SettingsStore store = makeStore(dir, vault);
+        QVERIFY(store.saveRaw({{QStringLiteral("password"), QStringLiteral("test-only-password")}}));
+        const QByteArray before = diskContents(store);
+        vault->failRead = true;
+        const SettingsStore locked(store.paths(), vault);
+        QVariantMap settings = locked.loadRaw();
+        QVERIFY(settings.value(QStringLiteral("password")).toString().isEmpty());
+        settings.insert(QStringLiteral("theme"), QStringLiteral("other"));
+        QVERIFY(!locked.saveRaw(settings));
+        QCOMPARE(diskContents(store), before);
+        QCOMPARE(vault->values.size(), 1);
+    }
+
+    void migrationOnlyReplacesPlaintextAfterSuccessfulSecureWrite() {
+        QTemporaryDir dir;
+        auto vault = std::make_shared<FakeSecretStore>();
+        const SettingsStore store = makeStore(dir, vault);
+        const QByteArray original = R"({"password":"legacy-test-secret","theme":"system"})";
+        writeText(store.paths().settingsPath, original);
+        vault->failWrite = true;
+        QVERIFY(!store.migrateCredentials());
+        QCOMPARE(diskContents(store), original);
+        vault->failWrite = false;
+        QVERIFY(store.migrateCredentials());
+        QVERIFY(!diskContents(store).contains("legacy-test-secret"));
+        QCOMPARE(store.loadRaw().value(QStringLiteral("password")).toString(), QStringLiteral("legacy-test-secret"));
+        QCOMPARE(vault->values.size(), 1);
+    }
+
+    void explicitRecoveryKeepsPreferencesWhenKeychainIsLost() {
+        QTemporaryDir dir;
+        auto vault = std::make_shared<FakeSecretStore>();
+        const SettingsStore store = makeStore(dir, vault);
+        QVERIFY(store.saveRaw({{QStringLiteral("password"), QStringLiteral("test-only-password")},
+                               {QStringLiteral("theme"), QStringLiteral("system")},
+                               {QStringLiteral("host"), QStringLiteral("irc.example")}}));
+        vault->failRead = true;
+        const SettingsStore lost(store.paths(), vault);
+        (void)lost.loadRaw();
+        QVERIFY(lost.forgetCredentials());
+        const QVariantMap recovered = lost.loadRaw();
+        QCOMPARE(recovered.value(QStringLiteral("theme")).toString(), QStringLiteral("system"));
+        QCOMPARE(recovered.value(QStringLiteral("host")).toString(), QStringLiteral("irc.example"));
+        QVERIFY(recovered.value(QStringLiteral("password")).toString().isEmpty());
+        QVERIFY(!diskContents(lost).contains("_maxchat_credentials"));
+        QVERIFY(lost.saveRaw(recovered));
+    }
+
+    void failedFileCommitRemovesOnlyTheNewCredentialRevision() {
+        QTemporaryDir dir;
+        auto vault = std::make_shared<FakeSecretStore>();
+        const SettingsStore store = makeStore(dir, vault);
+        vault->afterWrite = [&store]() { QDir().mkpath(store.paths().settingsPath); };
+        QVERIFY(!store.saveRaw({{QStringLiteral("password"), QStringLiteral("test-only-password")}}));
+        QVERIFY(vault->values.isEmpty());
+        QVERIFY(QFileInfo(store.paths().settingsPath).isDir());
+    }
+
+    void clearingPasswordsRetiresTheirCredentialEntry() {
+        QTemporaryDir dir;
+        auto vault = std::make_shared<FakeSecretStore>();
+        const SettingsStore store = makeStore(dir, vault);
+        QVERIFY(store.saveRaw({{QStringLiteral("password"), QStringLiteral("test-only-password")}}));
+        QVERIFY(store.saveRaw({{QStringLiteral("password"), QString()}}));
+        QVERIFY(vault->values.isEmpty());
+        QVERIFY(!diskContents(store).contains("_maxchat_credentials"));
+    }
+
+    void exportDoesNotUnlockKeychainOrIncludeLegacyPasswords() {
+        QTemporaryDir dir;
+        auto vault = std::make_shared<FakeSecretStore>();
+        const SettingsStore store = makeStore(dir, vault);
+        writeText(store.paths().settingsPath,
+                  R"({"imgbb_api_key":"legacy-test-secret","networks":[{"name":"Example","password":"nested-test-secret"}]})");
+        const QByteArray legacyExport = QJsonDocument::fromVariant(store.loadPublicWithDefaults()).toJson();
+        QVERIFY(!legacyExport.contains("test-secret"));
+        QVERIFY(store.migrateCredentials());
+        vault->failRead = true;
+        const int reads = vault->reads;
+        const SettingsStore locked(store.paths(), vault);
+        const QByteArray exported = QJsonDocument::fromVariant(locked.loadPublicWithDefaults()).toJson();
+        QVERIFY(!exported.contains("test-secret"));
+        QVERIFY(!exported.contains("_maxchat_credentials"));
+        QCOMPARE(vault->reads, reads);
+    }
+
+    void redactedImportsKeepLocalSecretsOnlyForTheSameEndpoint() {
+        QTemporaryDir dir;
+        auto vault = std::make_shared<FakeSecretStore>();
+        const SettingsStore store = makeStore(dir, vault);
+        const QVariantMap localNetwork{
+            {QStringLiteral("name"), QStringLiteral("Private example")},
+            {QStringLiteral("host"), QStringLiteral("irc.example")},
+            {QStringLiteral("password"), QStringLiteral("local-test-secret")}};
+        QVERIFY(store.saveRaw({{QStringLiteral("networks"), QVariantList{localNetwork}}}));
+        QVariantMap imported = SettingsStore::withoutSecrets(store.loadRaw());
+        imported.insert(QStringLiteral("_maxchat_credentials"), QStringLiteral("untrusted-reference"));
+        const QVariantMap prepared = store.prepareImportedSettings(imported);
+        QVERIFY(!prepared.contains(QStringLiteral("_maxchat_credentials")));
+        QCOMPARE(prepared.value(QStringLiteral("networks")).toList().first().toMap()
+                     .value(QStringLiteral("password")).toString(), QStringLiteral("local-test-secret"));
+        QVariantMap redirected = imported.value(QStringLiteral("networks")).toList().first().toMap();
+        redirected.insert(QStringLiteral("host"), QStringLiteral("different.example"));
+        imported.insert(QStringLiteral("networks"), QVariantList{redirected});
+        const QVariantMap rejected = store.prepareImportedSettings(imported);
+        QVERIFY(rejected.value(QStringLiteral("networks")).toList().first().toMap()
+                    .value(QStringLiteral("password")).toString().isEmpty());
+    }
+
     void defaultSettingsContainLaunchCriticalDefaults() {
         const QVariantMap settings = SettingsStore::defaultSettings();
 
