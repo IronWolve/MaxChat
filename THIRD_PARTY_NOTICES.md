@@ -8,7 +8,7 @@ modified libraries is imposed.
 
 The BS MaxChat logo is copyright © 2026 IronWolve, all rights reserved, and is
 included by permission. It retains its separate branding terms; see
-`assets/branding/COPYRIGHT.txt`.
+`licenses/branding/COPYRIGHT.txt`.
 
 ## Qt and multimedia
 
@@ -52,7 +52,7 @@ replaceable; the supplied signing script permits ad-hoc re-signing after changes
 ## Lua
 
 The maxchat-script-worker helper statically links
-the Lua 5.4.9 interpreter, whose source is vendored under `third_party/lua/`
+the Lua 5.4.9 interpreter, whose source is vendored under `src/vendor/lua/`
 (the standalone `lua.c`/`luac.c` mains are excluded). Lua is distributed under
 the MIT License:
 
@@ -82,7 +82,7 @@ sha256 `2335b6c582a52654f94612bf10d2f4672805d05329aa6568b1d8cd9e5c6fb8e6`.
 ## Hunspell
 
 Hunspell 1.7.4 is statically linked under its **MPL-1.1** license option, retaining
-the MySpell BSD notices. Its unmodified covered source is in `third_party/hunspell/`
+the MySpell BSD notices. Its unmodified covered source is in `src/vendor/hunspell/`
 and the matching MaxChat source archive. Preserve `COPYING.MPL`, `license.hunspell`
 and `license.myspell`; upstream alternative GPL/LGPL texts remain included.
 MPL-covered files retain MPL terms when modified, while the larger MaxChat work
@@ -93,7 +93,7 @@ SHA-256: `66ec82a577395fe9d471504267e6dd04615c76517c61af7c6b9c19e5e34e73c8`.
 ## Spelling dictionaries
 
 The separately loaded, editable `.aff`/`.dic` data remains under each dictionary's
-own grant. Upstream texts ship alongside the files. `licenses/DICTIONARIES.json`
+own grant. Upstream texts are retained in `licenses/dictionaries/`. `licenses/DICTIONARIES.json`
 records exact file hashes, collection package versions, modifications and the
 pinned upstream revision. The corresponding-source companion also includes
 original source distributions and generators; the collection's normalization
@@ -134,7 +134,7 @@ do not imply endorsement of MaxChat.
 ## zlib
 
 The bounded comic-art decoder statically links the unmodified inflate subset of
-zlib 1.3.2 under its zlib grant. The full notice is `third_party/zlib/LICENSE`.
+zlib 1.3.2 under its zlib grant. The full notice is `licenses/zlib/LICENSE`.
 Source: https://zlib.net/zlib-1.3.2.tar.gz
 SHA-256: `bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16`.
 Compression/gzip utilities are not included in this subset.

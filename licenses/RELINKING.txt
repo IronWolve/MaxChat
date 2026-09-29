@@ -11,7 +11,7 @@ manifest and third-party source companion beside the binary downloads, under
 equivalent access conditions and at no additional charge. SOURCES.json identifies
 archive names, upstream versions and SHA-256 values. The companion includes exact
 Qt module sources, FFmpeg, ICU, dictionary source distributions/generators and
-Linux distribution source packages with their build recipes. MaxChat source
+Linux distribution source packages with their build recipes. The complete release source archive
 includes its CMake/build/packaging scripts and the used Hunspell, Lua and zlib
 source. Keep these companions available with any redistribution of the binaries.
 

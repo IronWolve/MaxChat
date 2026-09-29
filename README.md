@@ -106,12 +106,17 @@ one-off connection. Comic mode is optional — see [Comic art](#comic-art-option
 
 Requires **Qt 6.11.2+** (Widgets, Network, Multimedia, MultimediaWidgets, LinguistTools),
 **CMake 3.24+**, Ninja and a C++20 compiler. Keep the checkout in `repo/` and build
-from its enclosing project directory:
+from its enclosing project directory.
+
+The Git checkout contains application/vendor source, images, licenses and this
+README. Build tools, packaging scripts, tests and non-image runtime data are
+excluded from Git. To build a release, download its complete
+[source archive](https://github.com/IronWolve/MaxChat/releases/download/1.0.3/MaxChat-1.0.3-source.tar.gz),
+which includes the matching build inputs:
 
 ```bash
-mkdir maxchat
-cd maxchat
-git clone https://github.com/IronWolve/MaxChat.git repo
+tar -xzf MaxChat-1.0.3-source.tar.gz
+cd MaxChat-1.0.3
 ./repo/tools/build.sh
 ./run/launchers/start.sh
 ```
@@ -175,11 +180,13 @@ MaxChat embeds **Lua 5.4** for optional scripting. Drop `.lua` files in your scr
 script runs in an isolated worker and must be granted permissions (network access, sending to IRC, disk) before
 it can use them — bundled scripts default to no permissions until you allow them in
 **Preferences ▸ Scripts**. The bundled examples (`assets/scripts/`) cover a URL logger, dice roller,
-weather, last-seen tracker, reminders, a memo pad, and a small interactive BBS. See the [bundled examples](assets/scripts/)
+weather, last-seen tracker, reminders, a memo pad, and a small interactive BBS. See the [bundled examples](https://github.com/IronWolve/MaxChat/tree/1.0.3/assets/scripts)
 for API usage. Workers enforce CPU, memory and output limits; granting native program
 execution still allows programs to run with your privileges.
 
 ## Building from source
+
+The commands below apply to the complete release-source archive described above.
 
 ```bash
 # Debug
