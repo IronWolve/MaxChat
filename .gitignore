@@ -13,6 +13,7 @@
 !/third_party/
 !/tools/
 !/translations/
+!/assets/branding/
 !/assets/dictionaries/
 !/assets/fonts/
 !/assets/icons/
@@ -52,6 +53,8 @@
 !/LICENSE
 !/README.md
 !/THIRD_PARTY_NOTICES.md
+!/assets/branding/COPYRIGHT.txt
+!/assets/branding/bs-maxchat-logo.png
 !/assets/dictionaries/LICENSE_da_DK.txt
 !/assets/dictionaries/LICENSE_de_DE.txt
 !/assets/dictionaries/LICENSE_en_GB.txt

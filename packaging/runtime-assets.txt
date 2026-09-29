@@ -277,3 +277,4 @@ licenses/RELINKING.txt
 licenses/appimage/THIRD-PARTY.txt
 licenses/dictionaries/Italian-legacy.txt
 licenses/dictionaries/MPL-2.0.txt
+assets/branding/COPYRIGHT.txt

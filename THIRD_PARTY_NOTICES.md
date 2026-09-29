@@ -6,6 +6,10 @@ texts ship with every platform. See `licenses/RELINKING.txt` for source delivery
 replacement and rebuilding instructions; no additional restriction on debugging
 modified libraries is imposed.
 
+The BS MaxChat logo is copyright © 2026 IronWolve, all rights reserved, and is
+included by permission. It retains its separate branding terms; see
+`assets/branding/COPYRIGHT.txt`.
+
 ## Qt and multimedia
 
 Qt 6.11.2 libraries and plugins are dynamically deployed under their LGPL-3.0

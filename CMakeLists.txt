@@ -8,7 +8,7 @@ if(MAXCHAT_BUILD_INSIDE_SOURCE)
 endif()
 
 project(MaxChatCpp
-    VERSION 1.0.2
+    VERSION 1.0.3
     DESCRIPTION "MaxChat — a graphical IRC client"
     LANGUAGES CXX
 )

@@ -11,5 +11,6 @@
     <file alias="sounds/scifi_chirp.wav">../assets/sounds/scifi_chirp.wav</file>
     <file alias="sounds/trek_hail.wav">../assets/sounds/trek_hail.wav</file>
     <file alias="icons/maxchat.ico">../assets/icons/maxchat.ico</file>
+    <file alias="branding/bs-maxchat-logo.png">../assets/branding/bs-maxchat-logo.png</file>
   </qresource>
 </RCC>

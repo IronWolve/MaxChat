@@ -93,8 +93,8 @@ Grab the latest build from the [Releases](https://github.com/IronWolve/MaxChat/r
   ```
   It's a single self-contained file with Qt bundled — no system Qt required. The 1.0.2 AppImage
   requires glibc 2.43 or newer (tested on Ubuntu 26.04).
-- **macOS — new in 1.0.2:** download the [Apple Silicon DMG](https://github.com/IronWolve/MaxChat/releases/download/1.0.2/MaxChat-1.0.2-macos-arm64.dmg)
-  or [ZIP](https://github.com/IronWolve/MaxChat/releases/download/1.0.2/MaxChat-1.0.2-macos-arm64.zip).
+- **macOS — new in 1.0.2:** download the [Apple Silicon DMG](https://github.com/IronWolve/MaxChat/releases/download/1.0.3/MaxChat-1.0.3-macos-arm64.dmg)
+  or [ZIP](https://github.com/IronWolve/MaxChat/releases/download/1.0.3/MaxChat-1.0.3-macos-arm64.zip).
   Copy `MaxChat.app` from the DMG to Applications, or extract the ZIP. Requires
   Apple Silicon and macOS 13+; tested on macOS 26.6.2. The app is ad-hoc signed,
   not notarized, so first launch may need approval in System Settings → Privacy & Security.
@@ -222,7 +222,7 @@ repo\build.bat tests      :: build, then run the test suite
   ZIP/DMG files under `run/packages/`. Select the Qt SDK with `MAXCHAT_QT_ROOT`.
 
 Source companions, dependency notices and checksums accompany the
-[release downloads](https://github.com/IronWolve/MaxChat/releases/tag/1.0.2).
+[release downloads](https://github.com/IronWolve/MaxChat/releases/tag/1.0.3).
 
 ## Saved passwords and settings exports
 

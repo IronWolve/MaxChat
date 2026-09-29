@@ -683,3 +683,5 @@ licenses/dictionaries/Italian-legacy.txt
 licenses/dictionaries/MPL-2.0.txt
 assets/screenshots/maxchat-no-theme.jpg
 assets/screenshots/maxchat-theme.jpg
+assets/branding/bs-maxchat-logo.png
+assets/branding/COPYRIGHT.txt

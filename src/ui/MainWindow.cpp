@@ -73,6 +73,8 @@
 #include <QDateTime>
 #include <QCoreApplication>
 #include <QDir>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QFileInfo>
 #include <QEventLoop>
 #include <QElapsedTimer>
@@ -119,6 +121,7 @@
 #include <QRegularExpression>
 #include <QScrollBar>
 #include <QSaveFile>
+#include <QScreen>
 #include <QSet>
 #include <QShortcut>
 #include <QSignalBlocker>
@@ -2225,14 +2228,56 @@ void maxchat::ui::MainWindow::openThemeBuilder() {
 }
 
 void maxchat::ui::MainWindow::openAbout() {
-    QMessageBox::about(
-        this, tr("About %1").arg(app::displayName()),
+    QDialog dialog(this);
+    dialog.setObjectName(QStringLiteral("aboutDialog"));
+    dialog.setWindowTitle(tr("About %1").arg(app::displayName()));
+    dialog.setWindowIcon(windowIcon());
+    auto* layout = new QVBoxLayout(&dialog);
+    layout->setContentsMargins(20, 20, 20, 16);
+    layout->setSpacing(16);
+
+    const int contentWidth = qMin(560, qMax(240, screen()->availableGeometry().width() - 80));
+    auto* logo = new QLabel(&dialog);
+    logo->setObjectName(QStringLiteral("aboutBrandLogo"));
+    logo->setAccessibleName(tr("BS MaxChat logo"));
+    logo->setAlignment(Qt::AlignCenter);
+    const qreal ratio = devicePixelRatioF();
+    QPixmap artwork(QStringLiteral(":/branding/bs-maxchat-logo.png"));
+    artwork = artwork.scaledToWidth(qRound(contentWidth * ratio), Qt::SmoothTransformation);
+    artwork.setDevicePixelRatio(ratio);
+    logo->setPixmap(artwork);
+    layout->addWidget(logo);
+
+    auto* description = new QLabel(
         tr("<b>%1 %2</b><br><br>"
                        "Native C++/Qt port of MaxChat.<br><br>"
                        "A full IRC client: multi-network, server list, link previews, "
                        "inline media, spellcheck, logging, DCC, scripting, and comic "
                        "mode with themeable balloons.")
-            .arg(app::displayName().toHtmlEscaped(), app::version().toHtmlEscaped()));
+            .arg(app::displayName().toHtmlEscaped(), app::version().toHtmlEscaped()), &dialog);
+    description->setObjectName(QStringLiteral("aboutDescription"));
+    description->setTextFormat(Qt::RichText);
+    description->setWordWrap(true);
+    description->setFixedWidth(contentWidth);
+    description->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
+    layout->addWidget(description);
+
+    auto* github = new QLabel(&dialog);
+    github->setObjectName(QStringLiteral("aboutGithubLink"));
+    github->setTextFormat(Qt::RichText);
+    github->setTextInteractionFlags(Qt::TextBrowserInteraction);
+    github->setOpenExternalLinks(true);
+    layout->addWidget(github);
+
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok, &dialog);
+    connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    layout->addWidget(buttons);
+    dialog.ensurePolished();
+    github->setText(QStringLiteral(
+        "<a href=\"https://github.com/IronWolve/MaxChat\" style=\"color:%1\">GitHub · IronWolve/MaxChat</a>")
+        .arg(description->palette().color(QPalette::WindowText).name()));
+    description->setMinimumHeight(description->heightForWidth(contentWidth));
+    dialog.exec();
 }
 
 namespace {
